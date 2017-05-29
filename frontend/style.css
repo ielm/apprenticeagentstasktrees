@@ -39,16 +39,20 @@ body {
   user-select: none;
 }
 
-.control .btn:hover {
+.control .btn:hover:not(.disabled) {
   background-color: skyblue;
 }
 
-.control .btn:active {
+.control .btn:active:not(.disabled) {
   box-shadow: inset 2px 2px 2px 1px rgba(50,75,80,0.5);
 }
 
-.control .btn:active p {
+.control .btn:active:not(.disabled) p {
   transform: translate(1px, -1px);
+}
+
+.control .disabled {
+  background-color: grey;
 }
 
 svg {

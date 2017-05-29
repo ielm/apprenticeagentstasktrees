@@ -38,16 +38,28 @@ $(document).ready(function() {
     d3.selectAll("#total").text(numTrees);
 
     d3.selectAll("#back").on("click", function() {
+      if (currentTree === numTrees) {
+        $("#forward").removeClass("disabled");
+      }
       if (currentTree > 0) {
         --currentTree;
         update(value);
       }
+      if (currentTree === 0) {
+        $("#back").addClass("disabled");
+      }
     });
 
     d3.selectAll("#forward").on("click", function() {
+      if (currentTree === 0) {
+        $("#back").removeClass("disabled");
+      }
       if (currentTree < numTrees) {
         ++currentTree;
         update(value);
+      }
+      if (currentTree === numTrees) {
+        $("#forward").addClass("disabled");
       }
     });
 
