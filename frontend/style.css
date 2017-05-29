@@ -1,0 +1,71 @@
+body {
+  text-align: center;
+  font-family: sans-serif;
+}
+
+.control {
+  font-size: 12pt;
+  height: 50px;
+}
+
+.control div {
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.control p, .control span {
+  display: inline;
+}
+
+.info {
+  margin-left: 2em;
+  margin-right: 2em;
+}
+
+.control .btn {
+  width: 120px;
+  height: 100%;
+  border-radius: 5px;
+  border-style: none;
+  color: white;
+  background-color: steelblue;
+}
+
+.control .btn p {
+  display: inline-block;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+.control .btn:hover {
+  background-color: skyblue;
+}
+
+.control .btn:active {
+  box-shadow: inset 2px 2px 2px 1px rgba(50,75,80,0.5);
+}
+
+.control .btn:active p {
+  transform: translate(1px, -1px);
+}
+
+svg {
+  font-family: sans-serif;
+  font-size: 10pt;
+}
+
+svg rect {
+  fill: skyblue;
+  stroke: teal;
+}
+
+svg text {
+  text-anchor: middle;
+}
+
+svg path {
+  fill: none;
+  stroke: teal;
+}

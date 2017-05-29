@@ -1,0 +1,253 @@
+[
+  {
+    "name": "Available Tasks",
+    "type": "alternatives"
+  },
+
+
+  {
+    "name": "Available Tasks",
+    "type": "alternatives",
+    "children": [
+      {
+        "name": "Mount Bench",
+        "type": "leaf"
+      },
+      {
+        "name": "Mount Stool",
+        "type": "sequential"
+      },
+      {
+        "name": "Mount Chair",
+        "type": "leaf"
+      }
+    ]
+  },
+
+
+  {
+    "name": "Available Tasks",
+    "type": "alternatives",
+    "children": [
+      {
+        "name": "Mount Bench",
+        "type": "leaf"
+      },
+      {
+        "name": "Mount Stool",
+        "type": "sequential",
+        "children": [
+          {
+            "name": "Take central frame",
+            "type": "leaf"
+          },
+          {
+            "name": "Mount legs",
+            "type": "parallel"
+          },
+          {
+            "name": "Mount top",
+            "type": "sequential"
+          }
+        ]
+      },
+      {
+        "name": "Mount Chair",
+        "type": "leaf"
+      }
+    ]
+  },
+
+
+  {
+    "name": "Available Tasks",
+    "type": "alternatives",
+    "children": [
+      {
+        "name": "Mount Bench",
+        "type": "leaf"
+      },
+      {
+        "name": "Mount Stool",
+        "type": "sequential",
+        "children": [
+          {
+            "name": "Take central frame",
+            "type": "leaf"
+          },
+          {
+            "name": "Mount legs",
+            "type": "parallel",
+            "children": [
+              {
+                "name": "Mount left leg",
+                "type": "sequential"
+              },
+              {
+                "name": "Mount right leg",
+                "type": "sequential"
+              }
+            ]
+          },
+          {
+            "name": "Mount top",
+            "type": "sequential",
+            "children": [
+              {
+                "name": "Take top",
+                "type": "sequential"
+              },
+              {
+                "name": "Place top",
+                "type": "leaf"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Mount Chair",
+        "type": "leaf"
+      }
+    ]
+  },
+
+
+  {
+    "name": "Available Tasks",
+    "type": "alternatives",
+    "children": [
+      {
+        "name": "Mount Bench",
+        "type": "leaf"
+      },
+      {
+        "name": "Mount Stool",
+        "type": "sequential",
+        "children": [
+          {
+            "name": "Take central frame",
+            "type": "leaf"
+          },
+          {
+            "name": "Mount legs",
+            "type": "parallel",
+            "children": [
+              {
+                "name": "Mount left leg",
+                "type": "sequential",
+                "children": [ ]
+              },
+              {
+                "name": "Mount right leg",
+                "type": "sequential",
+                "children": [
+                  {
+                    "name": "Take right leg",
+                    "type": "leaf"
+                  },
+                  {
+                    "name": "Snap right leg",
+                    "type": "leaf"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "name": "Mount top",
+            "type": "sequential",
+            "children": [
+              {
+                "name": "Take top",
+                "type": "sequential"
+              },
+              {
+                "name": "Place top",
+                "type": "leaf"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Mount Chair",
+        "type": "leaf"
+      }
+    ]
+  },
+
+
+  {
+    "name": "Available Tasks",
+    "type": "alternatives",
+    "children": [
+      {
+        "name": "Mount Bench",
+        "type": "leaf"
+      },
+      {
+        "name": "Mount Stool",
+        "type": "sequential",
+        "children": [
+          {
+            "name": "Take central frame",
+            "type": "leaf"
+          },
+          {
+            "name": "Mount legs",
+            "type": "parallel",
+            "children": [
+              {
+                "name": "Mount left leg",
+                "type": "sequential",
+                "children": [
+                  {
+                    "name": "Take left leg",
+                    "type": "leaf"
+                  },
+                  {
+                    "name": "Snap left leg",
+                    "type": "leaf"
+                  }
+                ]
+              },
+              {
+                "name": "Mount right leg",
+                "type": "sequential",
+                "children": [
+                  {
+                    "name": "Take right leg",
+                    "type": "leaf"
+                  },
+                  {
+                    "name": "Snap right leg",
+                    "type": "leaf"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "name": "Mount top",
+            "type": "sequential",
+            "children": [
+              {
+                "name": "Take top",
+                "type": "sequential"
+              },
+              {
+                "name": "Place top",
+                "type": "leaf"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Mount Chair",
+        "type": "leaf"
+      }
+    ]
+  }
+]
