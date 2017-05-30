@@ -71,6 +71,7 @@ class TreeNode:
     this.hasQuestionedDescendants = False
     this.questionedWith = None
     this.tmr = None
+    this.type = "sequential"
   
   def addChildNode(this, child):
     this.children.append(child)
@@ -79,6 +80,7 @@ class TreeNode:
   def addAction(this, action):
     if len(this.children) == 0:
       this.terminal = True
+      this.type = "leaf"
     if not this.terminal:
       return False
     this.children.append(action)
@@ -91,10 +93,8 @@ class TreeNode:
         this.childrenStatus[i] = mark;
         break
     
-    this.setQuestionedDescendants(mark)
-    
-        
-  
+    this.setQuestionedDescendants(mark)        
+
   def setQuestionedDescendants(this, hqd):
     if hqd:
       this.hasQuestionedDescendants = True
@@ -185,6 +185,9 @@ def construct_tree(input):
       i-=1 # account for the main loop and the inner loop both incrementing it
     disambiguate(root)
     i+=1
+    #list = []
+    #tree_to_json_format(root, list)
+    #steps.append(list)
   return root
     
 
@@ -215,8 +218,23 @@ def gettestdata():
   testdata = json.load(infile)
   return testdata
   
+def tree_to_json_format(node, list):
+  output = dict()
+  output["name"] = node.name
+  output["type"] = node.type
+  output["children"] = []
+  index = len(list)
+  list.append(output)
+  if not node.terminal:
+    for child in node.children:
+      output["children"].append(tree_to_json_format(child, list))
+      list[output["children"][-1]]["parent"] = index
+  return index
+  
 def start():
   testdata = gettestdata()
   tree = construct_tree(testdata)
   print_tree(tree)
-  return tree
+  list = []
+  tree_to_json_format(root, list)
+  return json.dumps(list)
