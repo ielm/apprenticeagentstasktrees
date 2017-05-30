@@ -9,7 +9,9 @@ var currentTree = 0;
 var nodeWidth = 140;
 var nodeHeight = 25;
 
-$(document).ready(function() {
+var duration = 750;
+
+$(function() {
   d3.selectAll("svg")
       .attr("width", width + margin.left + margin.right)
       .attr("height", height + margin.top + margin.bottom)
@@ -21,16 +23,25 @@ $(document).ready(function() {
 
   var treeLayout = d3.tree()
       .size([width, height])
-      //.nodeSize([nodeWidth, nodeHeight])
       .separation(function(a,b) { return a.parent == b.parent ? 1 : 1.15; } );
 
   d3.json("sample.json", function(error, value) {
     numTrees = value.length;
     value = value.map(function(el) { return d3.hierarchy(el); });
+    var prevPositions = {};
     value.forEach(function(el) {
       treeLayout(el);
       var yStep = height / (el.height + 2)
-      el.each(function(d) { d.y = (d.depth + 1) * yStep; } );
+      el.each(function(d) {
+        d.y = (d.depth + 1) * yStep;
+
+        d.x0 = prevPositions[d.data.name] ? prevPositions[d.data.name].x :
+          (d.parent? d.parent.x0 : d.x);
+        d.y0 = prevPositions[d.data.name] ? prevPositions[d.data.name].y :
+          (d.parent? d.parent.y0 : d.y);
+
+        prevPositions[d.data.name] = { x: d.x, y: d.y };
+      } );
     });
 
     if (value[0]) value.unshift(null);
@@ -72,8 +83,6 @@ var nodes = undefined;
 var links = undefined;
 
 var linkGen = d3.linkVertical()
-    //.source(function(d) { return [d.source.x, d.source.y + nodeHeight / 2]; } )
-    //.target(function(d) { return [d.target.x, d.target.y - nodeHeight / 2]; } );
     .x(function(d) { return d.x; } )
     .y(function(d) { return d.y; } );
 
@@ -91,15 +100,8 @@ function update(rawData) {
   var node = canvas.selectAll("g")
       .data(nodes, function(d) { return d.data.name; });
 
-  node.attr("transform", function(d) {
-        return "translate(" + d.x + "," + d.y + ")";
-      } );
-
   var nodeEnter = node.enter().append("g")
-      .attr("class", "node")
-      .attr("transform", function(d) {
-        return "translate(" + (d.x) + "," + d.y + ")";
-      });
+      .attr("class", "node");
 
   nodeEnter.append("rect")
       .attr("y", -(nodeHeight / 2))
@@ -121,16 +123,48 @@ function update(rawData) {
         .attr("x", -(w / 2));
   } );
 
-  var nodeExit = node.exit().remove();
+  nodeEnter.attr("transform", function(d) {
+        return "translate(" + (d.x0) + "," + (d.y0)  +
+          "),scale(" + 1e-6 + ")";
+      });
+
+  var nodeUpdate = node.merge(nodeEnter).transition()
+      .duration(duration)
+      .attr("transform", function(d) {
+        return "translate(" + d.x + "," + d.y + "),scale(1)";
+      } );
+
+  var nodeExit = node.exit();
+  nodeExit.transition()
+      .duration(duration)
+      .attr("transform", function(d) {
+        return "translate(" + (d.x0) + "," + (d.y0) + "),scale(" + 1e-6 + ")";
+      } )
+      .remove();
 
   var link = canvas.selectAll("path")
-      .data(links, function(d) { return d.source.name + d.target.name; });
-
-  link.attr("d", linkGen);
+      .data(links, function(d) { return d.source.data.name + d.target.data.name; });
 
   var linkEnter = link.enter().insert("path", "g")
       .attr("class", "link")
+      .attr("d", function(d) {
+        return linkGen({
+          source: { x: d.source.x0, y: d.source.y0 },
+          target: { x: d.source.x0, y: d.source.y0 }
+        });
+      } );
+
+  var linkUpdate = link.merge(linkEnter).transition()
+      .duration(duration)
       .attr("d", linkGen);
 
-  var linkExit = link.exit().remove();
+  var linkExit = link.exit().transition()
+      .duration(duration)
+      .attr("d", function(d) {
+        return linkGen({
+          source: { x: d.source.x0, y: d.source.y0 },
+          target: { x: d.source.x0, y: d.source.y0 }
+        });
+      } )
+      .remove();
 }
