@@ -1,4 +1,6 @@
 import json
+from flask import Flask
+from flask import request
 
 #TODO this currently just returns the first event it finds
 def find_main_event(tmr):
@@ -212,12 +214,7 @@ def print_tree(tree, spaces=""):
   else:
     for child in tree.children:
       print_tree(child, spaces + "  ")
-  
-def gettestdata():
-  infile = open("test1.json", "r")
-  testdata = json.load(infile)
-  return testdata
-  
+
 def tree_to_json_format(node, list):
   output = dict()
   output["name"] = node.name
@@ -231,10 +228,17 @@ def tree_to_json_format(node, list):
       list[output["children"][-1]]["parent"] = index
   return index
   
+app = Flask(__name__)
+
+@app.route('/', methods=['POST'])
 def start():
-  testdata = gettestdata()
-  tree = construct_tree(testdata)
-  print_tree(tree)
+  if not request.json:
+    abort(400)
+  tree = construct_tree(request.json)
+  #print_tree(tree)
   list = []
-  tree_to_json_format(root, list)
+  tree_to_json_format(tree, list)
   return json.dumps(list)
+
+if __name__ == '__main__':
+  app.run(debug=True, port=5000)
