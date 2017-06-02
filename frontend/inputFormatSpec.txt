@@ -68,4 +68,4 @@ could be represented as such (ignoring the childMatrix field for now):
 ]
 
 This is not a strict requirement, however, and each stage can include the entire
-if that is more convenient to generate.
+tree if that is more convenient to generate.
