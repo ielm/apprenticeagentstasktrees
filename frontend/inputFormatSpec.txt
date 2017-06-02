@@ -1,0 +1,71 @@
+Each input file is an array of arrays of nodes. Each internal array represents
+one stage of the growth of the tree represented by the input file.
+
+Each node contains, minimally:
+  - name (string)
+  - children (array of strings)
+  - childMatrix (2d array of strings)
+and may also contain any other fields, which will be copied verbaitm into the
+frontend's internal representation for potential use.
+
+The child matrix should be a square matrix with rows and columns corresponding
+to each node listed in the children array, in the same order. Its elements
+should be one of "<", ">", or "=".
+
+Each stage of the tree's growth need not reproduce the entire tree structure,
+only the delta from the previous stage. That is, any node that has changed only
+needs to list its name and any properties that have changed, and unchanged nodes
+do not need to be listed at all. (Newly added nodes have all of their properties
+changed, and so must be listed in full.)
+
+For example, the following sequence:
+
+    A             A                 D
+                  |                 |
+              ---------             |
+              B       C             A
+                                    |
+                              --------------
+                              B     C      E
+
+could be represented as such (ignoring the childMatrix field for now):
+
+[
+  [
+    {
+      "name": "A",
+      "children": []
+    }
+  ],
+  [
+    {
+      "name": "A",
+      "children": ["B", "C"]
+    },
+    {
+      "name": "B",
+      "children": []
+    },
+    {
+      "name": "C",
+      "children": []
+    }
+  ],
+  [
+    {
+      "name": "D",
+      "children": ["A"]
+    },
+    {
+      "name": "A",
+      "children": ["B", "C", "E"]
+    },
+    {
+      "name": "E",
+      "children": []
+    }
+  ]
+]
+
+This is not a strict requirement, however, and each stage can include the entire
+if that is more convenient to generate.
