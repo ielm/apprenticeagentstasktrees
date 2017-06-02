@@ -60,16 +60,38 @@ svg {
   font-size: 10pt;
 }
 
-svg rect {
-  fill: skyblue;
+svg .node, svg .link {
   stroke: teal;
+}
+
+svg .node {
+  fill: skyblue;
 }
 
 svg text {
   text-anchor: middle;
+  fill: black;
+  stroke: none;
 }
 
 svg path {
   fill: none;
-  stroke: teal;
+}
+
+svg .questioned, svg .q_desc {
+  stroke: darkgoldenrod;
+}
+
+svg .node.questioned {
+  fill: khaki;
+}
+
+svg .link.questioned path {
+  stroke-dasharray: 8,3;
+}
+
+svg .link.questioned text {
+  fill: saddlebrown;
+  font-size: 14pt;
+  font-weight: bold;
 }
