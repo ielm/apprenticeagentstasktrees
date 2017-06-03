@@ -76,16 +76,20 @@ class TreeNode:
                              # leaving it like this because non-terminal children 
                              # could also be questioned
     this.parent = None # put a parent pointer here; root has None or whatever; recurse up the tree on markquestioned for hqd, add method for adding children
+    this.relationships = []
     this.name = ""
     this.terminal = False
     this.hasQuestionedDescendants = False
     this.questionedWith = None
     this.tmr = None
-    this.type = "sequential"
+    this.type = "sequential" #Deprecated
   
   def addChildNode(this, child):
     this.children.append(child)
     child.parent = this
+    for row in this.relationships:
+      row.append(1)
+    this.relationships.append( [-1]*len(this.relationships) + [0] )
   
   def addAction(this, action):
     if len(this.children) == 0:
@@ -95,6 +99,9 @@ class TreeNode:
       return False
     this.children.append(action)
     this.childrenStatus.append(False)
+    for row in this.relationships:
+      row.append(1)
+    this.relationships.append( [-1]*len(this.relationships) + [0] )
     return True
   
   def markQuestioned(this, target, mark):
@@ -120,12 +127,14 @@ class TreeNode:
 
   
 def disambiguate(node):
+  # TODO find same-main-event nodes and parallelize their children if possible
   for question in traverse_tree(node, True):
     for answer in traverse_tree(node, False):
       if answer.tmr is None:
         continue
       if same_main_event(question.tmr, answer.tmr):
         # TODO ALLOW FOR PARALLEL
+        # TODO when things are removed, update the relationships matrix
         other = question.questionedWith
         for action in answer.children:
           other.children.remove(action)
@@ -200,7 +209,31 @@ def construct_tree(input):
     #tree_to_json_format(root, list)
     #steps.append(list)
   return root
-    
+  
+def get_children_mapping(a,b):
+  mapping = [-1]*len(a.children)
+  revmapping = [-1]*len(b.children)
+  for i in range(len(a.children)):
+    j = 0
+    while revmapping[j] != -1 or not same_node(a.children[i], b.children[j]):
+      j += 1
+      if j >= len(b.children):
+        raise RuntimeError("Cannot merge trees!")
+        # TODO in the future, this will trigger some kind of alternatives situation
+    mapping[i] = j
+    revmapping[j] = i
+  return mapping
+
+def update_children_relationships(a,b,mapping):
+  debugfile = open("debugfile"+a.name, "w")
+  debugfile.write(str(mapping))
+  debugfile.write(str(a.relationships))
+  debugfile.write(str(b.relationships))
+  for i in range(len(a.relationships)):
+    for j in range(len(a.relationships[i])):
+      # Set it to 0 if they are different, keep as-is if they are the same. In other words, multiply by (a==b)
+      a.relationships[i][j] *= (a.relationships[i][j] == b.relationships[mapping[i]][mapping[j]])
+     
 #Merges b into a. Could be changed.
 def merge_tree(a, b):
   #Assumes same_node(a,b) is true
@@ -227,17 +260,8 @@ def merge_tree(a, b):
         merge_tree(a.children[i], b.children[i])
     else:
       a.type = "parallel"
-      mapping = [-1]*len(a.children)
-      revmapping = [-1]*len(b.children)
-      for i in range(len(a.children)):
-        j = 0
-        while not same_node(a.children[i], b.children[j]) and revmapping[j] == -1:
-          j += 1
-          if j >= len(b.children):
-            raise RuntimeError("Cannot merge trees!")
-            # TODO in the future, this will trigger some kind of alternatives situation
-        mapping[i] = j
-        revmapping[j] = i
+      mapping = get_children_mapping(a,b)
+      update_children_relationships(a,b,mapping)
       for i in range(len(a.children)):
         merge_tree(a.children[i], b.children[mapping[i]])
   elif (len(b.children) == 1 or b.type == "alternate") and (len(a.children) == 1 or a.type == "alternate"):
@@ -247,6 +271,7 @@ def merge_tree(a, b):
   else:
     raise RuntimeError("Cannot merge trees!") # again, will trigger alternatives situation eventually
 
+# TODO this might not be needed any more?
 def print_tree(tree, spaces=""):
   if not type(tree) is TreeNode:
     print(spaces+"Expected TreeNode, got something else? "+str(tree))
@@ -254,8 +279,7 @@ def print_tree(tree, spaces=""):
   if len(tree.name) == 0:
     print(spaces+"<unnamed node>");
   else:
-    print(spaces+tree.name);
-  
+    print(spaces+tree.name);  
   if tree.terminal:
     print(spaces+"  (%d actions)" % (len(tree.children)))
     for i in range(len(tree.children)):
@@ -273,6 +297,7 @@ def tree_to_json_format(node, list):
   output["name"] = node.name
   output["type"] = node.type
   output["children"] = []
+  output["relationships"] = node.relationships
   index = len(list)
   list.append(output)
   if not node.terminal:
