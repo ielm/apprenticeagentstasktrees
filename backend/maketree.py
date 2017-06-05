@@ -70,6 +70,7 @@ class TreeNode:
     this.questionedWith = None
     this.tmr = None
     this.type = "sequential" #Deprecated
+    this.oldName = None
   
   def addChildNode(this, child):
     this.children.append(child)
@@ -143,7 +144,7 @@ def traverse_tree(node, question_status):
     for child in node.children:
       yield from traverse_tree(child, question_status)
         
-def construct_tree(input):
+def construct_tree(input, steps):
   root = TreeNode()
   current = root
   i=0
@@ -157,6 +158,7 @@ def construct_tree(input):
           if current.children[-1].name == "": # if their node is unnamed,
             current.children[-1].name = get_name_from_utterance(input[i])#mark that node with this utterance
             current.children[-1].tmr = input[i]["results"][0]["TMR"]
+            current.children[-1].oldName = ""
           else: # need to split actions between pre-utterance and post-utterance
             new = TreeNode()
             current.addChildNode(new)
@@ -191,9 +193,9 @@ def construct_tree(input):
       i-=1 # account for the main loop and the inner loop both incrementing it
     disambiguate(root)
     i+=1
-    #list = []
-    #tree_to_json_format(root, list)
-    #steps.append(list)
+    list = []
+    tree_to_json_format(root, list)
+    steps.append(list)
   return root
   
 def get_children_mapping(a,b):
@@ -282,6 +284,8 @@ def tree_to_json_format(node, list):
   output = dict()
   output["name"] = node.name
   output["type"] = node.type
+  if not node.oldName is None:
+    output["oldName"] = node.oldName
   output["children"] = []
   #output["relationships"] = node.relationships
   index = len(list)
@@ -300,15 +304,16 @@ app = Flask(__name__)
 def start():
   if not request.json:
     abort(400)
-  current_tree = construct_tree(request.json)
+  steps = []
+  current_tree = construct_tree(request.json, steps)
   #global current_tree
   #if current_tree is None:
   #  current_tree = new_tree
   #else:
   #  merge_tree(current_tree, new_tree)
-  list = []
-  tree_to_json_format(current_tree, list)
-  return json.dumps(list)
+  #list = []
+  #tree_to_json_format(current_tree, list)
+  return json.dumps(steps)
 
 if __name__ == '__main__':
   app.run(debug=True, port=5000)
