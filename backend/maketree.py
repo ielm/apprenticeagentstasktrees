@@ -57,7 +57,11 @@ def same_node(node1, node2):
 class TreeNode:
   """A class representing a node in the action hierarchy tree."""
   
+  id = 0
+  
   def __init__(this):
+    this.id = TreeNode.id
+    TreeNode.id += 1
     this.children = []
     this.childrenStatus = [] # True if child is questioned, false otherwise
                              # leaving it like this because non-terminal children 
@@ -70,7 +74,6 @@ class TreeNode:
     this.questionedWith = None
     this.tmr = None
     this.type = "sequential" #Deprecated
-    this.oldName = None
   
   def addChildNode(this, child):
     this.children.append(child)
@@ -158,7 +161,6 @@ def construct_tree(input, steps):
           if current.children[-1].name == "": # if their node is unnamed,
             current.children[-1].name = get_name_from_utterance(input[i])#mark that node with this utterance
             current.children[-1].tmr = input[i]["results"][0]["TMR"]
-            current.children[-1].oldName = ""
           else: # need to split actions between pre-utterance and post-utterance
             new = TreeNode()
             current.addChildNode(new)
@@ -180,7 +182,7 @@ def construct_tree(input, steps):
         while i+1 < len(input) and is_action(input[i+1]):
           new.addAction(input[i+1])
           i+=1
-        if not new.terminal: # if no actions were addee
+        if not new.terminal: # if no actions were added
           current = new
           # go to next thing
         
@@ -284,8 +286,7 @@ def tree_to_json_format(node, list):
   output = dict()
   output["name"] = node.name
   output["type"] = node.type
-  if not node.oldName is None:
-    output["oldName"] = node.oldName
+  output["id"] = node.id
   output["children"] = []
   #output["relationships"] = node.relationships
   index = len(list)
@@ -293,8 +294,8 @@ def tree_to_json_format(node, list):
   if not node.terminal:
     for child in node.children:
       output["children"].append(tree_to_json_format(child, list))
-      list[output["children"][-1]]["parent"] = index
-  return index
+      list[output["children"][-1]]["parent"] = list[index]["id"]
+  return output["id"]
   
 app = Flask(__name__)
 
