@@ -7,25 +7,21 @@ def find_main_event(tmr):
   for item in tmr:
     if type(tmr[item]) is dict and "is-in-subtree" in tmr[item] and tmr[item]["is-in-subtree"] == "EVENT":
       return tmr[item]
-  return False
+  return None
 #  raise RuntimeError("Cannot find main event: No events in given TMR: "+str(tmr))
 
 def has_no_events(utterance):
-  return find_main_event(utterance["results"][0]["TMR"]) is False
+  return find_main_event(utterance["results"][0]["TMR"]) is None
 
 #determines whether a given token is utterance or action
 def is_utterance(token):
   return type(token) is dict and 'results' in token
 
 def is_action(token):
-  #return False
   return not is_utterance(token)
   
 #determines whether a given utterance is prefix or postfix
 #TODO: phatic utterances? infix utterances?
-#TODO: Currently, just checks for the presence of any past-tense event
-#   in the entire TMR. This is... suboptimal.
-#   Is there a way to determine the "main" verb of a TMR?
 def is_postfix(utterance):
   # Assumes there is only one TMR for each utterance
   tmr = utterance["results"][0]["TMR"]
@@ -40,23 +36,14 @@ def same_main_event(tmr1, tmr2):
   event2 = find_main_event(tmr2)
   if event1["concept"] != event2["concept"]:
     return False
-  if "AGENT" in event1:
-    if not "AGENT" in event2:
-      return False
-    if tmr1[event1["AGENT"]]["concept"] != tmr2[event2["AGENT"]]["concept"]:
-      return False
-  if "THEME" in event1:
-    if not "THEME" in event2:
-      return False
-    if tmr1[event1["THEME"]]["concept"] != tmr2[event2["THEME"]]["concept"]:
-      return False
-  if "INSTRUMENT" in event1:
-    if not "INSTRUMENT" in event2:
-      return False
-    if tmr1[event1["INSTRUMENT"]]["concept"] != tmr2[event2["INSTRUMENT"]]["concept"]:
-      return False
-  # TODO if one is missing an agent or theme or instrument, that doesn't discount them from being the same
-  # TODO make symmetrical
+  if "AGENT" in event1 and "AGENT" in event2 and tmr1[event1["AGENT"]]["concept"] != tmr2[event2["AGENT"]]["concept"]:
+    return False
+  if ("THEME" in event1) != ("THEME" in event2):
+    return false
+  if "THEME" in event1 and "THEME" in event2 and tmr1[event1["THEME"]]["concept"] != tmr2[event2["THEME"]]["concept"]:
+    return False
+  if "INSTRUMENT" in event1 and "INSTRUMENT" in event2 and tmr1[event1["INSTRUMENT"]]["concept"] != tmr2[event2["INSTRUMENT"]]["concept"]:
+    return False
   return True
   
 def same_node(node1, node2):
