@@ -283,7 +283,7 @@ def tree_to_json_format(node, list):
   output["name"] = node.name
   output["type"] = node.type
   output["children"] = []
-  output["relationships"] = node.relationships
+  #output["relationships"] = node.relationships
   index = len(list)
   list.append(output)
   if not node.terminal:
