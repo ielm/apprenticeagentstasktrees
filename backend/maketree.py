@@ -1,6 +1,7 @@
 import json
 from flask import Flask
 from flask import request
+from mini_ontology import ontology
 
 #TODO this currently just returns the first event it finds
 def find_main_event(tmr):
@@ -9,9 +10,6 @@ def find_main_event(tmr):
       return tmr[item]
   return None
 #  raise RuntimeError("Cannot find main event: No events in given TMR: "+str(tmr))
-
-def has_no_events(utterance):
-  return find_main_event(utterance["results"][0]["TMR"]) is None
 
 #determines whether a given token is utterance or action
 def is_utterance(token):
@@ -53,6 +51,15 @@ def same_node(node1, node2):
     return False
   return same_main_event(node1.tmr, node2.tmr)
   
+def about_part_of(tmr1, tmr2):
+  event1 = find_main_event(tmr1)
+  event2 = find_main_event(tmr2)
+  if event1 is None or event2 is None:
+    return False
+  if not ("THEME" in event1 and "THEME" in event2):
+    return False
+  
+  return tmr1[event1["THEME"]]["concept"] in ontology[tmr2[event2["THEME"]]["concept"]]["HAS-OBJECT-AS-PART"]["SEM"]
   
 class TreeNode:
   """A class representing a node in the action hierarchy tree."""
@@ -99,8 +106,7 @@ class TreeNode:
     for i in range(len(this.children)):
       if this.children[i] == target:
         this.childrenStatus[i] = mark;
-        break
-    
+        break    
     this.setQuestionedDescendants(mark)        
 
   def setQuestionedDescendants(this, hqd):
@@ -153,19 +159,44 @@ def construct_tree(input, steps):
   i=0
   while i < len(input): # For each input token
     if is_utterance(input[i]):
-      if has_no_events(input[i]): #phatic utterances etc. just get skipped for now
+      tmr = input[i]["results"][0]["TMR"]
+      if find_main_event(tmr) is None: #phatic utterances etc. just get skipped for now
         i+=1
         continue
       elif is_postfix(input[i]):
-        if i > 0 and is_action(input[i-1]): #If it was preceded by actions
+        afile = open("afile", "w")
+        afile.write(str(current.children[-1].tmr))
+        afile.close()
+        if (not current.children[-1].tmr is None) and about_part_of(current.children[-1].tmr, tmr):
+          new = TreeNode()
+          current.addChildNode(new)
+          new.name = get_name_from_utterance(input[i])
+          new.tmr = tmr
+          
+          current.children[-2].parent = new.id
+          new.children.append(current.children[-2])
+          
+          j = -3
+          while about_part_of(current.children[j].tmr, tmr):
+            current.children[j].parent = new.id
+            new.children.append(current.children[j])
+            j -= 1
+            
+          #new.relationships = [ row[j+1:] for row in current.relationships[j+1:] ]
+          #current.relationships = [ row[:j+1] for row in current.relationships[:j+1] ]
+            
+          for child in new.children:
+            current.children.remove(child)
+            
+        elif i > 0 and is_action(input[i-1]): #If it was preceded by actions
           if current.children[-1].name == "": # if their node is unnamed,
             current.children[-1].name = get_name_from_utterance(input[i])#mark that node with this utterance
-            current.children[-1].tmr = input[i]["results"][0]["TMR"]
+            current.children[-1].tmr = tmr
           else: # need to split actions between pre-utterance and post-utterance
             new = TreeNode()
             current.addChildNode(new)
             new.name = get_name_from_utterance(input[i])
-            new.tmr = input[i]["results"][0]["TMR"]
+            new.tmr = tmr
             for action in current.children[-2].children:
               new.addAction(action)
               new.markQuestioned(action, True)
@@ -173,12 +204,12 @@ def construct_tree(input, steps):
               new.questionedWith = current.children[-2]
               current.children[-2].questionedWith = new
         else:
-          pass #There will be things to do here later...
+          pass #... add more heuristics here
       else: # Prefix
         new = TreeNode()
         current.addChildNode(new)
         new.name = get_name_from_utterance(input[i])
-        new.tmr = input[i]["results"][0]["TMR"]
+        new.tmr = tmr
         while i+1 < len(input) and is_action(input[i+1]):
           new.addAction(input[i+1])
           i+=1
@@ -295,7 +326,7 @@ def tree_to_json_format(node, list):
     for child in node.children:
       output["children"].append(tree_to_json_format(child, list))
       list[output["children"][-1]]["parent"] = list[index]["id"]
-  return output["id"]
+  return index
   
 app = Flask(__name__)
 
