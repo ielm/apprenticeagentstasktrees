@@ -2,6 +2,7 @@ Each input file is an array of arrays of nodes. Each internal array represents
 one stage of the growth of the tree represented by the input file.
 
 Each node contains, minimally:
+  - id (int) (this should be unique across all nodes)
   - name (string)
   - children (array of strings)
   - childMatrix (2d array of strings)
@@ -10,11 +11,12 @@ frontend's internal representation for potential use.
 
 The child matrix should be a square matrix with rows and columns corresponding
 to each node listed in the children array, in the same order. Its elements
-should be one of "<", ">", or "=".
+should be one of "-1", "1", or "0", indicating that <row> comes before <col>,
+<row> comes after <col>, or <row> and <col> are interchangeable, respectively.
 
 Each stage of the tree's growth need not reproduce the entire tree structure,
 only the delta from the previous stage. That is, any node that has changed only
-needs to list its name and any properties that have changed, and unchanged nodes
+needs to list its id and any properties that have changed, and unchanged nodes
 do not need to be listed at all. (Newly added nodes have all of their properties
 changed, and so must be listed in full.)
 
@@ -33,34 +35,39 @@ could be represented as such (ignoring the childMatrix field for now):
 [
   [
     {
+      "id": 0,
       "name": "A",
       "children": []
     }
   ],
   [
     {
-      "name": "A",
-      "children": ["B", "C"]
+      "id": 0,
+      "children": [1, 2]
     },
     {
+      "id": 1,
       "name": "B",
       "children": []
     },
     {
+      "id": 2,
       "name": "C",
       "children": []
     }
   ],
   [
     {
+      "id": 3,
       "name": "D",
-      "children": ["A"]
+      "children": [0]
     },
     {
-      "name": "A",
-      "children": ["B", "C", "E"]
+      "id": 0,
+      "children": [1, 2, 4]
     },
     {
+      "id": 4,
       "name": "E",
       "children": []
     }
