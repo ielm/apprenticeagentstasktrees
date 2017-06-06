@@ -56,9 +56,17 @@ def same_main_event(tmr1, tmr2):
     if tmr1[event1["INSTRUMENT"]]["concept"] != tmr2[event2["INSTRUMENT"]]["concept"]:
       return False
   # TODO if one is missing an agent or theme or instrument, that doesn't discount them from being the same
+  # TODO make symmetrical
   return True
   
-
+def same_node(node1, node2):
+  if node1.tmr is None and node2.tmr is None:
+    return True
+  if node1.tmr is None or node2.tmr is None:
+    return False
+  return same_main_event(node1.tmr, node2.tmr)
+  
+  
 class TreeNode:
   """A class representing a node in the action hierarchy tree."""
   
@@ -117,6 +125,7 @@ def disambiguate(node):
       if answer.tmr is None:
         continue
       if same_main_event(question.tmr, answer.tmr):
+        # TODO ALLOW FOR PARALLEL
         other = question.questionedWith
         for action in answer.children:
           other.children.remove(action)
@@ -192,7 +201,51 @@ def construct_tree(input):
     #steps.append(list)
   return root
     
-
+#Merges b into a. Could be changed.
+def merge_tree(a, b):
+  #Assumes same_node(a,b) is true
+  if a.type == "leaf" and b.type == "leaf":
+    return
+  
+  if len(a.children) == 1 and len(b.children) == 1:
+    # Trying to merge two one-child nodes will cause an error if the nodes are different,
+    # so handle that case separately
+    if same_node(a.children[0], b.children[0]):
+      merge_tree(a.children[0], b.children[0])
+      return
+    else:
+      a.type = "alternate"
+      a.children.append(b.children[0])
+  if len(a.children) == len(b.children):
+    #if a is sequential and b is sequential
+    sequential=True
+    for i in range(len(a.children)):
+      if not same_node(a.children[i], b.children[i]):
+        sequential=False
+    if sequential:
+      for i in range(len(a.children)):
+        merge_tree(a.children[i], b.children[i])
+    else:
+      a.type = "parallel"
+      mapping = [-1]*len(a.children)
+      revmapping = [-1]*len(b.children)
+      for i in range(len(a.children)):
+        j = 0
+        while not same_node(a.children[i], b.children[j]) and revmapping[j] == -1:
+          j += 1
+          if j >= len(b.children):
+            raise RuntimeError("Cannot merge trees!")
+            # TODO in the future, this will trigger some kind of alternatives situation
+        mapping[i] = j
+        revmapping[j] = i
+      for i in range(len(a.children)):
+        merge_tree(a.children[i], b.children[mapping[i]])
+  elif (len(b.children) == 1 or b.type == "alternate") and (len(a.children) == 1 or a.type == "alternate"):
+    a.type = "alternate"
+    for child in b.children:
+      a.children.append(child)
+  else:
+    raise RuntimeError("Cannot merge trees!") # again, will trigger alternatives situation eventually
 
 def print_tree(tree, spaces=""):
   if not type(tree) is TreeNode:
@@ -230,14 +283,20 @@ def tree_to_json_format(node, list):
   
 app = Flask(__name__)
 
+current_tree = None
+
 @app.route('/', methods=['POST'])
 def start():
   if not request.json:
     abort(400)
-  tree = construct_tree(request.json)
-  #print_tree(tree)
+  new_tree = construct_tree(request.json)
+  global current_tree
+  if current_tree is None:
+    current_tree = new_tree
+  else:
+    merge_tree(current_tree, new_tree)
   list = []
-  tree_to_json_format(tree, list)
+  tree_to_json_format(current_tree, list)
   return json.dumps(list)
 
 if __name__ == '__main__':
