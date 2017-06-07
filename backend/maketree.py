@@ -1,62 +1,55 @@
 import json
 from flask import Flask
 from flask import request
+from mini_ontology import ontology
 
 #TODO this currently just returns the first event it finds
 def find_main_event(tmr):
   for item in tmr:
     if type(tmr[item]) is dict and "is-in-subtree" in tmr[item] and tmr[item]["is-in-subtree"] == "EVENT":
       return tmr[item]
-  return False
+  return None
 #  raise RuntimeError("Cannot find main event: No events in given TMR: "+str(tmr))
-
-def has_no_events(utterance):
-  return find_main_event(utterance["results"][0]["TMR"]) is False
 
 #determines whether a given token is utterance or action
 def is_utterance(token):
   return type(token) is dict and 'results' in token
 
 def is_action(token):
-  #return False
   return not is_utterance(token)
   
 #determines whether a given utterance is prefix or postfix
 #TODO: phatic utterances? infix utterances?
-#TODO: Currently, just checks for the presence of any past-tense event
-#   in the entire TMR. This is... suboptimal.
-#   Is there a way to determine the "main" verb of a TMR?
 def is_postfix(utterance):
   # Assumes there is only one TMR for each utterance
   tmr = utterance["results"][0]["TMR"]
   return find_main_event(tmr)["TIME"][0] == "<"
   
 #formats an utterance into a node name
-def get_name_from_utterance(utterance):
-  return utterance["sentence"]
+def get_name_from_tmr(tmr):
+  event = find_main_event(tmr)
+  output = event["concept"]
+  if "THEME" in event:
+    output += " "+tmr[event["THEME"]]["concept"]
+    if "THEME1" in event:
+      output += " AND "+tmr[event["THEME1"]]["concept"]
+  if "INSTRUMENT" in event:
+    output += " WITH "+tmr[event["INSTRUMENT"]]["concept"]
+  return output
   
 def same_main_event(tmr1, tmr2):
   event1 = find_main_event(tmr1)
   event2 = find_main_event(tmr2)
   if event1["concept"] != event2["concept"]:
     return False
-  if "AGENT" in event1:
-    if not "AGENT" in event2:
-      return False
-    if tmr1[event1["AGENT"]]["concept"] != tmr2[event2["AGENT"]]["concept"]:
-      return False
-  if "THEME" in event1:
-    if not "THEME" in event2:
-      return False
-    if tmr1[event1["THEME"]]["concept"] != tmr2[event2["THEME"]]["concept"]:
-      return False
-  if "INSTRUMENT" in event1:
-    if not "INSTRUMENT" in event2:
-      return False
-    if tmr1[event1["INSTRUMENT"]]["concept"] != tmr2[event2["INSTRUMENT"]]["concept"]:
-      return False
-  # TODO if one is missing an agent or theme or instrument, that doesn't discount them from being the same
-  # TODO make symmetrical
+  if "AGENT" in event1 and "AGENT" in event2 and tmr1[event1["AGENT"]]["concept"] != tmr2[event2["AGENT"]]["concept"]:
+    return False
+  if ("THEME" in event1) != ("THEME" in event2):
+    return false
+  if "THEME" in event1 and "THEME" in event2 and tmr1[event1["THEME"]]["concept"] != tmr2[event2["THEME"]]["concept"]:
+    return False
+  if "INSTRUMENT" in event1 and "INSTRUMENT" in event2 and tmr1[event1["INSTRUMENT"]]["concept"] != tmr2[event2["INSTRUMENT"]]["concept"]:
+    return False
   return True
   
 def same_node(node1, node2):
@@ -66,26 +59,43 @@ def same_node(node1, node2):
     return False
   return same_main_event(node1.tmr, node2.tmr)
   
+def about_part_of(tmr1, tmr2):
+  event1 = find_main_event(tmr1)
+  event2 = find_main_event(tmr2)
+  if event1 is None or event2 is None:
+    return False
+  if not ("THEME" in event1 and "THEME" in event2):
+    return False
+  
+  return tmr1[event1["THEME"]]["concept"] in ontology[tmr2[event2["THEME"]]["concept"]]["HAS-OBJECT-AS-PART"]["SEM"]
   
 class TreeNode:
   """A class representing a node in the action hierarchy tree."""
   
+  id = 0
+  
   def __init__(this):
+    this.id = TreeNode.id
+    TreeNode.id += 1
     this.children = []
     this.childrenStatus = [] # True if child is questioned, false otherwise
                              # leaving it like this because non-terminal children 
                              # could also be questioned
     this.parent = None # put a parent pointer here; root has None or whatever; recurse up the tree on markquestioned for hqd, add method for adding children
+    this.relationships = []
     this.name = ""
     this.terminal = False
     this.hasQuestionedDescendants = False
     this.questionedWith = None
     this.tmr = None
-    this.type = "sequential"
+    this.type = "sequential" #Deprecated
   
   def addChildNode(this, child):
     this.children.append(child)
     child.parent = this
+    for row in this.relationships:
+      row.append(1)
+    this.relationships.append( [-1]*len(this.relationships) + [0] )
   
   def addAction(this, action):
     if len(this.children) == 0:
@@ -95,14 +105,16 @@ class TreeNode:
       return False
     this.children.append(action)
     this.childrenStatus.append(False)
+    for row in this.relationships:
+      row.append(1)
+    this.relationships.append( [-1]*len(this.relationships) + [0] )
     return True
   
   def markQuestioned(this, target, mark):
     for i in range(len(this.children)):
       if this.children[i] == target:
         this.childrenStatus[i] = mark;
-        break
-    
+        break    
     this.setQuestionedDescendants(mark)        
 
   def setQuestionedDescendants(this, hqd):
@@ -120,6 +132,7 @@ class TreeNode:
 
   
 def disambiguate(node):
+  # TODO find same-main-event nodes and parallelize their children if possible
   for question in traverse_tree(node, True):
     for answer in traverse_tree(node, False):
       if answer.tmr is None:
@@ -148,25 +161,50 @@ def traverse_tree(node, question_status):
     for child in node.children:
       yield from traverse_tree(child, question_status)
         
-def construct_tree(input):
+def construct_tree(input, steps):
   root = TreeNode()
   current = root
   i=0
   while i < len(input): # For each input token
     if is_utterance(input[i]):
-      if has_no_events(input[i]): #phatic utterances etc. just get skipped for now
+      tmr = input[i]["results"][0]["TMR"]
+      if find_main_event(tmr) is None: #phatic utterances etc. just get skipped for now
         i+=1
         continue
       elif is_postfix(input[i]):
-        if i > 0 and is_action(input[i-1]): #If it was preceded by actions
+        afile = open("afile", "w")
+        afile.write(str(current.children[-1].tmr))
+        afile.close()
+        if (not current.children[-1].tmr is None) and about_part_of(current.children[-1].tmr, tmr):
+          new = TreeNode()
+          current.addChildNode(new)
+          new.name = get_name_from_tmr(tmr)
+          new.tmr = tmr
+          
+          current.children[-2].parent = new.id
+          new.children.append(current.children[-2])
+          
+          j = -3
+          while about_part_of(current.children[j].tmr, tmr):
+            current.children[j].parent = new.id
+            new.children.append(current.children[j])
+            j -= 1
+            
+          #new.relationships = [ row[j+1:] for row in current.relationships[j+1:] ]
+          #current.relationships = [ row[:j+1] for row in current.relationships[:j+1] ]
+            
+          for child in new.children:
+            current.children.remove(child)
+            
+        elif i > 0 and is_action(input[i-1]): #If it was preceded by actions
           if current.children[-1].name == "": # if their node is unnamed,
-            current.children[-1].name = get_name_from_utterance(input[i])#mark that node with this utterance
-            current.children[-1].tmr = input[i]["results"][0]["TMR"]
+            current.children[-1].name = get_name_from_tmr(tmr)#mark that node with this utterance
+            current.children[-1].tmr = tmr
           else: # need to split actions between pre-utterance and post-utterance
             new = TreeNode()
             current.addChildNode(new)
-            new.name = get_name_from_utterance(input[i])
-            new.tmr = input[i]["results"][0]["TMR"]
+            new.name = get_name_from_tmr(tmr)
+            new.tmr = tmr
             for action in current.children[-2].children:
               new.addAction(action)
               new.markQuestioned(action, True)
@@ -174,16 +212,16 @@ def construct_tree(input):
               new.questionedWith = current.children[-2]
               current.children[-2].questionedWith = new
         else:
-          pass #There will be things to do here later...
+          pass #... add more heuristics here
       else: # Prefix
         new = TreeNode()
         current.addChildNode(new)
-        new.name = get_name_from_utterance(input[i])
-        new.tmr = input[i]["results"][0]["TMR"]
+        new.name = get_name_from_tmr(tmr)
+        new.tmr = tmr
         while i+1 < len(input) and is_action(input[i+1]):
           new.addAction(input[i+1])
           i+=1
-        if not new.terminal: # if no actions were addee
+        if not new.terminal: # if no actions were added
           current = new
           # go to next thing
         
@@ -196,11 +234,35 @@ def construct_tree(input):
       i-=1 # account for the main loop and the inner loop both incrementing it
     disambiguate(root)
     i+=1
-    #list = []
-    #tree_to_json_format(root, list)
-    #steps.append(list)
+    list = []
+    tree_to_json_format(root, list)
+    steps.append(list)
   return root
-    
+  
+def get_children_mapping(a,b):
+  mapping = [-1]*len(a.children)
+  revmapping = [-1]*len(b.children)
+  for i in range(len(a.children)):
+    j = 0
+    while revmapping[j] != -1 or not same_node(a.children[i], b.children[j]):
+      j += 1
+      if j >= len(b.children):
+        raise RuntimeError("Cannot merge trees!")
+        # TODO in the future, this will trigger some kind of alternatives situation
+    mapping[i] = j
+    revmapping[j] = i
+  return mapping
+
+def update_children_relationships(a,b,mapping):
+  debugfile = open("debugfile"+a.name, "w")
+  debugfile.write(str(mapping))
+  debugfile.write(str(a.relationships))
+  debugfile.write(str(b.relationships))
+  for i in range(len(a.relationships)):
+    for j in range(len(a.relationships[i])):
+      # Set it to 0 if they are different, keep as-is if they are the same. In other words, multiply by (a==b)
+      a.relationships[i][j] *= (a.relationships[i][j] == b.relationships[mapping[i]][mapping[j]])
+     
 #Merges b into a. Could be changed.
 def merge_tree(a, b):
   #Assumes same_node(a,b) is true
@@ -227,17 +289,8 @@ def merge_tree(a, b):
         merge_tree(a.children[i], b.children[i])
     else:
       a.type = "parallel"
-      mapping = [-1]*len(a.children)
-      revmapping = [-1]*len(b.children)
-      for i in range(len(a.children)):
-        j = 0
-        while not same_node(a.children[i], b.children[j]) and revmapping[j] == -1:
-          j += 1
-          if j >= len(b.children):
-            raise RuntimeError("Cannot merge trees!")
-            # TODO in the future, this will trigger some kind of alternatives situation
-        mapping[i] = j
-        revmapping[j] = i
+      mapping = get_children_mapping(a,b)
+      update_children_relationships(a,b,mapping)
       for i in range(len(a.children)):
         merge_tree(a.children[i], b.children[mapping[i]])
   elif (len(b.children) == 1 or b.type == "alternate") and (len(a.children) == 1 or a.type == "alternate"):
@@ -247,6 +300,7 @@ def merge_tree(a, b):
   else:
     raise RuntimeError("Cannot merge trees!") # again, will trigger alternatives situation eventually
 
+# TODO this might not be needed any more?
 def print_tree(tree, spaces=""):
   if not type(tree) is TreeNode:
     print(spaces+"Expected TreeNode, got something else? "+str(tree))
@@ -254,8 +308,7 @@ def print_tree(tree, spaces=""):
   if len(tree.name) == 0:
     print(spaces+"<unnamed node>");
   else:
-    print(spaces+tree.name);
-  
+    print(spaces+tree.name);  
   if tree.terminal:
     print(spaces+"  (%d actions)" % (len(tree.children)))
     for i in range(len(tree.children)):
@@ -272,32 +325,35 @@ def tree_to_json_format(node, list):
   output = dict()
   output["name"] = node.name
   output["type"] = node.type
+  output["id"] = node.id
   output["children"] = []
+  #output["relationships"] = node.relationships
   index = len(list)
   list.append(output)
   if not node.terminal:
     for child in node.children:
       output["children"].append(tree_to_json_format(child, list))
-      list[output["children"][-1]]["parent"] = index
+      list[output["children"][-1]]["parent"] = list[index]["id"]
   return index
   
 app = Flask(__name__)
 
-current_tree = None
+#current_tree = None
 
 @app.route('/', methods=['POST'])
 def start():
   if not request.json:
     abort(400)
-  new_tree = construct_tree(request.json)
-  global current_tree
-  if current_tree is None:
-    current_tree = new_tree
-  else:
-    merge_tree(current_tree, new_tree)
-  list = []
-  tree_to_json_format(current_tree, list)
-  return json.dumps(list)
+  steps = []
+  current_tree = construct_tree(request.json, steps)
+  #global current_tree
+  #if current_tree is None:
+  #  current_tree = new_tree
+  #else:
+  #  merge_tree(current_tree, new_tree)
+  #list = []
+  #tree_to_json_format(current_tree, list)
+  return json.dumps(steps)
 
 if __name__ == '__main__':
   app.run(debug=True, port=5000)
