@@ -4,7 +4,7 @@ $(function() {
     var treeSeq = treeSeqFromData(parsedData);
     console.log(treeSeq);
 
-    var render = new TreeRenderer(1000, 560, ".treeviz", treeSeq);
+    var render = new TreeRenderer(1200, 720, ".treeviz", treeSeq);
 
     d3.select("#current").text(render.curStage + 1);
     d3.select("#total").text(render.length);

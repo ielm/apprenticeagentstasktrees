@@ -15,9 +15,12 @@
  * ForestRenderData instance members:
  *  forestRenderData.trees (array[D3 node]): the array of tree roots in this
  *      forest, in the format of a D3.js hierarchy with a tree layout applied.
+ *  forestRenderData.forest (Forest): the original Forest from which this
+ *      ForestRenderData was constructed.
  * */
 function ForestRenderData(forest, width, height, separation) {
   this.trees = [];
+  this.forest = forest;
   var minMaxes = [];
 
   var globalMax = 1;
@@ -128,6 +131,8 @@ ForestRenderData.prototype = {
  *      the stages array.
  *  treeRenderer.length (int, readonly): the number of stages in the current
  *      TreeSeq.
+ *  treeRenderer.transitionDuration (int): the duration, in miliseconds, of
+ *      each transition between stages of the tree. Defaults to 1500.
  * 
  * Direct assignment to member fields of TreeRenderer should be avoided.
  * Instead, use the methods defined below.
@@ -138,6 +143,7 @@ function TreeRenderer(width, height, svgId, treeSeq) {
   this.svg = svgId;
   this.stages = [];
   this.curStage = 0;
+  this.transitionDuration = 1500;
 
   Object.defineProperty(this, "length", {
     __proto__: null,
@@ -195,15 +201,22 @@ TreeRenderer.prototype = {
 
     nodeEnter.append("text")
         .attr("dy", "0.35em")
-        .attr("text-anchor", "middle")
+        .attr("text-anchor", "middle");
+
+    nodeEnter.append("rect");
+
+    var nodeUpdate = node.merge(nodeEnter)
+        .attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"; });
+
+    nodeUpdate.select("text")
         .text(function(d) { return d.data.name === "" ? "?" : d.data.name; });
 
-    nodeEnter.each(function() {
+    nodeUpdate.each(function() {
       var text = d3.select(this).select("text");
       var w = text.node().getBBox().width + 30;
       var h = text.node().getBBox().height + 10;
 
-      d3.select(this).append("rect")
+      d3.select(this).select("rect")
           .attr("x", -(w / 2))
           .attr("y", -(h / 2))
           .attr("width", w)
@@ -212,9 +225,6 @@ TreeRenderer.prototype = {
           .attr("ry", h / 2)
           .lower();
     });
-
-    var nodeUpdate = node.merge(nodeEnter)
-        .attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"; });
 
     var nodeExit = node.exit().remove();
 
@@ -243,6 +253,21 @@ TreeRenderer.prototype = {
     if (this.curStage <= 0) return;
     --this.curStage;
     this.redraw();
+  },
+
+  transition: function(prev, next) {
+    var prevForestRender = this.stages[prev];
+    var nextForestRender = this.stages[next];
+    var prevForest = prevForestRender.forest;
+    var nextForest = nextForestRender.forest;
+
+    nextForest.trees.forEach(function(root) {
+      root.each(function(node) {
+        var nodeData = node.data;
+
+        // In progress
+      });
+    });
   },
 
   linkGen: d3.linkVertical()
