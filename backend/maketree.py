@@ -26,8 +26,16 @@ def is_postfix(utterance):
   return find_main_event(tmr)["TIME"][0] == "<"
   
 #formats an utterance into a node name
-def get_name_from_utterance(utterance):
-  return utterance["sentence"]
+def get_name_from_tmr(tmr):
+  event = find_main_event(tmr)
+  output = event["concept"]
+  if "THEME" in event:
+    output += " "+tmr[event["THEME"]]["concept"]
+    if "THEME1" in event:
+      output += " AND "+tmr[event["THEME1"]]["concept"]
+  if "INSTRUMENT" in event:
+    output += " WITH "+tmr[event["INSTRUMENT"]]["concept"]
+  return output
   
 def same_main_event(tmr1, tmr2):
   event1 = find_main_event(tmr1)
@@ -170,7 +178,7 @@ def construct_tree(input, steps):
         if (not current.children[-1].tmr is None) and about_part_of(current.children[-1].tmr, tmr):
           new = TreeNode()
           current.addChildNode(new)
-          new.name = get_name_from_utterance(input[i])
+          new.name = get_name_from_tmr(tmr)
           new.tmr = tmr
           
           current.children[-2].parent = new.id
@@ -190,12 +198,12 @@ def construct_tree(input, steps):
             
         elif i > 0 and is_action(input[i-1]): #If it was preceded by actions
           if current.children[-1].name == "": # if their node is unnamed,
-            current.children[-1].name = get_name_from_utterance(input[i])#mark that node with this utterance
+            current.children[-1].name = get_name_from_tmr(tmr)#mark that node with this utterance
             current.children[-1].tmr = tmr
           else: # need to split actions between pre-utterance and post-utterance
             new = TreeNode()
             current.addChildNode(new)
-            new.name = get_name_from_utterance(input[i])
+            new.name = get_name_from_tmr(tmr)
             new.tmr = tmr
             for action in current.children[-2].children:
               new.addAction(action)
@@ -208,7 +216,7 @@ def construct_tree(input, steps):
       else: # Prefix
         new = TreeNode()
         current.addChildNode(new)
-        new.name = get_name_from_utterance(input[i])
+        new.name = get_name_from_tmr(tmr)
         new.tmr = tmr
         while i+1 < len(input) and is_action(input[i+1]):
           new.addAction(input[i+1])
