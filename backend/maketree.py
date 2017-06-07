@@ -1,4 +1,5 @@
 import json
+import copy
 from flask import Flask
 from flask import request
 from flask import abort
@@ -33,8 +34,8 @@ def get_name_from_tmr(tmr):
   output = event["concept"]
   if "THEME" in event:
     output += " "+tmr[event["THEME"]]["concept"]
-    if "THEME1" in event:
-      output += " AND "+tmr[event["THEME1"]]["concept"]
+    if "THEME-1" in event:
+      output += " AND "+tmr[event["THEME-1"]]["concept"]
   if "INSTRUMENT" in event:
     output += " WITH "+tmr[event["INSTRUMENT"]]["concept"]
   return output
@@ -56,7 +57,7 @@ def same_main_event(tmr1, tmr2):
   
 def same_node(node1, node2):
   if node1.tmr is None and node2.tmr is None:
-    return True
+    return node1.id == node2.id
   if node1.tmr is None or node2.tmr is None:
     return False
   return same_main_event(node1.tmr, node2.tmr)
@@ -72,8 +73,7 @@ def about_part_of(tmr1, tmr2):
   return tmr1[event1["THEME"]]["concept"] in ontology[tmr2[event2["THEME"]]["concept"]]["HAS-OBJECT-AS-PART"]["SEM"]
   
 class TreeNode:
-  """A class representing a node in the action hierarchy tree."""
-  
+  """A class representing a node in the action hierarchy tree."""  
   id = 0
   
   def __init__(this):
@@ -94,6 +94,7 @@ class TreeNode:
   
   def addChildNode(this, child):
     this.children.append(child)
+    this.childrenStatus.append(False)
     child.parent = this
     for row in this.relationships:
       row.append(1)
@@ -108,8 +109,7 @@ class TreeNode:
     actionNode = TreeNode()
     actionNode.type = "leaf"
     actionNode.name = action["action"]
-    this.children.append(action)
-    this.childrenStatus.append(False)
+    this.addChildNode(actionNode)
     for row in this.relationships:
       row.append(1)
     this.relationships.append( [-1]*len(this.relationships) + [0] )
@@ -140,29 +140,37 @@ def disambiguate(node):
   # TODO find same-main-event nodes and parallelize their children if possible
   for question in traverse_tree(node, True):
     for answer in traverse_tree(node, False):
-      if answer.tmr is None:
+      if answer.tmr is None or question.tmr is None:
         continue
       if same_main_event(question.tmr, answer.tmr):
-        # TODO ALLOW FOR PARALLEL
+        prevlen = len(question.children)
         other = question.questionedWith
-        for action in answer.children:
-          other.children.remove(action)
-        for action in other.children:
-          question.children.remove(action)
+        
+        mapping = get_children_mapping(answer, other, lambda x,y: x.name==y.name if x.tmr is None or y.tmr is None else same_main_event(x,y))
+        for i in range(len(mapping)):
+          mapping[i] = other.children[mapping[i]]
+        for i in range(len(answer.children)):
+          other.children.remove(mapping[i])
+        
+        mapping = get_children_mapping(other, question, lambda x,y: x.id==y.id)
+        for i in range(len(mapping)):
+          mapping[i] = question.children[mapping[i]]
+        for i in range(len(other.children)):
+          question.children.remove(mapping[i])
+        
         other.questionedWith = None
         question.questionedWith = None
         other.childrenStatus = [False]*len(other.children)
         question.childrenStatus = [False]*len(question.children)
         other.setQuestionedDescendants(False)
         question.setQuestionedDescendants(False)
+        assert(prevlen > len(question.children))
         
 
 def traverse_tree(node, question_status):
-  if node.terminal:
-    if node.hasQuestionedDescendants == question_status:
-      yield node
-    return
-  else:
+  if node.hasQuestionedDescendants == question_status:
+    yield node
+  if not node.terminal:
     for child in node.children:
       yield from traverse_tree(child, question_status)
         
@@ -187,12 +195,14 @@ def construct_tree(input, steps):
           new.tmr = tmr
           
           current.children[-2].parent = new.id
-          new.children.append(current.children[-2])
+          new.addChild(current.children[-2])
+          # current.removeChild(current.children[-2]) TODO implement this!!!
           
           j = -3
           while about_part_of(current.children[j].tmr, tmr):
             current.children[j].parent = new.id
-            new.children.append(current.children[j])
+            new.addChild(current.children[j])
+            # current.removeChild(current.children[j]) TODO implement this!!!
             j -= 1
             
           #new.relationships = [ row[j+1:] for row in current.relationships[j+1:] ]
@@ -210,12 +220,12 @@ def construct_tree(input, steps):
             current.addChildNode(new)
             new.name = get_name_from_tmr(tmr)
             new.tmr = tmr
+            new.questionedWith = current.children[-2]
+            current.children[-2].questionedWith = new
             for action in current.children[-2].children:
-              new.addAction(action)
-              new.markQuestioned(action, True)
               current.children[-2].markQuestioned(action, True)
-              new.questionedWith = current.children[-2]
-              current.children[-2].questionedWith = new
+              new.addChildNode(copy.copy(action)) #make a shallow copy of the node
+              new.markQuestioned(new.children[-1], True)
         else:
           pass #... add more heuristics here
       else: # Prefix
@@ -244,18 +254,20 @@ def construct_tree(input, steps):
     steps.append(list)
   return root
   
-def get_children_mapping(a,b):
-  mapping = [-1]*len(a.children)
-  revmapping = [-1]*len(b.children)
+def get_children_mapping(a,b, comparison): #There's probably a standard function for this
+  mapping = [None]*len(a.children)
+  revmapping = [None]*len(b.children)
   for i in range(len(a.children)):
     j = 0
-    while revmapping[j] != -1 or not same_node(a.children[i], b.children[j]):
+    while not (revmapping[j] is None and comparison(a.children[i], b.children[j])):
       j += 1
       if j >= len(b.children):
-        raise RuntimeError("Cannot merge trees!")
+          break
+        # raise RuntimeError("Cannot merge trees!")
         # TODO in the future, this will trigger some kind of alternatives situation
-    mapping[i] = j
-    revmapping[j] = i
+    else:
+      mapping[i] = j
+      revmapping[j] = i
   return mapping
 
 def update_children_relationships(a,b,mapping):
@@ -270,6 +282,7 @@ def update_children_relationships(a,b,mapping):
      
 #Merges b into a. Could be changed.
 def merge_tree(a, b):
+  # TODO replace children.append with addChild
   #Assumes same_node(a,b) is true
   if a.type == "leaf" and b.type == "leaf":
     return
@@ -294,7 +307,8 @@ def merge_tree(a, b):
         merge_tree(a.children[i], b.children[i])
     else:
       a.type = "parallel"
-      mapping = get_children_mapping(a,b)
+      mapping = get_children_mapping(a,b, lambda x,y: same_main_event(x.tmr, y.tmr))
+      #TODO IMPORTANT Changes to get_children_mapping may cause this to not work any more.
       update_children_relationships(a,b,mapping)
       for i in range(len(a.children)):
         merge_tree(a.children[i], b.children[mapping[i]])
@@ -310,21 +324,14 @@ def print_tree(tree, spaces=""):
   if not type(tree) is TreeNode:
     print(spaces+"Expected TreeNode, got something else? "+str(tree))
     return
+  if tree.hasQuestionedDescendants:
+    print("?")
   if len(tree.name) == 0:
     print(spaces+"<unnamed node>");
   else:
-    print(spaces+tree.name);  
-  if tree.terminal:
-    print(spaces+"  (%d actions)" % (len(tree.children)))
-    for i in range(len(tree.children)):
-      if type(tree.children[i]) is TreeNode:
-        print(spaces + "  Branch in node marked terminal?")
-        print_tree(tree.children[i], spaces+"  ")
-      else:
-        print(spaces+"  ACTION:"+tree.children[i]['action']+(" (questioned)" if tree.childrenStatus[i] else "") )
-  else:
-    for child in tree.children:
-      print_tree(child, spaces + "  ")
+    print(spaces+tree.name);
+  for child in tree.children:
+    print_tree(child, spaces + "  ")
 
 def tree_to_json_format(node, list):
   output = dict()
