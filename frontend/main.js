@@ -1,11 +1,10 @@
 $(function() {
 
-  d3.selectAll(".control").attr("display", "none");
-
   d3.select(".treeviz")
       .attr("width", 1200)
       .attr("height", 720)
     .append("rect")
+      .attr("class", "nodata")
       .attr("fill", "lightgrey")
       .attr("rx", "10px")
       .attr("ry", "10px")
@@ -13,6 +12,7 @@ $(function() {
       .attr("height", 720);
   d3.select(".treeviz")
     .append("text")
+      .attr("class", "nodata")
       .attr("x", 600)
       .attr("y", 360)
       .attr("text-anchor", "middle")
@@ -51,19 +51,30 @@ $(function() {
     var treeSeq = treeSeqFromData(parsedData);
     console.log(treeSeq);
 
-    d3.selectAll(".treeviz").selectAll("*")
+    var remove = d3.selectAll(".treeviz").selectAll("*");
+
+    var render = new TreeRenderer(1200, 720, ".treeviz", treeSeq);
+    render.transitionDuration = 750;
+
+    d3.select("#total").text(render.length - 1);
+    d3.select("#forward").classed("disabled", false);
+
+    remove
         .attr("opacity", 1)
       .transition()
         .duration(500)
         .ease(d3.easeLinear)
         .attr("opacity", 1e-6)
-        .remove();
-
-    var render = new TreeRenderer(1200, 720, ".treeviz", treeSeq);
-    render.transitionDuration = 750;
-
-    d3.select("#current").text(render.curStage);
-    d3.select("#total").text(render.length - 1);
+        .remove()
+      .filter(function(d, i) { return i === 0; })
+      .transition().duration(500)
+        .on("end", function() {
+          render.nextStage();
+          d3.select("#current").text(render.curStage);
+          d3.select("#back").classed("disabled", false);
+          if (render.curStage >= render.length - 1)
+            d3.select("#forward").classed("disabled", true);
+        });
 
     d3.select("#forward").on("click", function() {
       render.nextStage();
