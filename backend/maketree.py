@@ -2,6 +2,7 @@ import json
 from flask import Flask
 from flask import request
 from flask import abort
+from flask_cors import cross_origin
 from mini_ontology import ontology
 
 #TODO this currently just returns the first event it finds
@@ -342,6 +343,7 @@ app = Flask(__name__)
 #current_tree = None
 
 @app.route('/alpha/maketree', methods=['POST'])
+@cross_origin()
 def start():
   if not request.json:
     abort(400)

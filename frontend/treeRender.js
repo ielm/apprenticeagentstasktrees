@@ -15,12 +15,13 @@
  * ForestRenderData instance members:
  *  forestRenderData.trees (array[D3 node]): the array of tree roots in this
  *      forest, in the format of a D3.js hierarchy with a tree layout applied.
- *  forestRenderData.forest (Forest): the original Forest from which this
- *      ForestRenderData was constructed.
+ *  forestRenderData.nodes (Object): an Object that maps each node's render ID
+ *      to the corresponding D3.js node in this forest.
  * */
 function ForestRenderData(forest, width, height, separation) {
   this.trees = [];
-  this.forest = forest;
+  this.nodes = {};
+  var nodes = this.nodes;
   var minMaxes = [];
 
   var globalMax = 1;
@@ -83,8 +84,9 @@ function ForestRenderData(forest, width, height, separation) {
       var nodeHeight = root.height - node.depth;
       node.x *= mult;
       node.y = height - yStepStride * (nodeHeight + 1);
+      nodes[node.data.id] = node;
     });
-  });
+  }, this);
 }
 ForestRenderData.prototype = {
   treeLayout: d3.tree().nodeSize([1,1])
@@ -132,7 +134,7 @@ ForestRenderData.prototype = {
  *  treeRenderer.length (int, readonly): the number of stages in the current
  *      TreeSeq.
  *  treeRenderer.transitionDuration (int): the duration, in miliseconds, of
- *      each transition between stages of the tree. Defaults to 1500.
+ *      each transition between stages of the tree. Defaults to 1000.
  * 
  * Direct assignment to member fields of TreeRenderer should be avoided.
  * Instead, use the methods defined below.
@@ -143,7 +145,7 @@ function TreeRenderer(width, height, svgId, treeSeq) {
   this.svg = svgId;
   this.stages = [];
   this.curStage = 0;
-  this.transitionDuration = 1500;
+  this.transitionDuration = 1000;
 
   Object.defineProperty(this, "length", {
     __proto__: null,
@@ -179,6 +181,8 @@ TreeRenderer.prototype = {
   },
 
   redraw: function() {
+    var duration = this.transitionDuration;
+    var linkGen = this.linkGen;
     var svg = d3.selectAll(this.svg)
         .attr("width", this.width)
         .attr("height", this.height);
@@ -193,40 +197,87 @@ TreeRenderer.prototype = {
       var links = curStage.links();
     }
 
+    nodes.forEach(function(n) {
+      if (n.x0 === undefined) n.x0 = n.x;
+      if (n.y0 === undefined) n.y0 = n.y;
+    });
+
     var node = svg.selectAll("g.node")
         .data(nodes, function(d) { return d.data.id; });
 
     var nodeEnter = node.enter().append("g")
         .attr("class", "node");
 
+    var nodeUpdate = node.merge(nodeEnter);
+    nodeUpdate.each(function(d) {
+      var text = d3.select(this).append("text")
+          .attr("class", "REMOVETHIS")
+          .attr("opacity", 0)
+          .text(function(d) { return d.data.name === "" ? "?" : d.data.name; })
+        .node();
+      d.w = text.getBBox().width + 30;
+      d.h = text.getBBox().height + 10;
+      d3.select(text).remove();
+    });
+      
     nodeEnter.append("text")
         .attr("dy", "0.35em")
-        .attr("text-anchor", "middle");
-
-    nodeEnter.append("rect");
-
-    var nodeUpdate = node.merge(nodeEnter)
-        .attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"; });
-
-    nodeUpdate.select("text")
+        .attr("text-anchor", "middle")
         .text(function(d) { return d.data.name === "" ? "?" : d.data.name; });
 
-    nodeUpdate.each(function() {
-      var text = d3.select(this).select("text");
-      var w = text.node().getBBox().width + 30;
-      var h = text.node().getBBox().height + 10;
-
-      d3.select(this).select("rect")
-          .attr("x", -(w / 2))
-          .attr("y", -(h / 2))
-          .attr("width", w)
-          .attr("height", h)
-          .attr("rx", h / 2)
-          .attr("ry", h / 2)
-          .lower();
+    nodeEnter.attr("transform", function(d) {
+      return "translate(" + d.x0 + "," + d.y0 + "),scale(" + 1e-6 + ")";
     });
 
-    var nodeExit = node.exit().remove();
+    nodeEnter.append("rect")
+        .attr("x", function(d) { return -(d.w / 2); })
+        .attr("y", function(d) { return -(d.h / 2); })
+        .attr("width", function(d) { return d.w; })
+        .attr("height", function(d) { return d.h; })
+        .attr("rx", function(d) { return d.h / 2; })
+        .attr("ry", function(d) { return d.h / 2; })
+        .lower();
+
+    nodeUpdate.transition("position")
+        .duration(this.transitionDuration)
+        .attr("transform", function(d) {
+          return "translate(" + d.x + "," + d.y + "),scale(1)";
+        })
+      .select("text")
+        .attr("x", 0)
+        .attr("y", 0);
+
+    nodeUpdate.select("text").transition("textFade")
+       .duration(this.transitionDuration * 0.2)
+        .ease(d3.easeLinear)
+        .attr("opacity", function(d) {
+          var text = d3.select(this).text();
+          return text === d.data.name || text === "?" && d.data.name === "" ? 1 : 1e-6;
+        })
+      .transition("textFade")
+        .duration(this.transitionDuration * 0.4)
+        .text(function(d) { return d.data.name === "" ? "?" : d.data.name; })
+        .attr("opacity", 1);
+
+    nodeUpdate.select("rect").transition("rectScale")
+        .duration(function(d) {
+          return duration * 0.45;
+          //return d.w < this.getBBox().width ? duration : duration * 0.75;
+        })
+        .ease(d3.easeQuad)
+        .attr("x", function(d) { return -(d.w / 2); })
+        .attr("y", function(d) { return -(d.h / 2); })
+        .attr("width", function(d) { return d.w; })
+        .attr("height", function(d) { return d.h; })
+        .attr("rx", function(d) { return d.h / 2; })
+        .attr("ry", function(d) { return d.h / 2; });
+
+    var nodeExit = node.exit().transition("position")
+        .duration(duration)
+        .attr("transform", function(d) {
+          return "translate(" + d.x0 + "," + d.y0 + "),scale(" + 1e-6 + ")";
+        })
+        .remove();
 
     var link = svg.selectAll("g.link")
         .data(links, function(d) { return d.source.data.id + "-" + d.target.data.id; });
@@ -234,40 +285,85 @@ TreeRenderer.prototype = {
     var linkEnter = link.enter().insert("g", "g.node")
         .attr("class", "link");
 
-    linkEnter.append("path");
+    linkEnter.append("path")
+        .attr("d", function(d) {
+          return linkGen({source: [d.target.x0, d.target.y0], target: [d.target.x0, d.target.y0] });
+        });
 
-    var linkUpdate = link.merge(linkEnter)
-      .select("path")
-        .attr("d", this.linkGen);
+    var linkUpdate = link.merge(linkEnter);
 
-    var linkExit = link.exit().remove();
+    linkUpdate.select("path").transition("pathMove")
+        .duration(duration)
+        .attr("d", linkGen);
+
+    var linkExit = link.exit();
+    
+    linkExit.select("path").transition("pathMove")
+        .duration(duration)
+        .attr("d", function(d) {
+          return linkGen({source: [d.target.x0, d.target.y0], target: [d.target.x0, d.target.y0]});
+        });
+
+    linkExit.transition()
+        .duration(duration)
+        .remove();
   },
 
   nextStage: function() {
     if (this.curStage >= this.length - 1) return;
     ++this.curStage;
-    this.redraw();
+    this.transition(this.curStage - 1, this.curStage);
   },
 
   prevStage: function() {
     if (this.curStage <= 0) return;
     --this.curStage;
-    this.redraw();
+    this.transition(this.curStage + 1, this.curStage);
   },
 
   transition: function(prev, next) {
-    var prevForestRender = this.stages[prev];
-    var nextForestRender = this.stages[next];
-    var prevForest = prevForestRender.forest;
-    var nextForest = nextForestRender.forest;
+    var prevForest = this.stages[prev];
+    var nextForest = this.stages[next];
 
     nextForest.trees.forEach(function(root) {
       root.each(function(node) {
         var nodeData = node.data;
+        var nodeId = node.data.id
 
-        // In progress
+        var strNodeId = new String(nodeId).valueOf();
+        if (! (strNodeId in prevForest.nodes)) {
+          if (!node.parent) {
+            node.x0 = node.x;
+            node.y0 = node.y;
+          }
+          else {
+            var parent = node.parent;
+            var parentId = parent.data.id;
+            while (!prevForest.nodes[parentId]) {
+              if (parent.parent) {
+                parent = parent.parent;
+                parentId = parent.data.id;
+              }
+              else {
+                parentId = null;
+                break;
+              }
+            }
+
+            if (parentId !== null) {
+              node.x0 = prevForest.nodes[parentId].x;
+              node.y0 = prevForest.nodes[parentId].y;
+            }
+            else {
+              node.x0 = node.parent.x0;
+              node.y0 = node.parent.y0;
+            }
+          }
+        }
       });
-    });
+    }, this);
+
+    this.redraw();
   },
 
   linkGen: d3.linkVertical()

@@ -320,5 +320,6 @@ function treeSeqFromData(data) {
     }
   });
 
+  forests.unshift(new Forest());
   return new TreeSeq(forests);
 }

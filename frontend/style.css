@@ -29,6 +29,7 @@ body {
   border-style: none;
   color: white;
   background-color: steelblue;
+  user-select: none;
 }
 
 .control .btn p {
@@ -36,7 +37,6 @@ body {
   -webkit-user-select: none;
   -moz-user-select: none;
   -ms-user-select: none;
-  user-select: none;
 }
 
 .control .btn:hover:not(.disabled) {
@@ -48,7 +48,7 @@ body {
 }
 
 .control .btn:active:not(.disabled) p {
-  transform: translate(1px, -1px);
+  transform: translate(1px, 0px);
 }
 
 .control .disabled {
@@ -94,4 +94,8 @@ svg .link.questioned text {
   fill: saddlebrown;
   font-size: 14pt;
   font-weight: bold;
+}
+
+form {
+  margin-top: 20px;
 }
