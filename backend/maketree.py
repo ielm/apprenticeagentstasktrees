@@ -102,9 +102,12 @@ class TreeNode:
   def addAction(this, action):
     if len(this.children) == 0:
       this.terminal = True
-      this.type = "leaf"
+      #this.type = "leaf"
     if not this.terminal:
       return False
+    actionNode = TreeNode()
+    actionNode.type = "leaf"
+    actionNode.name = action["action"]
     this.children.append(action)
     this.childrenStatus.append(False)
     for row in this.relationships:
@@ -332,11 +335,10 @@ def tree_to_json_format(node, list):
   #output["relationships"] = node.relationships
   index = len(list)
   list.append(output)
-  if not node.terminal:
-    for child in node.children:
-      output["children"].append(list[tree_to_json_format(child, list)]["id"])
-      list[output["children"][-1]]["parent"] = list[index]["id"]
-  return index
+  #if not node.terminal:
+  for child in node.children:
+      output["children"].append(child.id)
+      tree_to_json_format(child, list)
   
 app = Flask(__name__)
 
