@@ -14,8 +14,8 @@ $(function() {
         data: reader.result,
         dataType: "json",
         success: function(ret, status) {
-          console.log("Returned data:", ret);
-          console.log("Status:", status);
+          var error = status === "success" ? undefined : status;
+          changeTree(error, ret);
         }
       });
     };
@@ -28,6 +28,8 @@ $(function() {
     console.log(parsedData);
     var treeSeq = treeSeqFromData(parsedData);
     console.log(treeSeq);
+
+    d3.selectAll(".treeviz").select("*").remove();
 
     var render = new TreeRenderer(1200, 720, ".treeviz", treeSeq);
     render.transitionDuration = 750;
