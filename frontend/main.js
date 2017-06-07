@@ -1,4 +1,28 @@
+var data = undefined;
+var xhr;
+
 $(function() {
+  
+  var form = document.getElementById("apiquery");
+
+  form.onsubmit = function (e) {
+	console.log("Submitted");
+    // stop the regular form submission
+    e.preventDefault();
+  
+    // construct an HTTP request
+    xhr = new XMLHttpRequest();
+    xhr.open("POST", document.getElementById("url").value, true);
+    xhr.setRequestHeader('Content-Type', 'application/json; charset=UTF-8');
+  
+    //send the selected file
+    xhr.send(document.getElementById("upload").files[0]);
+  
+    xhr.onloadend = function () {
+  	  data = this.responseXML;
+    };
+  };
+  
   d3.json("output.json", function(error, parsedData) {
     if (error) throw error;
     var treeSeq = treeSeqFromData(parsedData);

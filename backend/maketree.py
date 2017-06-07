@@ -1,6 +1,7 @@
 import json
 from flask import Flask
 from flask import request
+from flask import abort
 from mini_ontology import ontology
 
 #TODO this currently just returns the first event it finds
@@ -332,7 +333,7 @@ def tree_to_json_format(node, list):
   list.append(output)
   if not node.terminal:
     for child in node.children:
-      output["children"].append(tree_to_json_format(child, list))
+      output["children"].append(list[tree_to_json_format(child, list)]["id"])
       list[output["children"][-1]]["parent"] = list[index]["id"]
   return index
   
@@ -340,7 +341,7 @@ app = Flask(__name__)
 
 #current_tree = None
 
-@app.route('/', methods=['POST'])
+@app.route('/alpha/maketree', methods=['POST'])
 def start():
   if not request.json:
     abort(400)
