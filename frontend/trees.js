@@ -20,6 +20,10 @@
  *      is treated as a root node.
  *  propertiesObj (object, optional): an arbitrary object that will be assigned`
  *      to this node's properties field.
+ *  options (Object, optional): an object with key-value pairs specifying
+ *      further options for this TreeNode:
+ *        questioned: (boolean) -- Set to true if this node might possibly be
+ *            the child of more than one parent node. Defaults to false.
  * 
  * TreeNode instance members:
  *  treeNode.name (string): the name of this node.
@@ -33,13 +37,18 @@
  *  treeNode.properties (Object): an arbitrary object with additional properties
  *      for this node.
  * */
-function TreeNode(name, id, children, childMatrix, parent, propertiesObj) {
+function TreeNode(name, id, children, childMatrix, parent, propertiesObj, options) {
   this.name = name;
   this.id = id;
   this.children = children;
   this.childMatrix = childMatrix;
   this.parent = parent;
   this.properties = {};
+
+  if (options && "questioned" in options && typeof options.questioned === "boolean")
+    this.questioned = options.questioned;
+  else
+    this.questioned = false;
 
   this.type = (!this.childMatrix || this.childMatrix.length === 0) ?
     "leaf" : "sequential";
@@ -223,7 +232,7 @@ function treeSeqFromData(data) {
   data.forEach(function(stage) {
 
     // get new children for each node in the input
-    stage.forEach(function(inputNode) {
+    stage.tree.forEach(function(inputNode) {
       var nodeId = inputNode.id;
       if (!seqData[nodeId]) seqData[nodeId] = {
         name: "",
@@ -293,9 +302,13 @@ function treeSeqFromData(data) {
 
           // update children's newInstances and recurse down the tree
           rootInfo.children.forEach(function(childId) {
+            var treeNodeOptions = {};
+            if (seqData[childId].newParents.length > 1)
+              treeNodeOptions.questioned = true;
+
             root.children.push(new TreeNode(
               seqData[childId].name, 0, [], seqData[childId].childMatrix,
-              root, seqData[childId].properties)
+              root, seqData[childId].properties, treeNodeOptions)
             );
 
             if (!seqData[childId].newInstances) seqData[childId].newInstances = [];

@@ -175,7 +175,7 @@ TreeRenderer.prototype = {
   recalculateStages: function() {
     this.stages = [];
     this.treeSeq.stages.forEach(function(forest) {
-      this.stages.push(new ForestRenderData(forest, this.width, this.height, 1.25));
+      this.stages.push(new ForestRenderData(forest, this.width, this.height, 1.15));
     }, this);
     this.redraw();
   },
@@ -247,6 +247,8 @@ TreeRenderer.prototype = {
         .attr("x", 0)
         .attr("y", 0);
 
+    nodeUpdate.classed("questioned", function (d) { return d.data.questioned; });
+
     nodeUpdate.select("text").transition("textFade")
        .duration(this.transitionDuration * 0.2)
         .ease(d3.easeLinear)
@@ -290,11 +292,35 @@ TreeRenderer.prototype = {
           return linkGen({source: [d.target.x0, d.target.y0], target: [d.target.x0, d.target.y0] });
         });
 
-    var linkUpdate = link.merge(linkEnter);
+    linkEnter.append("text")
+        .attr("text-anchor", "middle")
+        .attr("dy", "0.35em")
+        .text("?")
+        .attr("x", function(d) { return d.target.x0; })
+        .attr("y", function(d) { return d.target.y0; })
+        .attr("opacity", 1e-6);
+
+    var linkUpdate = link.merge(linkEnter)
+        .classed("questioned", function(d) {
+          return d.target.data.questioned && !d.source.data.questioned;
+        })
+        .classed("q_desc", function(d) { return d.source.data.questioned; });
 
     linkUpdate.select("path").transition("pathMove")
         .duration(duration)
         .attr("d", linkGen);
+
+    linkUpdate.select("text").transition("textMove")
+        .duration(duration)
+        .attr("x", function(d) { return (d.source.x + d.target.x) / 2; })
+        .attr("y", function(d) { return (d.source.y + d.target.y) / 2; });
+
+    linkUpdate.select("text").transition("textFade")
+        .duration(duration * 0.75)
+        .ease(d3.easeLinear)
+        .attr("opacity", function(d) {
+          return d.target.data.questioned ? 1 : 1e-6;
+        });
 
     var linkExit = link.exit();
     
@@ -303,6 +329,16 @@ TreeRenderer.prototype = {
         .attr("d", function(d) {
           return linkGen({source: [d.target.x0, d.target.y0], target: [d.target.x0, d.target.y0]});
         });
+
+    linkExit.select("text").transition("textMove")
+        .duration(duration)
+        .attr("x", function(d) { return d.target.x0; })
+        .attr("y", function(d) { return d.target.y0; });
+
+    linkExit.select("text").transition("textFade")
+        .duration(duration * 0.75)
+        .ease(d3.easeLinear)
+        .attr("opacity", 1e-6);
 
     linkExit.transition()
         .duration(duration)

@@ -90,7 +90,7 @@ svg .link.questioned path {
   stroke-dasharray: 8,3;
 }
 
-svg .link.questioned text {
+svg .link text {
   fill: saddlebrown;
   font-size: 14pt;
   font-weight: bold;

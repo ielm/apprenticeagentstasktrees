@@ -1,20 +1,27 @@
+var margin = { top: 50, bottom: 50, left: 75, right: 75 };
+var width = 1500;
+var height = 720;
+
 $(function() {
 
   d3.select(".treeviz")
-      .attr("width", 1200)
-      .attr("height", 720)
+      .attr("width", width + margin.left + margin.right)
+      .attr("height", height + margin.top + margin.bottom)
+    .append("g")
+      .attr("class", "canvas")
+      .attr("transform", "translate(" + margin.top + "," + margin.left + ")")
     .append("rect")
       .attr("class", "nodata")
       .attr("fill", "lightgrey")
       .attr("rx", "10px")
       .attr("ry", "10px")
-      .attr("width", 1200)
-      .attr("height", 720);
-  d3.select(".treeviz")
+      .attr("width", width)
+      .attr("height", height);
+  d3.select(".canvas")
     .append("text")
       .attr("class", "nodata")
-      .attr("x", 600)
-      .attr("y", 360)
+      .attr("x", width / 2)
+      .attr("y", height / 2)
       .attr("text-anchor", "middle")
       .attr("style", "fill: lightcyan; font-size: 18pt; letter-spacing: 0.15em;")
       .text("No tree data");
@@ -47,34 +54,35 @@ $(function() {
   //d3.json("output.json", function(error, parsedData) {
   function changeTree(error, parsedData) {
     if (error) throw error;
-    console.log(parsedData);
+    console.log(JSON.parse(JSON.stringify(parsedData)));
     var treeSeq = treeSeqFromData(parsedData);
     console.log(treeSeq);
 
-    var remove = d3.selectAll(".treeviz").selectAll("*");
+    var remove = d3.selectAll(".canvas").selectAll("*");
 
-    var render = new TreeRenderer(1200, 720, ".treeviz", treeSeq);
+    var render = new TreeRenderer(width, height, ".canvas", treeSeq);
     render.transitionDuration = 750;
 
     d3.select("#total").text(render.length - 1);
     d3.select("#forward").classed("disabled", false);
 
     remove
-        .attr("opacity", 1)
+        .attr("opacity", function() {
+          return d3.select(this).attr("opacity") || 1;
+        })
       .transition()
         .duration(500)
         .ease(d3.easeLinear)
         .attr("opacity", 1e-6)
-        .remove()
-      .filter(function(d, i) { return i === 0; })
-      .transition().duration(500)
-        .on("end", function() {
-          render.nextStage();
-          d3.select("#current").text(render.curStage);
-          d3.select("#back").classed("disabled", false);
-          if (render.curStage >= render.length - 1)
-            d3.select("#forward").classed("disabled", true);
-        });
+        .remove();
+
+    d3.timeout(function() {
+      render.nextStage();
+      d3.select("#current").text(render.curStage);
+      d3.select("#back").classed("disabled", false);
+      if (render.curStage >= render.length - 1)
+        d3.select("#forward").classed("disabled", true);
+    }, 1000);
 
     d3.select("#forward").on("click", function() {
       render.nextStage();
