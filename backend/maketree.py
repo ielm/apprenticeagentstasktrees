@@ -99,6 +99,13 @@ class TreeNode:
     for row in this.relationships:
       row.append(1)
     this.relationships.append( [-1]*len(this.relationships) + [0] )
+    
+  def removeChild(this, index):
+    this.children.pop(index)
+    this.childrenStatus.pop(index)
+    this.relationships.pop(index)
+    for row in this.relationships:
+      row.pop(index)
   
   def addAction(this, action):
     if len(this.children) == 0:
@@ -114,6 +121,7 @@ class TreeNode:
       row.append(1)
     this.relationships.append( [-1]*len(this.relationships) + [0] )
     return True
+    
   
   def markQuestioned(this, target, mark):
     for i in range(len(this.children)):
@@ -193,24 +201,25 @@ def construct_tree(input, steps):
         afile.write(str(current.children[-1].tmr))
         afile.close()
         if (not current.children[-1].tmr is None) and about_part_of(current.children[-1].tmr, tmr):
+          #Mark some of the preceding nodes as children of a new node
           new = TreeNode()
           current.addChildNode(new)
           new.name = get_name_from_tmr(tmr)
           new.tmr = tmr
           
           current.children[-2].parent = new.id
-          new.addChild(current.children[-2])
-          # current.removeChild(current.children[-2]) TODO implement this!!!
+          new.addChildNode(current.children[-2])
+          current.childrenStatus.pop(-2)
           
           j = -3
           while about_part_of(current.children[j].tmr, tmr):
             current.children[j].parent = new.id
-            new.addChild(current.children[j])
-            # current.removeChild(current.children[j]) TODO implement this!!!
+            new.addChildNode(current.children[j])
+            current.childrenStatus.pop(-2)
             j -= 1
             
-          #new.relationships = [ row[j+1:] for row in current.relationships[j+1:] ]
-          #current.relationships = [ row[:j+1] for row in current.relationships[:j+1] ]
+          new.relationships = [ row[j+1:] for row in current.relationships[j+1:] ]
+          current.relationships = [ row[:j+1] for row in current.relationships[:j+1] ]
             
           for child in new.children:
             current.children.remove(child)
