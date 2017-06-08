@@ -179,10 +179,14 @@ def construct_tree(input, steps):
   current = root
   i=0
   while i < len(input): # For each input token
+    output = dict()
+    steps.append(output)
     if is_utterance(input[i]):
+      output["input"] = input[i]["sentence"]
       tmr = input[i]["results"][0]["TMR"]
       if find_main_event(tmr) is None: #phatic utterances etc. just get skipped for now
         i+=1
+        steps.pop() # no output for this iteration
         continue
       elif is_postfix(input[i]):
         afile = open("afile", "w")
@@ -233,17 +237,18 @@ def construct_tree(input, steps):
         current.addChildNode(new)
         new.name = get_name_from_tmr(tmr)
         new.tmr = tmr
-        while i+1 < len(input) and is_action(input[i+1]):
-          new.addAction(input[i+1])
-          i+=1
-        if not new.terminal: # if no actions were added
+        if not is_action(input[i+1]): # if no actions will be added; shouldn't go out of bounds because this is pre-utterance
           current = new
           # go to next thing
         
     else: # Action
-      new = TreeNode()
-      current.addChildNode(new)
+      output["input"] = []      
+      new = current.children[-1]
+      if len(new.children) > 0: #if that already has children
+        new = TreeNode()
+        current.addChildNode(new)
       while i < len(input) and is_action(input[i]):
+        output["input"].append(input[i]["action"])
         new.addAction(input[i])
         i+=1
       i-=1 # account for the main loop and the inner loop both incrementing it
@@ -251,7 +256,7 @@ def construct_tree(input, steps):
     i+=1
     list = []
     tree_to_json_format(root, list)
-    steps.append(list)
+    output["tree"] = list
   return root
   
 def get_children_mapping(a,b, comparison): #There's probably a standard function for this
