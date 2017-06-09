@@ -1,9 +1,24 @@
+// margin for the SVG
 var margin = { top: 50, bottom: 50, left: 75, right: 75 };
+
+// width of the SVG, minus the margins
 var width = 1500;
 var height = 720;
 
 $(function() {
 
+  // set the default URL to send requests to the service
+  $("input[type=text]").val("http://" + document.location.hostname + ":5000/alpha/maketree");
+
+  // set up the link between the file dialog and the masking element
+  var $fileupload = $("input[type=file]");
+  $fileupload.change(function() {
+    var $span = $("div.upload_mask span");
+    $span.removeClass("dim");
+    $span.html($fileupload[0].files[0].name);
+  });
+
+  // set up SVG with margins, and add "no tree data" overlay
   d3.select(".treeviz")
       .attr("width", width + margin.left + margin.right)
       .attr("height", height + margin.top + margin.bottom)
@@ -28,6 +43,7 @@ $(function() {
 
   d3.selectAll("#current, #total").text("0");
   
+  // handle submission of reuests and receipt of responses
   $("#apiquery").submit(function(e) {
     e.preventDefault();
 
@@ -51,7 +67,8 @@ $(function() {
     reader.readAsText(file);
   });
   
-  //d3.json("output.json", function(error, parsedData) {
+  // Changes the active tree. Fades out any elements currently in the SVG, and
+  // sets up the TreeRenderer for the new tree.
   function changeTree(error, parsedData) {
     if (error) throw error;
     console.log(JSON.parse(JSON.stringify(parsedData)));
