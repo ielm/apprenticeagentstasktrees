@@ -193,7 +193,6 @@ def traverse_tree(node, question_status=None):
       yield from traverse_tree(child, question_status)
         
 def construct_tree(input, steps):
-  stepsfile = open("stepsfile", "w")
   root = TreeNode()
   current = root
   i=0
@@ -208,9 +207,6 @@ def construct_tree(input, steps):
         steps.pop() # no output for this iteration
         continue
       elif is_postfix(input[i]):
-        afile = open("afile", "w")
-        afile.write(str(current.children[-1].tmr))
-        afile.close()
         if (not current.children[-1].tmr is None) and about_part_of(current.children[-1].tmr, tmr):
           #Mark some of the preceding nodes as children of a new node
           new = TreeNode()
@@ -278,9 +274,6 @@ def construct_tree(input, steps):
     list = []
     tree_to_json_format(root, list)
     output["tree"] = list
-    stepsfile.write(str(list))
-    stepsfile.write("\n")
-    stepsfile.flush()
   return root
   
 def get_children_mapping(a,b, comparison): #There's probably a standard function for this
@@ -300,17 +293,6 @@ def get_children_mapping(a,b, comparison): #There's probably a standard function
   return mapping
 
 def update_children_relationships(a,b,mapping):
-  logfile = open("logfile", "w")
-  logfile.write(a.name)
-  for child in a.children:
-    logfile.write(child.name)
-  logfile.write(b.name)
-  for child in b.children:
-    logfile.write(child.name)
-  logfile.write(str(a.relationships))
-  logfile.write(str(b.relationships))
-  logfile.write(str(mapping))
-  logfile.close()
   for i in range(len(a.relationships)):
     for j in range(len(a.relationships[i])):
       if mapping[i] is None or mapping[j] is None:
@@ -388,7 +370,7 @@ def tree_to_json_format(node, list):
   
 app = Flask(__name__)
 
-#current_tree = None
+current_tree = None
 
 @app.route('/alpha/maketree', methods=['POST'])
 @cross_origin()
@@ -397,13 +379,13 @@ def start():
     abort(400)
   steps = []
   current_tree = construct_tree(request.json, steps)
-  #global current_tree
-  #if current_tree is None:
-  #  current_tree = new_tree
-  #else:
-  #  merge_tree(current_tree, new_tree)
-  #list = []
-  #tree_to_json_format(current_tree, list)
+  global current_tree
+  if current_tree is None:
+    current_tree = new_tree
+  else:
+    merge_tree(current_tree, new_tree)
+  list = []
+  tree_to_json_format(current_tree, list)
   return json.dumps(steps)
 
 if __name__ == '__main__':
