@@ -1,6 +1,7 @@
 import json
 import copy
 from flask import Flask, request, abort, send_from_directory
+from flask_cors import CORS
 from mini_ontology import ontology
 
 #TODO this currently just returns the first event it finds
@@ -377,6 +378,7 @@ def tree_to_json_format(node, list):
       tree_to_json_format(child, list)
   
 app = Flask(__name__)
+CORS(app)
 
 @app.route('/alpha/maketree/<path:filename>', methods=['GET'])
 def servefile(filename):
