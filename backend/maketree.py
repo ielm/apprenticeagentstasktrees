@@ -221,7 +221,6 @@ def construct_tree(input, steps):
           current.children[-2].parent = new.id
           new.addChildNode(current.children[-2])
           current.childrenStatus.pop(-2)
-
           
           j = -3
           while about_part_of(current.children[j].tmr, tmr):
