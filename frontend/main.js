@@ -13,7 +13,7 @@ $(function() {
   // set up the link between the file dialog and the masking element
   var $fileupload = $("input[type=file]");
   $fileupload.change(function() {
-    var $span = $("div.upload_mask span");
+    var $span = $("div.input_mask span");
     $span.removeClass("dim");
     $span.html($fileupload[0].files[0].name);
   });

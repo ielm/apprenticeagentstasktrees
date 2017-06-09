@@ -41,19 +41,19 @@ body {
 }
 
 .control .btn:hover:not(.disabled),
-div.upload_mask:hover,
+div.input_mask:hover,
 input[type=submit]:hover {
   background-color: skyblue;
 }
 
 .control .btn:active:not(.disabled),
-div.upload_mask:active,
+div.input_mask:active,
 input[type=submit]:active {
   box-shadow: inset 2px 2px 2px 1px rgba(50,75,80,0.5);
 }
 
 .control .btn:active:not(.disabled) p,
-div.upload_mask:active div {
+div.input_mask:active div {
   transform: translate(1px, 0px);
 }
 
@@ -107,32 +107,35 @@ form {
   margin-top: 20px;
 }
 
-div.upload_mask {
+div.input_mask {
   display: inline-block;
   position: relative;
   background-color: steelblue;
   border-radius: 5px;
-  text-align: left;
   color: white;
-  width: 300px;
 }
 
-div.upload_mask div {
+div.file_mask {
+  width: 300px;
+  text-align: left;
+}
+
+div.input_mask div {
   margin: 6px 10px;
 }
 
-div.upload_mask span {
+div.file_mask span {
   margin-left: 5px;
   font-size: 10pt;
   overflow: hidden;
   white-space: nowrap;
 }
 
-div.upload_mask span.dim {
+div.input_mask span.dim {
   opacity: 0.5;
 }
 
-div.upload_mask input[type=file] {
+div.input_mask input[type=file] {
   position: absolute;
   width: 100%;
   height: 100%;
@@ -143,18 +146,19 @@ div.upload_mask input[type=file] {
 input[type=text] {
   padding: 6px 10px;
   border-radius: 5px;
-  border-color: lightsteelblue;
+  border-color: steelblue;
+  border-style: solid;
 }
 
 input[type=text]:focus {
   box-shadow: 0px 0px 1px 1px lightsteelblue;
 }
 
-input[type=submit] {
-  padding: 8px 10px;
-  background-color: steelblue;
-  border: none;
-  color: white;
-  border-radius: 5px;
-  outline: none;
+div.input_mask input[type=submit] {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  opacity: 0;
 }

@@ -222,7 +222,12 @@ TreeSeq.prototype = {};
  *  data (object): an object parsed from an input JSON file. The format of the
  *      file is described elsewhere.
  *
- * Returns a TreeSeq generated from the data object.
+ * Returns a TreeSeq generated from the data object. The first Forest in the
+ * sequence will be empty, followed by Forests based on the input data.
+ *
+ * The input data is modified by this function. Specifically, the properties
+ * 'id', 'name', 'children', and 'childMatrix' are removed from the input data
+ * for each node.
  * */
 function treeSeqFromData(data) {
   var seqData = {};
