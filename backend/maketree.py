@@ -1,7 +1,6 @@
 import json
 import copy
 from flask import Flask, request, abort, send_from_directory
-from flask_cors import cross_origin
 from mini_ontology import ontology
 
 #TODO this currently just returns the first event it finds
@@ -384,7 +383,6 @@ def servefile(filename):
   return send_from_directory("../frontend", filename)
 
 @app.route('/alpha/maketree', methods=['POST'])
-@cross_origin()
 def start():
   if not request.json:
     abort(400)
@@ -395,7 +393,6 @@ def start():
 current_tree = None
 
 @app.route('/alpha/mergetree', methods=['POST'])
-@cross_origin()
 def start_with_merging():
   if not request.json:
     abort(400)
@@ -414,7 +411,6 @@ def start_with_merging():
   return json.dumps(list)    
 
 @app.route('/alpha/mergetree', methods=['DELETE'])
-@cross_origin()
 def clear_merged_tree():
   global current_tree
   current_tree = None
