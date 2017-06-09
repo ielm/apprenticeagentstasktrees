@@ -273,6 +273,8 @@ def construct_tree(input, steps):
     i+=1
     list = []
     tree_to_json_format(root, list)
+    if len(steps) > 1:
+      subtract_lists(list, steps[-2]["tree"]) #calculate delta
     output["tree"] = list
   return root
   
@@ -354,6 +356,11 @@ def print_tree(tree, spaces=""):
   for child in tree.children:
     print_tree(child, spaces + "  ")
 
+def subtract_lists(list1, list2):
+  for node in list2:
+    if node in list1:
+      list1.remove(node)
+
 def tree_to_json_format(node, list):
   output = dict()
   output["name"] = node.name
@@ -370,7 +377,7 @@ def tree_to_json_format(node, list):
   
 app = Flask(__name__)
 
-current_tree = None
+#current_tree = None
 
 @app.route('/alpha/maketree', methods=['POST'])
 @cross_origin()
@@ -379,11 +386,11 @@ def start():
     abort(400)
   steps = []
   current_tree = construct_tree(request.json, steps)
-  global current_tree
-  if current_tree is None:
-    current_tree = new_tree
-  else:
-    merge_tree(current_tree, new_tree)
+  #global current_tree
+  #if current_tree is None:
+  #  current_tree = new_tree
+  #else:
+  #  merge_tree(current_tree, new_tree)
   list = []
   tree_to_json_format(current_tree, list)
   return json.dumps(steps)
