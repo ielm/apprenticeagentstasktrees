@@ -63,6 +63,8 @@ def same_node(node1, node2):
   return same_main_event(node1.tmr, node2.tmr)
   
 def about_part_of(tmr1, tmr2):
+  if tmr1 is None or tmr2 is None:
+    return False
   event1 = find_main_event(tmr1)
   event2 = find_main_event(tmr2)
   if event1 is None or event2 is None:
@@ -87,7 +89,6 @@ class TreeNode:
     this.relationships = []
     this.name = ""
     this.terminal = False
-    this.hasQuestionedDescendants = False
     this.questionedWith = None
     this.tmr = None
     this.type = "sequential" #Deprecated
@@ -126,59 +127,53 @@ class TreeNode:
     if target in this.children:
       this.childrenStatus[this.children.index(target)] = mark
     else:
-      raise RuntimeError("No such child")
-    this.setQuestionedDescendants(mark)        
-
-  #This method needs work.
-  #What if there are questioned descendants further down?
-  #Also: questioned nodes might not even have parents
-  def setQuestionedDescendants(this, hqd):
-    if hqd:
-      this.hasQuestionedDescendants = True
-      if not this.parent is None:
-        this.parent.setQuestionedDescendants(True)
-    else: #check to make sure it doesn't have other questioned descendants
-      for i in this.childrenStatus:
-        if i == True:
-          return
-      this.hasQuestionedDescendants = False
-      if not this.parent is None:
-        this.parent.setQuestionedDescendants(False)
-
+      raise RuntimeError("No such child")    
   
-def disambiguate(node):
-  for question in traverse_tree(node, True):
-    for answer in traverse_tree(node, False):
+def disambiguate(tree, othertree=None):
+  if othertree is None:
+    othertree = tree
+  for question in traverse_tree(tree, True):
+    for answer in traverse_tree(othertree, False):
       if answer.tmr is None or question.tmr is None:
         continue
       if same_main_event(question.tmr, answer.tmr):
         #NOTE: this assumes that the questioned children are not interdependent
-        prevlen = len(question.children)
         other = question.questionedWith
         
         mapping = get_children_mapping(answer, other, same_node)
+        
+        #DEBUG
+        somefile = open("somefile", "w")
+        for child in answer.children:
+          somefile.write(child.name+"\n")
+        somefile.write(str(mapping)+"\n")
+        for child in other.children:
+          somefile.write(child.name+"\n")
+        somefile.close()
+        #GUBED
+        
         for i in range(len(mapping)):
-          mapping[i] = other.children[mapping[i]]
+          if not mapping[i] is None:
+            mapping[i] = other.children[mapping[i]]
         for i in range(len(answer.children)):
-          other.removeChildNode(mapping[i])
+          if not mapping[i] is None:
+            other.removeChildNode(mapping[i])
         
         mapping = get_children_mapping(other, question, lambda x,y: x.id==y.id)
         for i in range(len(mapping)):
-          mapping[i] = question.children[mapping[i]]
+          if not mapping[i] is None:
+            mapping[i] = question.children[mapping[i]]
         for i in range(len(other.children)):
-          question.removeChildNode(mapping[i])
+          if not mapping[i] is None:
+            question.removeChildNode(mapping[i])
         
         other.questionedWith = None
         question.questionedWith = None
         other.childrenStatus = [False]*len(other.children)
         question.childrenStatus = [False]*len(question.children)
-        other.setQuestionedDescendants(False)
-        question.setQuestionedDescendants(False)
-        
-        assert(prevlen > len(question.children))
-        
-  for child1 in traverse_tree(node, False):
-    for child2 in traverse_tree(node, False):
+                
+  for child1 in traverse_tree(tree, False):
+    for child2 in traverse_tree(othertree, False):
       if child1 is child2:
         continue
       if child1.tmr is None or child2.tmr is None:
@@ -189,7 +184,7 @@ def disambiguate(node):
         
 
 def traverse_tree(node, question_status=None):
-  if question_status is None or node.hasQuestionedDescendants == question_status:
+  if question_status is None or (True in node.childrenStatus) == question_status:
     yield node
   if not node.terminal:
     for child in node.children:
@@ -211,6 +206,9 @@ def construct_tree(input, steps):
         continue
       elif is_postfix(input[i]):
         if (not current.children[-1].tmr is None) and about_part_of(current.children[-1].tmr, tmr):
+          while about_part_of(current.tmr, tmr) and not current.parent is None:
+            current = current.parent
+          
           #Mark some of the preceding nodes as children of a new node
           new = TreeNode()
           new.name = get_name_from_tmr(tmr)
@@ -364,8 +362,6 @@ def print_tree(tree, spaces=""):
   if not type(tree) is TreeNode:
     print(spaces+"Expected TreeNode, got something else? "+str(tree))
     return
-  if tree.hasQuestionedDescendants:
-    print("?")
   if len(tree.name) == 0:
     print(spaces+"<unnamed node>");
   else:
@@ -394,7 +390,7 @@ def tree_to_json_format(node, list):
   
 app = Flask(__name__)
 
-#current_tree = None
+current_tree = None
 
 @app.route('/alpha/maketree', methods=['POST'])
 @cross_origin()
@@ -402,15 +398,16 @@ def start():
   if not request.json:
     abort(400)
   steps = []
-  current_tree = construct_tree(request.json, steps)
-  #global current_tree
-  #if current_tree is None:
-  #  current_tree = new_tree
-  #else:
-  #  merge_tree(current_tree, new_tree)
-  #list = []
-  #tree_to_json_format(current_tree, list)
-  return json.dumps(steps)
+  new_tree = construct_tree(request.json, steps)
+  global current_tree
+  if current_tree is None:
+    current_tree = new_tree
+  else:
+    disambiguate(current_tree, new_tree)
+    #merge_tree(current_tree, new_tree)
+  list = []
+  tree_to_json_format(current_tree, list)
+  return json.dumps(list)
 
 if __name__ == '__main__':
   app.run(debug=True, port=5000)
