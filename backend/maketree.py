@@ -142,16 +142,6 @@ def disambiguate(tree, othertree=None):
         
         mapping = get_children_mapping(answer, other, same_node)
         
-        #DEBUG
-        somefile = open("somefile", "w")
-        for child in answer.children:
-          somefile.write(child.name+"\n")
-        somefile.write(str(mapping)+"\n")
-        for child in other.children:
-          somefile.write(child.name+"\n")
-        somefile.close()
-        #GUBED
-        
         for i in range(len(mapping)):
           if not mapping[i] is None:
             mapping[i] = other.children[mapping[i]]
@@ -172,6 +162,7 @@ def disambiguate(tree, othertree=None):
         other.childrenStatus = [False]*len(other.children)
         question.childrenStatus = [False]*len(question.children)
                 
+  #parallelize
   for child1 in traverse_tree(tree, False):
     for child2 in traverse_tree(othertree, False):
       if child1 is child2:
@@ -390,11 +381,20 @@ def tree_to_json_format(node, list):
   
 app = Flask(__name__)
 
-current_tree = None
-
 @app.route('/alpha/maketree', methods=['POST'])
 @cross_origin()
 def start():
+  if not request.json:
+    abort(400)
+  steps = []
+  new_tree = construct_tree(request.json, steps)
+  return json.dumps(steps)
+
+current_tree = None
+
+@app.route('/alpha/mergetree', methods=['POST'])
+@cross_origin()
+def start_with_merging():
   if not request.json:
     abort(400)
   steps = []
@@ -403,11 +403,20 @@ def start():
   if current_tree is None:
     current_tree = new_tree
   else:
+    disambiguate(new_tree, current_tree)
     disambiguate(current_tree, new_tree)
-    #merge_tree(current_tree, new_tree)
+    #if stuff gets weird enough, might have to disambiguate the two of them back and forth for a while
+    merge_tree(current_tree, new_tree)
   list = []
   tree_to_json_format(current_tree, list)
-  return json.dumps(list)
+  return json.dumps(list)    
 
+@app.route('/alpha/mergetree', methods=['DELETE'])
+@cross_origin()
+def clear_merged_tree():
+  global current_tree
+  current_tree = None
+  return json.dumps({"result":True})
+  
 if __name__ == '__main__':
   app.run(debug=True, port=5000)
