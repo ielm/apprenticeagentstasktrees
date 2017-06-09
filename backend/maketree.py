@@ -57,7 +57,7 @@ def same_main_event(tmr1, tmr2):
   
 def same_node(node1, node2):
   if node1.tmr is None and node2.tmr is None:
-    return node1.id == node2.id
+    return node1.name == node2.name
   if node1.tmr is None or node2.tmr is None:
     return False
   return same_main_event(node1.tmr, node2.tmr)
@@ -123,12 +123,15 @@ class TreeNode:
     
   
   def markQuestioned(this, target, mark):
-    for i in range(len(this.children)):
-      if this.children[i] == target:
-        this.childrenStatus[i] = mark;
-        break    
+    if target in this.children:
+      this.childrenStatus[this.children.index(target)] = mark
+    else:
+      raise RuntimeError("No such child")
     this.setQuestionedDescendants(mark)        
 
+  #This method needs work.
+  #What if there are questioned descendants further down?
+  #Also: questioned nodes might not even have parents
   def setQuestionedDescendants(this, hqd):
     if hqd:
       this.hasQuestionedDescendants = True
@@ -153,7 +156,7 @@ def disambiguate(node):
         prevlen = len(question.children)
         other = question.questionedWith
         
-        mapping = get_children_mapping(answer, other, lambda x,y: x.name==y.name if x.tmr is None or y.tmr is None else same_main_event(x.tmr,y.tmr))
+        mapping = get_children_mapping(answer, other, same_node)
         for i in range(len(mapping)):
           mapping[i] = other.children[mapping[i]]
         for i in range(len(answer.children)):
@@ -181,7 +184,7 @@ def disambiguate(node):
       if child1.tmr is None or child2.tmr is None:
         continue
       if same_main_event(child1.tmr, child2.tmr):
-        mapping = get_children_mapping(child1, child2, lambda x,y: x.name==y.name if x.tmr is None or y.tmr is None else same_main_event(x.tmr,y.tmr))
+        mapping = get_children_mapping(child1, child2, same_node)
         update_children_relationships(child1, child2, mapping)
         
 
@@ -210,27 +213,41 @@ def construct_tree(input, steps):
         if (not current.children[-1].tmr is None) and about_part_of(current.children[-1].tmr, tmr):
           #Mark some of the preceding nodes as children of a new node
           new = TreeNode()
-          current.addChildNode(new)
           new.name = get_name_from_tmr(tmr)
           new.tmr = tmr
           
-          current.children[-2].parent = new.id
-          new.addChildNode(current.children[-2])
-          current.childrenStatus.pop(-2)
-          
-          j = -3
-          while about_part_of(current.children[j].tmr, tmr):
-            current.children[j].parent = new.id
-            new.addChildNode(current.children[j])
-            current.childrenStatus.pop(-2)
-
+          j = -2
+          while j > -len(current.children) and about_part_of(current.children[j].tmr, tmr):
             j -= 1
+          
+          j += 1 #to make future things simpler          
+          
+          if j > -len(current.children) + 1:
+            current.questionedWith = new
+            new.questionedWith = current
+          
+          for child in current.children[:j]:
+            new.addChildNode(copy.copy(child))
+            current.markQuestioned(child, True)
+            new.markQuestioned(new.children[-1], True)
             
-          new.relationships = [ row[j+1:] for row in current.relationships[j+1:] ]
-          current.relationships = [ row[:j+1] for row in current.relationships[:j+1] ]
-            
-          for child in new.children:
+          for child in current.children[j:]:
+            new.addChildNode(child)
+            child.parent = new
+                    
+          #don't update relationships until done adding nodes to new
+          new.relationships = copy.deepcopy(current.relationships)
+          current.relationships = [ row[:j] for row in current.relationships[:j] ]
+          
+          assert(new.children[-1] is current.children[-1])
+          
+          for child in new.children[j:]:
             current.children.remove(child)
+            current.childrenStatus.pop()
+                    
+          current.addChildNode(new)
+          #And then add the rest of the nodes as questioned between this and its parent?
+          #... actually, what if this node is neither a sibling nor a child of current but rather its parent?
             
         elif i > 0 and is_action(input[i-1]): #If it was preceded by actions
           if current.children[-1].name == "": # if their node is unnamed,
@@ -330,7 +347,7 @@ def merge_tree(a, b):
         merge_tree(a.children[i], b.children[i])
     else:
       a.type = "parallel"
-      mapping = get_children_mapping(a,b, lambda x,y: same_main_event(x.tmr, y.tmr))
+      mapping = get_children_mapping(a,b, same_node)
       #TODO IMPORTANT Changes to get_children_mapping may cause this to not work any more.
       update_children_relationships(a,b,mapping)
       for i in range(len(a.children)):
@@ -391,8 +408,8 @@ def start():
   #  current_tree = new_tree
   #else:
   #  merge_tree(current_tree, new_tree)
-  list = []
-  tree_to_json_format(current_tree, list)
+  #list = []
+  #tree_to_json_format(current_tree, list)
   return json.dumps(steps)
 
 if __name__ == '__main__':
