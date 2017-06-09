@@ -1,8 +1,6 @@
 import json
 import copy
-from flask import Flask
-from flask import request
-from flask import abort
+from flask import Flask, request, abort, send_from_directory
 from flask_cors import cross_origin
 from mini_ontology import ontology
 
@@ -380,6 +378,10 @@ def tree_to_json_format(node, list):
       tree_to_json_format(child, list)
   
 app = Flask(__name__)
+
+@app.route('/alpha/maketree/<path:filename>', methods=['GET'])
+def servefile(filename):
+  return send_from_directory("../frontend", filename)
 
 @app.route('/alpha/maketree', methods=['POST'])
 @cross_origin()
