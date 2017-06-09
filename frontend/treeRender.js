@@ -181,7 +181,11 @@ TreeRenderer.prototype = {
 
   /**
    * Change the TreeSeq rendered by this TreeRenderer. This will cause the
+<<<<<<< HEAD
    * current stage to be reset to 1 and the tree to be redrawn.
+=======
+   * current stage to be reset to 0 and the tree to be redrawn.
+>>>>>>> 806d7fff907caa19966215287420af9d37f98414
    *
    * Parameters:
    *  treeSeq (TreeSeq): the new TreeSeq object.
@@ -212,7 +216,7 @@ TreeRenderer.prototype = {
   /**
    * Reconstructs all ForestRenderData objects in this TreeRenderer from the
    * data in the current TreeSeq object. This will cause the current stage to
-   * be reset to 1 and the tree to be redrawn. Otherwise, this will have no
+   * be reset to 0 and the tree to be redrawn. Otherwise, this will have no
    * observable effect unless the TreeRenderer's TreeSeq object has changed.
    * */
   recalculateStages: function() {
