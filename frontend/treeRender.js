@@ -17,10 +17,13 @@
  *      forest, in the format of a D3.js hierarchy with a tree layout applied.
  *  forestRenderData.nodes (Object): an Object that maps each node's render ID
  *      to the corresponding D3.js node in this forest.
+ *  forestRenderData.forest (Forest): the original Forest used to construct
+ *      this ForestRenderData.
  * */
 function ForestRenderData(forest, width, height, separation) {
   this.trees = [];
   this.nodes = {};
+  this.forest = forest;
   var nodes = this.nodes;
   var minMaxes = [];
 
@@ -89,9 +92,16 @@ function ForestRenderData(forest, width, height, separation) {
   }, this);
 }
 ForestRenderData.prototype = {
+  /**
+   * The D3 tree layout function used by this ForestRenderData.
+   * */
   treeLayout: d3.tree().nodeSize([1,1])
-                .separation(function(a,b) { return a.parent === b.parent ? 1 : 1.15; }),
+                .separation(function(a,b) { return a.parent === b.parent ? 1 : 1.075; }),
 
+  /**
+   * A wrapper around the D3 node object's descendants function. Returns an
+   * array of all D3 nodes in this ForestRenderData.
+   * */
   descendants: function() {
     var ret = [];
     this.trees.forEach(function(tree) {
@@ -100,12 +110,25 @@ ForestRenderData.prototype = {
     return ret;
   },
 
+  /**
+   * A wrapper around the D3 node object's links function. Returns an array of
+   * all D3 links (objects with properties 'source' and 'target' set to D3
+   * nodes) in this ForestRenderData.
+   * */
   links: function() {
     var ret = [];
     this.trees.forEach(function(tree) {
       ret = ret.concat(tree.links());
     });
     return ret;
+  },
+
+  /**
+   * Reconstruct this ForestRenderData with new width, height, and separation
+   * values.
+   * */
+  regenerateData: function(width, height, separation) {
+    ForestRenderData.call(this, this.forest, width, height, separation);
   }
 };
 
@@ -156,6 +179,13 @@ function TreeRenderer(width, height, svgId, treeSeq) {
 }
 TreeRenderer.prototype = {
 
+  /**
+   * Change the TreeSeq rendered by this TreeRenderer. This will cause the
+   * current stage to be reset to 0 and the tree to be redrawn.
+   *
+   * Parameters:
+   *  treeSeq (TreeSeq): the new TreeSeq object.
+   * */
   setTreeSeq: function(treeSeq) {
     if (!treeSeq instanceof TreeSeq)
       throw typeError("passed object is not an instance of TreeSeq");
@@ -163,6 +193,13 @@ TreeRenderer.prototype = {
     this.recalculateStages();
   },
 
+  /**
+   * Set the CSS selector used to identify the SVG element in which to render
+   * this tree.
+   *
+   * Paramters:
+   *  selector (string): the new CSS selector.
+   * */
   setSvg: function(selector) {
     d3.selectAll(this.svg)
       .selectAll("*")
@@ -172,14 +209,27 @@ TreeRenderer.prototype = {
     this.redraw();
   },
 
+  /**
+   * Reconstructs all ForestRenderData objects in this TreeRenderer from the
+   * data in the current TreeSeq object. This will cause the current stage to
+   * be reset to 0 and the tree to be redrawn. Otherwise, this will have no
+   * observable effect unless the TreeRenderer's TreeSeq object has changed.
+   * */
   recalculateStages: function() {
     this.stages = [];
     this.treeSeq.stages.forEach(function(forest) {
       this.stages.push(new ForestRenderData(forest, this.width, this.height, 1.15));
     }, this);
+    this.curStage = 0;
     this.redraw();
   },
 
+  /**
+   * Animates the tree to its new state. Has no effect if the x0 and y0
+   * properties of the D3 nodes have not changed, (as by the transition()
+   * method below,) or if the TreeSeq object has
+   * not changed, since the previous time this function was called.
+   * */
   redraw: function() {
     var duration = this.transitionDuration;
     var linkGen = this.linkGen;
@@ -345,18 +395,36 @@ TreeRenderer.prototype = {
         .remove();
   },
 
+  /**
+   * Increments the current stage and transitions the tree to the new state.
+   * If the current stage cannot be incremented, has no effect.
+   * */
   nextStage: function() {
     if (this.curStage >= this.length - 1) return;
     ++this.curStage;
     this.transition(this.curStage - 1, this.curStage);
   },
 
+  /**
+   * Decrements the current stage and transitions the tree to the new state.
+   * If the current stage cannot be decremented, has no effect.
+   * */
   prevStage: function() {
     if (this.curStage <= 0) return;
     --this.curStage;
     this.transition(this.curStage + 1, this.curStage);
   },
 
+  /**
+   * Calculates the previous positions of each node in the current stage of the
+   * tree, assigning x0 and y0 properties on each D3 node in the TreeRenderer.
+   *
+   * Parameters:
+   *  prev (int): the index of the stage from which the tree is being
+   *      transitioned.
+   *  next (int): the index of the stage to which the tree is being
+   *      transitioned.
+   * */
   transition: function(prev, next) {
     var prevForest = this.stages[prev];
     var nextForest = this.stages[next];
