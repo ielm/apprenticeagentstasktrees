@@ -100,12 +100,14 @@ class TreeNode:
       row.append(1)
     this.relationships.append( [-1]*len(this.relationships) + [0] )
     
-  def removeChild(this, index):
+  def removeChildNode(this, child):
+    index = this.children.index(child)
     this.children.pop(index)
     this.childrenStatus.pop(index)
     this.relationships.pop(index)
     for row in this.relationships:
       row.pop(index)
+    assert(len(this.children) == len(this.relationships))
   
   def addAction(this, action):
     if len(this.children) == 0:
@@ -117,9 +119,6 @@ class TreeNode:
     actionNode.type = "leaf"
     actionNode.name = action["action"]
     this.addChildNode(actionNode)
-    for row in this.relationships:
-      row.append(1)
-    this.relationships.append( [-1]*len(this.relationships) + [0] )
     return True
     
   
@@ -145,26 +144,26 @@ class TreeNode:
 
   
 def disambiguate(node):
-  # TODO find same-main-event nodes and parallelize their children if possible
   for question in traverse_tree(node, True):
     for answer in traverse_tree(node, False):
       if answer.tmr is None or question.tmr is None:
         continue
       if same_main_event(question.tmr, answer.tmr):
+        #NOTE: this assumes that the questioned children are not interdependent
         prevlen = len(question.children)
         other = question.questionedWith
         
-        mapping = get_children_mapping(answer, other, lambda x,y: x.name==y.name if x.tmr is None or y.tmr is None else same_main_event(x,y))
+        mapping = get_children_mapping(answer, other, lambda x,y: x.name==y.name if x.tmr is None or y.tmr is None else same_main_event(x.tmr,y.tmr))
         for i in range(len(mapping)):
           mapping[i] = other.children[mapping[i]]
         for i in range(len(answer.children)):
-          other.children.remove(mapping[i])
+          other.removeChildNode(mapping[i])
         
         mapping = get_children_mapping(other, question, lambda x,y: x.id==y.id)
         for i in range(len(mapping)):
           mapping[i] = question.children[mapping[i]]
         for i in range(len(other.children)):
-          question.children.remove(mapping[i])
+          question.removeChildNode(mapping[i])
         
         other.questionedWith = None
         question.questionedWith = None
@@ -172,17 +171,29 @@ def disambiguate(node):
         question.childrenStatus = [False]*len(question.children)
         other.setQuestionedDescendants(False)
         question.setQuestionedDescendants(False)
+        
         assert(prevlen > len(question.children))
         
+  for child1 in traverse_tree(node, False):
+    for child2 in traverse_tree(node, False):
+      if child1 is child2:
+        continue
+      if child1.tmr is None or child2.tmr is None:
+        continue
+      if same_main_event(child1.tmr, child2.tmr):
+        mapping = get_children_mapping(child1, child2, lambda x,y: x.name==y.name if x.tmr is None or y.tmr is None else same_main_event(x.tmr,y.tmr))
+        update_children_relationships(child1, child2, mapping)
+        
 
-def traverse_tree(node, question_status):
-  if node.hasQuestionedDescendants == question_status:
+def traverse_tree(node, question_status=None):
+  if question_status is None or node.hasQuestionedDescendants == question_status:
     yield node
   if not node.terminal:
     for child in node.children:
       yield from traverse_tree(child, question_status)
         
 def construct_tree(input, steps):
+  stepsfile = open("stepsfile", "w")
   root = TreeNode()
   current = root
   i=0
@@ -268,6 +279,9 @@ def construct_tree(input, steps):
     list = []
     tree_to_json_format(root, list)
     output["tree"] = list
+    stepsfile.write(str(list))
+    stepsfile.write("\n")
+    stepsfile.flush()
   return root
   
 def get_children_mapping(a,b, comparison): #There's probably a standard function for this
@@ -287,14 +301,24 @@ def get_children_mapping(a,b, comparison): #There's probably a standard function
   return mapping
 
 def update_children_relationships(a,b,mapping):
-  debugfile = open("debugfile"+a.name, "w")
-  debugfile.write(str(mapping))
-  debugfile.write(str(a.relationships))
-  debugfile.write(str(b.relationships))
+  logfile = open("logfile", "w")
+  logfile.write(a.name)
+  for child in a.children:
+    logfile.write(child.name)
+  logfile.write(b.name)
+  for child in b.children:
+    logfile.write(child.name)
+  logfile.write(str(a.relationships))
+  logfile.write(str(b.relationships))
+  logfile.write(str(mapping))
+  logfile.close()
   for i in range(len(a.relationships)):
     for j in range(len(a.relationships[i])):
+      if mapping[i] is None or mapping[j] is None:
+        raise RuntimeError("Attempting to update relationships on incomplete mapping")
       # Set it to 0 if they are different, keep as-is if they are the same. In other words, multiply by (a==b)
       a.relationships[i][j] *= (a.relationships[i][j] == b.relationships[mapping[i]][mapping[j]])
+      b.relationships[mapping[i]][mapping[j]] = a.relationships[i][j]
      
 #Merges b into a. Could be changed.
 def merge_tree(a, b):
@@ -355,7 +379,7 @@ def tree_to_json_format(node, list):
   output["type"] = node.type
   output["id"] = node.id
   output["children"] = []
-  #output["relationships"] = node.relationships
+  output["relationships"] = node.relationships
   index = len(list)
   list.append(output)
   #if not node.terminal:
