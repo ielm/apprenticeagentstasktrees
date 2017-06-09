@@ -226,7 +226,6 @@ TreeRenderer.prototype = {
     }, this);
     this.curStage = 0;
     this.redraw();
-    this.nextStage();
   },
 
   /**
