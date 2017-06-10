@@ -87,7 +87,7 @@ function ForestRenderData(forest, width, height, separation) {
       var nodeHeight = root.height - node.depth;
       node.x *= mult;
       node.y = height - yStepStride * (nodeHeight + 1);
-      nodes[node.data.id] = node;
+      nodes[node.data.renderId] = node;
     });
   }, this);
 }
@@ -257,7 +257,7 @@ TreeRenderer.prototype = {
     });
 
     var node = svg.selectAll("g.node")
-        .data(nodes, function(d) { return d.data.id; });
+        .data(nodes, function(d) { return d.data.renderId; });
 
     var nodeEnter = node.enter().append("g")
         .attr("class", "node");
@@ -336,7 +336,7 @@ TreeRenderer.prototype = {
         .remove();
 
     var link = svg.selectAll("g.link")
-        .data(links, function(d) { return d.source.data.id + "-" + d.target.data.id; });
+        .data(links, function(d) { return d.target.data.renderId; });
 
     var linkEnter = link.enter().insert("g", "g.node")
         .attr("class", "link");
@@ -373,7 +373,7 @@ TreeRenderer.prototype = {
         .duration(duration * 0.75)
         .ease(d3.easeLinear)
         .attr("opacity", function(d) {
-          return d.target.data.questioned ? 1 : 1e-6;
+          return !d.source.data.questioned && d.target.data.questioned ? 1 : 1e-6;
         });
 
     var linkExit = link.exit();
@@ -436,7 +436,7 @@ TreeRenderer.prototype = {
     nextForest.trees.forEach(function(root) {
       root.each(function(node) {
         var nodeData = node.data;
-        var nodeId = node.data.id
+        var nodeId = node.data.renderId
 
         var strNodeId = new String(nodeId).valueOf();
         if (! (strNodeId in prevForest.nodes)) {
@@ -446,11 +446,11 @@ TreeRenderer.prototype = {
           }
           else {
             var parent = node.parent;
-            var parentId = parent.data.id;
+            var parentId = parent.data.renderId;
             while (!prevForest.nodes[parentId]) {
               if (parent.parent) {
                 parent = parent.parent;
-                parentId = parent.data.id;
+                parentId = parent.data.renderId;
               }
               else {
                 parentId = null;

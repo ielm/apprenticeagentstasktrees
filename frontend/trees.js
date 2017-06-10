@@ -3,7 +3,11 @@
  *
  * Parameters:
  *  name (string): the name of this node.
- *  id (int): the unique id of this node.
+ *  renderId (int): the unique id of this instance of this node, used to
+ *      identify it during rendering.
+ *  nodeId (int): the unique id of this node shared by all identical instances
+ *      of it. There may be more than one instance of a node if more than one
+ *      node claims it as a child.
  *  children (array[TreeNode]): the children of this node. If empty, null, or
  *      undefined, this node is treated as a leaf node.
  *  childMatrix (array[array[int]]): an adjacency matrix representing the
@@ -27,7 +31,8 @@
  * 
  * TreeNode instance members:
  *  treeNode.name (string): the name of this node.
- *  treeNode.id (int): the unique id of this node.
+ *  treeNode.renderId (int): the unique id of this instance of this TreeNode
+ *  treeNode.nodeId (int): the unique id shared by all instances of this TreeNode
  *  treeNode.children (array[TreeNode]): the children of this node. If
  *      empty, null, or undefined, this node is a leaf node.
  *  treeNode.childMatrix (array[array[int]]): the child matrix of this
@@ -37,9 +42,10 @@
  *  treeNode.properties (Object): an arbitrary object with additional properties
  *      for this node.
  * */
-function TreeNode(name, id, children, childMatrix, parent, propertiesObj, options) {
+function TreeNode(name, renderId, nodeId, children, childMatrix, parent, propertiesObj, options) {
   this.name = name;
-  this.id = id;
+  this.renderId = renderId;
+  this.nodeId = nodeId;
   this.children = children;
   this.childMatrix = childMatrix;
   this.parent = parent;
@@ -88,7 +94,7 @@ TreeNode.prototype = {};
  *  forest.trees (array[TreeNodes]): array of the roots of the trees contained
  *      in this Forest.
  *  forest.nodes (object): an object used as a map from node id's to references
- *      to the nodes themselves. Forest.nodes[TreeNode.id] will return a
+ *      to the nodes themselves. Forest.nodes[TreeNode.renderId] will return a
  *      reference to the TreeNode if it exists in any tree in this Forest, or
  *      undefined if it does not.
  *
@@ -110,15 +116,16 @@ function Forest(trees) {
 
   this.trees.forEach(function(t) {
     if (t.parent !== null && t.parent !== undefined)
-      throw new TypeError("Root node " + t.name + ", id " + t.id + ", has a parent");
+      throw new TypeError("Root node " + t.name + ", id " + t.renderId + ", has a parent");
 
     (function addIds(n) {
       if (!n instanceof TreeNode)
         throw new TypeError("Found an invalid TreeNode object");
-      if (this.nodes[n.id] !== undefined)
-        throw new Error("Nodes " + n.name + " and " + this.nodes[n.id].name + " share IDs");
+      if (this.nodes[n.renderId] !== undefined)
+        throw new Error("Nodes \"" + n.name + "\"." + n.renderId + " and \""
+          + this.nodes[n.renderId].name + "\"." + this.nodes[n.renderId].renderId + " share IDs");
 
-      this.nodes[n.id] = n;
+      this.nodes[n.renderId] = n;
       n.children.forEach(addIds, this);
     }).call(this, t);
   }, this);
@@ -133,8 +140,8 @@ Forest.prototype = {
    *      parent field of the node will be modified as necessary to match the
    *      parent indicated in the parameters to this method.
    *  parent (int or TreeNode): the parent node of the added node. If this
-   *      parameter is an int, it must be the ID of a node in this Forest. If
-   *      it is a TreeNode, it must have a name and ID that match a TreeNode in
+   *      parameter is an int, it must be the render ID of a node in this Forest. If
+   *      it is a TreeNode, it must have a name and render ID that match a TreeNode in
    *      this Forest.
    *  index (int, optional): the desired index of the added node in the
    *      parent's children array. This must be in the range 0 to
@@ -147,8 +154,8 @@ Forest.prototype = {
    *    Forest.
    * Throws TypeError if the parent is neither an integer nor a TreeNode.
    * Throws Error if the parent is invalid. The parent is invalid if 1. the
-   *    specified ID does not exist in this Forest, or 2. if the specified
-   *    TreeNode has id and name properties that do not match any TreeNode in
+   *    specified render ID does not exist in this Forest, or 2. if the specified
+   *    TreeNode has render id and name properties that do not match any TreeNode in
    *    this Forest.
    * Throws TypeError if index is not an integer.
    * Throws Error if index is invalid. The index is invalid if 1. it is not an
@@ -164,7 +171,7 @@ Forest.prototype = {
         throw new Error("Invalid parent ID for this Forest");
     }
     else if (parent instanceof TreeNode) {
-      var par = this.nodes[parent.id];
+      var par = this.nodes[parent.renderId];
       if (par === undefined || par.name !== parent.name)
         throw new Error("Provided parent does not match any in this Forest");
     }
@@ -179,7 +186,7 @@ Forest.prototype = {
       throw new Error("index out of bounds of parent's children array.");
 
     par.children.splice(index, 0, node);
-    this.nodes[node.id] = node;
+    this.nodes[node.renderId] = node;
   }
 };
 
@@ -275,45 +282,29 @@ function treeSeqFromData(data) {
 
     // identify roots and construct trees for each one that we find
     var roots = [];
+    var rootsInfo = [];
     for (var nodeId in seqData) {
       if (!seqData[nodeId].newParents) seqData[nodeId].newParents = [];
       if (seqData[nodeId].newParents.length === 0) {
         seqData[nodeId].newInstances = [
-          new TreeNode(seqData[nodeId].name, 0, [],
+          new TreeNode(seqData[nodeId].name, 0, nodeId, [],
             seqData[nodeId].childMatrix, null, seqData[nodeId].properties)
         ];
 
         function constructTree(root, nodeId) {
           var rootInfo = seqData[nodeId];
 
-          // figure out if there's an available and valid old instance to take
-          // the ID from
-          if (!root.parent && rootInfo.instances.length > 0)
-            var renderId = rootInfo.instances[0].id;
-          else { 
-            var oldInst = rootInfo.instances.find(function(old) {
-              return (old.parent) && (old.parent.id === root.parent.id);
-            });
-            if (oldInst)
-              var renderId = oldInst.id;
-            else {
-              oldInst = rootInfo.instances.find(function(old) { return !old.parent; });
-              if (oldInst) var renderId = oldInst.id;
-              else var renderId = nextId++;
-            }
-          }
-
-          root.id = renderId;
-
           // update children's newInstances and recurse down the tree
           rootInfo.children.forEach(function(childId) {
+            /*
             var treeNodeOptions = {};
             if (seqData[childId].newParents.length > 1)
               treeNodeOptions.questioned = true;
+              */
 
             root.children.push(new TreeNode(
-              seqData[childId].name, 0, [], seqData[childId].childMatrix,
-              root, seqData[childId].properties, treeNodeOptions)
+              seqData[childId].name, 0, childId, [], seqData[childId].childMatrix,
+              root, seqData[childId].properties)
             );
 
             if (!seqData[childId].newInstances) seqData[childId].newInstances = [];
@@ -324,8 +315,41 @@ function treeSeqFromData(data) {
 
         constructTree(seqData[nodeId].newInstances[0], nodeId);
         roots.push(seqData[nodeId].newInstances[0]);
+        rootsInfo.push(seqData[nodeId]);
       }
     }
+
+    function assignRenderIds(node) {
+      var nodeInfo = seqData[node.nodeId];
+      var oldInst = nodeInfo.instances.find(function(old) {
+        return old.parent && node.parent && old.parent.renderId === node.parent.renderId;
+      });
+
+      if (!oldInst) {
+        oldInst = nodeInfo.instances.find(function(old) {
+          return old.parent === null || old.parent === undefined;
+        });
+        
+        if (!oldInst) {
+          oldInst = nodeInfo.instances.find(function(old) {
+            return !nodeInfo.newParents.find(function(parId) { old.parent.renderId === parId; });
+          });
+        }
+      }
+
+      if (oldInst) {
+        node.renderId = oldInst.renderId;
+        var index = nodeInfo.instances.findIndex(function(n) { return n.renderId === oldInst.renderId; });
+        nodeInfo.instances.splice(index, 1);
+      }
+      else node.renderId = nextId++;
+
+      if (nodeInfo.newInstances.length > 1)
+        node.questioned = true;
+
+      node.children.forEach(assignRenderIds);
+    }
+    roots.forEach(assignRenderIds);
 
     forests.push(new Forest(roots));
 

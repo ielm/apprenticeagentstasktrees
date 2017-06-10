@@ -8,7 +8,8 @@ var height = 720;
 $(function() {
 
   // set the default URL to send requests to the service
-  $("input[type=text]").val("http://" + document.location.hostname + ":5000/alpha/maketree");
+  if (document.URL.substr(0,4) === "http") 
+    $("input[type=text]").val("http://" + document.location.hostname + ":5000/alpha/maketree");
 
   // set up the link between the file dialog and the masking element
   var $fileupload = $("input[type=file]");
