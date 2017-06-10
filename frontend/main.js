@@ -84,6 +84,24 @@ $(function() {
     d3.select("#total").text(render.length - 1);
     d3.select("#forward").classed("disabled", false);
 
+    var inputs = ["(Before input)"];
+
+    parsedData.forEach(function(stage) {
+      if (typeof stage.input === "string")
+        inputs.push('"' + stage.input + '"');
+      else {
+        var append = "";
+        stage.input.forEach(function(input, i) {
+          if (i > 0)
+            append += ", ";
+          append += input;
+        });
+        inputs.push('"' + append + '"');
+      }
+    });
+
+    console.log(inputs);
+
     remove
         .attr("opacity", function() {
           return d3.select(this).attr("opacity") || 1;
@@ -100,6 +118,7 @@ $(function() {
       d3.select("#back").classed("disabled", false);
       if (render.curStage >= render.length - 1)
         d3.select("#forward").classed("disabled", true);
+      d3.select(".control p.input").text(inputs[render.curStage]);
     }, 1000);
 
     d3.select("#forward").on("click", function() {
@@ -109,6 +128,7 @@ $(function() {
         d3.select("#forward").classed("disabled", true);
 
       d3.select("#current").text(render.curStage);
+      d3.select(".control p.input").text(inputs[render.curStage]);
     });
     d3.select("#back").on("click", function() {
       render.prevStage();
@@ -117,6 +137,7 @@ $(function() {
         d3.select("#back").classed("disabled", true);
 
       d3.select("#current").text(render.curStage);
+      d3.select(".control p.input").text(inputs[render.curStage]);
     });
   }
 });

@@ -18,8 +18,22 @@ body {
 }
 
 .info {
+  min-width: 30em;
   margin-left: 2em;
   margin-right: 2em;
+}
+
+.info p {
+  display: block;
+  margin: 0;
+}
+
+.info p.input {
+  font-weight: bold;
+}
+
+.info p:not(.input) {
+  font-size: 10pt;
 }
 
 .control .btn {
