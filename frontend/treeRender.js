@@ -158,6 +158,11 @@ ForestRenderData.prototype = {
  *      TreeSeq.
  *  treeRenderer.transitionDuration (int): the duration, in miliseconds, of
  *      each transition between stages of the tree. Defaults to 1000.
+ *
+ * TreeRenderer constructor properties:
+ *  TreeRenderer.hoveredNode (DOM element): the <g> element representing the
+ *      node that the user has hovered over with the mouse. Null if no such 
+ *      node exists.
  * 
  * Direct assignment to member fields of TreeRenderer should be avoided.
  * Instead, use the methods defined below.
@@ -177,15 +182,53 @@ function TreeRenderer(width, height, svgId, treeSeq) {
 
   this.setTreeSeq(treeSeq);
 }
+TreeRenderer.hoveredNode = null;
+
+/**
+ * Set the currently hovered node, raising it to the top of the z-order and
+ * animating its scale-up, and also animating any previous hovered node's scale
+ * down.
+ *
+ * Parameters:
+ *  node (DOM element): the <g> element to set as the newly hovered node. If
+ *      null, remove all hovering effects from all nodes.
+ * */
+TreeRenderer.setHovered = function(node) {
+  function setScale(scale, originalString) {
+    var ret = originalString.replace(/(scale\()([0-9\.,\s]*)(\))/, "$1" + scale + "$3");
+    if (ret === originalString) ret += " scale(" + scale + ")";
+    return ret;
+  }
+
+  if (this.hoveredNode) {
+    var hoveredNode = d3.select(this.hoveredNode);
+    hoveredNode.transition("hoverScale")
+        .duration(500)
+        .ease(d3.easeSinInOut)
+        .attr("transform", function() {
+          return setScale(1, hoveredNode.attr("transform"));
+        });
+  }
+
+  if (node) {
+    var hoveredNode = d3.select(node);
+    hoveredNode.raise()
+      .transition("hoverScale")
+        .duration(500)
+        .ease(d3.easeSinInOut)
+        .attr("transform", function() {
+          return setScale(1.5, hoveredNode.attr("transform"));
+        });
+  }
+
+  this.hoveredNode = node;
+};
+
 TreeRenderer.prototype = {
 
   /**
    * Change the TreeSeq rendered by this TreeRenderer. This will cause the
-<<<<<<< HEAD
-   * current stage to be reset to 1 and the tree to be redrawn.
-=======
    * current stage to be reset to 0 and the tree to be redrawn.
->>>>>>> 806d7fff907caa19966215287420af9d37f98414
    *
    * Parameters:
    *  treeSeq (TreeSeq): the new TreeSeq object.
@@ -291,6 +334,9 @@ TreeRenderer.prototype = {
         .attr("rx", function(d) { return d.h / 2; })
         .attr("ry", function(d) { return d.h / 2; })
         .lower();
+
+    nodeEnter.on("pointerenter", function() { TreeRenderer.setHovered(this); })
+        .on("pointerleave", function() { TreeRenderer.setHovered(null); });
 
     nodeUpdate.transition("position")
         .duration(this.transitionDuration)

@@ -25,7 +25,7 @@ $(function() {
       .attr("height", height + margin.top + margin.bottom)
     .append("g")
       .attr("class", "canvas")
-      .attr("transform", "translate(" + margin.top + "," + margin.left + ")")
+      .attr("transform", "translate(" + margin.left + "," + margin.top + ")")
     .append("rect")
       .attr("class", "nodata")
       .attr("fill", "lightgrey")
