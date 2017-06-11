@@ -394,13 +394,13 @@ TreeRenderer.prototype = {
     var prevForest = this.stages[prev];
     var nextForest = this.stages[next];
 
-    nextForest.trees.forEach(function(root) {
-      root.each(function(node) {
+    function calcZeroCoords(forestFrom) {
+      return function(node) {
         var nodeData = node.data;
         var nodeId = node.data.renderId
 
         var strNodeId = new String(nodeId).valueOf();
-        if (! (strNodeId in prevForest.nodes)) {
+        if (! (strNodeId in forestFrom.nodes)) {
           if (!node.parent) {
             node.x0 = node.x;
             node.y0 = node.y;
@@ -408,7 +408,7 @@ TreeRenderer.prototype = {
           else {
             var parent = node.parent;
             var parentId = parent.data.renderId;
-            while (!prevForest.nodes[parentId]) {
+            while (!forestFrom.nodes[parentId]) {
               if (parent.parent) {
                 parent = parent.parent;
                 parentId = parent.data.renderId;
@@ -420,8 +420,8 @@ TreeRenderer.prototype = {
             }
 
             if (parentId !== null) {
-              node.x0 = prevForest.nodes[parentId].x;
-              node.y0 = prevForest.nodes[parentId].y;
+              node.x0 = forestFrom.nodes[parentId].x;
+              node.y0 = forestFrom.nodes[parentId].y;
             }
             else {
               node.x0 = node.parent.x0;
@@ -429,8 +429,15 @@ TreeRenderer.prototype = {
             }
           }
         }
-      });
-    }, this);
+      };
+    }
+
+    nextForest.trees.forEach(function(root) {
+      root.each(calcZeroCoords(prevForest));
+    });
+    prevForest.trees.forEach(function(root) {
+      root.each(calcZeroCoords(nextForest));
+    });
 
     var duration = this.transitionDuration;
     var linkGen = this.linkGen;
