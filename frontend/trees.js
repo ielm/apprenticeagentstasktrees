@@ -192,12 +192,15 @@ Forest.prototype = {
 
 /**
  * Construct a new TreeSeq object. TreeSeqs represent a sequence of stages in
- * the growth of a tree or forest.
+ * the growth of a tree or forest. The first Forest of a TreeSeq is always
+ * empty.
  *
  * Parameters:
  *  stages (array[Forest], optional): if provided, the stages of this TreeSeq
  *      are initialized to the stages array. Otherwise, the TreeSeq's stages
- *      are initialized to an empty array.
+ *      are initialized to an array containing only an empty Forest. If the
+ *      first Forest of the array is not empty, an empty Forest will be added
+ *      to the beginning of the TreeSeq.
  *
  * Throws TypeError if stages is defined but not an array.
  * Throws TypeError if any element of stages is not an instance of Forest.
@@ -210,23 +213,52 @@ Forest.prototype = {
  * went ahead and made it a class.)
  * */
 function TreeSeq(stages) {
-  if (stages === undefined) this.stages = [];
-  else if (! stages instanceof Array)
+  if (stages === undefined) this.stages = [new Forest()];
+  else if (! (stages instanceof Array))
     throw new TypeError("Expected array for stages, got " + typeof(stages));
   else this.stages = stages;
+  if (this.stages.length === 0) this.stages.push(new Forest());
 
   this.stages.forEach(function(t) {
     if (!t instanceof Forest)
       throw new TypeError("Expected Forest elements in stages");
   });
+
+  if (this.stages[0].trees.length !== 0) this.stages.unshift(new Forest());
 }
-TreeSeq.prototype = {};
+TreeSeq.prototype = {
+  /**
+   * Append the given Forest(s) to the end of the TreeSeq.
+   *
+   * Paramters:
+   *  forests (Forest of array[Forest]): one or more Forests to append to the
+   *      TreeSeq.
+   *
+   *  Throws TypeError if forests is not an instance of Forest or Array.
+   *  Throws TypeError if any element of forests is not a Forest.
+   * */
+  append: function(forests) {
+    if (!(forests instanceof Array) && !(forests instanceof Forest))
+      throw new TypeError("Expected Array or Forest, got " + typeof(forests));
+
+    if (forests instanceof Forest)
+      this.stages.push(forests);
+    else {
+      forests.forEach(function(f) {
+        if (!(f instanceof Forest))
+          throw new TypeError("Expected Forest elements in forests");
+      });
+      this.stages = this.stages.concat(forests);
+    }
+  }
+};
 
 /**
  * Create a TreeSeq from the passed data.
  *
  * Parameters:
- *  data (object): an object parsed from an input JSON file. The format of the
+ *  data (array[array[object]]): an array of arrays of objects describing the
+ *      nodes of the tree, parsed from an input JSON file. The format of the
  *      file is described elsewhere.
  *
  * Returns a TreeSeq generated from the data object. The first Forest in the
@@ -244,7 +276,7 @@ function treeSeqFromData(data) {
   data.forEach(function(stage) {
 
     // get new children for each node in the input
-    stage.tree.forEach(function(inputNode) {
+    stage.forEach(function(inputNode) {
       var nodeId = inputNode.id;
       if (!seqData[nodeId]) seqData[nodeId] = {
         name: "",
@@ -296,12 +328,6 @@ function treeSeqFromData(data) {
 
           // update children's newInstances and recurse down the tree
           rootInfo.children.forEach(function(childId) {
-            /*
-            var treeNodeOptions = {};
-            if (seqData[childId].newParents.length > 1)
-              treeNodeOptions.questioned = true;
-              */
-
             root.children.push(new TreeNode(
               seqData[childId].name, 0, childId, [], seqData[childId].childMatrix,
               root, seqData[childId].properties)
@@ -362,6 +388,5 @@ function treeSeqFromData(data) {
     }
   });
 
-  forests.unshift(new Forest());
   return new TreeSeq(forests);
 }

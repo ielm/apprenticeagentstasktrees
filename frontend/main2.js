@@ -9,20 +9,14 @@ $(function() {
 
   // set the default URL to send requests to the service
   if (document.URL.substr(0,4) === "http") 
-    $("input[type=text]").val("http://" + document.location.hostname + ":5000/alpha/maketree");
+    $("input[type=text]").val("http://" + document.location.hostname + ":5000/alpha/mergetree");
 
   // set up the link between the file dialog and the masking element
   var $fileupload = $("input[type=file]");
   $fileupload.change(function() {
     var $span = $("div.input_mask span");
-    if ($fileupload[0].files[0]) {
-      $span.removeClass("dim");
-      $span.html($fileupload[0].files[0].name);
-    }
-    else {
-      $span.addClass("dim");
-      $span.html("None");
-    }
+    $span.removeClass("dim");
+    $span.html($fileupload[0].files[0].name);
   });
 
   // set up SVG with margins, and add "no tree data" overlay
@@ -67,33 +61,37 @@ $(function() {
         success: function(ret, status) {
           var error = status === "success" ? undefined : status;
           changeTree(error, ret);
-          d3.selectAll(".control").attr("display", "block");
+          //d3.selectAll(".control").attr("display", "block");
         }
       });
     };
     reader.readAsText(file);
   });
+
+  var seq = treeSeqFromData([]);
+  var render = new TreeRenderer(width, height, ".canvas", seq);
+  render.transitionDuration = 750;
   
   // Changes the active tree. Fades out any elements currently in the SVG, and
   // sets up the TreeRenderer for the new tree.
   function changeTree(error, parsedData) {
     if (error) throw error;
     console.log(JSON.parse(JSON.stringify(parsedData)));
+    var forest = treeSeqFromData([parsedData]).stages[1];
+    console.log(forest);
 
-    var nodes = [];
-    parsedData.forEach(function(d) { nodes.push(d.tree); });
+    seq.append(forest);
 
-    var treeSeq = treeSeqFromData(nodes);
-    console.log(treeSeq);
+    var remove = d3.selectAll(".canvas").selectAll(".nodata");
 
-    var remove = d3.selectAll(".canvas").selectAll("*");
-
-    var render = new TreeRenderer(width, height, ".canvas", treeSeq);
-    render.transitionDuration = 750;
+    var curStage = render.curStage;
+    render.setTreeSeq(seq);
+    render.nextStage();
 
     d3.select("#total").text(render.length - 1);
     d3.select("#forward").classed("disabled", false);
 
+    /*
     var inputs = ["(Before input)"];
 
     parsedData.forEach(function(stage) {
@@ -111,25 +109,28 @@ $(function() {
     });
 
     console.log(inputs);
+    */
 
-    remove
-        .attr("opacity", function() {
-          return d3.select(this).attr("opacity") || 1;
-        })
-      .transition()
-        .duration(500)
-        .ease(d3.easeLinear)
-        .attr("opacity", 1e-6)
-        .remove();
+    if (d3.selectAll(".nodata").size() > 0) {
+      remove
+          .attr("opacity", function() {
+            return d3.select(this).attr("opacity") || 1;
+          })
+        .transition()
+          .duration(500)
+          .ease(d3.easeLinear)
+          .attr("opacity", 1e-6)
+          .remove();
 
-    d3.timeout(function() {
-      render.nextStage();
-      d3.select("#current").text(render.curStage);
-      d3.select("#back").classed("disabled", false);
-      if (render.curStage >= render.length - 1)
-        d3.select("#forward").classed("disabled", true);
-      d3.select(".control p.input").text(inputs[render.curStage]);
-    }, 1000);
+      d3.timeout(function() {
+        //render.nextStage();
+        d3.select("#current").text(render.curStage);
+        d3.select("#back").classed("disabled", false);
+        if (render.curStage >= render.length - 1)
+          d3.select("#forward").classed("disabled", true);
+        //d3.select(".control p.input").text(inputs[render.curStage]);
+      }, 1000);
+    }
 
     d3.select("#forward").on("click", function() {
       render.nextStage();
@@ -138,7 +139,7 @@ $(function() {
         d3.select("#forward").classed("disabled", true);
 
       d3.select("#current").text(render.curStage);
-      d3.select(".control p.input").text(inputs[render.curStage]);
+      //d3.select(".control p.input").text(inputs[render.curStage]);
     });
     d3.select("#back").on("click", function() {
       render.prevStage();
@@ -147,7 +148,7 @@ $(function() {
         d3.select("#back").classed("disabled", true);
 
       d3.select("#current").text(render.curStage);
-      d3.select(".control p.input").text(inputs[render.curStage]);
+      //d3.select(".control p.input").text(inputs[render.curStage]);
     });
   }
 });
