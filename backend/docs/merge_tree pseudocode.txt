@@ -1,0 +1,26 @@
+This merges data from the b tree into the a tree; that is, it transforms the a tree so that it
+accurately represents both the input used to construct a and the input used to construct b.
+
+def merge_tree(a, b):
+	(This is only called on nodes that are either both roots of their respective trees,
+		or that represent the same utterance or action. It modifies a and its descendants,
+		and leaves b unchanged.)
+	
+	if a and b are both leaf nodes, return
+	
+	if a and b each have exactly one child:
+		if the children represent the same utterance or action, merge_tree on those nodes
+		otherwise, add b's child (and all its descendants) as an alternative to a's child
+	
+	if a and b have the same number of children:
+		if they have the same children in the same order:
+			merge_tree each pair of children
+		if they have the same children in a different order:
+			update a's child relationship matrix to allow for b's permutation
+			then merge_tree each pair of children
+			
+	if a and b both either have one child or are marked that their children are alternates:
+		add all children of b as alternate children of a
+		(note: this should be changed to find children that are the same and merge them)
+		
+	otherwise, can't merge these trees and need more algorithms
