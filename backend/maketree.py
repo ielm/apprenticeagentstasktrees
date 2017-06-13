@@ -60,6 +60,12 @@ def same_node(node1, node2):
     return False
   return same_main_event(node1.tmr, node2.tmr)
   
+#def ancestor_in_list(concept, list):
+#  #this would be a lot easier with a smarter ontology
+#  if concept == "ALL":
+#    return False
+#  return concept in list or ancestor_in_list(ontology[concept]["IS-A"], list)
+  
 def about_part_of(tmr1, tmr2):
   if tmr1 is None or tmr2 is None:
     return False
@@ -71,6 +77,7 @@ def about_part_of(tmr1, tmr2):
     return False
   
   return tmr1[event1["THEME"]]["concept"] in ontology[tmr2[event2["THEME"]]["concept"]]["HAS-OBJECT-AS-PART"]["SEM"]
+  #TODO make this prioritize DEFAULT over SEM
   
 class TreeNode:
   """A class representing a node in the action hierarchy tree."""  
@@ -203,13 +210,11 @@ def construct_tree(input, steps):
           new.name = get_name_from_tmr(tmr)
           new.tmr = tmr
           
-          j = -2
-          while j > -len(current.children) and about_part_of(current.children[j].tmr, tmr):
-            j -= 1
+          j = 0
+          while j < len(current.children) and not about_part_of(current.children[j].tmr, tmr):
+            j +=1
           
-          j += 1 #to make future things simpler          
-          
-          if j > -len(current.children) + 1:
+          if j < len(current.children):
             current.questionedWith = new
             new.questionedWith = current
           
@@ -240,6 +245,20 @@ def construct_tree(input, steps):
           if current.children[-1].name == "": # if their node is unnamed,
             current.children[-1].name = get_name_from_tmr(tmr)#mark that node with this utterance
             current.children[-1].tmr = tmr
+          elif about_part_of(tmr, current.children[-1].tmr):
+            #Insert this new node between the previous node and its children
+            new = TreeNode()
+            new.name = get_name_from_tmr(tmr)
+            new.tmr = tmr
+            current = current.children[-1]
+            
+            new.children = current.children
+            current.children = [new]
+            new.childrenStatus = current.childrenStatus
+            current.childrenStatus = [False]
+            new.relationships = current.relationships
+            current.relationships = [[0]]            
+            
           else: # need to split actions between pre-utterance and post-utterance
             new = TreeNode()
             current.addChildNode(new)
@@ -254,6 +273,13 @@ def construct_tree(input, steps):
         else:
           pass #... add more heuristics here
       else: # Prefix
+        #Check to see if this is about part of something by going up the tree.
+        # TODO: Test this. (e.g. picnic table example)
+        candidate = current
+        while candidate.parent is not None and not about_part_of(tmr, candidate.tmr):
+          candidate = candidate.parent
+        if candidate.parent is not None:
+          current = candidate
         new = TreeNode()
         current.addChildNode(new)
         new.name = get_name_from_tmr(tmr)
@@ -341,8 +367,13 @@ def merge_tree(a, b):
         merge_tree(a.children[i], b.children[mapping[i]])
   elif (len(b.children) == 1 or b.type == "alternate") and (len(a.children) == 1 or a.type == "alternate"):
     a.type = "alternate"
-    for child in b.children:
-      a.children.append(child)
+    for achild in b.children:
+      for bchild in a.children:
+        if same_node(a,b):
+          merge_tree(achild, bchild)
+          break #only break inner loop
+      else:
+        a.addChild(bchild)
   else:
     raise RuntimeError("Cannot merge trees!") # again, will trigger alternatives situation eventually
 
