@@ -1,7 +1,7 @@
 This is the central method of maketree.py. It takes in a list of TMRs and atomic actions
 and attempts to place them into a hierarchical tree structure.
 
-def construct_tree(input, steps):
+function construct_tree:
 	make a TreeNode to be the root
 	set the current node to be the root
 	
@@ -29,6 +29,8 @@ def construct_tree(input, steps):
 				else if previous input was an action:
 					if that action currently is a child of a nameless node:
 						mark that node with this utterance
+					else if the theme of the new input is part of the theme of the previous input:
+						insert a node for the new input between the previous node and its children
 					else:
 						mark all children of previous node (which should all be actions) as questioned
 						(i.e. they might belong to previous node, but they might belong to this node)

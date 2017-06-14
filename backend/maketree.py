@@ -4,7 +4,7 @@ from flask import Flask, request, abort, send_from_directory
 from flask_cors import CORS
 from mini_ontology import ontology
 
-#TODO this currently just returns the first event it finds
+#this currently just returns the first event it finds
 def find_main_event(tmr):
   for item in tmr:
     if type(tmr[item]) is dict and "is-in-subtree" in tmr[item] and tmr[item]["is-in-subtree"] == "EVENT":
@@ -274,7 +274,6 @@ def construct_tree(input, steps):
           pass #... add more heuristics here
       else: # Prefix
         #Check to see if this is about part of something by going up the tree.
-        # TODO: Test this. (e.g. picnic table example)
         candidate = current
         while candidate.parent is not None and not about_part_of(tmr, candidate.tmr):
           candidate = candidate.parent
@@ -335,7 +334,6 @@ def update_children_relationships(a,b,mapping):
      
 #Merges b into a. Could be changed.
 def merge_tree(a, b):
-  # TODO replace children.append with addChild
   #Assumes same_node(a,b) is true
   if a.type == "leaf" and b.type == "leaf":
     return
@@ -348,8 +346,8 @@ def merge_tree(a, b):
       return
     else:
       a.type = "alternate"
-      a.children.append(b.children[0])
-  if len(a.children) == len(b.children):
+      a.addChildNode(b.children[0])
+  elif len(a.children) == len(b.children):
     #if a is sequential and b is sequential
     sequential=True
     for i in range(len(a.children)):
@@ -377,7 +375,7 @@ def merge_tree(a, b):
   else:
     raise RuntimeError("Cannot merge trees!") # again, will trigger alternatives situation eventually
 
-# TODO this might not be needed any more?
+#this might not be needed any more?
 def print_tree(tree, spaces=""):
   if not type(tree) is TreeNode:
     print(spaces+"Expected TreeNode, got something else? "+str(tree))
@@ -441,7 +439,8 @@ def start_with_merging():
     merge_tree(current_tree, new_tree)
   list = []
   tree_to_json_format(current_tree, list)
-  return json.dumps(list)    
+  #return json.dumps(list)
+  return json.dumps([{"input":"(input not shown)", "tree": list}])
 
 @app.route('/alpha/mergetree', methods=['DELETE'])
 def clear_merged_tree():
