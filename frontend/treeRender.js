@@ -196,16 +196,10 @@ TreeRenderer.hoveredNode = null;
 TreeRenderer.setHovered = function(node) {
   if (this.hoveredNode && this.hoveredNode.isSameNode(node)) return;
 
-  function setScale(scale, originalString) {
-    var ret = originalString.replace(/(scale\()([0-9\.,\s]*)(\))/, "$1" + scale + "$3");
-    if (ret === originalString) ret += " scale(" + scale + ")";
-    return ret;
-  }
-
   if (this.hoveredNode) {
     var hoveredNode = d3.select(this.hoveredNode);
     hoveredNode.transition("hoverScale")
-        .duration(500)
+        .duration(250)
         .ease(d3.easeSinInOut)
         .attr("transform", function() {
           return setScale(1, hoveredNode.attr("transform"));
@@ -216,7 +210,7 @@ TreeRenderer.setHovered = function(node) {
     var hoveredNode = d3.select(node);
     hoveredNode.raise()
       .transition("hoverScale")
-        .duration(500)
+        .duration(250)
         .ease(d3.easeSinInOut)
         .attr("transform", function() {
           return setScale(1.5, hoveredNode.attr("transform"));
@@ -230,7 +224,7 @@ TreeRenderer.prototype = {
 
   /**
    * Change the TreeSeq rendered by this TreeRenderer. This will cause the
-   * current stage to be reset to 0 and the tree to be redrawn.
+   * tree to be redrawn.
    *
    * Parameters:
    *  treeSeq (TreeSeq): the new TreeSeq object.
@@ -327,8 +321,10 @@ TreeRenderer.prototype = {
 
     nodeUpdate.each(function(d) {
       var text = d3.select(this).select("text").node();
-      d.w = text.getBBox().width + 30;
-      d.h = text.getBBox().height + 10;
+      d.w = text.getBBox().width + 20;
+      d.h = text.getBBox().height + 8;
+      d.h += d.h * d.h / d.w;
+      if (d.h > d.w) d.h = d.w;
     });
 
     nodeUpdate.select("rect")
@@ -389,7 +385,8 @@ TreeRenderer.prototype = {
         .attr("width", this.width)
         .attr("height", this.height);
     
-    d3.interrupt(svg.node());
+    if (svg.node())
+      d3.interrupt(svg.node());
 
     var prevForest = this.stages[prev];
     var nextForest = this.stages[next];
@@ -470,11 +467,13 @@ TreeRenderer.prototype = {
           .attr("opacity", 0)
           .text(function(d) { return d.data.name === "" ? "?" : d.data.name; })
         .node();
-      d.w = text.getBBox().width + 30;
-      d.h = text.getBBox().height + 10;
+      d.w = text.getBBox().width + 20;
+      d.h = text.getBBox().height + 8;
+      d.h += d.h * d.h / d.w;
+      if (d.h > d.w) d.h = d.w;
       d3.select(text).remove();
     });
-      
+
     nodeEnter.append("text")
         .attr("dy", "0.35em")
         .attr("text-anchor", "middle")

@@ -7,7 +7,7 @@
     <script type="application/javascript" src="utils.js"></script>
     <script type="application/javascript" src="trees.js"></script>
     <script type="application/javascript" src="treeRender.js"></script>
-    <script type="application/javascript" src="main2.js"></script>
+    <script type="application/javascript" src="main.js"></script>
     <link type="text/css" rel="stylesheet" href="style.css"/>
   </head>
   <body>
@@ -15,14 +15,15 @@
     <div class="control">
       <div class="btn disabled" id="back"><p>Back</p></div>
       <div class="info">
-        <p>Current stage: <span id="current"></span> of <span id="total"></span></p>
+        <p>Current stage: <span id="current">0</span> of <span id="total">0</span></p>
         <p class="input"></p>
       </div>
       <div class="btn disabled" id="forward"><p>Forward</p></div>
     </div>
   <div class="fileupload">
+    <button id="reset">Reset Data</button>
     <form id="apiquery">
-      <input id="url" type="text" value="http://localhost:5000/alpha/maketree"></input>
+      <input id="url" type="text" value="http://localhost:5000"></input>
       <div class="input_mask file_mask">
         <div>File:<span class="dim">None</span></div>
         <input id="upload" type="file"></input>
