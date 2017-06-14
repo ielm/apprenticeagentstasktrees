@@ -39,6 +39,9 @@
 "total-confidence": 2,
 "total-preference": 0}
 }],
+"sent-num": 0,
+"sentence": "I plan to build a chair.",
+"timestamp": "2017-May-23 21:07:04"},
 {"action": "get-screwdriver"},
 {"action": "get-screws"},
 {"action": "get-dowel"},
