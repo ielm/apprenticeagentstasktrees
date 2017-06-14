@@ -263,7 +263,7 @@ function addTree(maketreeData, mergetreeData) {
   inputTrees.push(newTreeData);
 
   if (displayedTree === null) {
-    var primTreeNodes = [ mergetreeData ];
+    var primTreeNodes = [mergetreeData[0].tree];
     var primTreeSeq = treeSeqFromData(primTreeNodes);
 
     primaryTree = {};
@@ -276,7 +276,7 @@ function addTree(maketreeData, mergetreeData) {
     primaryTree.render.transitionDuration = 750;
   }
   else {
-    var newTreeForest = treeSeqFromData([mergetreeData]).stages[1];
+    var newTreeForest = treeSeqFromData([mergetreeData[0].tree]).stages[1];
 
     var primTree = primaryTree? primaryTree : displayedTree;
 
