@@ -88,12 +88,12 @@ TreeNode.prototype = {};
  * Throws TypeError if any node in any tree is not an instance of TreeNode.
  * Throws TypeError if any of the passed roots have a parent.
  * Throws Error if any two nodes in any tree passed to the Forest have the same
- *    id property.
+ *    renderId property.
  *
  * Forest instance members:
  *  forest.trees (array[TreeNodes]): array of the roots of the trees contained
  *      in this Forest.
- *  forest.nodes (object): an object used as a map from node id's to references
+ *  forest.nodes (object): an object used as a map from node renderId's to references
  *      to the nodes themselves. Forest.nodes[TreeNode.renderId] will return a
  *      reference to the TreeNode if it exists in any tree in this Forest, or
  *      undefined if it does not.
@@ -192,41 +192,126 @@ Forest.prototype = {
 
 /**
  * Construct a new TreeSeq object. TreeSeqs represent a sequence of stages in
- * the growth of a tree or forest.
+ * the growth of a tree or forest. The first Forest of a TreeSeq is always
+ * empty.
  *
  * Parameters:
- *  stages (array[Forest], optional): if provided, the stages of this TreeSeq
+ *  stages (Forest or array[Forest], optional): if provided, the stages of this TreeSeq
  *      are initialized to the stages array. Otherwise, the TreeSeq's stages
- *      are initialized to an empty array.
+ *      are initialized to an array containing only an empty Forest. If the
+ *      first Forest of the array is not empty, an empty Forest will be added
+ *      to the beginning of the TreeSeq.
  *
- * Throws TypeError if stages is defined but not an array.
  * Throws TypeError if any element of stages is not an instance of Forest.
  *
  * TreeSeq instance members:
- *  treeSeq.stages (array[Forest]): the array of stages in this TreeSeq.
+ *  treeSeq.stages (array[Forest]): the stage or array of stages in this TreeSeq.
+ *  treeSeq.nodesPerStage (array[object]): an array of objects used internally
+ *      to map node IDs to information about the nodes with those IDs in each
+ *      stage.
  *
- * (Note: this could just as easily be a simple array rather than a class, but
- * I kinda anticipate having to add more information to these objects, so I
- * went ahead and made it a class.)
+ * The stages field should be regarded as read-only, and the nodesPerStage field
+ * should be regarded as fully private. Do not directly assign to these fields;
+ * use the methods defined below instead.
  * */
 function TreeSeq(stages) {
-  if (stages === undefined) this.stages = [];
-  else if (! stages instanceof Array)
-    throw new TypeError("Expected array for stages, got " + typeof(stages));
-  else this.stages = stages;
+  this.stages = [new Forest()];
+  this.nodesPerStage = [ {} ];
+  this.nodesPerStage.nextId = 0;
 
-  this.stages.forEach(function(t) {
-    if (!t instanceof Forest)
-      throw new TypeError("Expected Forest elements in stages");
-  });
+  if (stages === undefined || (stages instanceof Array && stages.length === 0))
+    return;
+
+  else this.append(stages);
 }
-TreeSeq.prototype = {};
+TreeSeq.prototype = {
+  /**
+   * Append the given Forest(s) to the end of the TreeSeq, modifying the render
+   * IDs of nodes in each Forest to maintain consistency in render IDs with
+   * nodes of matching node IDs in the Forests of previous stages.
+   *
+   * Paramters:
+   *  forests (Forest of array[Forest]): one or more Forests to append to the
+   *      TreeSeq.
+   *
+   *  Throws TypeError if forests is not an instance of Forest or Array.
+   *  Throws TypeError if any element of forests is not a Forest.
+   * */
+  append: function(forests) {
+    if (!(forests instanceof Array)) var adds = [ forests ];
+    else var adds = forests;
+
+    var stages = this.stages;
+    var nodesPerStage = this.nodesPerStage;
+
+    adds.forEach(function(f) {
+      if (! (f instanceof Forest))
+        throw new TypeError("Expected array of Forests, got " + typeof f);
+      stages.push(f);
+      nodesPerStage.push({});
+      
+      for (var id in f.nodes) {
+        var n = f.nodes[id];
+        if (!nodesPerStage.back[n.nodeId])
+          nodesPerStage.back[n.nodeId] = { instances: [], parentNodeIds: [] };
+
+        var curInfo = nodesPerStage.back[n.nodeId];
+        curInfo.instances.push(n);
+        if (n.parent && !curInfo.parentNodeIds.includes(n.parent.nodeId))
+          curInfo.parentNodeIds.push(n.parent.nodeId);
+
+        delete f.nodes[id];
+      }
+
+      function assignRenderIds(node) {
+        var prevInfo = nodesPerStage[stages.length - 2][node.nodeId];
+        if (!prevInfo) prevInfo = { instances: [], parentNodeIds: [] };
+
+        var curInfo = nodesPerStage.back[node.nodeId];
+
+        var oldInstances = prevInfo.instances;
+
+        var oldInst = oldInstances.find(function(old) {
+          return old.parent && node.parent && old.parent.renderId === node.parent.renderId;
+        });
+
+        if (!oldInst) {
+          oldInst = oldInstances.find(function(old) {
+            return old.parent === null || old.parent === undefined;
+          });
+          
+          if (!oldInst) {
+            oldInst = oldInstances.find(function(old) {
+              return !curInfo.parentNodeIds.find(function(parId) { old.parent.renderId === parId; });
+            });
+          }
+        }
+
+        if (oldInst) {
+          node.renderId = oldInst.renderId;
+          var index = oldInstances.findIndex(function(n) { return n.renderId === oldInst.renderId; });
+          oldInstances.splice(index, 1);
+        }
+        else node.renderId = nodesPerStage.nextId++;
+        f.nodes[node.renderId] = node;
+
+        if (curInfo.instances.length > 1)
+          node.questioned = true;
+
+        node.children.forEach(assignRenderIds);
+      }
+
+      f.trees.forEach(assignRenderIds);
+    });
+  }
+};
 
 /**
  * Create a TreeSeq from the passed data.
  *
  * Parameters:
- *  data (object): an object parsed from an input JSON file. The format of the
+ *  data (array[array[object]]): an array of arrays of objects describing the
+ *      nodes of the tree, parsed from an input JSON file. The format of the
  *      file is described elsewhere.
  *
  * Returns a TreeSeq generated from the data object. The first Forest in the
@@ -244,7 +329,7 @@ function treeSeqFromData(data) {
   data.forEach(function(stage) {
 
     // get new children for each node in the input
-    stage.tree.forEach(function(inputNode) {
+    stage.forEach(function(inputNode) {
       var nodeId = inputNode.id;
       if (!seqData[nodeId]) seqData[nodeId] = {
         name: "",
@@ -287,7 +372,7 @@ function treeSeqFromData(data) {
       if (!seqData[nodeId].newParents) seqData[nodeId].newParents = [];
       if (seqData[nodeId].newParents.length === 0) {
         seqData[nodeId].newInstances = [
-          new TreeNode(seqData[nodeId].name, 0, nodeId, [],
+          new TreeNode(seqData[nodeId].name, nextId++, nodeId, [],
             seqData[nodeId].childMatrix, null, seqData[nodeId].properties)
         ];
 
@@ -296,14 +381,8 @@ function treeSeqFromData(data) {
 
           // update children's newInstances and recurse down the tree
           rootInfo.children.forEach(function(childId) {
-            /*
-            var treeNodeOptions = {};
-            if (seqData[childId].newParents.length > 1)
-              treeNodeOptions.questioned = true;
-              */
-
             root.children.push(new TreeNode(
-              seqData[childId].name, 0, childId, [], seqData[childId].childMatrix,
+              seqData[childId].name, nextId++, childId, [], seqData[childId].childMatrix,
               root, seqData[childId].properties)
             );
 
@@ -319,38 +398,6 @@ function treeSeqFromData(data) {
       }
     }
 
-    function assignRenderIds(node) {
-      var nodeInfo = seqData[node.nodeId];
-      var oldInst = nodeInfo.instances.find(function(old) {
-        return old.parent && node.parent && old.parent.renderId === node.parent.renderId;
-      });
-
-      if (!oldInst) {
-        oldInst = nodeInfo.instances.find(function(old) {
-          return old.parent === null || old.parent === undefined;
-        });
-        
-        if (!oldInst) {
-          oldInst = nodeInfo.instances.find(function(old) {
-            return !nodeInfo.newParents.find(function(parId) { old.parent.renderId === parId; });
-          });
-        }
-      }
-
-      if (oldInst) {
-        node.renderId = oldInst.renderId;
-        var index = nodeInfo.instances.findIndex(function(n) { return n.renderId === oldInst.renderId; });
-        nodeInfo.instances.splice(index, 1);
-      }
-      else node.renderId = nextId++;
-
-      if (nodeInfo.newInstances.length > 1)
-        node.questioned = true;
-
-      node.children.forEach(assignRenderIds);
-    }
-    roots.forEach(assignRenderIds);
-
     forests.push(new Forest(roots));
 
     // clean up newParents and newInstances
@@ -362,6 +409,5 @@ function treeSeqFromData(data) {
     }
   });
 
-  forests.unshift(new Forest());
   return new TreeSeq(forests);
 }
