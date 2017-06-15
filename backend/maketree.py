@@ -411,6 +411,7 @@ app = Flask(__name__)
 CORS(app)
 
 @app.route('/alpha/maketree/', methods=['GET'])
+@app.route('/', methods=['GET'])
 def serveindex():
   return servefile("index.html")
 
