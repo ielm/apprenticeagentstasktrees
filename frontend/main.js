@@ -324,21 +324,64 @@ $(function() {
     var file = $("#upload")[0].files[0];
     if (file === undefined) throw new Error("No file given");
 
+    function handleErrors(jqXHR) {
+      if (jqXHR.status !== 500) {
+        window.alert("Response status " + jqXHR.status + ": " + jqXHR.statusText);
+        return;
+      }
+
+      else {
+        var $fragment = $(document.createElement("html"));
+        $fragment.append(jqXHR.responseText || jqXHR.responseXML);
+        var $textarea = $fragment.find("textarea");
+        $textarea.css({
+          "width": "90%",
+          "height": "75%",
+          "margin-left": "5%"
+        });
+
+        var $overlay = $(document.createElement("div"));
+        $overlay.addClass("error-overlay");
+        $overlay.append("<h1>Error 500</h1>",
+            $textarea,
+            "<br/>",
+            "<button>Dismiss</button>");
+        $overlay.css({
+          "position": "absolute",
+          "top": "10%",
+          "margin-left": "25%",
+          "width": "50%",
+          "height": "50%",
+          "background-color": "white"
+        });
+
+        $overlay.find("button").click(function() {
+          $overlay.remove();
+        });
+
+        $(document.documentElement).append($overlay);
+      }
+    }
+
     var reader = new FileReader();
     reader.onload = function() {
       $.post({
         url: $("#url")[0].value + "/alpha/maketree",
         contentType: "application/json",
         data: reader.result,
-        dataType: "json",
+        dataType: "text",
+        error: handleErrors,
         success: function(maketreeData, status) {
+          console.log(status);
           $.post({
             url: $("#url")[0].value + "/alpha/mergetree",
             contentType: "application/json",
             data: reader.result,
-            dataType: "json",
+            dataType: "text",
+            error: handleErrors,
             success: function(mergetreeData, status) {
-              addTree(maketreeData, mergetreeData);
+              console.log(status);
+              addTree(JSON.parse(maketreeData), JSON.parse(mergetreeData));
             }
           });
         }
