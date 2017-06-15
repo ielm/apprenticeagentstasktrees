@@ -87,14 +87,12 @@ class TreeNode:
     this.id = TreeNode.id
     TreeNode.id += 1
     this.children = []
-    this.childrenStatus = [] # True if child is questioned, false otherwise
-                             # leaving it like this because non-terminal children 
-                             # could also be questioned
-    this.parent = None # put a parent pointer here; root has None or whatever; recurse up the tree on markquestioned for hqd, add method for adding children
+    this.childrenStatus = [] # True if child is disputed, false otherwise
+    this.parent = None
     this.relationships = []
     this.name = ""
     this.terminal = False
-    this.questionedWith = None
+    this.disputedWith = None
     this.tmr = None
     this.type = "sequential" #Deprecated
   
@@ -128,13 +126,13 @@ class TreeNode:
     return True
     
   
-  def markQuestioned(this, target, mark):
+  def markDisputed(this, target, mark):
     if target in this.children:
       this.childrenStatus[this.children.index(target)] = mark
     else:
       raise RuntimeError("No such child")    
   
-def disambiguate(tree, othertree=None):
+def settle_disputes(tree, othertree=None):
   if othertree is None:
     othertree = tree
   for question in traverse_tree(tree, True):
@@ -142,8 +140,8 @@ def disambiguate(tree, othertree=None):
       if answer.tmr is None or question.tmr is None:
         continue
       if same_main_event(question.tmr, answer.tmr):
-        #NOTE: this assumes that the questioned children are not interdependent
-        other = question.questionedWith
+        #NOTE: this assumes that the disputed children are not interdependent
+        other = question.disputedWith
         
         mapping = get_children_mapping(answer, other, same_node)
         
@@ -162,12 +160,14 @@ def disambiguate(tree, othertree=None):
           if not mapping[i] is None:
             question.removeChildNode(mapping[i])
         
-        other.questionedWith = None
-        question.questionedWith = None
+        other.disputedWith = None
+        question.disputedWith = None
         other.childrenStatus = [False]*len(other.children)
         question.childrenStatus = [False]*len(question.children)
-                
-  #parallelize
+
+def find_parallels(tree, othertree=None):
+  if othertree is None:
+    othertree = tree
   for child1 in traverse_tree(tree, False):
     for child2 in traverse_tree(othertree, False):
       if child1 is child2:
@@ -188,7 +188,7 @@ def traverse_tree(node, question_status=None):
         
 def construct_tree(input, steps):
   root = TreeNode()
-  current = root
+  current_parent = root
   i=0
   while i < len(input): # For each input token
     output = dict()
@@ -201,9 +201,9 @@ def construct_tree(input, steps):
         steps.pop() # no output for this iteration
         continue
       elif is_postfix(input[i]):
-        if (not current.children[-1].tmr is None) and about_part_of(current.children[-1].tmr, tmr):
-          while about_part_of(current.tmr, tmr) and not current.parent is None:
-            current = current.parent
+        if (not current_parent.children[-1].tmr is None) and about_part_of(current_parent.children[-1].tmr, tmr):
+          while about_part_of(current_parent.tmr, tmr) and not current_parent.parent is None:
+            current_parent = current_parent.parent
           
           #Mark some of the preceding nodes as children of a new node
           new = TreeNode()
@@ -211,94 +211,95 @@ def construct_tree(input, steps):
           new.tmr = tmr
           
           j = 0
-          while j < len(current.children) and not about_part_of(current.children[j].tmr, tmr):
+          while j < len(current_parent.children) and not about_part_of(current_parent.children[j].tmr, tmr):
             j +=1
           
-          if j < len(current.children):
-            current.questionedWith = new
-            new.questionedWith = current
+          if j < len(current_parent.children):
+            current_parent.disputedWith = new
+            new.disputedWith = current_parent
           
-          for child in current.children[:j]:
+          for child in current_parent.children[:j]:
             new.addChildNode(copy.copy(child))
-            current.markQuestioned(child, True)
-            new.markQuestioned(new.children[-1], True)
+            current_parent.markDisputed(child, True)
+            new.markDisputed(new.children[-1], True)
             
-          for child in current.children[j:]:
+          for child in current_parent.children[j:]:
             new.addChildNode(child)
             child.parent = new
                     
           #don't update relationships until done adding nodes to new
-          new.relationships = copy.deepcopy(current.relationships)
-          current.relationships = [ row[:j] for row in current.relationships[:j] ]
+          new.relationships = copy.deepcopy(current_parent.relationships)
+          current_parent.relationships = [ row[:j] for row in current_parent.relationships[:j] ]
           
-          assert(new.children[-1] is current.children[-1])
+          assert(new.children[-1] is current_parent.children[-1])
           
           for child in new.children[j:]:
-            current.children.remove(child)
-            current.childrenStatus.pop()
+            current_parent.children.remove(child)
+            current_parent.childrenStatus.pop()
                     
-          current.addChildNode(new)
-          #And then add the rest of the nodes as questioned between this and its parent?
-          #... actually, what if this node is neither a sibling nor a child of current but rather its parent?
+          current_parent.addChildNode(new)
+          #And then add the rest of the nodes as disputed between this and its parent?
+          #... actually, what if this node is neither a sibling nor a child of current_parent but rather its parent?
             
         elif i > 0 and is_action(input[i-1]): #If it was preceded by actions
-          if current.children[-1].name == "": # if their node is unnamed,
-            current.children[-1].name = get_name_from_tmr(tmr)#mark that node with this utterance
-            current.children[-1].tmr = tmr
-          elif about_part_of(tmr, current.children[-1].tmr):
+          if current_parent.children[-1].name == "": # if their node is unnamed,
+            current_parent.children[-1].name = get_name_from_tmr(tmr)#mark that node with this utterance
+            current_parent.children[-1].tmr = tmr
+          elif about_part_of(tmr, current_parent.children[-1].tmr):
             #Insert this new node between the previous node and its children
             new = TreeNode()
             new.name = get_name_from_tmr(tmr)
             new.tmr = tmr
-            current = current.children[-1]
+            current_parent = current_parent.children[-1]
             
-            new.children = current.children
-            current.children = [new]
-            new.childrenStatus = current.childrenStatus
-            current.childrenStatus = [False]
-            new.relationships = current.relationships
-            current.relationships = [[0]]            
+            new.children = current_parent.children
+            current_parent.children = [new]
+            new.childrenStatus = current_parent.childrenStatus
+            current_parent.childrenStatus = [False]
+            new.relationships = current_parent.relationships
+            current_parent.relationships = [[0]]            
             
           else: # need to split actions between pre-utterance and post-utterance
             new = TreeNode()
-            current.addChildNode(new)
+            current_parent.addChildNode(new)
             new.name = get_name_from_tmr(tmr)
             new.tmr = tmr
-            new.questionedWith = current.children[-2]
-            current.children[-2].questionedWith = new
-            for action in current.children[-2].children:
-              current.children[-2].markQuestioned(action, True)
+            new.disputedWith = current_parent.children[-2]
+            current_parent.children[-2].disputedWith = new
+            for action in current_parent.children[-2].children:
+              current_parent.children[-2].markDisputed(action, True)
               new.addChildNode(copy.copy(action)) #make a shallow copy of the node
-              new.markQuestioned(new.children[-1], True)
+              new.markDisputed(new.children[-1], True)
         else:
           pass #... add more heuristics here
       else: # Prefix
         #Check to see if this is about part of something by going up the tree.
-        candidate = current
+        candidate = current_parent
         while candidate.parent is not None and not about_part_of(tmr, candidate.tmr):
           candidate = candidate.parent
         if candidate.parent is not None:
-          current = candidate
+          current_parent = candidate
         new = TreeNode()
-        current.addChildNode(new)
+        current_parent.addChildNode(new)
         new.name = get_name_from_tmr(tmr)
         new.tmr = tmr
         if not is_action(input[i+1]): # if no actions will be added; shouldn't go out of bounds because this is pre-utterance
-          current = new
+          current_parent = new
           # go to next thing
         
     else: # Action
       output["input"] = []      
-      new = current.children[-1]
+      new = current_parent.children[-1]
       if len(new.children) > 0: #if that already has children
         new = TreeNode()
-        current.addChildNode(new)
+        current_parent.addChildNode(new)
       while i < len(input) and is_action(input[i]):
         output["input"].append(input[i]["action"])
         new.addAction(input[i])
         i+=1
       i-=1 # account for the main loop and the inner loop both incrementing it
-    disambiguate(root)
+    settle_disputes(root)
+    find_parallels(root)
     i+=1
     list = []
     tree_to_json_format(root, list)
@@ -408,6 +409,10 @@ def tree_to_json_format(node, list):
   
 app = Flask(__name__)
 CORS(app)
+
+@app.route('/alpha/maketree/', methods=['GET'])
+def serveindex():
+  return servefile("index.html")
 
 @app.route('/alpha/maketree/<path:filename>', methods=['GET'])
 def servefile(filename):
