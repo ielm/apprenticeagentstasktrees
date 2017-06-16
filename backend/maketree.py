@@ -60,6 +60,12 @@ def same_node(node1, node2):
     return False
   return same_main_event(node1.tmr, node2.tmr)
   
+def is_finality_statement(tmr):
+  for item in tmr:
+    if type(tmr[item]) is dict and "concept" in tmr[item] and tmr[item]["concept"] == "ALL":
+      return True
+  return False
+  
 #def ancestor_in_list(concept, list):
 #  #this would be a lot easier with a smarter ontology
 #  if concept == "ALL":
@@ -83,19 +89,22 @@ class TreeNode:
   """A class representing a node in the action hierarchy tree."""  
   id = 0
   
-  def __init__(this):
+  def __init__(this, tmr = None):
     this.id = TreeNode.id
     TreeNode.id += 1
     this.children = []
     this.childrenStatus = [] # True if child is disputed, false otherwise
     this.parent = None
     this.relationships = []
-    this.name = ""
     this.terminal = False
     this.disputedWith = None
-    this.tmr = None
     this.type = "sequential" #Deprecated
-  
+    this.setTmr(tmr)
+    
+  def setTmr(this, tmr):
+    this.name = "" if tmr is None else get_name_from_tmr(tmr)
+    this.tmr = tmr
+
   def addChildNode(this, child):
     this.children.append(child)
     this.childrenStatus.append(False)
@@ -197,18 +206,20 @@ def construct_tree(input, steps):
       output["input"] = input[i]["sentence"]
       tmr = input[i]["results"][0]["TMR"]
       if find_main_event(tmr) is None: #phatic utterances etc. just get skipped for now
-        i+=1
-        steps.pop() # no output for this iteration
-        continue
+        if is_finality_statement(tmr):
+          if len(root.children) == 1:
+            root = root.children[0]
+        else:
+          i+=1
+          steps.pop() # no output for this iteration
+          continue
       elif is_postfix(input[i]):
         if (not current_parent.children[-1].tmr is None) and about_part_of(current_parent.children[-1].tmr, tmr):
           while about_part_of(current_parent.tmr, tmr) and not current_parent.parent is None:
             current_parent = current_parent.parent
           
           #Mark some of the preceding nodes as children of a new node
-          new = TreeNode()
-          new.name = get_name_from_tmr(tmr)
-          new.tmr = tmr
+          new = TreeNode(tmr)
           
           j = 0
           while j < len(current_parent.children) and not about_part_of(current_parent.children[j].tmr, tmr):
@@ -243,13 +254,10 @@ def construct_tree(input, steps):
             
         elif i > 0 and is_action(input[i-1]): #If it was preceded by actions
           if current_parent.children[-1].name == "": # if their node is unnamed,
-            current_parent.children[-1].name = get_name_from_tmr(tmr)#mark that node with this utterance
-            current_parent.children[-1].tmr = tmr
+            current_parent.children[-1].setTmr(tmr)
           elif about_part_of(tmr, current_parent.children[-1].tmr):
             #Insert this new node between the previous node and its children
-            new = TreeNode()
-            new.name = get_name_from_tmr(tmr)
-            new.tmr = tmr
+            new = TreeNode(tmr)
             current_parent = current_parent.children[-1]
             
             new.children = current_parent.children
@@ -260,10 +268,8 @@ def construct_tree(input, steps):
             current_parent.relationships = [[0]]            
             
           else: # need to split actions between pre-utterance and post-utterance
-            new = TreeNode()
+            new = TreeNode(tmr)
             current_parent.addChildNode(new)
-            new.name = get_name_from_tmr(tmr)
-            new.tmr = tmr
             new.disputedWith = current_parent.children[-2]
             current_parent.children[-2].disputedWith = new
             for action in current_parent.children[-2].children:
@@ -279,10 +285,8 @@ def construct_tree(input, steps):
           candidate = candidate.parent
         if candidate.parent is not None:
           current_parent = candidate
-        new = TreeNode()
+        new = TreeNode(tmr)
         current_parent.addChildNode(new)
-        new.name = get_name_from_tmr(tmr)
-        new.tmr = tmr
         if not is_action(input[i+1]): # if no actions will be added; shouldn't go out of bounds because this is pre-utterance
           current_parent = new
           # go to next thing
@@ -395,6 +399,7 @@ def subtract_lists(list1, list2):
 
 def tree_to_json_format(node, list):
   output = dict()
+  #output["name"] = str(node.id) + ": " + ("?" if len(node.name)==0 else node.name)
   output["name"] = node.name
   output["type"] = node.type
   output["id"] = node.id
