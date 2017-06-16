@@ -331,16 +331,14 @@ $(function() {
       }
 
       else {
-        var $fragment = $(document.createElement("html"));
-        $fragment.append(jqXHR.responseText || jqXHR.responseXML);
-        var $textarea = $fragment.find("textarea");
+        var $overlay = $(document.createElement("div"));
+        var $textarea = $(document.createElement("textarea"));
         $textarea.css({
           "width": "90%",
           "height": "75%",
-          "margin-left": "5%"
         });
+        $textarea.text(jqXHR.responseText);
 
-        var $overlay = $(document.createElement("div"));
         $overlay.addClass("error-overlay");
         $overlay.append("<h1>Error 500</h1>",
             $textarea,
@@ -352,7 +350,9 @@ $(function() {
           "margin-left": "25%",
           "width": "50%",
           "height": "50%",
-          "background-color": "white"
+          "background-color": "lightgrey",
+          "border-radius": "10px",
+          "padding": "1em"
         });
 
         $overlay.find("button").click(function() {

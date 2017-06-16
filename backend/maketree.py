@@ -1,7 +1,8 @@
 import json
 import copy
+import traceback
 from flask import Flask, request, abort, send_from_directory
-from flask_cors import CORS
+from flask_cors import CORS, cross_origin
 from mini_ontology import ontology
 
 #this currently just returns the first event it finds
@@ -410,7 +411,13 @@ def tree_to_json_format(node, list):
 app = Flask(__name__)
 CORS(app)
 
-@app.route('/alpha/maketree/', methods=['GET'])
+@app.errorhandler(Exception)
+def server_error(error):
+  tb_str = traceback.format_exc()
+  app.logger.debug(tb_str)
+  return tb_str, 500, { "Access-Control-Allow-Origin": "*"}
+
+@app.route('/alpha/maketree', methods=['GET'])
 @app.route('/', methods=['GET'])
 def serveindex():
   return servefile("index.html")
