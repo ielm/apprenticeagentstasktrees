@@ -16,7 +16,12 @@ var height = totalHeight;
  *  {
  *    svg: <string, CSS selector for this tree's <g> element>,
  *    render: <TreeRenderer for this tree>,
- *    node: <DOM Element, the actual <g> element for this tree>
+ *    node: <DOM Element, the actual <g> element for this tree>,
+ *    inputs: <array[string], the original inputs for that stage, or the number
+ *            and file name of the tree that generated that stage for the
+ *            primary tree>,
+ *    filename: <string, the name of the uploaded file that resulted in this
+ *              tree, undefined for primary tree>
  *  }
  * */
 var primaryTree = null;
@@ -74,7 +79,7 @@ function resetTree() {
           .ease(d3.easeLinear)
           .attr("opacity", 1);
 
-      d3.selectAll("#current, #total").text("0");
+      d3.selectAll("#current").text("0");
     }
   });
 }
@@ -170,7 +175,7 @@ function setDisplayedTree(index) {
         .attr("transform", "translate(" + sidebarWidth + ",0) scale(1)");
 
   $("#current").html(displayedTree.render.curStage);
-  $("#total").html(displayedTree.render.length - 1);
+  $(".input").html(displayedTree.inputs[displayedTree.render.curStage]);
 
   if (displayedTree.render.curStage > 0)
     $("#back").removeClass("disabled");
@@ -202,7 +207,7 @@ function setDisplayedTree(index) {
         if (d === primaryTree)
           return "Primary Tree";
         else
-          return "Tree " + (inputTrees.indexOf(d) + 1);
+          return "(" + (inputTrees.indexOf(d) + 1) + ") " + d.filename;
       })
     .transition("textFade")
       .delay(250)
@@ -247,11 +252,27 @@ function setDisplayedTree(index) {
       .on("click", null);
 }
 
-function addTree(maketreeData, mergetreeData) {
+function addTree(maketreeData, mergetreeData, filename) {
   var newTreeNodes = maketreeData.map(function(d) { return d.tree; });
   var newTreeSeq = treeSeqFromData(newTreeNodes);
 
   var newTreeData = {};
+
+  newTreeData.inputs = maketreeData.map(function(d) { return d.input; });
+  newTreeData.inputs.forEach(function(input, i, inputs) {
+    if (input instanceof Array) {
+      var newstr = "";
+      input.forEach(function(d, i) {
+        if (i > 0) newstr += ", ";
+        newstr += d;
+      });
+      
+      inputs[i] = newstr;
+    }
+    else inputs[i] = '"' + input + '"';
+  });
+  newTreeData.inputs.unshift("(Before input)");
+  newTreeData.filename = filename;
 
   newTreeData.node = document.createElementNS("http://www.w3.org/2000/svg", "g");
   newTreeData.node.id = "tree" + inputTrees.length;
@@ -266,7 +287,7 @@ function addTree(maketreeData, mergetreeData) {
     var primTreeNodes = [mergetreeData[0].tree];
     var primTreeSeq = treeSeqFromData(primTreeNodes);
 
-    primaryTree = {};
+    primaryTree = { inputs: [ "(Before input)", "(1) " + newTreeData.filename ] };
     
     primaryTree.node = document.createElementNS("http://www.w3.org/2000/svg", "g");
     primaryTree.node.id = "primaryTree";
@@ -282,6 +303,7 @@ function addTree(maketreeData, mergetreeData) {
 
     primTree.render.treeSeq.append(newTreeForest);
     primTree.render.setTreeSeq(primTree.render.treeSeq);
+    primTree.inputs.push("(" + inputTrees.indexOf(newTreeData) + ") " + newTreeData.filename);
   }
 
   setDisplayedTree(inputTrees.length - 1);
@@ -381,7 +403,7 @@ $(function() {
             error: handleErrors,
             success: function(mergetreeData, status) {
               console.log(status);
-              addTree(JSON.parse(maketreeData), JSON.parse(mergetreeData));
+              addTree(JSON.parse(maketreeData), JSON.parse(mergetreeData), file.name);
             }
           });
         }
@@ -400,6 +422,7 @@ $(function() {
       $("#forward").addClass("disabled");
 
     $("#current").html(displayedTree.render.curStage);
+    $(".input").html(displayedTree.inputs[displayedTree.render.curStage]);
   }
   function back() {
     if (!displayedTree) return;
@@ -411,6 +434,7 @@ $(function() {
       $("#forward").removeClass("disabled");
 
     $("#current").html(displayedTree.render.curStage);
+    $(".input").html(displayedTree.inputs[displayedTree.render.curStage]);
   }
 
   $("#forward").click(forward);
