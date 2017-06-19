@@ -451,8 +451,10 @@ def start_with_merging():
   if current_tree is None:
     current_tree = new_tree
   else:
-    disambiguate(new_tree, current_tree)
-    disambiguate(current_tree, new_tree)
+    settle_disputes(new_tree, current_tree)
+    settle_disputes(current_tree, new_tree)
+    find_parallels(new_tree, current_tree)
+    find_parallels(current_tree, new_tree)
     #if stuff gets weird enough, might have to disambiguate the two of them back and forth for a while
     merge_tree(current_tree, new_tree)
   list = []
