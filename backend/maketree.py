@@ -1,146 +1,9 @@
 import json
 import copy
-import traceback
-from flask import Flask, request, abort, send_from_directory
-from flask_cors import CORS, cross_origin
 from mini_ontology import ontology
 
-#this currently just returns the first event it finds
-def find_main_event(tmr):
-  for item in tmr:
-    if type(tmr[item]) is dict and "is-in-subtree" in tmr[item] and tmr[item]["is-in-subtree"] == "EVENT":
-      return tmr[item]
-  return None
-#  raise RuntimeError("Cannot find main event: No events in given TMR: "+str(tmr))
-
-#determines whether a given token is utterance or action
-def is_utterance(token):
-  return type(token) is dict and 'results' in token
-
-def is_action(token):
-  return not is_utterance(token)
-  
-#determines whether a given utterance is prefix or postfix
-#TODO: phatic utterances? infix utterances?
-def is_postfix(utterance):
-  # Assumes there is only one TMR for each utterance
-  tmr = utterance["results"][0]["TMR"]
-  return find_main_event(tmr)["TIME"][0] == "<"
-  
-#formats an utterance into a node name
-def get_name_from_tmr(tmr):
-  event = find_main_event(tmr)
-  output = event["concept"]
-  if "THEME" in event:
-    output += " "+tmr[event["THEME"]]["concept"]
-    if "THEME-1" in event:
-      output += " AND "+tmr[event["THEME-1"]]["concept"]
-  if "INSTRUMENT" in event:
-    output += " WITH "+tmr[event["INSTRUMENT"]]["concept"]
-  return output
-  
-def same_main_event(tmr1, tmr2):
-  event1 = find_main_event(tmr1)
-  event2 = find_main_event(tmr2)
-  if event1["concept"] != event2["concept"]:
-    return False
-  if "AGENT" in event1 and "AGENT" in event2 and tmr1[event1["AGENT"]]["concept"] != tmr2[event2["AGENT"]]["concept"]:
-    return False
-  if ("THEME" in event1) != ("THEME" in event2):
-    return false
-  if "THEME" in event1 and "THEME" in event2 and tmr1[event1["THEME"]]["concept"] != tmr2[event2["THEME"]]["concept"]:
-    return False
-  if "INSTRUMENT" in event1 and "INSTRUMENT" in event2 and tmr1[event1["INSTRUMENT"]]["concept"] != tmr2[event2["INSTRUMENT"]]["concept"]:
-    return False
-  return True
-  
-def same_node(node1, node2):
-  if node1.tmr is None and node2.tmr is None:
-    return node1.name == node2.name
-  if node1.tmr is None or node2.tmr is None:
-    return False
-  return same_main_event(node1.tmr, node2.tmr)
-  
-def is_finality_statement(tmr):
-  for item in tmr:
-    if type(tmr[item]) is dict and "concept" in tmr[item] and tmr[item]["concept"] == "ALL":
-      return True
-  return False
-  
-#def ancestor_in_list(concept, list):
-#  #this would be a lot easier with a smarter ontology
-#  if concept == "ALL":
-#    return False
-#  return concept in list or ancestor_in_list(ontology[concept]["IS-A"], list)
-  
-def about_part_of(tmr1, tmr2):
-  if tmr1 is None or tmr2 is None:
-    return False
-  event1 = find_main_event(tmr1)
-  event2 = find_main_event(tmr2)
-  if event1 is None or event2 is None:
-    return False
-  if not ("THEME" in event1 and "THEME" in event2):
-    return False
-  
-  return tmr1[event1["THEME"]]["concept"] in ontology[tmr2[event2["THEME"]]["concept"]]["HAS-OBJECT-AS-PART"]["SEM"]
-  #TODO make this prioritize DEFAULT over SEM
-  
-class TreeNode:
-  """A class representing a node in the action hierarchy tree."""  
-  id = 0
-  
-  def __init__(this, tmr = None):
-    this.id = TreeNode.id
-    TreeNode.id += 1
-    this.children = []
-    this.childrenStatus = [] # True if child is disputed, false otherwise
-    this.parent = None
-    this.relationships = []
-    this.terminal = False
-    this.disputedWith = None
-    this.type = "sequential" #Deprecated
-    this.setTmr(tmr)
-    
-  def setTmr(this, tmr):
-    this.name = "" if tmr is None else get_name_from_tmr(tmr)
-    this.tmr = tmr
-
-  def addChildNode(this, child):
-    this.children.append(child)
-    this.childrenStatus.append(False)
-    child.parent = this
-    for row in this.relationships:
-      row.append(1)
-    this.relationships.append( [-1]*len(this.relationships) + [0] )
-    
-  def removeChildNode(this, child):
-    index = this.children.index(child)
-    this.children.pop(index)
-    this.childrenStatus.pop(index)
-    this.relationships.pop(index)
-    for row in this.relationships:
-      row.pop(index)
-    assert(len(this.children) == len(this.relationships))
-  
-  def addAction(this, action):
-    if len(this.children) == 0:
-      this.terminal = True
-      #this.type = "leaf"
-    if not this.terminal:
-      return False
-    actionNode = TreeNode()
-    actionNode.type = "leaf"
-    actionNode.name = action["action"]
-    this.addChildNode(actionNode)
-    return True
-    
-  
-  def markDisputed(this, target, mark):
-    if target in this.children:
-      this.childrenStatus[this.children.index(target)] = mark
-    else:
-      raise RuntimeError("No such child")    
+from treenode import *
+from tmrutils import *
   
 def settle_disputes(tree, othertree=None):
   if othertree is None:
@@ -187,15 +50,7 @@ def find_parallels(tree, othertree=None):
       if same_main_event(child1.tmr, child2.tmr):
         mapping = get_children_mapping(child1, child2, same_node)
         update_children_relationships(child1, child2, mapping)
-        
 
-def traverse_tree(node, question_status=None):
-  if question_status is None or (True in node.childrenStatus) == question_status:
-    yield node
-  if not node.terminal:
-    for child in node.children:
-      yield from traverse_tree(child, question_status)
-        
 def construct_tree(input, steps):
   root = TreeNode()
   current_parent = root
@@ -313,74 +168,6 @@ def construct_tree(input, steps):
     output["tree"] = list
   return root
   
-def get_children_mapping(a,b, comparison): #There's probably a standard function for this
-  mapping = [None]*len(a.children)
-  revmapping = [None]*len(b.children)
-  for i in range(len(a.children)):
-    j = 0
-    while not (revmapping[j] is None and comparison(a.children[i], b.children[j])):
-      j += 1
-      if j >= len(b.children):
-          break
-        # raise RuntimeError("Cannot merge trees!")
-        # TODO in the future, this will trigger some kind of alternatives situation
-    else:
-      mapping[i] = j
-      revmapping[j] = i
-  return mapping
-
-def update_children_relationships(a,b,mapping):
-  for i in range(len(a.relationships)):
-    for j in range(len(a.relationships[i])):
-      if mapping[i] is None or mapping[j] is None:
-        raise RuntimeError("Attempting to update relationships on incomplete mapping")
-      # Set it to 0 if they are different, keep as-is if they are the same. In other words, multiply by (a==b)
-      a.relationships[i][j] *= (a.relationships[i][j] == b.relationships[mapping[i]][mapping[j]])
-      b.relationships[mapping[i]][mapping[j]] = a.relationships[i][j]
-     
-#Merges b into a. Could be changed.
-def merge_tree(a, b):
-  #Assumes same_node(a,b) is true
-  if a.type == "leaf" and b.type == "leaf":
-    return
-  
-  if len(a.children) == 1 and len(b.children) == 1:
-    # Trying to merge two one-child nodes will cause an error if the nodes are different,
-    # so handle that case separately
-    if same_node(a.children[0], b.children[0]):
-      merge_tree(a.children[0], b.children[0])
-      return
-    else:
-      a.type = "alternate"
-      a.addChildNode(b.children[0])
-  elif len(a.children) == len(b.children):
-    #if a is sequential and b is sequential
-    sequential=True
-    for i in range(len(a.children)):
-      if not same_node(a.children[i], b.children[i]):
-        sequential=False
-    if sequential:
-      for i in range(len(a.children)):
-        merge_tree(a.children[i], b.children[i])
-    else:
-      a.type = "parallel"
-      mapping = get_children_mapping(a,b, same_node)
-      #TODO IMPORTANT Changes to get_children_mapping may cause this to not work any more.
-      update_children_relationships(a,b,mapping)
-      for i in range(len(a.children)):
-        merge_tree(a.children[i], b.children[mapping[i]])
-  elif (len(b.children) == 1 or b.type == "alternate") and (len(a.children) == 1 or a.type == "alternate"):
-    a.type = "alternate"
-    for achild in b.children:
-      for bchild in a.children:
-        if same_node(a,b):
-          merge_tree(achild, bchild)
-          break #only break inner loop
-      else:
-        a.addChild(bchild)
-  else:
-    raise RuntimeError("Cannot merge trees!") # again, will trigger alternatives situation eventually
-
 #this might not be needed any more?
 def print_tree(tree, spaces=""):
   if not type(tree) is TreeNode:
@@ -392,11 +179,6 @@ def print_tree(tree, spaces=""):
     print(spaces+tree.name);
   for child in tree.children:
     print_tree(child, spaces + "  ")
-
-def subtract_lists(list1, list2):
-  for node in list2:
-    if node in list1:
-      list1.remove(node)
 
 def tree_to_json_format(node, list):
   output = dict()
@@ -413,60 +195,3 @@ def tree_to_json_format(node, list):
       output["children"].append(child.id)
       tree_to_json_format(child, list)
   
-app = Flask(__name__)
-CORS(app)
-
-@app.errorhandler(Exception)
-def server_error(error):
-  tb_str = traceback.format_exc()
-  app.logger.debug(tb_str)
-  return tb_str, 500, { "Access-Control-Allow-Origin": "*"}
-
-@app.route('/alpha/maketree', methods=['GET'])
-@app.route('/', methods=['GET'])
-def serveindex():
-  return servefile("index.html")
-
-@app.route('/alpha/maketree/<path:filename>', methods=['GET'])
-def servefile(filename):
-  return send_from_directory("../frontend", filename)
-
-@app.route('/alpha/maketree', methods=['POST'])
-def start():
-  if not request.json:
-    abort(400)
-  steps = []
-  new_tree = construct_tree(request.json, steps)
-  return json.dumps(steps)
-
-current_tree = None
-
-@app.route('/alpha/mergetree', methods=['POST'])
-def start_with_merging():
-  if not request.json:
-    abort(400)
-  steps = []
-  new_tree = construct_tree(request.json, steps)
-  global current_tree
-  if current_tree is None:
-    current_tree = new_tree
-  else:
-    settle_disputes(new_tree, current_tree)
-    settle_disputes(current_tree, new_tree)
-    find_parallels(new_tree, current_tree)
-    find_parallels(current_tree, new_tree)
-    #if stuff gets weird enough, might have to disambiguate the two of them back and forth for a while
-    merge_tree(current_tree, new_tree)
-  list = []
-  tree_to_json_format(current_tree, list)
-  #return json.dumps(list)
-  return json.dumps([{"input":"(input not shown)", "tree": list}])
-
-@app.route('/alpha/mergetree', methods=['DELETE'])
-def clear_merged_tree():
-  global current_tree
-  current_tree = None
-  return json.dumps({"result":True})
-  
-if __name__ == '__main__':
-  app.run(host="0.0.0.0", debug=True, port=5000)
