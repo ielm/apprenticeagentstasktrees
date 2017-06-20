@@ -214,3 +214,16 @@ path.divider {
   stroke: black;
   stroke-width: 2px;
 }
+
+rect.nodata {
+  fill: lightgrey;
+  rx: 10px;
+  ry: 10px;
+}
+
+text.nodata {
+  text-anchor: middle;
+  fill: lightcyan;
+  font-size: 18pt;
+  letter-spacing: 0.15em;
+}

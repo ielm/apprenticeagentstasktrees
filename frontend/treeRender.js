@@ -11,6 +11,19 @@
  *  separation (float): the minimum separation between adjacently-placed
  *      trees. This is a relative measure, with 1 being equal to the minimum
  *      separation between sibling nodes of the same tree.
+ *  svg (string, optional): the CSS selector for the SVG element in which this
+ *      ForestRenderData will be used. If provided, the ForestRenderData will
+ *      temporarily insert text elements in this element for the purpose of
+ *      calculating additional information about each node. These elements will
+ *      be inserted at large negative coordinates to attempt to avoid visual
+ *      flickering.
+ *
+ *      If this parameter is provided, the following properties will be
+ *      assigned to each D3 node in the Forest:
+ *        w: (number) The width, in pixels, of the node.
+ *        h: (number) The height, in pixels, of the node.
+ *      Additionally, the x and y coordinates will be modified from those
+ *      assigned by the D3 TreeLayout to attempt to avoid overlapping nodes.
  *
  * ForestRenderData instance members:
  *  forestRenderData.trees (array[D3 node]): the array of tree roots in this
@@ -19,17 +32,21 @@
  *      to the corresponding D3.js node in this forest.
  *  forestRenderData.forest (Forest): the original Forest used to construct
  *      this ForestRenderData.
+ *  forestRenderData.svg (string): If the svg parameter was provided to the
+ *      constructor, this property will match that value. Otherwise, it will be
+ *      undefined.
  * */
-function ForestRenderData(forest, width, height, separation) {
+function ForestRenderData(forest, width, height, separation, svg) {
   this.trees = [];
   this.nodes = {};
   this.forest = forest;
+  this.svg = svg;
   var nodes = this.nodes;
   var minMaxes = [];
 
   var globalMax = 1;
   var maxHeight = 0;
-  
+
   forest.trees.forEach(function(tree, treeIndex) {
     this.trees.push(this.treeLayout(d3.hierarchy(tree)));
     if (this.trees.back.height > maxHeight) maxHeight = this.trees.back.height;
@@ -83,11 +100,79 @@ function ForestRenderData(forest, width, height, separation) {
   var yStepStride = height / ySteps;
 
   this.trees.forEach(function(root) {
+    var prevNode = null;
+    var prevBBox = null;
+
+    var alt = true;
+
     root.each(function(node) {
       var nodeHeight = root.height - node.depth;
       node.x *= mult;
       node.y = height - yStepStride * (nodeHeight + 1);
       nodes[node.data.renderId] = node;
+
+      if (svg !== undefined) {
+        var text = d3.selectAll(svg).append("text")
+            .attr("opacity", 1e-6)
+            .attr("class", "temp")
+            .attr("x", node.x)
+            .attr("y", node.y)
+            .text(node.data.name === ""? "?" : node.data.name);
+        node.w = text.node().getBBox().width + 20;
+        node.h = text.node().getBBox().height + 8;
+
+        var bbox = { left: node.x - node.w/2,
+                     right: node.x + node.w/2,
+                     top: node.y - node.h/2,
+                     bottom: node.y + node.h/2 };
+
+        text.remove();
+
+        if (prevNode && prevNode.depth === node.depth) {
+          if (prevBBox.right >= bbox.left &&
+              prevBBox.bottom >= bbox.top &&
+              prevBBox.top <= bbox.bottom)
+          {
+            if (prevNode.y === node.y) {
+              if (alt || node.parent.children[1] === node) {
+                prevNode.y -= prevNode.h/2 + 2;
+                node.y += node.h/2 + 2;
+              }
+              else {
+                prevNode.y += prevNode.h/2 + 2;
+                node.y -= node.h/2 + 2;
+              }
+
+              alt = !alt;
+            }
+            else {
+              if (node.parent.children[0] !== node && node.parent.children[1] !== node) {
+                if (prevNode.y > node.y) {
+                  node.y += Math.abs(prevBBox.bottom - bbox.top) + 4;
+                }
+                else {
+                  node.y -= Math.abs(prevBBox.top - bbox.bottom) + 4;
+                }
+              }
+              else {
+                if (prevNode.y > node.y) {
+                  node.y -= Math.abs(prevBBox.top - bbox.bottom) + 4;
+                }
+                else {
+                  node.y += Math.abs(prevBBox.bottom - bbox.top) + 4;
+                }
+              }
+            }
+
+            bbox.top = node.y - node.h/2;
+            bbox.bottom = node.y + node.h/2;
+          }
+        }
+        else alt = true;
+
+        prevNode = node;
+        prevBBox = bbox;
+      }
     });
   }, this);
 }
@@ -125,10 +210,10 @@ ForestRenderData.prototype = {
 
   /**
    * Reconstruct this ForestRenderData with new width, height, and separation
-   * values.
+   * values. Re-uses the current Forest and SVG values.
    * */
   regenerateData: function(width, height, separation) {
-    ForestRenderData.call(this, this.forest, width, height, separation);
+    ForestRenderData.call(this, this.forest, width, height, separation, this.svg);
   }
 };
 
@@ -161,9 +246,9 @@ ForestRenderData.prototype = {
  *
  * TreeRenderer constructor properties:
  *  TreeRenderer.hoveredNode (DOM element): the <g> element representing the
- *      node that the user has hovered over with the mouse. Null if no such 
+ *      node that the user has hovered over with the mouse. Null if no such
  *      node exists.
- * 
+ *
  * Direct assignment to member fields of TreeRenderer should be avoided.
  * Instead, use the methods defined below.
  * */
@@ -247,7 +332,7 @@ TreeRenderer.prototype = {
     var curSelection = d3.select(this.svg).selectAll("*");
     var nodes = curSelection.nodes();
     var newSelection = d3.select(selector).node();
-    
+
     nodes.forEach(function(n) {
       newSelection.appendChild(n);
     });
@@ -270,7 +355,7 @@ TreeRenderer.prototype = {
   recalculateStages: function() {
     this.stages = [];
     this.treeSeq.stages.forEach(function(forest) {
-      this.stages.push(new ForestRenderData(forest, this.width, this.height, 1.15));
+      this.stages.push(new ForestRenderData(forest, this.width, this.height, 1.15, this.svg));
     }, this);
     this.redraw();
   },
@@ -307,7 +392,7 @@ TreeRenderer.prototype = {
         .on("pointerleave", function() { TreeRenderer.setHovered(null); });
 
     var nodeUpdate = node.merge(nodeEnter);
-      
+
     nodeUpdate
         .classed("questioned", function (d) { return d.data.questioned; })
         .attr("transform", function(d) {
@@ -319,6 +404,7 @@ TreeRenderer.prototype = {
         .attr("text-anchor", "middle")
         .text(function(d) { return d.data.name === "" ? "?" : d.data.name; });
 
+    /*
     nodeUpdate.each(function(d) {
       var text = d3.select(this).select("text").node();
       d.w = text.getBBox().width + 20;
@@ -326,6 +412,7 @@ TreeRenderer.prototype = {
       d.h += d.h * d.h / d.w;
       if (d.h > d.w) d.h = d.w;
     });
+    */
 
     nodeUpdate.select("rect")
         .attr("x", function(d) { return -(d.w / 2); })
@@ -384,7 +471,7 @@ TreeRenderer.prototype = {
     var svg = d3.selectAll(this.svg)
         .attr("width", this.width)
         .attr("height", this.height);
-    
+
     if (svg.node())
       d3.interrupt(svg.node());
 
@@ -461,6 +548,7 @@ TreeRenderer.prototype = {
         .attr("class", "node");
 
     var nodeUpdate = node.merge(nodeEnter);
+    /*
     nodeUpdate.each(function(d) {
       var text = d3.select(this).append("text")
           .attr("class", "REMOVETHIS")
@@ -473,6 +561,7 @@ TreeRenderer.prototype = {
       if (d.h > d.w) d.h = d.w;
       d3.select(text).remove();
     });
+    */
 
     nodeEnter.append("text")
         .attr("dy", "0.35em")
@@ -580,7 +669,7 @@ TreeRenderer.prototype = {
         });
 
     var linkExit = link.exit();
-    
+
     linkExit.select("path").transition("pathMove")
         .duration(duration)
         .attr("d", function(d) {

@@ -59,9 +59,6 @@ function resetTree() {
 
       canvas.append("rect")
           .attr("class", "nodata")
-          .attr("fill", "lightgrey")
-          .attr("rx", "10px")
-          .attr("ry", "10px")
           .attr("width", totalWidth)
           .attr("height", totalHeight)
           .attr("opacity", 1e-6);
@@ -69,8 +66,6 @@ function resetTree() {
           .attr("class", "nodata")
           .attr("x", totalWidth / 2)
           .attr("y", totalHeight / 2)
-          .attr("text-anchor", "middle")
-          .attr("style", "fill: lightcyan; font-size: 18pt; letter-spacing: 0.15em;")
           .text("No data")
           .attr("opacity", 1e-6);
       canvas.selectAll(".nodata").transition("resetFade")
@@ -79,7 +74,10 @@ function resetTree() {
           .ease(d3.easeLinear)
           .attr("opacity", 1);
 
-      d3.selectAll("#current").text("0");
+      $("#current").html("0");
+      $(".input").html("");
+      $("#back").addClass("disabled");
+      $("#forward").addClass("disabled");
     }
   });
 }
@@ -115,11 +113,11 @@ function setDisplayedTree(index) {
   });
   if (displayedTree) displayedTree.render.redraw();
   if (primaryTree) primaryTree.render.redraw();
-  
+
   if (index === undefined) var i = inputTrees.length - 1;
   else var i = index;
 
-  if (i === displayedTreeIndex) return;
+  //if (i === displayedTreeIndex) return;
 
   if (displayedTreeIndex === -1) primaryTree = displayedTree;
   else if (displayedTreeIndex !== null) inputTrees[displayedTreeIndex] = displayedTree;
@@ -142,7 +140,7 @@ function setDisplayedTree(index) {
   }
 
   var sidebar = d3.select(".canvas").selectAll("g.docked")
-      .data(data, function(d) { return d.svg; });
+      .data(data, function(d) { return d && d.svg; });
 
   var sidebarEnter = sidebar.enter()
     .append(function(d) { return d.node; })
@@ -171,7 +169,7 @@ function setDisplayedTree(index) {
   }
 
   if (d3.select(displayedTree.svg).empty())
-    d3.select(".canvas").append(function() { return displayedTree.node; })
+    d3.select(".canvas").select(function() { return displayedTree.node; })
         .attr("transform", "translate(" + sidebarWidth + ",0) scale(1)");
 
   $("#current").html(displayedTree.render.curStage);
@@ -266,7 +264,7 @@ function addTree(maketreeData, mergetreeData, filename) {
         if (i > 0) newstr += ", ";
         newstr += d;
       });
-      
+
       inputs[i] = newstr;
     }
     else inputs[i] = '"' + input + '"';
@@ -274,7 +272,7 @@ function addTree(maketreeData, mergetreeData, filename) {
   newTreeData.inputs.unshift("(Before input)");
   newTreeData.filename = filename;
 
-  newTreeData.node = document.createElementNS("http://www.w3.org/2000/svg", "g");
+  newTreeData.node = d3.selectAll(".canvas").append("g").node();
   newTreeData.node.id = "tree" + inputTrees.length;
   newTreeData.svg = "#" + newTreeData.node.id;
 
@@ -288,8 +286,8 @@ function addTree(maketreeData, mergetreeData, filename) {
     var primTreeSeq = treeSeqFromData(primTreeNodes);
 
     primaryTree = { inputs: [ "(Before input)", "(1) " + newTreeData.filename ] };
-    
-    primaryTree.node = document.createElementNS("http://www.w3.org/2000/svg", "g");
+
+    primaryTree.node = d3.selectAll(".canvas").append("g").node();
     primaryTree.node.id = "primaryTree";
     primaryTree.svg = "#" + primaryTree.node.id;
 
@@ -303,12 +301,22 @@ function addTree(maketreeData, mergetreeData, filename) {
 
     primTree.render.treeSeq.append(newTreeForest);
     primTree.render.setTreeSeq(primTree.render.treeSeq);
-    primTree.inputs.push("(" + inputTrees.indexOf(newTreeData) + ") " + newTreeData.filename);
+    primTree.inputs.push("(" + (inputTrees.indexOf(newTreeData) + 1) + ") " + newTreeData.filename);
   }
 
-  setDisplayedTree(inputTrees.length - 1);
+  if (primaryTree) {
+    setDisplayedTree(inputTrees.length - 1);
+    d3.select(displayedTree.svg)
+        .attr("transform", "translate(" + sidebarWidth + ",0)");
+  }
+  else {
+    //d3.select(newTreeData.svg).classed("docked", true);
+    setDisplayedTree(displayedTreeIndex);
+  }
+
 
   if (primaryTree) primaryTree.render.nextStage();
+  else newTreeData.render.nextStage();
   $("#forward").click();
 }
 
