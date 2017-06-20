@@ -1,3 +1,4 @@
+from mini_ontology import ontology
 
 #this currently just returns the first event it finds
 def find_main_event(tmr):

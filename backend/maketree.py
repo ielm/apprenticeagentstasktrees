@@ -1,6 +1,5 @@
 import json
 import copy
-from mini_ontology import ontology
 
 from treenode import *
 from tmrutils import *
@@ -62,13 +61,13 @@ def construct_tree(input, steps):
       output["input"] = input[i]["sentence"]
       tmr = input[i]["results"][0]["TMR"]
       if find_main_event(tmr) is None: #phatic utterances etc. just get skipped for now
-        if is_finality_statement(tmr):
-          if len(root.children) == 1:
-            root = root.children[0]
-        else:
-          i+=1
-          steps.pop() # no output for this iteration
-          continue
+        #if is_finality_statement(tmr):
+        #  if len(root.children) == 1:
+        #    root = root.children[0]
+        #else:
+        i+=1
+        steps.pop() # no output for this iteration
+        continue
       elif is_postfix(input[i]):
         if (not current_parent.children[-1].tmr is None) and about_part_of(current_parent.children[-1].tmr, tmr):
           while about_part_of(current_parent.tmr, tmr) and not current_parent.parent is None:

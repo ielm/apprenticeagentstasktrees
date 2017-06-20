@@ -4,6 +4,7 @@ from flask import Flask, request, abort, send_from_directory
 from flask_cors import CORS, cross_origin
 
 import maketree
+import mergetree
 
 app = Flask(__name__)
 CORS(app)
@@ -14,12 +15,12 @@ def server_error(error):
   app.logger.debug(tb_str)
   return tb_str, 500, { "Access-Control-Allow-Origin": "*"}
 
-@app.route('/alpha/maketree', methods=['GET'])
+@app.route('/alpha/', methods=['GET'])
 @app.route('/', methods=['GET'])
 def serveindex():
   return servefile("index.html")
 
-@app.route('/alpha/maketree/<path:filename>', methods=['GET'])
+@app.route('/alpha/<path:filename>', methods=['GET'])
 def servefile(filename):
   return send_from_directory("../frontend", filename)
 
