@@ -90,7 +90,17 @@
 "sent-num": 1,
 "sentence": "First I need a screwdriver.",
 "timestamp": "2017-May-23 21:07:05"},
-{"action": "get-screwdriver"},
+
+{"results": [{"TMR": {"GET-SCREWDRIVER-2": {
+"TIME": ["FIND-ANCHOR-TIME"],
+"AGENT": "HUMAN-2",
+"concept": "GET-SCREWDRIVER",
+"is-in-subtree": "EVENT"},
+"HUMAN-2": {"concept": "HUMAN",
+"is-in-subtree": "OBJECT"}
+}}],
+"action": "get-screwdriver"},
+
 {"results": [{"TMR": {"BOX-3": {"CONTAINS": "SCREW-3",
 "INSTRUMENT-OF": "EVENT-3",
 "concept": "BOX",
@@ -148,10 +158,56 @@
 "sent-num": 2,
 "sentence": "I also need a box of screws.",
 "timestamp": "2017-May-23 21:07:06"},
-{"action": "get-screws"},
-{"action": "get-dowel"},
-{"action": "get-foot"},
-{"action": "get-top-bracket"},
+
+{"results": [{"TMR": {"GET-SCREWS-2": {
+"TIME": ["FIND-ANCHOR-TIME"],
+"AGENT": "HUMAN-2",
+"concept": "GET-SCREWS",
+"is-in-subtree": "EVENT"},
+"HUMAN-2": {"concept": "HUMAN",
+"is-in-subtree": "OBJECT"}
+}}],
+"action": "get-screws"},
+{"results": [{"TMR": {"GET-DOWEL-2": {
+"TIME": ["FIND-ANCHOR-TIME"],
+"AGENT": "HUMAN-2",
+"concept": "GET-DOWEL",
+"is-in-subtree": "EVENT"},
+"HUMAN-2": {"concept": "HUMAN",
+"is-in-subtree": "OBJECT"}
+}}],
+"action": "get-dowel"},
+{"results": [{"TMR": {"GET-FOOT-2": {
+"TIME": ["FIND-ANCHOR-TIME"],
+"AGENT": "HUMAN-2",
+"concept": "GET-FOOT",
+"is-in-subtree": "EVENT"},
+"HUMAN-2": {"concept": "HUMAN",
+"is-in-subtree": "OBJECT"}
+}}],
+"action": "get-foot"},
+{"results": [{"TMR": {"GET-TOP-BRACKET-2": {
+"TIME": ["FIND-ANCHOR-TIME"],
+"AGENT": "HUMAN-2",
+"concept": "GET-TOP-BRACKET",
+"is-in-subtree": "EVENT"},
+"HUMAN-2": {"concept": "HUMAN",
+"is-in-subtree": "OBJECT"}
+}}],
+"action": "get-top-brakcet"},
+{"results": [{"TMR": {"SCREW-IN-2": {
+"TIME": ["FIND-ANCHOR-TIME"],
+"AGENT": "HUMAN-2",
+"THEME": "ARTIFACT-LEG-2",
+"THEME1": "FOOT-2",
+"INSTRUMENT": "SCREWDRIVER-2",
+"concept": "SCREW-IN",
+"is-in-subtree": "EVENT"},
+"HUMAN-2": {"concept": "HUMAN",
+"is-in-subtree": "OBJECT"}
+}}],
+"action": "screw-in"},
+
 {"results": [{"TMR": {"ARTIFACT-LEG-4": {"THEME-OF": "BUILD-4",
 "concept": "ARTIFACT-LEG",
 "from-sense": "LEG-N2",
@@ -184,9 +240,46 @@
 "sent-num": 3,
 "sentence": "I built a leg.",
 "timestamp": "2017-May-23 21:07:07"},
-{"action": "get-dowel"},
-{"action": "get-foot"},
-{"action": "get-top-bracket"},
+
+{"results": [{"TMR": {"GET-DOWEL-2": {
+"TIME": ["FIND-ANCHOR-TIME"],
+"AGENT": "HUMAN-2",
+"concept": "GET-DOWEL",
+"is-in-subtree": "EVENT"},
+"HUMAN-2": {"concept": "HUMAN",
+"is-in-subtree": "OBJECT"}
+}}],
+"action": "get-dowel"},
+{"results": [{"TMR": {"GET-FOOT-2": {
+"TIME": ["FIND-ANCHOR-TIME"],
+"AGENT": "HUMAN-2",
+"concept": "GET-FOOT",
+"is-in-subtree": "EVENT"},
+"HUMAN-2": {"concept": "HUMAN",
+"is-in-subtree": "OBJECT"}
+}}],
+"action": "get-foot"},
+{"results": [{"TMR": {"GET-TOP-BRACKET-2": {
+"TIME": ["FIND-ANCHOR-TIME"],
+"AGENT": "HUMAN-2",
+"concept": "GET-TOP-BRACKET",
+"is-in-subtree": "EVENT"},
+"HUMAN-2": {"concept": "HUMAN",
+"is-in-subtree": "OBJECT"}
+}}],
+"action": "get-top-brakcet"},
+{"results": [{"TMR": {"SCREW-IN-2": {
+"TIME": ["FIND-ANCHOR-TIME"],
+"AGENT": "HUMAN-2",
+"THEME": "ARTIFACT-LEG-2",
+"THEME1": "FOOT-2",
+"INSTRUMENT": "SCREWDRIVER-2",
+"concept": "SCREW-IN",
+"is-in-subtree": "EVENT"},
+"HUMAN-2": {"concept": "HUMAN",
+"is-in-subtree": "OBJECT"}
+}}],
+"action": "screw-in"},
 {"results": [{"TMR": {"ARTIFACT-LEG-5": {"MEMBER-TYPE-OF": "SET-5",
 "THEME-OF": "BUILD-5",
 "concept": "ARTIFACT-LEG",
