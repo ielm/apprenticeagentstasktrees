@@ -103,8 +103,6 @@ function ForestRenderData(forest, width, height, separation, svg) {
     var prevNode = null;
     var prevBBox = null;
 
-    var alt = true;
-
     root.each(function(node) {
       var nodeHeight = root.height - node.depth;
       node.x *= mult;
@@ -128,51 +126,75 @@ function ForestRenderData(forest, width, height, separation, svg) {
 
         text.remove();
 
+        node.dy = 0;
         if (prevNode && prevNode.depth === node.depth) {
           if (prevBBox.right >= bbox.left &&
-              prevBBox.bottom >= bbox.top &&
-              prevBBox.top <= bbox.bottom)
+              prevBBox.top <= bbox.bottom &&
+              prevBBox.bottom >= bbox.top)
           {
             if (prevNode.y === node.y) {
-              if (alt || node.parent.children[1] === node) {
-                prevNode.y -= prevNode.h/2 + 2;
-                node.y += node.h/2 + 2;
-              }
-              else {
-                prevNode.y += prevNode.h/2 + 2;
-                node.y -= node.h/2 + 2;
-              }
+              var prevDDy = -(prevNode.h / 2 + 2);
+              prevNode.y += prevDDy;
+              prevNode.dy += prevDDy;
 
-              alt = !alt;
+              var dDy = node.h / 2 + 2;
+              node.y += dDy;
+              node.dy += dDy;
+            }
+            else if (prevNode.y > node.y) {
+              var dDy = -((bbox.bottom - prevBBox.top) + 4);
+              node.y += dDy;
+              node.dy += dDy;
             }
             else {
-              if (node.parent.children[0] !== node && node.parent.children[1] !== node) {
-                if (prevNode.y > node.y) {
-                  node.y += Math.abs(prevBBox.bottom - bbox.top) + 4;
-                }
-                else {
-                  node.y -= Math.abs(prevBBox.top - bbox.bottom) + 4;
-                }
-              }
-              else {
-                if (prevNode.y > node.y) {
-                  node.y -= Math.abs(prevBBox.top - bbox.bottom) + 4;
-                }
-                else {
-                  node.y += Math.abs(prevBBox.bottom - bbox.top) + 4;
-                }
-              }
+              var dDy = (prevBBox.bottom - bbox.top) + 4;
+              node.y += dDy;
+              node.dy += dDy;
             }
 
             bbox.top = node.y - node.h/2;
             bbox.bottom = node.y + node.h/2;
           }
         }
-        else alt = true;
 
+        node.scale = 1.0;
         prevNode = node;
         prevBBox = bbox;
       }
+    });
+
+    var prevNodes = [];
+    var prevBBoxes = [];
+
+    if (svg !== undefined) root.each(function(node) {
+      if (!prevNodes.back || prevNodes.back.depth !== node.depth) {
+        prevNodes = [];
+        prevBBoxes = [];
+      }
+
+      var bbox = { left: node.x - node.w/2,
+                   right: node.x + node.w/2,
+                   top: node.y - node.h/2,
+                   bottom: node.y + node.h/2 };
+
+      var i = prevNodes.length - 1;
+      while (prevBBoxes[i] && prevBBoxes[i].right >= bbox.left) {
+        if (prevBBoxes[i].top <= bbox.bottom && prevBBoxes[i].bottom >= bbox.top) {
+          break;
+        }
+        --i;
+      }
+      if (i >= 0 && i < prevNodes.length) {
+        var prevScaledW = prevNodes[i].w + prevNodes[i].scale;
+        var newScale = 2 * (node.x - prevNodes[i].x) / (node.w + prevScaledW);
+        if (newScale < 1.0) {
+          node.scale = newScale;
+          prevNodes[i].scale *= newScale;
+        }
+      }
+
+      prevNodes.push(node);
+      prevBBoxes.push(bbox);
     });
   }, this);
 }
@@ -283,16 +305,27 @@ TreeRenderer.setHovered = function(node) {
 
   if (this.hoveredNode) {
     var hoveredNode = d3.select(this.hoveredNode);
+    var link = d3.select(hoveredNode.datum().link);
     hoveredNode.transition("hoverScale")
         .duration(250)
         .ease(d3.easeSinInOut)
-        .attr("transform", function() {
-          return setScale(1, hoveredNode.attr("transform"));
+        .attr("transform", function(d) {
+          return setScale([d.scale, 1], hoveredNode.attr("transform"));
         });
+    link.lower()
+        .attr("stroke-width", "1px");
+    link.select("text").attr("style", "");
   }
 
   if (node) {
     var hoveredNode = d3.select(node);
+    var link = d3.select(hoveredNode.datum().link);
+    var parNode = d3.select(hoveredNode.datum().parentNode);
+
+    link.raise()
+        .attr("stroke-width", "2px");
+    link.select("text").attr("style", "font-size: 24pt;");
+    parNode.raise();
     hoveredNode.raise()
       .transition("hoverScale")
         .duration(250)
@@ -336,11 +369,6 @@ TreeRenderer.prototype = {
     nodes.forEach(function(n) {
       newSelection.appendChild(n);
     });
-    /*
-    d3.selectAll(this.svg)
-      .selectAll("*")
-        .remove();
-    */
 
     this.svg = selector;
     d3.select(this.svg).attr("width", this.width).attr("height", this.height);
@@ -365,6 +393,7 @@ TreeRenderer.prototype = {
    * */
   redraw: function() {
     var linkGen = this.linkGen;
+    var linkGenD3 = this.linkGenD3;
     var svg = d3.selectAll(this.svg)
         .attr("width", this.width)
         .attr("height", this.height);
@@ -392,27 +421,20 @@ TreeRenderer.prototype = {
         .on("pointerleave", function() { TreeRenderer.setHovered(null); });
 
     var nodeUpdate = node.merge(nodeEnter);
+    nodeUpdate.each(function(d) {
+      d.node = this;
+    });
 
     nodeUpdate
         .classed("questioned", function (d) { return d.data.questioned; })
         .attr("transform", function(d) {
-          return "translate(" + d.x + "," + d.y + ")";
+          return "translate(" + d.x + "," + d.y + ") scale(" + d.scale + ",1.0)";
         });
 
     nodeUpdate.select("text")
         .attr("dy", "0.35em")
         .attr("text-anchor", "middle")
         .text(function(d) { return d.data.name === "" ? "?" : d.data.name; });
-
-    /*
-    nodeUpdate.each(function(d) {
-      var text = d3.select(this).select("text").node();
-      d.w = text.getBBox().width + 20;
-      d.h = text.getBBox().height + 8;
-      d.h += d.h * d.h / d.w;
-      if (d.h > d.w) d.h = d.w;
-    });
-    */
 
     nodeUpdate.select("rect")
         .attr("x", function(d) { return -(d.w / 2); })
@@ -439,21 +461,29 @@ TreeRenderer.prototype = {
           return d.target.data.questioned && !d.source.data.questioned;
         })
         .classed("q_desc", function(d) { return d.source.data.questioned; });
+    linkUpdate.each(function(d) {
+      d.target.link = this;
+      d.target.parentNode = d.source.node;
+    });
 
     linkUpdate.select("text")
         .attr("text-anchor", "middle")
         .attr("dy", "0.35em")
         .text("?")
         .attr("x", function(d) { return (d.source.x + d.target.x) / 2; })
-        .attr("y", function(d) { return (d.source.y + d.target.y) / 2; })
+        .attr("y", function(d) { return (d.source.y + (d.target.y - d.target.h/2 - d.target.dy)) / 2; })
         .attr("opacity", function(d) {
           return !d.source.data.questioned && d.target.data.questioned ? 1 : 1e-6;
         });
 
     linkUpdate.select("path")
-        .attr("d", linkGen);
+        .attr("d", function(d) { return linkGen(d, linkGenD3); });
 
     var linkExit = link.exit().remove();
+    linkExit.each(function(d) {
+      d.target.link = undefined;
+      d.target.parentNode = undefined;
+    });
   },
 
   /**
@@ -525,6 +555,7 @@ TreeRenderer.prototype = {
 
     var duration = this.transitionDuration;
     var linkGen = this.linkGen;
+    var linkGenD3 = this.linkGenD3;
 
     var curStage = this.stages[this.curStage];
     if (curStage === null) {
@@ -548,20 +579,9 @@ TreeRenderer.prototype = {
         .attr("class", "node");
 
     var nodeUpdate = node.merge(nodeEnter);
-    /*
     nodeUpdate.each(function(d) {
-      var text = d3.select(this).append("text")
-          .attr("class", "REMOVETHIS")
-          .attr("opacity", 0)
-          .text(function(d) { return d.data.name === "" ? "?" : d.data.name; })
-        .node();
-      d.w = text.getBBox().width + 20;
-      d.h = text.getBBox().height + 8;
-      d.h += d.h * d.h / d.w;
-      if (d.h > d.w) d.h = d.w;
-      d3.select(text).remove();
+      d.node = this;
     });
-    */
 
     nodeEnter.append("text")
         .attr("dy", "0.35em")
@@ -587,7 +607,7 @@ TreeRenderer.prototype = {
     nodeUpdate.transition("position")
         .duration(this.transitionDuration)
         .attr("transform", function(d) {
-          return "translate(" + d.x + "," + d.y + "),scale(1)";
+          return "translate(" + d.x + "," + d.y + "),scale(" + d.scale + ",1.0)";
         })
       .select("text")
         .attr("x", 0)
@@ -610,7 +630,6 @@ TreeRenderer.prototype = {
     nodeUpdate.select("rect").transition("rectScale")
         .duration(function(d) {
           return duration * 0.45;
-          //return d.w < this.getBBox().width ? duration : duration * 0.75;
         })
         .ease(d3.easeQuad)
         .attr("x", function(d) { return -(d.w / 2); })
@@ -620,7 +639,12 @@ TreeRenderer.prototype = {
         .attr("rx", function(d) { return d.h / 2; })
         .attr("ry", function(d) { return d.h / 2; });
 
-    var nodeExit = node.exit().transition("position")
+    var nodeExit = node.exit();
+    nodeExit.each(function(d) {
+      d.node = undefined;
+    });
+
+    nodeExit.transition("position")
         .duration(duration)
         .attr("transform", function(d) {
           return "translate(" + d.x0 + "," + d.y0 + "),scale(" + 1e-6 + ")";
@@ -635,7 +659,7 @@ TreeRenderer.prototype = {
 
     linkEnter.append("path")
         .attr("d", function(d) {
-          return linkGen({source: [d.target.x0, d.target.y0], target: [d.target.x0, d.target.y0] });
+          return linkGen({source: [d.target.x0, d.target.y0], target: [d.target.x0, d.target.y0]}, linkGenD3);
         });
 
     linkEnter.append("text")
@@ -651,15 +675,19 @@ TreeRenderer.prototype = {
           return d.target.data.questioned && !d.source.data.questioned;
         })
         .classed("q_desc", function(d) { return d.source.data.questioned; });
+    linkUpdate.each(function(d) {
+      d.target.link = this;
+      d.target.parentNode = d.source.node;
+    });
 
     linkUpdate.select("path").transition("pathMove")
         .duration(duration)
-        .attr("d", linkGen);
+        .attr("d", function(d) { return linkGen(d, linkGenD3); });
 
     linkUpdate.select("text").transition("textMove")
         .duration(duration)
         .attr("x", function(d) { return (d.source.x + d.target.x) / 2; })
-        .attr("y", function(d) { return (d.source.y + d.target.y) / 2; });
+        .attr("y", function(d) { return (d.source.y + (d.target.y - d.target.h/2 - d.target.dy)) / 2; });
 
     linkUpdate.select("text").transition("textFade")
         .duration(duration * 0.75)
@@ -669,11 +697,15 @@ TreeRenderer.prototype = {
         });
 
     var linkExit = link.exit();
+    linkExit.each(function(d) {
+      d.target.link = undefined;
+      d.target.parentNode = undefined;
+    });
 
     linkExit.select("path").transition("pathMove")
         .duration(duration)
         .attr("d", function(d) {
-          return linkGen({source: [d.target.x0, d.target.y0], target: [d.target.x0, d.target.y0]});
+          return linkGen({source: [d.target.x0, d.target.y0], target: [d.target.x0, d.target.y0]}, linkGenD3);
         });
 
     linkExit.select("text").transition("textMove")
@@ -714,15 +746,40 @@ TreeRenderer.prototype = {
     this.transition(this.curStage + 1, this.curStage);
   },
 
-  linkGen: d3.linkVertical()
+  linkGenD3: d3.linkVertical()
+      .source(function(d) {
+        if (d.source instanceof Array) return d.source;
+        else return {
+          type: "source",
+          node: d.source,
+          //child: d.source.children.indexOf(d.target)
+        };
+      })
+      .target(function(d) {
+        if (d.target instanceof Array) return d.target;
+        else return { type: "target", node: d.target };
+      })
       .x(function(d) {
         if (d instanceof Array)
           return d[0];
-        else return d.x;
+        else return d.node.x;
       })
       .y(function(d) {
         if (d instanceof Array)
           return d[1];
-        else return d.y;
-      })
+        else {
+          if (d.type === "source") return d.node.y;
+          else {
+            return d.node.y - d.node.h/2 - d.node.dy;
+          }
+        }
+      }),
+
+  linkGen: function(d, linkGenD3) {
+    var path = linkGenD3(d);
+    if (d.target instanceof Array)
+      return path + "V" + d.target[1];
+    else
+      return path + "V" + d.target.y;
+  }
 };

@@ -4,7 +4,11 @@ Object.defineProperty(Array.prototype, "back", {
 });
 
 function setScale(scale, originalString) {
-  var ret = originalString.replace(/(scale\()([0-9\.,\s]*)(\))/, "$1" + scale + "$3");
-  if (ret === originalString) ret += " scale(" + scale + ")";
+  if (scale instanceof Array)
+    var newScale = scale[0] + "," + scale[1];
+  else
+    var newScale = scale;
+  var ret = originalString.replace(/(scale\()([0-9\.,\s]*)(\))/, "$1" + newScale + "$3");
+  if (ret === originalString) ret += " scale(" + newScale + ")";
   return ret;
 }
