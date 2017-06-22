@@ -331,7 +331,7 @@ TreeRenderer.setHovered = function(node) {
         .duration(250)
         .ease(d3.easeSinInOut)
         .attr("transform", function() {
-          return setScale(1.5, hoveredNode.attr("transform"));
+          return setScale(1.25, hoveredNode.attr("transform"));
         });
   }
 

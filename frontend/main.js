@@ -10,6 +10,16 @@ var sidebarWidth = width * sidebarScale;
 
 var height = totalHeight;
 
+Object.defineProperty(this, "sidebarY", {
+  get: function() {
+    var sidebar = d3.select(".sidebar");
+    if (sidebar.empty()) return 0;
+
+    else return getTranslate(sidebar.node()).y;
+  }
+});
+var prevScrollTime = 0;
+
 /**
  * primaryTree, displayedTree, and inputTrees contain elements of the following
  * type:
@@ -106,7 +116,39 @@ function setDisplayedTree(index) {
         .attr("opacity", 1e-6)
         .remove();
     firstTime = true;
+    d3.select(".canvas").append("g")
+        .attr("class", "sidebar")
+        .on("wheel", function() {
+          var dy = -d3.event.deltaY;
+          var now = Date.now();
+          if (now - prevScrollTime < 250) dy *= 3;
+          prevScrollTime = now;
+
+          var sidebarHeight = inputTrees.length * height * sidebarScale;
+
+          if (sidebarHeight < height) dy = 0;
+          else if (sidebarY + dy > 0) dy = -sidebarY;
+          else if (sidebarY + dy + sidebarHeight < height)
+            dy = height - sidebarY - sidebarHeight;
+
+          console.log("WHEEL EVENT: dy = " + dy + "\n",
+              "translate(0," + (getTranslate(this).y + dy) + ")");
+
+          d3.select(this).transition("scroll")
+              .duration(500)
+              .ease(d3.easeCubicOut)
+              .attr("transform", "translate(0," + (getTranslate(this).y + dy) + ")")
+            .select("rect")
+              .attr("y", function() { return +d3.select(this).attr("y") - dy; });
+        })
+      .append("rect")
+        .attr("opacity", 0)
+        .attr("width", sidebarWidth)
+        .attr("height", totalHeight + margin.top + margin.bottom)
+        .attr("y", -margin.top);
   }
+
+  var sidebar = d3.select(".sidebar");
 
   inputTrees.forEach(function(t) {
     if (t) t.render.redraw();
@@ -116,8 +158,6 @@ function setDisplayedTree(index) {
 
   if (index === undefined) var i = inputTrees.length - 1;
   else var i = index;
-
-  //if (i === displayedTreeIndex) return;
 
   if (displayedTreeIndex === -1) primaryTree = displayedTree;
   else if (displayedTreeIndex !== null) inputTrees[displayedTreeIndex] = displayedTree;
@@ -139,22 +179,39 @@ function setDisplayedTree(index) {
     data.unshift(primaryTree);
   }
 
-  var sidebar = d3.select(".canvas").selectAll("g.docked")
+  var sidebarTrees = sidebar.selectAll("g.docked")
       .data(data, function(d) { return d && d.svg; });
 
-  var sidebarEnter = sidebar.enter()
+  var sidebarEnter = sidebarTrees.enter()
     .append(function(d) { return d.node; })
-      .classed("docked", true);
+      .classed("docked", true)
+      .attr("transform", function() {
+        var translate = getTranslate(this);
+        var newTransform = setTranslate(this, translate.x, translate.y - sidebarY);
+        console.log("Enter:", translate, newTransform);
+        return newTransform;
+      });
 
-  var sidebarExit = sidebar.exit()
-      .classed("docked", false);
+  var sidebarExit = sidebarTrees.exit()
+      .classed("docked", false)
+      .each(function() {
+        var that = this;
+        d3.select(".canvas").append(function() { return that; });
+      })
+      .attr("transform", function() {
+        var translate = getTranslate(this);
+        var newTransform = setTranslate(this, translate.x, translate.y + sidebarY);
+        console.log("Exit:", translate, newTransform);
+        return newTransform;
+      });
+
   sidebarExit.raise().transition("displayPos")
       .duration(750)
       .attr("transform", "translate(" + sidebarWidth + ",0) scale(1)")
     .on("end", function(d) { d.render.redraw(); });
 
   if (!firstTime) {
-    sidebar.merge(sidebarEnter).order()
+    sidebarTrees.merge(sidebarEnter).order()
       .transition("sidebarPos")
         .duration(750)
         .attr("transform", function(d, i) {
@@ -162,7 +219,7 @@ function setDisplayedTree(index) {
         });
   }
   else {
-    sidebar.merge(sidebarEnter).order()
+    sidebarTrees.merge(sidebarEnter).order()
         .attr("transform", function(d, i) {
           return "translate(0," + (i * height * sidebarScale) + ") scale(" + sidebarScale + ")";
         });
@@ -310,7 +367,6 @@ function addTree(maketreeData, mergetreeData, filename) {
         .attr("transform", "translate(" + sidebarWidth + ",0)");
   }
   else {
-    //d3.select(newTreeData.svg).classed("docked", true);
     setDisplayedTree(displayedTreeIndex);
   }
 
