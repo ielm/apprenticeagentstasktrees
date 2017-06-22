@@ -11,11 +11,11 @@ def update_children_relationships(a,b,mapping):
   for i in range(len(a.relationships)):
     for j in range(len(a.relationships[i])):
       if mapping[i] is None or mapping[j] is None:
-        raise RuntimeError("Attempting to update relationships on incomplete mapping")
+        #raise RuntimeError("Attempting to update relationships on incomplete mapping")
+        continue
       # Set it to 0 if they are different, keep as-is if they are the same. In other words, multiply by (a==b)
       a.relationships[i][j] *= (a.relationships[i][j] == b.relationships[mapping[i]][mapping[j]])
       b.relationships[mapping[i]][mapping[j]] = a.relationships[i][j]
-
 
 class TreeNode:
   """A class representing a node in the action hierarchy tree."""  

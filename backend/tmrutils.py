@@ -79,15 +79,16 @@ def subtract_lists(list1, list2):
   for node in list2:
     if node in list1:
       list1.remove(node)
-      
-def get_children_mapping(a,b, comparison): #There's probably a standard function for this
-  mapping = [None]*len(a.children)
-  revmapping = [None]*len(b.children)
-  for i in range(len(a.children)):
+
+
+def get_nodes_mapping(alist, blist, comparison): #There's probably a standard function for this
+  mapping = [None]*len(alist)
+  revmapping = [None]*len(blist)
+  for i in range(len(alist)):
     j = 0
-    while not (revmapping[j] is None and comparison(a.children[i], b.children[j])):
+    while not (revmapping[j] is None and comparison(alist[i], blist[j])):
       j += 1
-      if j >= len(b.children):
+      if j >= len(blist):
           break
         # raise RuntimeError("Cannot merge trees!")
         # TODO in the future, this will trigger some kind of alternatives situation
@@ -95,3 +96,7 @@ def get_children_mapping(a,b, comparison): #There's probably a standard function
       mapping[i] = j
       revmapping[j] = i
   return mapping
+  
+#TODO replace calls to this with calls to the other thing
+def get_children_mapping(a, b, comparison):
+  return get_nodes_mapping(a.children, b.children, comparison)
