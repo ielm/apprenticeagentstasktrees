@@ -90,5 +90,12 @@ ontology={
 		'HAS-OBJECT-AS-PART': {
 			'SEM': 'ANATOMICAL-STRUCTURE'
 		}
-	}
+	},
+  'MOUTH': {
+    'HAS-OBJECT-AS-PART': {
+			'SEM': ['TONGUE',
+			'LIP',
+			'TOOTH']
+		}
+  }
 }

@@ -52,10 +52,12 @@ def merge_tree(a, b):
 
 #IMPORTANT NOTE: NEW MERGETREE HEURISTICS MAY NOT PRESERVE ORDERING OF CHILDREN
 
-#OH HEY THINGS WITH SUBSTRINGS CAN HAPPEN? to preserve heuristics - BUT WHAT IF the thing without intermediates introduces new orderings........
+#OH HEY THINGS WITH SUBSTRINGS CAN HAPPEN? to preserve ordering - BUT WHAT IF the thing without intermediates introduces new orderings........
 
-#I see what the problem is right now. When the only nodes left have one child, it may pick an atomic action as the max instead.
-#To fix this, make the key function lower for atomic actions.
+#to change it to preserve order... collect_leaves would also return an adjacency matrix. would have to do permutations instead of combinations for power set. and a lot of shennanigans would be problematic
+
+# The current problem is: Nodes that appear in the a tree but not the b tree are in the output twice
+
     
 def thatthing(alist, blist, a, b):
   #print("START THATTHING")
@@ -128,6 +130,7 @@ def thisthing(alist, blist, aparent, bparent):
             
       thatthing(amax.children, list(childset), amax, bparent)
       #amax is already a child of aparent; bparent doesn't really matter at this point.
+      #aparent.addChildNode(amax)
       bparent.addChildNode(amax) #this is probably why the duplicate nodes
       #probably just prune the b tree to avoid complications?
       
@@ -154,7 +157,7 @@ def thisthing(alist, blist, aparent, bparent):
       del bleaves[bmax]
       
       aparent.addChildNode(bmax)
-      bparent.addChildNode(bmax) #the node is in both trees now. yes, this is a problem. no, i can't think of anything better.
+      #bparent.addChildNode(bmax) #the node is in both trees now. yes, this is a problem. no, i can't think of anything better.
       
       thatthing(bmax.children, list(childset), bmax, aparent)
       

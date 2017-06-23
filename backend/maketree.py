@@ -42,9 +42,9 @@ def find_parallels(tree, othertree=None):
     othertree = tree
   for child1 in traverse_tree(tree, False):
     for child2 in traverse_tree(othertree, False):
-      if child1 is child2:
-        continue
-      if child1.tmr is None or child2.tmr is None:
+      if child1 is child2 or child1.tmr is None or child2.tmr is None or len(child1.children) != len(child2.children):
+      # If two nodes have different numbers of children, that's probably because one of them is currently being added to.
+      # This might need to change later?
         continue
       if same_main_event(child1.tmr, child2.tmr):
         mapping = get_children_mapping(child1, child2, same_node)
