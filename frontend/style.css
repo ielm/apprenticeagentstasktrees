@@ -124,9 +124,8 @@ form {
   margin-top: 20px;
 }
 
-button#reset {
+button {
   display: inline-block;
-  background-color: red;
   color: white;
   font-size: 12pt;
   border-style: none;
@@ -134,15 +133,32 @@ button#reset {
   padding: 6px 10px;
 }
 
+.error-overlay button {
+  color: black;
+  background-color: white;
+}
+
+button#reset {
+  background-color: red;
+}
+
+button#save {
+  background-color: steelblue;
+}
+
 button#reset:hover {
   background-color: rosybrown;
 }
 
-button#reset:active {
+button#save:hover {
+  background-color: skyblue;
+}
+
+button:active {
   box-shadow: inset 2px 2px 2px 1px rgba(50,75,80,0.5);
 }
 
-button#reset:focus, button#reset:active {
+button:focus, button#reset:active {
   outline: none;
 }
 
