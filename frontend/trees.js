@@ -28,7 +28,7 @@
  *      further options for this TreeNode:
  *        questioned: (boolean) -- Set to true if this node might possibly be
  *            the child of more than one parent node. Defaults to false.
- * 
+ *
  * TreeNode instance members:
  *  treeNode.name (string): the name of this node.
  *  treeNode.renderId (int): the unique id of this instance of this TreeNode
@@ -249,7 +249,7 @@ TreeSeq.prototype = {
         throw new TypeError("Expected array of Forests, got " + typeof f);
       stages.push(f);
       nodesPerStage.push({});
-      
+
       for (var id in f.nodes) {
         var n = f.nodes[id];
         if (!nodesPerStage.back[n.nodeId])
@@ -279,7 +279,7 @@ TreeSeq.prototype = {
           oldInst = oldInstances.find(function(old) {
             return old.parent === null || old.parent === undefined;
           });
-          
+
           if (!oldInst) {
             oldInst = oldInstances.find(function(old) {
               return !curInfo.parentNodeIds.find(function(parId) { old.parent.renderId === parId; });
@@ -325,7 +325,7 @@ function treeSeqFromData(data) {
   var seqData = {};
   var forests = [];
   var nextId = 0;
-  
+
   data.forEach(function(stage) {
 
     // get new children for each node in the input

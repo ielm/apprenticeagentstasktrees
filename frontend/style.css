@@ -112,8 +112,10 @@ svg .link.questioned path {
 }
 
 svg .link text {
-  fill: saddlebrown;
-  font-size: 14pt;
+  fill: white;
+  stroke: saddlebrown;
+  stroke-width: 1px;
+  font-size: 18pt;
   font-weight: bold;
 }
 
@@ -210,7 +212,15 @@ div.sidebar svg {
   width: 100%;
 }
 
-path.divider {
-  stroke: black;
-  stroke-width: 2px;
+rect.nodata {
+  fill: lightgrey;
+  rx: 10px;
+  ry: 10px;
+}
+
+text.nodata {
+  text-anchor: middle;
+  fill: lightcyan;
+  font-size: 18pt;
+  letter-spacing: 0.15em;
 }
