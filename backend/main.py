@@ -16,7 +16,6 @@ def server_error(error):
   return tb_str, 500, { "Access-Control-Allow-Origin": "*"}
 
 @app.route('/alpha/', methods=['GET'])
-@app.route('/', methods=['GET'])
 def serveindex():
   return servefile("index.html")
 

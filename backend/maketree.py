@@ -3,6 +3,7 @@ import copy
 
 from treenode import *
 from tmrutils import *
+from knowledgebase import update_knowledge_base_2
   
 def settle_disputes(tree, othertree=None):
   if othertree is None:
@@ -155,6 +156,7 @@ def construct_tree(input, steps):
       while i < len(input) and is_action(input[i]):
         output["input"].append(input[i]["action"])
         new.addAction(input[i])
+        update_knowledge_base_2(input[i])
         i+=1
       i-=1 # account for the main loop and the inner loop both incrementing it
     settle_disputes(root)
