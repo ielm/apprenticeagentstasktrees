@@ -120,60 +120,80 @@ def merge_children(a, b, alist, blist):
     pos = 0
     while not other.children[pos] in mappedset:
       pos += 1
-    
+      
     end = -1
     while not other.children[end] in mappedset:
       end -= 1
+    end += len(other.children)
     
-    other.childrenStatus.insert(pos, False)
-    other.relationships.insert(pos, [2] * len(other.children))
-    for row in other.relationships:
-      row.insert(pos, 2)
-    other.children.insert(pos, maxnode)
-    
-    for i in range(len(other.children)):
-      if i == pos:
-        other.relationships[i][i] = 0
-        continue
+    if maxnode is bmax:
+      #Insert it into the a tree.
       
-      parallel = False
-      for node in mappedset:
-        if other.relationships[i][other.children.index(node)] == 0:
-          parallel = True
-          break
-      if parallel:
-        print("A node was parallel with a child: "+other.children[i].name)
-        other.relationships[i][pos] = 0
-        other.relationships[pos][i] = 0
+      a.childrenStatus.insert(pos, False)
+      a.relationships.insert(pos, [2] * len(a.children))
+      for row in a.relationships:
+        row.insert(pos, 2)
+      a.children.insert(pos, maxnode)
       
-      #Get the thing that it is mapped to in the opposite tree
-      #If this one's relationship to pos is opposite that one's relationship to the original location of end,
-      #or if that is parallel to something in mappedset,
-      #then parallelize.
+      for i in range(len(a.children)):
+        if i == pos:
+          a.relationships[i][i] = 0
+          continue
       
-      elif other.children[i] in mappingdict and ( (i > pos) != (maxnode.parent.children.index(mappingdict[other.children[i]]) > maxnode.parent.children.index(maxnode)) ):
-        other.relationships[i][pos] = 0
-        other.relationships[pos][i] = 0
+        parallel = False
+        for node in mappedset:
+          if a.relationships[i][a.children.index(node)] == 0:
+            parallel = True
+            break
+        if parallel:
+          a.relationships[i][pos] = 0
+          a.relationships[pos][i] = 0
         
-      elif i < pos:
-        other.relationships[i][pos] = 1
-        other.relationships[pos][i] = -1
-      elif i > end + len(other.children):
-        other.relationships[i][pos] = -1
-        other.relationships[pos][i] = 1
-      else:
-        print("A node was interleaved: "+other.children[i].name)
-        other.relationships[i][pos] = 0
-        other.relationships[pos][i] = 0
-        
-    if maxnode is amax:
-      a_not_mapped.remove(amax)
-      for child in mappedset:
-        b_not_mapped.remove(child)
-        b.removeChildNode(child)
-    else:
+        elif a.children[i] in mappingdict and ( (i > pos) != (b.children.index(mappingdict[a.children[i]]) > b.children.index(maxnode)) ):
+          a.relationships[i][pos] = 0
+          a.relationships[pos][i] = 0
+          
+        elif i < pos:
+          a.relationships[i][pos] = 1
+          a.relationships[pos][i] = -1
+        elif i > end:
+          a.relationships[i][pos] = -1
+          a.relationships[pos][i] = 1
+        else:
+          a.relationships[i][pos] = 0
+          a.relationships[pos][i] = 0
+
       b_not_mapped.remove(bmax)
       for child in mappedset:
         a_not_mapped.remove(child)
         a.removeChildNode(child)
+
+    else:
+      #max node is already in the a tree, just update a few relationships
+      start = pos
+      pos = a.children.index(maxnode)
+      #Oh. I have to do things with mappings.
+      
+      for i in range(len(mapping)):
+        if mapping[i] is not None:
+          print("start: %d, end: %d, pos: %d, name: %s" % (start, end, pos, a.children[i].name))
+          if (mapping[i] > start and i < pos) or (mapping[i] < end and i > pos):
+            a.relationships[i][pos] = 0
+            a.relationships[pos][i] = 0
+          else:
+            parallel = False
+            for node in mappedset:
+              if b.relationships[mapping[i]][b.children.index(node)] == 0:
+                parallel = True
+                break
+            if parallel:
+              a.relationships[i][pos] = 0
+              a.relationships[pos][i] = 0      
+      
+      a_not_mapped.remove(amax)
+      for child in mappedset:
+        b_not_mapped.remove(child)
+        b.removeChildNode(child)
+    
+
   #print("Finished a merge")
