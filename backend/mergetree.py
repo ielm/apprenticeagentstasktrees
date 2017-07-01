@@ -14,23 +14,21 @@ def collect_leaves(node):
       else:
         leaves += collect_leaves(child)
   return leaves
-
-powerset = lambda x: {frozenset(i) for i in chain.from_iterable(combinations(x, r) for r in range(len(x)+1))}
   
-#Merges b into a. Could be changed.
+#Merges b into a. Could be changed to construct a third tree.
 def merge_tree(a, b):
   #Assumes same_node(a,b) is true
   if a.type == "leaf" and b.type == "leaf":
     return
   
   if (len(b.children) == 1 or b.type == "alternate") and (len(a.children) == 1 or a.type == "alternate"):
-    for achild in b.children:
-      for bchild in a.children:
-        if same_node(a,b):
+    for bchild in b.children:
+      for achild in a.children:
+        if same_node(achild, bchild) and Multiset(collect_leaves(achild)) == Multiset(collect_leaves(bchild)):
           merge_tree(achild, bchild)
           break #only break inner loop
       else:
-        a.addChild(bchild)
+        a.addChildNode(achild)
         a.type = "alternate"
 
   else:# len(a.children) == len(b.children):
@@ -59,6 +57,12 @@ def merge_children(a, b, alist, blist):
 
   mapping = get_nodes_mapping(alist, blist, same_node)
   update_children_relationships(a,b,mapping)
+  
+  mappingdict = dict()
+  for i in range(len(mapping)):
+    if mapping[i] is not None:
+      mappingdict[alist[i]] = blist[mapping[i]]
+      mappingdict[blist[mapping[i]]] = alist[i]
   
   a_not_mapped = []
   b_not_mapped = blist.copy()
@@ -102,12 +106,7 @@ def merge_children(a, b, alist, blist):
     for child in (b_not_mapped if maxnode is amax else a_not_mapped):
       #Dynamic programming to find a subset of leaves.
       #This was a fun line of code to write.
-      S.append(
-        min( 
-          [S[-1]] + [(s[0]-set(otherleaves[child]),s[1]+[child]) for s in S if s[0] >= set(otherleaves[child])],
-          key = lambda x: len(x[0])
-        )
-      )
+      S.append( min( [S[-1]] + [(s[0]-set(otherleaves[child]),s[1]+[child]) for s in S if s[0] >= set(otherleaves[child])], key = lambda x: len(x[0]) ) )
       #pair of (smallest possible subset of X's leaves after subtracting some things in the range b1...bi, set of those things)
       if len(S[-1][0]) == 0:
         break
@@ -130,19 +129,32 @@ def merge_children(a, b, alist, blist):
     other.relationships.insert(pos, [2] * len(other.children))
     for row in other.relationships:
       row.insert(pos, 2)
-    other.children.insert(pos, amax)
+    other.children.insert(pos, maxnode)
     
     for i in range(len(other.children)):
       if i == pos:
+        other.relationships[i][i] = 0
         continue
+      
       parallel = False
       for node in mappedset:
         if other.relationships[i][other.children.index(node)] == 0:
           parallel = True
           break
       if parallel:
+        print("A node was parallel with a child: "+other.children[i].name)
         other.relationships[i][pos] = 0
         other.relationships[pos][i] = 0
+      
+      #Get the thing that it is mapped to in the opposite tree
+      #If this one's relationship to pos is opposite that one's relationship to the original location of end,
+      #or if that is parallel to something in mappedset,
+      #then parallelize.
+      
+      elif other.children[i] in mappingdict and ( (i > pos) != (maxnode.parent.children.index(mappingdict[other.children[i]]) > maxnode.parent.children.index(maxnode)) ):
+        other.relationships[i][pos] = 0
+        other.relationships[pos][i] = 0
+        
       elif i < pos:
         other.relationships[i][pos] = 1
         other.relationships[pos][i] = -1
@@ -150,6 +162,7 @@ def merge_children(a, b, alist, blist):
         other.relationships[i][pos] = -1
         other.relationships[pos][i] = 1
       else:
+        print("A node was interleaved: "+other.children[i].name)
         other.relationships[i][pos] = 0
         other.relationships[pos][i] = 0
         
