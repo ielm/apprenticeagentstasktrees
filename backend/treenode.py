@@ -1,4 +1,5 @@
 from tmrutils import get_name_from_tmr
+from tmrutils import same_node
 
 def traverse_tree(node, question_status=None):
   if question_status is None or (True in node.childrenStatus) == question_status:
@@ -13,7 +14,21 @@ def update_children_relationships(a,b,mapping):
       if mapping[i] is None or mapping[j] is None:
         #raise RuntimeError("Attempting to update relationships on incomplete mapping")
         continue
+      #print("a.children:
+      assert same_node(a.children[i],b.children[mapping[i]])
+      assert same_node(a.children[j],b.children[mapping[j]])
       # Set it to 0 if they are different, keep as-is if they are the same. In other words, multiply by (a==b)
+      #if a.relationships[i][j] != b.relationships[mapping[i]][mapping[j]]:
+        #print("parallelizing %s and %s based on mapping" % (a.children[i].name, a.children[j].name))
+        #print("a children:")
+        #print([c.name for c in a.children])
+        #print("a relationships:")
+        #print(a.relationships)
+        #print("b children:")
+        #print([c.name for c in b.children])
+        #print("b relationships:")
+        #print(b.relationships)
+        #print("\n")
       a.relationships[i][j] *= (a.relationships[i][j] == b.relationships[mapping[i]][mapping[j]])
       b.relationships[mapping[i]][mapping[j]] = a.relationships[i][j]
 

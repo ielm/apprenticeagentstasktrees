@@ -49,30 +49,40 @@ def merge_tree(a, b):
 
     
 def merge_children(a, b, alist, blist):
+  #alist must be a subset of a.children
+  #blist must be a subset of b.children
+
   #print("Start child merge!")
   #print("a:")
   #print([node.name for node in alist])
   #print("b:")
   #print([node.name for node in blist])
 
-  mapping = get_nodes_mapping(alist, blist, same_node)
+  #mapping = get_nodes_mapping(alist, blist, same_node)
+  mapping = get_children_mapping(a, b, same_node)
+  for i in range(len(mapping)): #hacky workaround...
+    if a.children[i] not in alist:
+      mapping[i] = None
+    if mapping[i] is not None and b.children[mapping[i]] not in blist:
+      mapping[i] = None
   update_children_relationships(a,b,mapping)
   
   mappingdict = dict()
   for i in range(len(mapping)):
     if mapping[i] is not None:
-      mappingdict[alist[i]] = blist[mapping[i]]
-      mappingdict[blist[mapping[i]]] = alist[i]
+      mappingdict[a.children[i]] = b.children[mapping[i]]
+      mappingdict[b.children[mapping[i]]] = a.children[i]
   
   a_not_mapped = []
   b_not_mapped = blist.copy()
   
   for i in range(len(mapping)):
     if mapping[i] is None:
-      a_not_mapped.append(alist[i])
+      if a.children[i] in alist:
+        a_not_mapped.append(a.children[i])
     else:
-      merge_tree(alist[i], blist[mapping[i]])
-      b_not_mapped.remove(blist[mapping[i]])
+      merge_tree(a.children[i], b.children[mapping[i]])
+      b_not_mapped.remove(b.children[mapping[i]])
     
   aleaves = dict()
   for child in a_not_mapped:
@@ -99,12 +109,10 @@ def merge_children(a, b, alist, blist):
       maxnode = amax
       other = b
       otherleaves = bleaves
-    
-    #Let X be the unmerged child with the most leaves (wlog say it is from A)
-    #then do a dynamic programming thing:
+
+    #Dynamic programming to find a subset of leaves.
     S = [(Multiset( (aleaves if maxnode is amax else bleaves) [maxnode]),[])]
     for child in (b_not_mapped if maxnode is amax else a_not_mapped):
-      #Dynamic programming to find a subset of leaves.
       #This was a fun line of code to write.
       S.append( min( [S[-1]] + [(s[0]-set(otherleaves[child]),s[1]+[child]) for s in S if s[0] >= set(otherleaves[child])], key = lambda x: len(x[0]) ) )
       #pair of (smallest possible subset of X's leaves after subtracting some things in the range b1...bi, set of those things)
@@ -139,6 +147,11 @@ def merge_children(a, b, alist, blist):
         if i == pos:
           a.relationships[i][i] = 0
           continue
+          
+        if a.children[i] in mappedset:
+          #these are about to get removed from a
+          #accidentally making them parallel to things could have bad consequences
+          continue
       
         parallel = False
         for node in mappedset:
@@ -146,10 +159,12 @@ def merge_children(a, b, alist, blist):
             parallel = True
             break
         if parallel:
+          #print("parallelizing %s and %s because first was parallel with child of bmax" % (a.children[i].name, a.children[pos].name))
           a.relationships[i][pos] = 0
           a.relationships[pos][i] = 0
         
         elif a.children[i] in mappingdict and ( (i > pos) != (b.children.index(mappingdict[a.children[i]]) > b.children.index(maxnode)) ):
+          #print("parallelizing %s and %s because first was mapped to thing on wrong side of bmax" % (a.children[i].name, a.children[pos].name))
           a.relationships[i][pos] = 0
           a.relationships[pos][i] = 0
           
@@ -160,6 +175,7 @@ def merge_children(a, b, alist, blist):
           a.relationships[i][pos] = -1
           a.relationships[pos][i] = 1
         else:
+          #print("parallelizing %s and %s by default" % (a.children[i].name, a.children[pos].name))
           a.relationships[i][pos] = 0
           a.relationships[pos][i] = 0
 
@@ -176,8 +192,9 @@ def merge_children(a, b, alist, blist):
       
       for i in range(len(mapping)):
         if mapping[i] is not None:
-          print("start: %d, end: %d, pos: %d, name: %s" % (start, end, pos, a.children[i].name))
+          #print("start: %d, end: %d, pos: %d, name: %s" % (start, end, pos, a.children[i].name))
           if (mapping[i] > start and i < pos) or (mapping[i] < end and i > pos):
+            #print("parallelizing %s and %s because first was mapped to thing on wrong side of amax" % (a.children[i].name, a.children[pos].name))
             a.relationships[i][pos] = 0
             a.relationships[pos][i] = 0
           else:
@@ -187,6 +204,7 @@ def merge_children(a, b, alist, blist):
                 parallel = True
                 break
             if parallel:
+              #print("parallelizing %s and %s because first was parallel with child of amax" % (a.children[i].name, a.children[pos].name))
               a.relationships[i][pos] = 0
               a.relationships[pos][i] = 0      
       

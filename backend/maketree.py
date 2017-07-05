@@ -137,9 +137,9 @@ def construct_tree(input, steps):
       else: # Prefix
         #Check to see if this is about part of something by going up the tree.
         candidate = current_parent
-        while candidate.parent is not None and not about_part_of(tmr, candidate.tmr):
+        while candidate.parent is not None and (about_part_of(candidate.tmr, tmr) or same_main_event(candidate.tmr, tmr)):
           candidate = candidate.parent
-        if candidate.parent is not None:
+        if candidate is not None:
           current_parent = candidate
         new = TreeNode(tmr)
         current_parent.addChildNode(new)

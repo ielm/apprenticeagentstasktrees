@@ -95,6 +95,7 @@ def get_nodes_mapping(alist, blist, comparison): #There's probably a standard fu
     else:
       mapping[i] = j
       revmapping[j] = i
+      assert comparison(alist[i], blist[j])
   return mapping
   
 #TODO replace calls to this with calls to the other thing
