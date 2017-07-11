@@ -3,6 +3,7 @@ import copy
 
 from treenode import *
 from tmrutils import *
+from knowledgebase import update_knowledge_base_2
   
 def settle_disputes(tree, othertree=None):
   if othertree is None:
@@ -42,9 +43,9 @@ def find_parallels(tree, othertree=None):
     othertree = tree
   for child1 in traverse_tree(tree, False):
     for child2 in traverse_tree(othertree, False):
-      if child1 is child2:
-        continue
-      if child1.tmr is None or child2.tmr is None:
+      if child1 is child2 or child1.tmr is None or child2.tmr is None or len(child1.children) != len(child2.children):
+      # If two nodes have different numbers of children, that's probably because one of them is currently being added to.
+      # This might need to change later?
         continue
       if same_main_event(child1.tmr, child2.tmr):
         mapping = get_children_mapping(child1, child2, same_node)
@@ -136,9 +137,9 @@ def construct_tree(input, steps):
       else: # Prefix
         #Check to see if this is about part of something by going up the tree.
         candidate = current_parent
-        while candidate.parent is not None and not about_part_of(tmr, candidate.tmr):
+        while candidate.parent is not None and (about_part_of(candidate.tmr, tmr) or same_main_event(candidate.tmr, tmr)):
           candidate = candidate.parent
-        if candidate.parent is not None:
+        if candidate is not None:
           current_parent = candidate
         new = TreeNode(tmr)
         current_parent.addChildNode(new)
@@ -155,6 +156,7 @@ def construct_tree(input, steps):
       while i < len(input) and is_action(input[i]):
         output["input"].append(input[i]["action"])
         new.addAction(input[i])
+        update_knowledge_base_2(input[i])
         i+=1
       i-=1 # account for the main loop and the inner loop both incrementing it
     settle_disputes(root)
