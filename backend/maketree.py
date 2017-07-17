@@ -109,7 +109,7 @@ def construct_tree(input, steps):
           #... actually, what if this node is neither a sibling nor a child of current_parent but rather its parent?
             
         elif i > 0 and is_action(input[i-1]): #If it was preceded by actions
-          if current_parent.children[-1].name == "": # if their node is unnamed,
+          if current_parent.children[-1].name == "": # if their node is unnamed
             current_parent.children[-1].setTmr(tmr)
           elif about_part_of(tmr, current_parent.children[-1].tmr):
             #Insert this new node between the previous node and its children
@@ -135,11 +135,11 @@ def construct_tree(input, steps):
         else:
           pass #... add more heuristics here
       else: # Prefix
-        #Check to see if this is about part of something by going up the tree.
+        #Check to see if this is directly about part of something by going up the tree.
         candidate = current_parent
-        while candidate.parent is not None and (about_part_of(candidate.tmr, tmr) or same_main_event(candidate.tmr, tmr)):
+        while candidate.parent is not None and not about_part_of(tmr, candidate.tmr):
           candidate = candidate.parent
-        if candidate is not None:
+        if candidate.parent is not None:
           current_parent = candidate
         new = TreeNode(tmr)
         current_parent.addChildNode(new)

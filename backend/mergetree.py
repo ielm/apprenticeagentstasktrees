@@ -28,7 +28,7 @@ def merge_tree(a, b):
           merge_tree(achild, bchild)
           break #only break inner loop
       else:
-        a.addChildNode(achild)
+        a.addChildNode(bchild)
         a.type = "alternate"
 
   else:# len(a.children) == len(b.children):
