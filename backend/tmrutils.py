@@ -2,6 +2,8 @@ from mini_ontology import ontology
 
 #this currently just returns the first event it finds
 def find_main_event(tmr):
+  if tmr is None:
+    return None
   for item in tmr:
     if type(tmr[item]) is dict and "is-in-subtree" in tmr[item] and tmr[item]["is-in-subtree"] == "EVENT":
       return tmr[item]

@@ -5,6 +5,7 @@ from flask_cors import CORS, cross_origin
 
 import maketree
 import mergetree
+import ontosend
 
 app = Flask(__name__)
 CORS(app)
@@ -29,6 +30,9 @@ def start():
     abort(400)
   steps = []
   new_tree = maketree.construct_tree(request.json, steps)
+  
+  ontosend.add_concepts_from_tree(new_tree)
+  
   return json.dumps(steps)
 
 current_tree = None
