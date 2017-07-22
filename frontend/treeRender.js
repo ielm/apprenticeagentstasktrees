@@ -238,6 +238,7 @@ ForestRenderData.prototype = {
     ForestRenderData.call(this, this.forest, width, height, separation, this.svg);
   }
 };
+ForestRenderData.prototype.consructor = ForestRenderData;
 
 /**
  * Construct a new TreeRenderer object, with its tree data initialized to
@@ -783,3 +784,4 @@ TreeRenderer.prototype = {
       return path + "V" + d.target.y;
   }
 };
+TreeRenderer.prototype.constructor = TreeRenderer;

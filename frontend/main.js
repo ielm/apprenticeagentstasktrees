@@ -32,6 +32,10 @@ var prevScrollTime = 0;
  *            primary tree>,
  *    filename: <string, the name of the uploaded file that resulted in this
  *              tree, undefined for primary tree>
+ *    TMRdata: <string, the contents of the uploaded file that resulted in
+ *             this tree, undefined for primary tree>
+ *    treedata: <array[object], the parsed JSON returned by the backend service
+ *              for this tree>
  *  }
  * */
 var primaryTree = null;
@@ -40,10 +44,21 @@ var displayedTree = null;
 var displayedTreeIndex = null;
 
 /**
- * Send an HTTP DELETE request to the server and remove all client-side tree
- * data, replacing the "No data" overlay.
+ * Send an HTTP DELETE request to the server, remove all client-side tree
+ * data, and replace the "No data" overlay.
  * */
-function resetTree() {
+function resetTree(noOverlay) {
+  var remove = d3.select(".canvas").selectAll("*")
+      .attr("opacity", function() {
+        var opac = this.attributes.getNamedItem("opacity");
+        return opac? opac.value : "1";
+      })
+    .transition("resetFade")
+      .duration(500)
+      .ease(d3.easeLinear)
+      .attr("opacity", 1e-6)
+      .remove();
+
   $.ajax({
     url: $("#url")[0].value + "/alpha/mergetree",
     method: "DELETE",
@@ -54,35 +69,31 @@ function resetTree() {
       displayedTree = null;
       displayedTreeIndex = null;
 
+      /*
       var canvas = d3.select(".canvas");
 
       canvas.selectAll("*")
-          .attr("opacity", function() {
-            var opac = this.attributes.getNamedItem("opacity");
-            return opac? opac.value : "1";
-          })
-        .transition("resetFade")
-          .duration(500)
-          .ease(d3.easeLinear)
-          .attr("opacity", 1e-6)
-          .remove();
-
-      canvas.append("rect")
-          .attr("class", "nodata")
-          .attr("width", totalWidth)
-          .attr("height", totalHeight)
-          .attr("opacity", 1e-6);
-      canvas.append("text")
-          .attr("class", "nodata")
-          .attr("x", totalWidth / 2)
-          .attr("y", totalHeight / 2)
-          .text("No data")
-          .attr("opacity", 1e-6);
-      canvas.selectAll(".nodata").transition("resetFade")
-          .delay(500)
-          .duration(500)
-          .ease(d3.easeLinear)
-          .attr("opacity", 1);
+      */
+      //remove
+      if (!noOverlay) {
+        var canvas = d3.select(".canvas");
+        canvas.append("rect")
+            .attr("class", "nodata")
+            .attr("width", totalWidth)
+            .attr("height", totalHeight)
+            .attr("opacity", 1e-6);
+        canvas.append("text")
+            .attr("class", "nodata")
+            .attr("x", totalWidth / 2)
+            .attr("y", totalHeight / 2)
+            .text("No data")
+            .attr("opacity", 1e-6);
+        canvas.selectAll(".nodata").transition("resetFade")
+            .delay(500)
+            .duration(500)
+            .ease(d3.easeLinear)
+            .attr("opacity", 1);
+      }
 
       $("#current").html("0");
       $(".input").html("");
@@ -99,15 +110,12 @@ function resetTree() {
  * If the index argument is omitted, it defaults to the most recently added
  * input tree.
  *
+ * This function also sets up all sidebar elements, event listeners, and
+ * animations.
+ *
  * Removes the "No data" overlay if present.
  * */
 function setDisplayedTree(index) {
-  /*
-  var sepPath = d3.path()
-      .moveTo(sidebarWidth / 5, 0)
-      .lineTo(4 * sidebarWidth / 5, 0);
-      */
-
   var firstTime = false;
   if (displayedTreeIndex === null) {
     d3.selectAll(".nodata").transition("resetFade")
@@ -116,12 +124,14 @@ function setDisplayedTree(index) {
         .attr("opacity", 1e-6)
         .remove();
     firstTime = true;
+
+    // Set up sidebar
     d3.select(".canvas").append("g")
         .attr("class", "sidebar")
         .on("wheel", function() {
           var dy = -d3.event.deltaY;
           var now = Date.now();
-          if (now - prevScrollTime < 250) dy *= 3;
+          if (now - prevScrollTime < 150) dy *= 3;
           prevScrollTime = now;
 
           var sidebarHeight = inputTrees.length * height * sidebarScale;
@@ -130,9 +140,6 @@ function setDisplayedTree(index) {
           else if (sidebarY + dy > 0) dy = -sidebarY;
           else if (sidebarY + dy + sidebarHeight < height)
             dy = height - sidebarY - sidebarHeight;
-
-          console.log("WHEEL EVENT: dy = " + dy + "\n",
-              "translate(0," + (getTranslate(this).y + dy) + ")");
 
           d3.select(this).transition("scroll")
               .duration(500)
@@ -150,15 +157,11 @@ function setDisplayedTree(index) {
 
   var sidebar = d3.select(".sidebar");
 
-  inputTrees.forEach(function(t) {
-    if (t) t.render.redraw();
-  });
-  if (displayedTree) displayedTree.render.redraw();
-  if (primaryTree) primaryTree.render.redraw();
-
+  // default index
   if (index === undefined) var i = inputTrees.length - 1;
   else var i = index;
 
+  // shuffle references between displayedTree, primaryTree, and inputTrees
   if (displayedTreeIndex === -1) primaryTree = displayedTree;
   else if (displayedTreeIndex !== null) inputTrees[displayedTreeIndex] = displayedTree;
 
@@ -173,6 +176,7 @@ function setDisplayedTree(index) {
 
   displayedTreeIndex = i;
 
+  // set up data for the D3.js sidebar data join
   var data = inputTrees.slice();
   if (i >= 0) {
     data.splice(i, 1);
@@ -182,16 +186,17 @@ function setDisplayedTree(index) {
   var sidebarTrees = sidebar.selectAll("g.docked")
       .data(data, function(d) { return d && d.svg; });
 
+  // move new sidebar entries into sidebar element
   var sidebarEnter = sidebarTrees.enter()
     .append(function(d) { return d.node; })
       .classed("docked", true)
       .attr("transform", function() {
         var translate = getTranslate(this);
         var newTransform = setTranslate(this, translate.x, translate.y - sidebarY);
-        console.log("Enter:", translate, newTransform);
         return newTransform;
       });
 
+  // move new displayed tree out of sidebar element
   var sidebarExit = sidebarTrees.exit()
       .classed("docked", false)
       .each(function() {
@@ -201,10 +206,10 @@ function setDisplayedTree(index) {
       .attr("transform", function() {
         var translate = getTranslate(this);
         var newTransform = setTranslate(this, translate.x, translate.y + sidebarY);
-        console.log("Exit:", translate, newTransform);
         return newTransform;
       });
 
+  // fancy fancy animations
   sidebarExit.raise().transition("displayPos")
       .duration(750)
       .attr("transform", "translate(" + sidebarWidth + ",0) scale(1)")
@@ -229,19 +234,7 @@ function setDisplayedTree(index) {
     d3.select(".canvas").select(function() { return displayedTree.node; })
         .attr("transform", "translate(" + sidebarWidth + ",0) scale(1)");
 
-  $("#current").html(displayedTree.render.curStage);
-  $(".input").html(displayedTree.inputs[displayedTree.render.curStage]);
-
-  if (displayedTree.render.curStage > 0)
-    $("#back").removeClass("disabled");
-  else
-    $("#back").addClass("disabled");
-
-  if (displayedTree.render.curStage < displayedTree.render.length - 1)
-    $("#forward").removeClass("disabled");
-  else
-    $("#forward").addClass("disabled");
-
+  // more sidebar setup - labels, backing elements, hover and click listenrs
   sidebarEnter.insert("rect", "*")
       .attr("class", "sidebarBacking")
       .attr("width", width)
@@ -305,9 +298,24 @@ function setDisplayedTree(index) {
       .on("pointerenter", null)
       .on("pointerleave", null)
       .on("click", null);
+
+  // update control area buttons and text
+  $("#current").html(displayedTree.render.curStage);
+  $(".input").html(displayedTree.inputs[displayedTree.render.curStage]);
+
+  if (displayedTree.render.curStage > 0)
+    $("#back").removeClass("disabled");
+  else
+    $("#back").addClass("disabled");
+
+  if (displayedTree.render.curStage < displayedTree.render.length - 1)
+    $("#forward").removeClass("disabled");
+  else
+    $("#forward").addClass("disabled");
 }
 
-function addTree(maketreeData, mergetreeData, filename) {
+function addTree(maketreeData, mergetreeData, filename, fileContents) {
+  console.log(maketreeData, mergetreeData);
   var newTreeNodes = maketreeData.map(function(d) { return d.tree; });
   var newTreeSeq = treeSeqFromData(newTreeNodes);
 
@@ -328,6 +336,8 @@ function addTree(maketreeData, mergetreeData, filename) {
   });
   newTreeData.inputs.unshift("(Before input)");
   newTreeData.filename = filename;
+  newTreeData.TMRdata = fileContents;
+  newTreeData.treedata = maketreeData;
 
   newTreeData.node = d3.selectAll(".canvas").append("g").node();
   newTreeData.node.id = "tree" + inputTrees.length;
@@ -347,6 +357,7 @@ function addTree(maketreeData, mergetreeData, filename) {
     primaryTree.node = d3.selectAll(".canvas").append("g").node();
     primaryTree.node.id = "primaryTree";
     primaryTree.svg = "#" + primaryTree.node.id;
+    primaryTree.treedata = mergetreeData;
 
     primaryTree.render = new TreeRenderer(width, height, primaryTree.svg, primTreeSeq);
     primaryTree.render.transitionDuration = 750;
@@ -359,6 +370,8 @@ function addTree(maketreeData, mergetreeData, filename) {
     primTree.render.treeSeq.append(newTreeForest);
     primTree.render.setTreeSeq(primTree.render.treeSeq);
     primTree.inputs.push("(" + (inputTrees.indexOf(newTreeData) + 1) + ") " + newTreeData.filename);
+
+    primTree.treedata.push(mergetreeData[0]);
   }
 
   if (primaryTree) {
@@ -374,6 +387,85 @@ function addTree(maketreeData, mergetreeData, filename) {
   if (primaryTree) primaryTree.render.nextStage();
   else newTreeData.render.nextStage();
   $("#forward").click();
+}
+
+function saveData() {
+  if (!displayedTree) {
+    window.alert("Nothing to save!");
+    return;
+  }
+
+  function TreeRecord(treedata) {
+    this.filename = treedata.filename;
+    this.TMRdata = treedata.TMRdata;
+    this.treedata = treedata.treedata;
+    this.curStage = treedata.render.curStage;
+    this.inputs = treedata.inputs;
+  }
+
+  var data = { SAVED_DATA: true };
+  data.trees = inputTrees.map(function(t, i) {
+    if (t === null) var tree = displayedTree;
+    else var tree = t;
+
+    return new TreeRecord(tree);
+  });
+  if (primaryTree) data.trees.unshift(new TreeRecord(primaryTree));
+  else data.trees.unshift(new TreeRecord(displayedTree));
+
+  data.displayedIndex = displayedTreeIndex;
+
+  var blob = new Blob([JSON.stringify(data)], { type: "application/json" });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement("a");
+  a.href = url;
+  a.download = "test.json";
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function loadSavedData(data) {
+  resetTree(true);
+
+  var loadedPrimaryTree = data.trees[0];
+  data.trees.shift();
+
+  data.trees.forEach(function(t) {
+    var nodes = t.treedata.map(function(d) { return d.tree; });
+    var treeSeq = treeSeqFromData(nodes);
+
+    var newTreeData = {};
+    newTreeData.inputs = t.inputs;
+    newTreeData.filename = t.filename;
+    newTreeData.TMRdata = t.TMRdata;
+    newTreeData.treedata = t.treedata;
+
+    newTreeData.node = d3.selectAll(".canvas").append("g").node();
+    newTreeData.node.id = "tree" + inputTrees.length;
+    newTreeData.svg = "#" + newTreeData.node.id;
+
+    newTreeData.render = new TreeRenderer(width, height, newTreeData.svg, treeSeq);
+    newTreeData.render.transitionDuration = 750;
+    newTreeData.render.curStage = t.curStage;
+    inputTrees.push(newTreeData);
+  });
+
+  var nodes = loadedPrimaryTree.treedata.map(function(d) { return d.tree; });
+  var treeSeq = treeSeqFromData(nodes);
+
+  primaryTree = {};
+  primaryTree.inputs = loadedPrimaryTree.inputs;
+  primaryTree.treedata = loadedPrimaryTree.treedata;
+
+  primaryTree.node = d3.selectAll(".canvas").append("g").node();
+  primaryTree.node.id = "primaryTree";
+  primaryTree.svg = "#" + primaryTree.node.id;
+
+  primaryTree.render = new TreeRenderer(width, height, primaryTree.svg, treeSeq);
+  primaryTree.render.transitionDuration = 750;
+  primaryTree.render.curStage = loadedPrimaryTree.curStage;
+
+  setDisplayedTree(data.displayedIndex);
 }
 
 $(function() {
@@ -451,6 +543,12 @@ $(function() {
 
     var reader = new FileReader();
     reader.onload = function() {
+      var data = JSON.parse(reader.result);
+      if (data.SAVED_DATA === true) {
+        loadSavedData(data);
+        return;
+      }
+
       $.post({
         url: $("#url")[0].value + "/alpha/maketree",
         contentType: "application/json",
@@ -458,7 +556,6 @@ $(function() {
         dataType: "text",
         error: handleErrors,
         success: function(maketreeData, status) {
-          console.log(status);
           $.post({
             url: $("#url")[0].value + "/alpha/mergetree",
             contentType: "application/json",
@@ -466,8 +563,7 @@ $(function() {
             dataType: "text",
             error: handleErrors,
             success: function(mergetreeData, status) {
-              console.log(status);
-              addTree(JSON.parse(maketreeData), JSON.parse(mergetreeData), file.name);
+              addTree(JSON.parse(maketreeData), JSON.parse(mergetreeData), file.name, reader.result);
             }
           });
         }
@@ -504,9 +600,11 @@ $(function() {
   $("#forward").click(forward);
   $("#back").click(back);
   $(document).keydown(function(e) {
+    if (document.activeElement.isSameNode(document.getElementById("url"))) return;
     if (e.key === "ArrowLeft") back();
     else if (e.key === "ArrowRight") forward();
   });
 
   $("#reset").click(resetTree);
+  $("#save").click(saveData);
 });
