@@ -16,6 +16,8 @@ def get_name_from_tmr(tmr):
   output = event["concept"]
   if "THEME" in event:
     output += " "+tmr[event["THEME"]]["concept"]
+    if "CARDINALITY" in tmr[event["THEME"]] and tmr[event["THEME"]]["CARDINALITY"][0] == ">":
+      output += "S"
     if "THEME-1" in event:
       output += " AND "+tmr[event["THEME-1"]]["concept"]
   if "INSTRUMENT" in event:
@@ -52,11 +54,11 @@ def same_main_event(tmr1, tmr2):
   return True
   
 def same_node(node1, node2):
-  if node1.tmr is None and node2.tmr is None:
+#  if node1.tmr is None and node2.tmr is None:
     return node1.name == node2.name
-  if node1.tmr is None or node2.tmr is None:
-    return False
-  return same_main_event(node1.tmr, node2.tmr)
+#  if node1.tmr is None or node2.tmr is None:
+#    return False
+#  return same_main_event(node1.tmr, node2.tmr)
   
 def is_finality_statement(tmr):
   for item in tmr:
@@ -73,8 +75,14 @@ def about_part_of(tmr1, tmr2):
     return False
   if not ("THEME" in event1 and "THEME" in event2):
     return False
+    
+  concept1 = tmr1[event1["THEME"]]["concept"]
+  concept2 = tmr2[event2["THEME"]]["concept"]
   
-  return tmr1[event1["THEME"]]["concept"] in ontology[tmr2[event2["THEME"]]["concept"]]["HAS-OBJECT-AS-PART"]["SEM"]
+  return concept1 in ontology[concept2]["HAS-OBJECT-AS-PART"]["SEM"] or (
+      "CARDINALITY" in tmr2[event2["THEME"]] and concept1==concept2 and tmr2[event2["THEME"]]["CARDINALITY"][0]=='>' # one is the plural of the other
+  )
+      
   #TODO make this prioritize DEFAULT over SEM
   
 def subtract_lists(list1, list2):

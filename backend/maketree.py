@@ -70,7 +70,17 @@ def construct_tree(input, steps):
         steps.pop() # no output for this iteration
         continue
       elif is_postfix(input[i]):
-        if (not current_parent.children[-1].tmr is None) and about_part_of(current_parent.children[-1].tmr, tmr):
+      
+        closeable_branch = current_parent.children[-1]
+        while not (closeable_branch.tmr is None or same_main_event(closeable_branch.tmr, tmr)):
+          closeable_branch = closeable_branch.parent
+          
+        if closeable_branch is not root:
+          if closeable_branch.tmr is None:
+            closeable_branch.setTmr(tmr)
+          current_parent = closeable_branch.parent
+        
+        elif (not current_parent.children[-1].tmr is None) and about_part_of(current_parent.children[-1].tmr, tmr):
           while about_part_of(current_parent.tmr, tmr) and not current_parent.parent is None:
             current_parent = current_parent.parent
           
@@ -109,7 +119,7 @@ def construct_tree(input, steps):
           #... actually, what if this node is neither a sibling nor a child of current_parent but rather its parent?
             
         elif i > 0 and is_action(input[i-1]): #If it was preceded by actions
-          if current_parent.children[-1].name == "": # if their node is unnamed
+          if current_parent.children[-1].name == "": # if their node is unnamed (This code is redundant given the whole closeable_branch thing above, but I don't feel like refactoring it right now)
             current_parent.children[-1].setTmr(tmr)
           elif about_part_of(tmr, current_parent.children[-1].tmr):
             #Insert this new node between the previous node and its children
@@ -148,7 +158,9 @@ def construct_tree(input, steps):
           # go to next thing
         
     else: # Action
-      output["input"] = []      
+      output["input"] = []
+      if len(current_parent.children) == 0:
+        current_parent.addChildNode(TreeNode())
       new = current_parent.children[-1]
       if len(new.children) > 0: #if that already has children
         new = TreeNode()

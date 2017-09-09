@@ -1,5 +1,4 @@
 from multiset import Multiset
-from itertools import chain, combinations
 
 from maketree import *
 

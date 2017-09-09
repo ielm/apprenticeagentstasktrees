@@ -1,6 +1,7 @@
 #ontosend.py
 
 import pymongo
+from datetime import datetime
 
 import treenode
 from tmrutils import *
@@ -10,17 +11,23 @@ onto = pymongo.MongoClient().after.inventory
 def event_name_to_concept_name(name):
   return name.lower().replace(" ","-")
 
-def add_concepts_from_tree(node):
+log=open("acftfile","w")
+
+def add_concepts_from_tree(node, timestamp = None):
+  log.write("acft called; node: "+node.name+"; time: "+str(timestamp))
+  log.flush()
+  if timestamp is None:
+    timestamp = datetime.utcnow().isoformat(sep=" ")
+
   event = find_main_event(node.tmr)
   if event is None:
     for child in node.children:
-      if len(child.children) > 0:
-        add_concepts_from_tree(child)
+      add_concepts_from_tree(child, timestamp)
     return
     
   name=event_name_to_concept_name(node.name)
   global onto
-  record = onto.find_one({"name":name})
+  record = onto.find_one({"name":name},{"localProperties":True})
   
   if record is None:
   
@@ -30,17 +37,19 @@ def add_concepts_from_tree(node):
       "localProperties" : [ {"filler" : "robot", "slot" : "agent", "facet" : "sem"} ],
       "overriddenFillers" : [ ],
       "totallyRemovedProperties" : [ ],
-      "inheritedProperties" : [ ]
+      "timestamp":timestamp
     }
     props = entry["localProperties"]
     overr = entry["overriddenFillers"]
 
     parent = onto.find_one({"name":event["concept"].lower()})
     
+    parts=[]
     for child in node.children:
-      if len(child.children) > 0:
-        add_concepts_from_tree(child)
-        props.append( {"filler" : event_name_to_concept_name(child.name), "slot" : "has-event-as-part", "facet" : "sem"} )
+      add_concepts_from_tree(child, timestamp)
+      parts.append(event_name_to_concept_name(child.name))
+    if len(parts) > 0:
+      props.append( {"filler" : parts, "slot" : "has-event-as-part", "facet" : "sem"} )
     
     if "THEME" in event:
       props.append( {"filler" : node.tmr[event["THEME"]]["concept"].lower(), "slot" : "theme", "facet" : "sem"} )
@@ -68,17 +77,61 @@ def add_concepts_from_tree(node):
             found_ancestor = True
         ancestor = onto.find_one({"name":ancestor["parents"][0]}) # TODO support multiple inheritance
     
-    #TODO add the overridden fillers
-    #These should be case roles that are ancestors of this thing's case role (e.g. ARTIFACT for CHAIR)
 
     onto.insert_one(entry)
-    assert(onto.find_one({"name":name}))
     
   else:
+
+    change = False
+
+    newparts=[]
     for child in node.children:
-      if len(child.children) > 0:
-        add_concepts_from_tree(child)
-        onto.update_one({"name":name},{"$push":{"localProperties":{"facet":"sem","slot":"has-event-as-part","filler":event_name_to_concept_name(child.name)}}})
-        
-        
-# TODO remove duplicate event-as-parts
+      add_concepts_from_tree(child, timestamp)
+      newparts.append(event_name_to_concept_name(child.name))
+  
+    if not newparts:
+      return
+  
+    for property in record["localProperties"]:
+      if property["slot"] == "has-event-as-part" and type(property["filler"]) is list:
+        oldparts = property["filler"]
+        i=0
+        j=0
+        match = True
+        mergedparts = []
+        while match:
+          match = False
+          if oldparts[i] == newparts[j]:
+            mergedparts.append(oldparts[i])
+            i += 1
+            j += 1
+            match = True
+          else:
+            change = True
+            for sequence in onto.aggregate( [{"$match":{"name":oldparts[i]}}, {"$unwind":"$localProperties"}, {"$match":{"localProperties.slot":"has-event-as-part"}}, {"$project":{"_id":0,"parts":"$localProperties.filler"}}]):
+              if sequence["parts"] == newparts[j:j+len(sequence["parts"])]:
+                mergedparts.append(oldparts[i])
+                j += len(sequence["parts"])
+                i += 1
+                match = True
+                break
+            if not match:
+              for sequence in onto.aggregate( [{"$match":{"name":newparts[j]}}, {"$unwind":"$localProperties"}, {"$match":{"localProperties.slot":"has-event-as-part"}}, {"$project":{"_id":0,"parts":"$localProperties.filler"}}]):
+                if sequence["parts"] == oldparts[i:i+len(sequence["parts"])]:
+                  mergedparts.append(newparts[j])
+                  i += len(sequence["parts"])
+                  j += 1
+                  match = True
+                  break
+          if i == len(oldparts) or j == len(newparts):
+            match = (i == len(oldparts) and j == len(newparts))
+            break
+          
+        if match and change:
+          # remove the sequence that is being overwritten
+          onto.update_one({"name":name}, {"$pull":{"localProperties":{"filler":oldparts}}})
+          newparts = mergedparts
+
+    if change:
+      onto.update_one({"name":name},{"$push":{"localProperties":{"facet":"sem","slot":"has-event-as-part","filler":newparts}}, "$set":{"timestamp":timestamp}})
+#
