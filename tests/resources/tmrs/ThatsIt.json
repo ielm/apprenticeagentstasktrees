@@ -1,0 +1,44 @@
+{
+  "results": [
+    {
+      "TMR": {
+        "ALL-10": {
+          "RANGE-OF": "COREFER-10",
+          "concept": "ALL",
+          "from-sense": "IT-N1",
+          "is-in-subtree": "ALL",
+          "preference": 0,
+          "sem-preference": 0,
+          "sent-word-ind": [
+            9,
+            [
+              2
+            ]
+          ],
+          "token": "it"
+        },
+        "COREFER-10": {
+          "RANGE": "ALL-10",
+          "TIME": [
+            "FIND-ANCHOR-TIME"
+          ],
+          "concept": "COREFER",
+          "from-sense": "BE-V2",
+          "is-in-subtree": "PROPERTY",
+          "preference": 0,
+          "sem-preference": 0,
+          "sent-word-ind": [
+            9,
+            [
+              1
+            ]
+          ],
+          "token": "'s"
+        }
+      }
+    }
+  ],
+  "sent-num": 9,
+  "sentence": "That's it.",
+  "timestamp": "2017-May-23 21:07:12"
+}

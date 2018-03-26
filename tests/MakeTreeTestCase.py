@@ -87,6 +87,17 @@ class MakeTreeTestCase(unittest.TestCase):
         self.assertNode(tree.find(["BUILD CHAIR", "EVENT WITH BOX"]), name="EVENT WITH BOX", children=1, terminal=True, type="sequential")
         self.assertNode(tree.find(["BUILD CHAIR", "EVENT WITH BOX", "get-screws"]), name="get-screws", children=0, type="leaf")
 
+    def test_tree_closed_prefix(self):
+        input = [
+            self.resource('resources/tmrs/IPlanToBuildAChair.json'),
+            self.resource('resources/tmrs/ThatsIt.json'),
+        ]
+
+        tree = maketree.construct_tree(input, [])
+
+        self.assertNode(tree, children=1)
+        self.assertNode(tree.find(["BUILD CHAIR"]), name="BUILD CHAIR", children=0, terminal=False, type="sequential")
+
 
 if __name__ == '__main__':
     unittest.main()
