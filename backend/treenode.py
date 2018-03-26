@@ -43,7 +43,7 @@ class TreeNode:
     this.childrenStatus = [] # True if child is disputed, false otherwise
     this.parent = None
     this.relationships = []
-    this.terminal = False
+    this.terminal = False     # JE: Terminal doesn't mean a terminal node in the tree (aka leaf) it means a node that has only actions (no sub-trees)?
     this.disputedWith = None
     this.type = "sequential" #Deprecated
     this.setTmr(tmr)
@@ -86,3 +86,16 @@ class TreeNode:
       this.childrenStatus[this.children.index(target)] = mark
     else:
       raise RuntimeError("No such child")
+
+  def find(self, path):
+    if len(path) == 0: return None
+
+    for child in self.children:
+      if child.name == path[0]:
+        if len(path) == 1:
+          return child
+        candidate = child.find(path[1:])
+        if candidate is not None:
+          return candidate
+
+    return None

@@ -1,0 +1,92 @@
+{
+  "results": [
+    {
+      "TMR": {
+        "EVENT-2": {
+          "INSTRUMENT": "SCREWDRIVER-2",
+          "SCOPE-OF": "MODALITY-2",
+          "TIME": [
+            "FIND-ANCHOR-TIME"
+          ],
+          "concept": "EVENT",
+          "from-sense": "NEED-V8",
+          "is-in-subtree": "EVENT",
+          "preference": 0,
+          "sem-preference": 2,
+          "sent-word-ind": [
+            1,
+            [
+              2
+            ]
+          ],
+          "token": "need"
+        },
+        "HUMAN-2": {
+          "ATTRIBUTION": "MODALITY-2",
+          "concept": "HUMAN",
+          "from-sense": "I-N1",
+          "is-in-subtree": "OBJECT",
+          "preference": 0,
+          "sem-preference": 0,
+          "sent-word-ind": [
+            1,
+            [
+              1
+            ]
+          ],
+          "token": "I"
+        },
+        "MODALITY-2": {
+          "ATTRIBUTED-TO": "HUMAN-2",
+          "SCOPE": "EVENT-2",
+          "TYPE": "OBLIGATIVE",
+          "VALUE": 1,
+          "concept": "MODALITY",
+          "from-sense": "NEED-V8",
+          "sent-word-ind": [
+            1,
+            [
+              2
+            ]
+          ],
+          "token": "need"
+        },
+        "SCREWDRIVER-2": {
+          "INSTRUMENT-OF": "EVENT-2",
+          "concept": "SCREWDRIVER",
+          "from-sense": "SCREWDRIVER-N1",
+          "is-in-subtree": "OBJECT",
+          "preference": 0,
+          "sem-preference": 0,
+          "sent-word-ind": [
+            1,
+            [
+              4
+            ]
+          ],
+          "token": "screwdriver"
+        },
+        "SET-2": {
+          "ORDINALITY": 1,
+          "concept": "SET",
+          "from-sense": "FIRST-ADV1",
+          "is-in-subtree": "PROPERTY",
+          "preference": -1,
+          "sem-preference": 0,
+          "sent-word-ind": [
+            1,
+            [
+              0
+            ]
+          ],
+          "token": "First"
+        },
+        "total-confidence": 1,
+        "total-preference": -1
+      }
+    }
+  ],
+  "sent-num": 1,
+  "sentence": "First I need a screwdriver.",
+  "timestamp": "2017-May-23 21:07:05"
+}

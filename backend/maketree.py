@@ -153,7 +153,7 @@ def construct_tree(input, steps):
           current_parent = candidate
         new = TreeNode(tmr)
         current_parent.addChildNode(new)
-        if not is_action(input[i+1]): # if no actions will be added; shouldn't go out of bounds because this is pre-utterance
+        if len(input) > i + 1 and not is_action(input[i+1]): # if no actions will be added; shouldn't go out of bounds because this is pre-utterance
           current_parent = new
           # go to next thing
         
