@@ -87,61 +87,58 @@ class TaskModel:
         #       in active node with this node (and mark them all as disputed).  It is currently unclear which actions
         #       belong to which node.
 
-        # 1) Check to see if this utterance was already mentioned in prefix (and do bail out if so).
-        if self.handle_postfix_utterance_already_mentioned(tmr):
-            if self.active_node.parent is not None:
-                self.active_node = self.active_node.parent
-            return
+        heuristics = [
+            self.handle_postfix_utterance_already_mentioned,
+            self.handle_postfix_utterance_presumed_event,
+            self.handle_postfix_utterance_between_events,
+            self.handle_postfix_utterance_before_actions,
+            self.handle_postfix_utterance_causes_disputes,
+        ]
 
-        # 2) Check for a presumed event (an event node with no TMR) and assign this TMR if found.
-        if self.handle_postfix_utterance_presumed_event(tmr):
-            if self.active_node.parent is not None:
-                self.active_node = self.active_node.parent
-            return
-
-        # 3a) Check if this utterance must be injected between utterances in the ancestry.
-        if self.handle_postfix_utterance_between_events(tmr):
-            if self.active_node.parent is not None:
-                self.active_node = self.active_node.parent
-            return
-
-        # 3b) Check if this utterance must be injected between the active_node and its actions.
-        # TODO
-
-        # 3c) Check if this utterance should be a disputed sibling of the active_node (disputing its actions).
-        # TODO
+        for heuristic in heuristics:
+            candidate = heuristic(tmr)
+            if candidate is not None:
+                self.active_node = candidate
+                break
 
     def handle_postfix_utterance_already_mentioned(self, tmr):
+        # Postfix Heuristic 1
+        # Check to see if this utterance was already mentioned in prefix (and do bail out if so).
+
         candidate = self.active_node
         if same_main_event(candidate.tmr, tmr):
-            return True
+            return candidate.parent
 
         while candidate.parent is not None:
             candidate = candidate.parent
             if same_main_event(candidate.tmr, tmr):
-                self.active_node = candidate
-                return True
+                return candidate.parent
 
-        return False
+        return None
 
     def handle_postfix_utterance_presumed_event(self, tmr):
+        # Postfix Heuristic 2
+        # Check for a presumed event (an event node with no TMR) and assign this TMR if found.
+
         candidate = self.active_node
         if candidate.tmr is None and candidate.terminal:
             candidate.setTmr(tmr)
-            return True
+            return candidate.parent
 
         while candidate.parent is not None:
             candidate = candidate.parent
             if candidate.tmr is None and candidate.terminal:
                 candidate.setTmr(tmr)
-                self.active_node = candidate
-                return True
+                return candidate.parent
 
-        return False
+        return None
 
     def handle_postfix_utterance_between_events(self, tmr):
+        # Postfix Heuristic 3a
+        # Check if this utterance must be injected between utterances in the ancestry.
+
         if not about_part_of(self.active_node.tmr, tmr):
-            return False
+            return None
 
         candidate = self.active_node
         while candidate.parent != self.root and about_part_of(candidate.parent.tmr, tmr):
@@ -155,8 +152,7 @@ class TaskModel:
             parent.addChildNode(event)
             event.addChildNode(candidate)
 
-            self.active_node = event
-            return True
+            return event.parent
         else:
             self.root.removeChildNode(candidate)
 
@@ -164,10 +160,36 @@ class TaskModel:
             self.root.addChildNode(event)
             event.addChildNode(candidate)
 
-            self.active_node = event
-            return True
+            return event.parent
 
-        return False
+        return None
+
+    def handle_postfix_utterance_before_actions(self, tmr):
+        # Postfix Heuristic 3b
+        # Check if this utterance must be injected between the active_node and its actions.
+
+        if not self.active_node.terminal or len(self.active_node.children) == 0:
+            return None
+
+        if about_part_of(tmr, self.active_node.tmr):
+            event = TreeNode(tmr)
+
+            actions = list(self.active_node.children)
+            for action in actions:
+                self.active_node.removeChildNode(action)
+                event.addChildNode(action)
+
+            self.active_node.addChildNode(event)
+            return event
+
+        return None
+
+    def handle_postfix_utterance_causes_disputes(self, tmr):
+        # Postfix Heuristic 3c
+        # Check if this utterance should be a disputed sibling of the active_node (disputing its actions).
+
+        # TODO
+        return None
 
     def handle_actions(self, actions):
         # All actions must be added at once - further, an EVENT node cannot have a mix of EVENT and ACTION children.

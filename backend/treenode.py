@@ -59,6 +59,9 @@ class TreeNode:
     for row in this.relationships:
       row.append(1)
     this.relationships.append( [-1]*len(this.relationships) + [0] )
+
+    if child.type == "leaf":
+      this.terminal = True
     
   def removeChildNode(this, child):
     index = this.children.index(child)
@@ -68,6 +71,9 @@ class TreeNode:
     for row in this.relationships:
       row.pop(index)
     assert(len(this.children) == len(this.relationships))
+
+    if len(this.children) == 0:
+      this.terminal = False
   
   def addAction(this, action):
     if len(this.children) == 0:
