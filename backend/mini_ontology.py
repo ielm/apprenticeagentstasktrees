@@ -24,7 +24,7 @@ ontology={
   },
   'SEAT': {
     'HAS-OBJECT-AS-PART': {
-      'SEM': 'ARTIFACT-PART'
+      'SEM': ['ARTIFACT-PART', 'ARTIFACT-LEG']
     }
   },
   'CHAIR-BACK': {

@@ -100,7 +100,10 @@ class TaskModel:
             return
 
         # 3a) Check if this utterance must be injected between utterances in the ancestry.
-        # TODO
+        if self.handle_postfix_utterance_between_events(tmr):
+            if self.active_node.parent is not None:
+                self.active_node = self.active_node.parent
+            return
 
         # 3b) Check if this utterance must be injected between the active_node and its actions.
         # TODO
@@ -133,6 +136,36 @@ class TaskModel:
                 candidate.setTmr(tmr)
                 self.active_node = candidate
                 return True
+
+        return False
+
+    def handle_postfix_utterance_between_events(self, tmr):
+        if not about_part_of(self.active_node.tmr, tmr):
+            return False
+
+        candidate = self.active_node
+        while candidate.parent != self.root and about_part_of(candidate.parent.tmr, tmr):
+            candidate = candidate.parent
+
+        if candidate.parent != self.root:
+            parent = candidate.parent
+            parent.removeChildNode(candidate)
+
+            event = TreeNode(tmr)
+            parent.addChildNode(event)
+            event.addChildNode(candidate)
+
+            self.active_node = event
+            return True
+        else:
+            self.root.removeChildNode(candidate)
+
+            event = TreeNode(tmr)
+            self.root.addChildNode(event)
+            event.addChildNode(candidate)
+
+            self.active_node = event
+            return True
 
         return False
 

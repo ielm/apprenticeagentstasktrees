@@ -118,6 +118,21 @@ class TaskModelTestCase(unittest.TestCase):
         self.assertNode(model.find(["BUILD CHAIR", "BUILD SEAT"]), name="BUILD SEAT", children=1, terminal=True, type="sequential")
         self.assertNode(model.find(["BUILD CHAIR", "BUILD SEAT", "get-screws"]), name="get-screws", children=0, terminal=False, type="leaf")
 
+    def test_model_inject_postfix_between_events(self):
+        input = [
+            self.resource('resources/tmrs/IPlanToBuildAChair.json'),
+            self.resource('resources/tmrs/IWillBuildALeg.json'),
+            self.resource('resources/actions/get-screwdriver.json'),
+            self.resource('resources/tmrs/IBuiltASeat.json'),
+        ]
+
+        model = TaskModel().learn(Instructions(input))
+
+        self.assertNode(model, children=1)
+        self.assertNode(model.find(["BUILD CHAIR"]), name="BUILD CHAIR", children=1, terminal=False, type="sequential")
+        self.assertNode(model.find(["BUILD CHAIR", "BUILD SEAT"]), name="BUILD SEAT", children=1, terminal=False, type="sequential")
+        self.assertNode(model.find(["BUILD CHAIR", "BUILD SEAT", "BUILD ARTIFACT-LEG"]), name="BUILD ARTIFACT-LEG", children=1, terminal=True, type="sequential")
+        self.assertNode(model.find(["BUILD CHAIR", "BUILD SEAT", "BUILD ARTIFACT-LEG", "get-screwdriver"]), name="get-screwdriver", children=0, terminal=False, type="leaf")
 
 if __name__ == '__main__':
     unittest.main()
