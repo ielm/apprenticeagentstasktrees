@@ -1,3 +1,5 @@
+import copy
+
 from tmrutils import get_name_from_tmr
 from tmrutils import same_node
 
@@ -92,6 +94,17 @@ class TreeNode:
       this.childrenStatus[this.children.index(target)] = mark
     else:
       raise RuntimeError("No such child")
+
+  def disputeWith(self, event):
+    # Here we are sharing / disputing all actions
+    actions = list(self.children)
+    for action in actions:
+      event.addChildNode(copy.copy(action))
+      self.markDisputed(action, True)
+      event.markDisputed(event.children[-1], True)
+
+    self.disputedWith = event
+    event.disputedWith = self
 
   def find(self, path):
     if len(path) == 0: return None

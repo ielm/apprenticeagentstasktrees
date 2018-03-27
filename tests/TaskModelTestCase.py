@@ -12,7 +12,7 @@ class TaskModelTestCase(unittest.TestCase):
             r = json.load(f)
         return r
 
-    def assertNode(self, node, name=None, children=None, terminal=None, type=None):
+    def assertNode(self, node, name=None, children=None, terminal=None, type=None, disputed=None):
         if name:
             self.assertEqual(node.name, name)
         if children:
@@ -21,6 +21,8 @@ class TaskModelTestCase(unittest.TestCase):
             self.assertEqual(node.terminal, terminal)
         if type:
             self.assertEqual(node.type, type)
+        if disputed:
+            self.assertEqual(node.disputedWith, disputed)
 
     def test_model_root(self):
         input = [
@@ -149,6 +151,31 @@ class TaskModelTestCase(unittest.TestCase):
         self.assertNode(model.find(["BUILD CHAIR", "BUILD ARTIFACT-LEG"]), name="BUILD ARTIFACT-LEG", children=2, terminal=True, type="sequential")
         self.assertNode(model.find(["BUILD CHAIR", "BUILD ARTIFACT-LEG", "get-screwdriver"]), name="get-screwdriver", children=0, terminal=False, type="leaf")
         self.assertNode(model.find(["BUILD CHAIR", "BUILD ARTIFACT-LEG", "get-screws"]), name="get-screws", children=0, terminal=False, type="leaf")
+
+    def test_model_postfix_causes_disputes(self):
+        input = [
+            self.resource('resources/tmrs/IPlanToBuildAChair.json'),
+            self.resource('resources/tmrs/IWillBuildALeg.json'),
+            self.resource('resources/actions/get-screwdriver.json'),
+            self.resource('resources/actions/get-screws.json'),
+            self.resource('resources/tmrs/IConnectedTheBackToTheSeat.json'),
+        ]
+
+        model = TaskModel().learn(Instructions(input))
+
+        self.assertNode(model, children=1)
+        self.assertNode(model.find(["BUILD CHAIR"]), name="BUILD CHAIR", children=2, terminal=False, type="sequential")
+        self.assertNode(model.find(["BUILD CHAIR", "BUILD ARTIFACT-LEG"]), name="BUILD ARTIFACT-LEG", children=2, terminal=True, type="sequential", disputed=model.find(["BUILD CHAIR", "ATTACH CHAIR-BACK AND SEAT"]))
+        self.assertNode(model.find(["BUILD CHAIR", "BUILD ARTIFACT-LEG", "get-screwdriver"]), name="get-screwdriver", children=0, terminal=False, type="leaf")
+        self.assertNode(model.find(["BUILD CHAIR", "BUILD ARTIFACT-LEG", "get-screws"]), name="get-screws", children=0, terminal=False, type="leaf")
+        self.assertNode(model.find(["BUILD CHAIR", "ATTACH CHAIR-BACK AND SEAT"]), name="ATTACH CHAIR-BACK AND SEAT", children=2, terminal=True, type="sequential", disputed=model.find(["BUILD CHAIR", "BUILD ARTIFACT-LEG"]))
+        self.assertNode(model.find(["BUILD CHAIR", "ATTACH CHAIR-BACK AND SEAT", "get-screwdriver"]), name="get-screwdriver", children=0, terminal=False, type="leaf")
+        self.assertNode(model.find(["BUILD CHAIR", "ATTACH CHAIR-BACK AND SEAT", "get-screws"]), name="get-screws", children=0, terminal=False, type="leaf")
+
+        self.assertTrue(model.find(["BUILD CHAIR", "BUILD ARTIFACT-LEG"]).childrenStatus[0])
+        self.assertTrue(model.find(["BUILD CHAIR", "BUILD ARTIFACT-LEG"]).childrenStatus[1])
+        self.assertTrue(model.find(["BUILD CHAIR", "ATTACH CHAIR-BACK AND SEAT"]).childrenStatus[0])
+        self.assertTrue(model.find(["BUILD CHAIR", "ATTACH CHAIR-BACK AND SEAT"]).childrenStatus[1])
 
 
 if __name__ == '__main__':

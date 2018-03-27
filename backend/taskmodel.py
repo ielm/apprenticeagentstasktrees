@@ -180,7 +180,7 @@ class TaskModel:
                 event.addChildNode(action)
 
             self.active_node.addChildNode(event)
-            return event
+            return event.parent
 
         return None
 
@@ -188,7 +188,17 @@ class TaskModel:
         # Postfix Heuristic 3c
         # Check if this utterance should be a disputed sibling of the active_node (disputing its actions).
 
-        # TODO
+        if not self.active_node.terminal or len(self.active_node.children) == 0:
+            return None
+
+        if not about_part_of(tmr, self.active_node.tmr):
+            event = TreeNode(tmr)
+
+            self.active_node.parent.addChildNode(event)
+            self.active_node.disputeWith(event)
+
+            return event.parent
+
         return None
 
     def handle_actions(self, actions):
