@@ -1,0 +1,63 @@
+{
+  "results": [
+    {
+      "TMR": {
+        "BUILD-8": {
+          "AGENT": "HUMAN-8",
+          "THEME": "SEAT-8",
+          "TIME": [
+            "<",
+            "FIND-ANCHOR-TIME"
+          ],
+          "concept": "BUILD",
+          "from-sense": "BUILD-V1",
+          "is-in-subtree": "EVENT",
+          "preference": 0,
+          "sem-preference": 2,
+          "sent-word-ind": [
+            7,
+            [
+              1
+            ]
+          ],
+          "token": "built"
+        },
+        "HUMAN-8": {
+          "AGENT-OF": "BUILD-8",
+          "concept": "HUMAN",
+          "from-sense": "I-N1",
+          "is-in-subtree": "OBJECT",
+          "preference": 0,
+          "sem-preference": 0,
+          "sent-word-ind": [
+            7,
+            [
+              0
+            ]
+          ],
+          "token": "I"
+        },
+        "SEAT-8": {
+          "THEME-OF": "BUILD-8",
+          "concept": "SEAT",
+          "from-sense": "SEAT-N1",
+          "is-in-subtree": "OBJECT",
+          "preference": 0,
+          "sem-preference": 0,
+          "sent-word-ind": [
+            7,
+            [
+              3
+            ]
+          ],
+          "token": "seat"
+        },
+        "total-confidence": 2,
+        "total-preference": 0
+      }
+    }
+  ],
+  "sent-num": 7,
+  "sentence": "I built a seat.",
+  "timestamp": "2017-May-23 21:07:09"
+}

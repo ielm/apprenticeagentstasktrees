@@ -69,7 +69,7 @@ def construct_tree(input, steps):
         i+=1
         steps.pop() # no output for this iteration
         continue
-      elif is_postfix(input[i]):
+      elif is_postfix_OLD(input[i]):
       
         closeable_branch = current_parent.children[-1]
         while not (closeable_branch.tmr is None or same_main_event(closeable_branch.tmr, tmr)):

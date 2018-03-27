@@ -33,12 +33,18 @@ def is_action(token):
   
 #determines whether a given utterance is prefix or postfix
 #TODO: phatic utterances? infix utterances?
-def is_postfix(utterance):
+def is_postfix_OLD(utterance):
   # Assumes there is only one TMR for each utterance
   tmr = utterance["results"][0]["TMR"]
   return find_main_event(tmr)["TIME"][0] == "<"
+
+def is_postfix(tmr):
+  return find_main_event(tmr)["TIME"][0] == "<"
   
 def same_main_event(tmr1, tmr2):
+  if tmr1 is None or tmr2 is None:
+    return False
+
   event1 = find_main_event(tmr1)
   event2 = find_main_event(tmr2)
   if event1["concept"] != event2["concept"]:
@@ -46,7 +52,7 @@ def same_main_event(tmr1, tmr2):
   if "AGENT" in event1 and "AGENT" in event2 and tmr1[event1["AGENT"]]["concept"] != tmr2[event2["AGENT"]]["concept"]:
     return False
   if ("THEME" in event1) != ("THEME" in event2):
-    return false
+    return False
   if "THEME" in event1 and "THEME" in event2 and tmr1[event1["THEME"]]["concept"] != tmr2[event2["THEME"]]["concept"]:
     return False
   if "INSTRUMENT" in event1 and "INSTRUMENT" in event2 and tmr1[event1["INSTRUMENT"]]["concept"] != tmr2[event2["INSTRUMENT"]]["concept"]:
