@@ -5,6 +5,7 @@ from tmrutils import is_utterance
 from tmrutils import same_main_event
 from treenode import TreeNode
 
+import maketree
 
 class TaskModel:
 
@@ -23,8 +24,8 @@ class TaskModel:
             else:
                 self.handle_actions(instruction_set)
 
-            # TODO: settle_disputes(root)
-            # TODO: find_parallels(root)
+        maketree.settle_disputes(self.root)
+        # TODO: find_parallels(root)
 
         return self.root
 

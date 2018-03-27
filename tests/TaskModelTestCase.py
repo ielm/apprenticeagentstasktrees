@@ -177,6 +177,35 @@ class TaskModelTestCase(unittest.TestCase):
         self.assertTrue(model.find(["BUILD CHAIR", "ATTACH CHAIR-BACK AND SEAT"]).childrenStatus[0])
         self.assertTrue(model.find(["BUILD CHAIR", "ATTACH CHAIR-BACK AND SEAT"]).childrenStatus[1])
 
+    def test_model_settle_disputes(self):
+        input = [
+            self.resource('resources/tmrs/IPlanToBuildAChair.json'),
+            self.resource('resources/tmrs/IWillBuildALeg.json'),
+            self.resource('resources/actions/get-screwdriver.json'),
+            self.resource('resources/actions/get-screws.json'),
+            self.resource('resources/tmrs/IConnectedTheBackToTheSeat.json'),
+            self.resource('resources/tmrs/IWillBuildASeat.json'),
+            self.resource('resources/tmrs/IWillBuildALeg.json'),
+            self.resource('resources/actions/get-screwdriver.json'),
+            self.resource('resources/tmrs/IBuiltALeg.json'),
+        ]
+
+        model = TaskModel().learn(Instructions(input))
+
+        self.assertNode(model, children=1)
+        self.assertNode(model.find(["BUILD CHAIR"]), name="BUILD CHAIR", children=3, terminal=False, type="sequential")
+        self.assertNode(model.find(["BUILD CHAIR", "BUILD ARTIFACT-LEG"]), name="BUILD ARTIFACT-LEG", children=1, terminal=True, type="sequential")
+        self.assertNode(model.find(["BUILD CHAIR", "BUILD ARTIFACT-LEG", "get-screwdriver"]), name="get-screwdriver", children=0, terminal=False, type="leaf")
+        self.assertNode(model.find(["BUILD CHAIR", "ATTACH CHAIR-BACK AND SEAT"]), name="ATTACH CHAIR-BACK AND SEAT", children=1, terminal=True, type="sequential")
+        self.assertNode(model.find(["BUILD CHAIR", "ATTACH CHAIR-BACK AND SEAT", "get-screws"]), name="get-screws", children=0, terminal=False, type="leaf")
+        self.assertNode(model.find(["BUILD CHAIR", "BUILD SEAT"]), name="BUILD SEAT", children=1, terminal=False, type="sequential")
+        self.assertNode(model.find(["BUILD CHAIR", "BUILD SEAT", "BUILD ARTIFACT-LEG"]), name="BUILD ARTIFACT-LEG", children=1, terminal=True, type="sequential")
+        self.assertNode(model.find(["BUILD CHAIR", "BUILD SEAT", "BUILD ARTIFACT-LEG", "get-screwdriver"]), name="get-screwdriver", children=0, terminal=False, type="leaf")
+
+        self.assertFalse(model.find(["BUILD CHAIR", "BUILD ARTIFACT-LEG"]).childrenStatus[0])
+        self.assertFalse(model.find(["BUILD CHAIR", "ATTACH CHAIR-BACK AND SEAT"]).childrenStatus[0])
+        self.assertFalse(model.find(["BUILD CHAIR", "BUILD SEAT", "BUILD ARTIFACT-LEG"]).childrenStatus[0])
+
 
 if __name__ == '__main__':
     unittest.main()
