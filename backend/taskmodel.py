@@ -7,6 +7,7 @@ from treenode import TreeNode
 
 import maketree
 
+
 class TaskModel:
 
     def __init__(self):
@@ -25,7 +26,7 @@ class TaskModel:
                 self.handle_actions(instruction_set)
 
         maketree.settle_disputes(self.root)
-        # TODO: find_parallels(root)
+        maketree.find_parallels(self.root)
 
         return self.root
 

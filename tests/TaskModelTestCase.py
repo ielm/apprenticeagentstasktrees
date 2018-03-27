@@ -206,6 +206,34 @@ class TaskModelTestCase(unittest.TestCase):
         self.assertFalse(model.find(["BUILD CHAIR", "ATTACH CHAIR-BACK AND SEAT"]).childrenStatus[0])
         self.assertFalse(model.find(["BUILD CHAIR", "BUILD SEAT", "BUILD ARTIFACT-LEG"]).childrenStatus[0])
 
+    def test_model_find_parallels(self):
+        input = [
+            self.resource('resources/tmrs/IPlanToBuildAChair.json'),
+            self.resource('resources/tmrs/IWillBuildALeg.json'),
+            self.resource('resources/actions/get-screwdriver.json'),
+            self.resource('resources/actions/get-screws.json'),
+            self.resource('resources/tmrs/IBuiltALeg.json'),
+            self.resource('resources/tmrs/IWillBuildALeg.json'),
+            self.resource('resources/actions/get-screws.json'),
+            self.resource('resources/actions/get-screwdriver.json'),
+            self.resource('resources/tmrs/IBuiltALeg.json'),
+        ]
+
+        model = TaskModel().learn(Instructions(input))
+
+        self.assertNode(model, children=1)
+        self.assertNode(model.find(["BUILD CHAIR"]), name="BUILD CHAIR", children=2, terminal=False, type="sequential")
+
+        leg1 = model.find(["BUILD CHAIR"]).children[0]
+        leg2 = model.find(["BUILD CHAIR"]).children[1]
+
+        self.assertNode(leg1, name="BUILD ARTIFACT-LEG", children=2, terminal=True, type="sequential")
+        self.assertNode(leg2, name="BUILD ARTIFACT-LEG", children=2, terminal=True, type="sequential")
+
+        self.assertEqual(leg1.relationships, [[0, 0], [0, 0]])
+        self.assertEqual(leg2.relationships, [[0, 0], [0, 0]])
+
+
 
 if __name__ == '__main__':
     unittest.main()
