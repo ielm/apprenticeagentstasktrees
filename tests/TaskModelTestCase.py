@@ -233,6 +233,27 @@ class TaskModelTestCase(unittest.TestCase):
         self.assertEqual(leg1.relationships, [[0, 0], [0, 0]])
         self.assertEqual(leg2.relationships, [[0, 0], [0, 0]])
 
+    def test_model_multiple_inputs(self):
+        input = [
+            self.resource('resources/tmrs/IPlanToBuildAChair.json'),
+        ]
+
+        tm = TaskModel()
+
+        model = tm.learn(Instructions(input))
+
+        self.assertNode(model, children=1)
+        self.assertNode(model.find(["BUILD CHAIR"]), name="BUILD CHAIR", children=0, terminal=False, type="sequential")
+
+        input = [
+            self.resource('resources/actions/get-screwdriver.json'),
+        ]
+
+        model = tm.learn(Instructions(input))
+
+        self.assertNode(model, children=1)
+        self.assertNode(model.find(["BUILD CHAIR"]), name="BUILD CHAIR", children=1, terminal=True, type="sequential")
+        self.assertNode(model.find(["BUILD CHAIR", "get-screwdriver"]), name="get-screwdriver", children=0, type="leaf")
 
 
 if __name__ == '__main__':
