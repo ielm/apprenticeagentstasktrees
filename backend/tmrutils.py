@@ -1,3 +1,5 @@
+import re
+
 from mini_ontology import ontology
 from mini_ontology import contains
 
@@ -92,7 +94,30 @@ def about_part_of(tmr1, tmr2):
   )
       
   #TODO make this prioritize DEFAULT over SEM
-  
+
+# Is TMR(1) about any of the THEMEs of any of the Actions(2).  "About" in this case will check THEME, INSTRUMENT and DESTINATION.
+def is_about(tmr, actions):
+  about = []
+  for key, value in find_main_event(tmr).items():
+    if (str.startswith(key, "THEME") or str.startswith(key, "INSTRUMENT") or str.startswith(key, "DESTINATION")) and not str.endswith(key, "constraint_info"):
+      about.append(re.split('-[0-9]+', value)[0])
+  themes = list(map(lambda action: action_mapper(action), actions))
+  return len(set(about).intersection(set(themes))) > 0
+
+# Determines what an action is about.  This is a hack until we address the actual input of actions (probably full TMRs?).
+def action_mapper(action):
+  lookup = {
+    "DOWEL": "ARTIFACT",
+    "BRACKET-FRONT": "ARTIFACT",
+    "BRACKET-FOOT": "ARTIFACT"
+  }
+
+  theme = str.split(action, '-', 1)[1].upper()
+  if theme in lookup:
+    return lookup[theme]
+  return theme
+
+
 def subtract_lists(list1, list2):
   for node in list2:
     if node in list1:

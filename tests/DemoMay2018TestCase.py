@@ -6,7 +6,7 @@ from tests.ApprenticeAgentsTestCase import ApprenticeAgentsTestCase
 
 class TaskModelTestCase(ApprenticeAgentsTestCase):
 
-    def test_x(self):
+    def test_demo(self):
         demo = self.resource('resources/DemoMay2018_TMRs.json')
 
         input = [
@@ -14,6 +14,13 @@ class TaskModelTestCase(ApprenticeAgentsTestCase):
             demo[1],
             self.resource('resources/actions/get-screwdriver.json'),
             demo[3],
+            self.resource('resources/actions/get-bracket-foot.json'),
+            self.resource('resources/actions/get-bracket-front.json'),
+            self.resource('resources/actions/get-dowel.json'),
+            self.resource('resources/actions/hold-dowel.json'),
+            demo[8],
+            self.resource('resources/actions/release-dowel.json'),
+            demo[10],
         ]
 
         model = TaskModel().learn(Instructions(input))

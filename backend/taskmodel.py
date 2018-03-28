@@ -1,5 +1,6 @@
 from tmrutils import about_part_of
 from tmrutils import find_main_event
+from tmrutils import is_about
 from tmrutils import is_postfix
 from tmrutils import is_utterance
 from tmrutils import same_main_event
@@ -48,7 +49,10 @@ class TaskModel:
         # Wherever the current active node is, we consider that (and its ancestry up to the root) looking for any
         # event where the theme of this (input) event is a part (HAS-OBJECT-AS-PART) of the inspected event.
         # If we find a match, we can add this new input event under the match - otherwise, we assume that it belongs
-        # under the current active node (or its closest non-terminal ancestor).
+        # under the current active node - if that node is a terminal (it has actions) then we insert this event
+        # between the active node and those actions if this event uses any of those action's THEMEs as either
+        # THEME or INSTRUMENT.  If all else fails, simply find the nearest non-terminal event to the current, and
+        # add this event as a child.
 
         candidate = self.active_node
 
@@ -61,12 +65,27 @@ class TaskModel:
 
         # If the active_node is a terminal, select its parent (the parent is necessarily the closest non-terminal
         # ancestor, so it can be selected by default).
-        if self.active_node.terminal:
-            self.active_node = self.active_node.parent
+        # if self.active_node.terminal:
+        #     self.active_node = self.active_node.parent
 
         event = TreeNode(tmr)
-        self.active_node.addChildNode(event)
-        self.active_node = event
+
+        # If the active_node is a terminal, and actions are related to the input TMR, inject the new node.
+        # Otherwise add the new node as a sibling to the current node.
+        if self.active_node.terminal and is_about(tmr, list(map(lambda child: child.name, self.active_node.children))):
+            actions = list(self.active_node.children)
+            for action in actions:
+                self.active_node.removeChildNode(action)
+                event.addChildNode(action)
+
+            self.active_node.addChildNode(event)
+            self.active_node = event
+        elif self.active_node.terminal:
+            self.active_node.parent.addChildNode(event)
+            self.active_node = event
+        else:
+            self.active_node.addChildNode(event)
+            self.active_node = event
 
     def handle_postfix_utterance(self, tmr):
         # A postfix utterance should be matched to one of three distinct states:
@@ -105,7 +124,7 @@ class TaskModel:
 
     def handle_postfix_utterance_already_mentioned(self, tmr):
         # Postfix Heuristic 1
-        # Check to see if this utterance was already mentioned in prefix (and do bail out if so).
+        # Check to see if this utterance was already mentioned in prefix (and bail out if so).
 
         candidate = self.active_node
         if same_main_event(candidate.tmr, tmr):

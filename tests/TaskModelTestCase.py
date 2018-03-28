@@ -71,6 +71,20 @@ class TaskModelTestCase(ApprenticeAgentsTestCase):
         self.assertNode(model.find(["BUILD CHAIR", "EVENT WITH BOX"]), name="EVENT WITH BOX", children=1, terminal=True, type="sequential")
         self.assertNode(model.find(["BUILD CHAIR", "EVENT WITH BOX", "get-screws"]), name="get-screws", children=0, type="leaf")
 
+    def test_model_inject_prefix_before_actions(self):
+        input = [
+            self.resource('resources/tmrs/IPlanToBuildAChair.json'),
+            self.resource('resources/actions/get-screwdriver.json'),
+            self.resource('resources/tmrs/FirstINeedAScrewdriver.json'),
+        ]
+
+        model = TaskModel().learn(Instructions(input))
+
+        self.assertNode(model, children=1)
+        self.assertNode(model.find(["BUILD CHAIR"]), name="BUILD CHAIR", children=1, terminal=False, type="sequential")
+        self.assertNode(model.find(["BUILD CHAIR", "EVENT WITH SCREWDRIVER"]), name="EVENT WITH SCREWDRIVER", children=1, terminal=True, type="sequential")
+        self.assertNode(model.find(["BUILD CHAIR", "EVENT WITH SCREWDRIVER", "get-screwdriver"]), name="get-screwdriver", children=0, terminal=False, type="leaf")
+
     def test_model_closed_prefix(self):
         input = [
             self.resource('resources/tmrs/IPlanToBuildAChair.json'),
