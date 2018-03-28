@@ -107,17 +107,34 @@ class TreeNode:
     event.disputedWith = self
 
   def find(self, path):
-    if len(path) == 0: return None
-
-    for child in self.children:
-      if child.name == path[0]:
-        if len(path) == 1:
-          return child
-        candidate = child.find(path[1:])
-        if candidate is not None:
-          return candidate
+    all = self.find_all(path)
+    if len(all) > 0:
+      return all[0]
 
     return None
+    # if len(path) == 0: return None
+    #
+    # for child in self.children:
+    #   if child.name == path[0]:
+    #     if len(path) == 1:
+    #       return child
+    #     candidate = child.find(path[1:])
+    #     if candidate is not None:
+    #       return candidate
+    #
+    # return None
+
+  def find_all(self, path):
+    if len(path) == 0: return []
+
+    steps = [child for child in self.children if child.name == path[0]]
+    if len(path) == 1: return steps
+
+    results = []
+    for step in steps:
+      results.extend(step.find_all(path[1:]))
+
+    return results
 
   def order_of_action(self, action_name):
     index = None

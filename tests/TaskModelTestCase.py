@@ -12,7 +12,7 @@ class TaskModelTestCase(unittest.TestCase):
             r = json.load(f)
         return r
 
-    def assertNode(self, node, name=None, children=None, terminal=None, type=None, disputed=None):
+    def assertNode(self, node, name=None, children=None, terminal=None, type=None, disputed=None, relationships=None):
         if name:
             self.assertEqual(node.name, name)
         if children:
@@ -23,6 +23,8 @@ class TaskModelTestCase(unittest.TestCase):
             self.assertEqual(node.type, type)
         if disputed:
             self.assertEqual(node.disputedWith, disputed)
+        if relationships:
+            self.assertEqual(node.relationships, relationships)
 
     def test_model_root(self):
         input = [
@@ -223,15 +225,8 @@ class TaskModelTestCase(unittest.TestCase):
 
         self.assertNode(model, children=1)
         self.assertNode(model.find(["BUILD CHAIR"]), name="BUILD CHAIR", children=2, terminal=False, type="sequential")
-
-        leg1 = model.find(["BUILD CHAIR"]).children[0]
-        leg2 = model.find(["BUILD CHAIR"]).children[1]
-
-        self.assertNode(leg1, name="BUILD ARTIFACT-LEG", children=2, terminal=True, type="sequential")
-        self.assertNode(leg2, name="BUILD ARTIFACT-LEG", children=2, terminal=True, type="sequential")
-
-        self.assertEqual(leg1.relationships, [[0, 0], [0, 0]])
-        self.assertEqual(leg2.relationships, [[0, 0], [0, 0]])
+        self.assertNode(model.find_all(["BUILD CHAIR", "BUILD ARTIFACT-LEG"])[0], name="BUILD ARTIFACT-LEG", children=2, terminal=True, type="sequential", relationships=[[0, 0], [0, 0]])
+        self.assertNode(model.find_all(["BUILD CHAIR", "BUILD ARTIFACT-LEG"])[1], name="BUILD ARTIFACT-LEG", children=2, terminal=True, type="sequential", relationships=[[0, 0], [0, 0]])
 
     def test_model_multiple_inputs(self):
         input = [
