@@ -1,4 +1,5 @@
 from mini_ontology import ontology
+from mini_ontology import contains
 
 #this currently just returns the first event it finds
 def find_main_event(tmr):
@@ -84,8 +85,9 @@ def about_part_of(tmr1, tmr2):
     
   concept1 = tmr1[event1["THEME"]]["concept"]
   concept2 = tmr2[event2["THEME"]]["concept"]
-  
-  return concept1 in ontology[concept2]["HAS-OBJECT-AS-PART"]["SEM"] or (
+
+  #return concept1 in ontology[concept2]["HAS-OBJECT-AS-PART"]["SEM"] or (
+  return contains(concept2, "HAS-OBJECT-AS-PART", "SEM", concept1) or (
       "CARDINALITY" in tmr2[event2["THEME"]] and concept1==concept2 and tmr2[event2["THEME"]]["CARDINALITY"][0]=='>' # one is the plural of the other
   )
       
