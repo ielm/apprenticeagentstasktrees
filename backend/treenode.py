@@ -118,3 +118,27 @@ class TreeNode:
           return candidate
 
     return None
+
+  def order_of_action(self, action_name):
+    index = None
+    for i, action in enumerate(self.children):
+      if action.type == "leaf" and action.name == action_name:
+        index = i
+        break
+
+    if index is None:
+      return None
+
+    row = self.relationships[index]
+    return row.count(-1)
+
+  def __str__(self):
+    indent = "  "
+    line = ("+" if self.type != "leaf" else "-[" + str(self.parent.order_of_action(self.name) + 1) + "]") + ("root" if self.name == "" else self.name) + ("" if self.disputedWith is None else " * " + self.disputedWith.name)
+
+    for child in self.children:
+      childstr = str(child)
+      for l in childstr.splitlines():
+        line += "\n" + indent + l
+
+    return line
