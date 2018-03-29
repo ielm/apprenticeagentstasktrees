@@ -38,10 +38,6 @@ class TaskModel:
 
     def handle_utterance(self, tmr):
 
-        # Skip phatic utterances for now.
-        # if find_main_event(tmr) is None:
-        #     return
-
         if is_postfix(tmr):
             self.handle_postfix_utterance(tmr)
         else:
@@ -49,58 +45,35 @@ class TaskModel:
 
     def handle_prefix_utterance(self, tmr):
         # A prefix utterance necessarily starts a new EVENT node.
-        # Wherever the current active node is, we consider that (and its ancestry up to the root) looking for any
-        # event where the theme of this (input) event is a part (HAS-OBJECT-AS-PART) of the inspected event.
-        # If we find a match, we can add this new input event under the match - otherwise, we assume that it belongs
-        # under the current active node - if that node is a terminal (it has actions) then we insert this event
-        # between the active node and those actions if this event uses any of those action's THEMEs as either
-        # THEME or INSTRUMENT.  If all else fails, simply find the nearest non-terminal event to the current, and
-        # add this event as a child.
+        # The utterance may refer to a previous event - in which case we want to find and "copy" it.
+        # Otherwise, we search the ancestry for any nodes that are related via HAS-OBJECT-AS-PART, looking for the
+        # right level to either add a child, or in some cases inject the new node between an event and its actions.
 
-        # If there is no event, consider the nearest ancestor to the active_node whose THEME is any OBJECT in this
-        # utterance to be a sibling, and add this utterance as a "copy".  This handles things such as "Now, another leg."
-        if find_main_event(tmr) is None:
-            self.handle_prefix_utterance_with_no_event(tmr)
-            return
+        heuristics = [
+            self.handle_prefix_utterance_with_no_event,
+            self.handle_prefix_utterance_about_existing_event,
+            self.handle_prefix_utterance_fallback_behavior,
+        ]
 
-        candidate = self.active_node
-
-        while candidate.parent is not None and not about_part_of(tmr, candidate.tmr):
-            candidate = candidate.parent
-
-        # If a HAS-OBJECT-AS-PART match was found, use that; otherwise, active_node is unchanged.
-        if candidate.parent is not None:
-            self.active_node = candidate
-
-        # If the active_node is a terminal, select its parent (the parent is necessarily the closest non-terminal
-        # ancestor, so it can be selected by default).
-        # if self.active_node.terminal:
-        #     self.active_node = self.active_node.parent
-
-        event = TreeNode(tmr)
-
-        # If the active_node is a terminal, and actions are related to the input TMR, inject the new node.
-        # Otherwise add the new node as a sibling to the current node.
-        if self.active_node.terminal and is_about(tmr, list(map(lambda child: child.tmr, self.active_node.children))):
-            actions = list(self.active_node.children)
-            for action in actions:
-                self.active_node.removeChildNode(action)
-                event.addChildNode(action)
-
-            self.active_node.addChildNode(event)
-            self.active_node = event
-        elif self.active_node.terminal:
-            self.active_node.parent.addChildNode(event)
-            self.active_node = event
-        else:
-            self.active_node.addChildNode(event)
-            self.active_node = event
+        for heuristic in heuristics:
+            candidate = heuristic(tmr)
+            if candidate is not None:
+                self.active_node = candidate
+                break
 
     def handle_prefix_utterance_with_no_event(self, tmr):
+        # Prefix Heuristic 1
+        # If there is no event, consider the nearest ancestor to the active_node whose THEME is any OBJECT in this
+        # utterance to be a sibling, and add this utterance as a "copy".
+        # This handles things such as "Now, another leg."
+
+        if find_main_event(tmr) is not None:
+            return None
+
         objects = find_objects(tmr)
 
         if len(objects) == 0:
-            return
+            return None  # What does a TMR with no event or object mean?
 
         candidate = self.active_node
 
@@ -109,10 +82,65 @@ class TaskModel:
                 event = TreeNode(candidate.tmr)
                 event.setOriginalTMR(tmr)
                 candidate.parent.addChildNode(event)
-                self.active_node = event
-                break
+                return event
             else:
                 candidate = candidate.parent
+
+        return None
+
+    def handle_prefix_utterance_about_existing_event(self, tmr):
+        # Prefix Heuristic 2
+        # Find the nearest ancestor (starting with active_node) where the THEME of this tmr is a part of the THEME
+        # of the ancestor tmr (using HAS-OBJECT-AS-PART).  If one is found, add the new node in one of two ways:
+        # 1) The active node is non-terminal = add the node as a child.
+        # 2) The active node is a terminal = inject the node between the active node and its actions.
+
+        candidate = self.active_node
+
+        while candidate.parent is not None and not about_part_of(tmr, candidate.tmr):
+            candidate = candidate.parent
+
+        if candidate.parent is None:
+            return None
+
+        event = TreeNode(tmr)
+
+        if not candidate.terminal:
+            candidate.addChildNode(event)
+            return event
+        else:
+            actions = list(candidate.children)
+            for action in actions:
+                candidate.removeChildNode(action)
+                event.addChildNode(action)
+
+            candidate.addChildNode(event)
+            return event
+
+    def handle_prefix_utterance_fallback_behavior(self, tmr):
+        # Prefix Heuristic 3
+        # If the previous heuristics could not be matched, assume that the active node must be the parent.  Add the
+        # new node in one of three ways:
+        # 1) The active node is terminal, and the new node is about the active node's children = inject the node.
+        # 2) The active node is a terminal = add the node to the parent.
+        # 3) The active node is non-terminal = add the node as a child.
+
+        event = TreeNode(tmr)
+
+        if self.active_node.terminal and is_about(tmr, list(map(lambda child: child.tmr, self.active_node.children))):
+            actions = list(self.active_node.children)
+            for action in actions:
+                self.active_node.removeChildNode(action)
+                event.addChildNode(action)
+
+            self.active_node.addChildNode(event)
+            return event
+        elif self.active_node.terminal:
+            self.active_node.parent.addChildNode(event)
+            return event
+        else:
+            self.active_node.addChildNode(event)
+            return event
 
     def handle_postfix_utterance(self, tmr):
         # A postfix utterance should be matched to one of three distinct states:

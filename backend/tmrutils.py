@@ -67,7 +67,6 @@ def same_main_event(tmr1, tmr2):
   event2 = find_main_event(tmr2)
   if event1["concept"] != event2["concept"]:
     return False
-  print("here")
   if "AGENT" in event1 and "AGENT" in event2 and event1["AGENT"] in tmr1 and event2["AGENT"] in tmr2 and tmr1[event1["AGENT"]]["concept"] != tmr2[event2["AGENT"]]["concept"]:
     return False
   if ("THEME" in event1) != ("THEME" in event2):
