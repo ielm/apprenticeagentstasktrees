@@ -63,8 +63,8 @@ class TaskModel:
 
     def handle_prefix_utterance_with_no_event(self, tmr):
         # Prefix Heuristic 1
-        # If there is no event, consider the nearest ancestor to the active_node whose THEME is any OBJECT in this
-        # utterance to be a sibling, and add this utterance as a "copy".
+        # If there is no event, consider first the active_node's children, and then the nearest ancestor to the
+        # active_node whose THEME is any OBJECT in this utterance to be a sibling, and add this utterance as a "copy".
         # This handles things such as "Now, another leg."
 
         if find_main_event(tmr) is not None:
@@ -75,6 +75,15 @@ class TaskModel:
         if len(objects) == 0:
             return None  # What does a TMR with no event or object mean?
 
+        # a) First, look to see if any children are a match
+        for child in self.active_node.children:
+            if len(set.intersection(set(find_themes(child.tmr)), set(objects))) > 0:
+                event = TreeNode(child.tmr)
+                event.setOriginalTMR(tmr)
+                self.active_node.addChildNode(event)
+                return event
+
+        # b) Now find the nearest matching ancestor
         candidate = self.active_node
 
         while candidate.parent is not None:
@@ -181,6 +190,7 @@ class TaskModel:
         # Postfix Heuristic 1
         # Check to see if this utterance was already mentioned in prefix (and bail out if so).
 
+        # a) Is the main event the same?
         candidate = self.active_node
         if same_main_event(candidate.tmr, tmr):
             return candidate.parent
@@ -188,6 +198,16 @@ class TaskModel:
         while candidate.parent is not None:
             candidate = candidate.parent
             if same_main_event(candidate.tmr, tmr):
+                return candidate.parent
+
+        # b) Is the theme of the main event the same?  (This option was added to handle the BUILD/ASSEMBLE issue)
+        candidate = self.active_node
+        if len(set(find_themes(candidate.tmr)).intersection(set(find_themes(tmr)))) > 0:
+            return candidate.parent
+
+        while candidate.parent is not None:
+            candidate = candidate.parent
+            if len(set(find_themes(candidate.tmr)).intersection(set(find_themes(tmr)))) > 0:
                 return candidate.parent
 
         return None

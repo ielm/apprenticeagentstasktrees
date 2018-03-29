@@ -4,7 +4,7 @@ from instructions import Instructions
 from tests.ApprenticeAgentsTestCase import ApprenticeAgentsTestCase
 
 
-class TaskModelTestCase(ApprenticeAgentsTestCase):
+class DemoMay2018TestCase(ApprenticeAgentsTestCase):
 
     def test_demo(self):
         demo = self.resource('resources/DemoMay2018_TMRs.json')
@@ -20,7 +20,7 @@ class TaskModelTestCase(ApprenticeAgentsTestCase):
             demo[7],    # Hold the dowel.
             demo[8],    # I am using the screwdriver to affix the brackets on the dowel with screws.
             demo[9],    # Release the dowel.
-            # demo[10],   # Ok, done.
+            demo[10],   # We have assembled a front leg.
             demo[11],   # Now, another front leg.
             demo[12],   # Get another foot bracket.
             demo[13],   # Get another front bracket.
@@ -28,7 +28,7 @@ class TaskModelTestCase(ApprenticeAgentsTestCase):
             demo[15],   # Hold the dowel.
             demo[16],   # I am putting another set of brackets on the dowel.
             demo[17],   # Release the dowel.
-            # demo[18],   # Ok, done.
+            demo[18],   # I have assembled another front chair leg.
         ]
 
         model = TaskModel().learn(Instructions(input))

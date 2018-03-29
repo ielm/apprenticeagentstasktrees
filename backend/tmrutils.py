@@ -57,7 +57,17 @@ def is_postfix(tmr):
   if event == None:
     return False
 
-  return event["TIME"][0] == "<"
+  if event["TIME"][0] == "<":
+    return True
+
+  if "SCOPE-OF" in event:
+    scope = tmr[event["SCOPE-OF"]]
+    if scope["concept"] == "ASPECT" and scope["token"] == "have":
+      return True
+
+  return False
+
+  # return event["TIME"][0] == "<"
   
 def same_main_event(tmr1, tmr2):
   if tmr1 is None or tmr2 is None:
