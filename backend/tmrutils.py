@@ -16,20 +16,31 @@ def find_main_event(tmr):
 #formats an utterance into a node name
 def get_name_from_tmr(tmr):
   event = find_main_event(tmr)
+  if event is None:
+    return ""
+
   output = event["concept"]
-  if "THEME" in event:
-    output += " "+tmr[event["THEME"]]["concept"]
-    if "CARDINALITY" in tmr[event["THEME"]] and tmr[event["THEME"]]["CARDINALITY"][0] == ">":
+
+  node = event
+  while "THEME" in node:
+  #if "THEME" in event:
+    output += " "+tmr[node["THEME"]]["concept"]
+    if "CARDINALITY" in tmr[node["THEME"]] and tmr[node["THEME"]]["CARDINALITY"][0] == ">":
       output += "S"
-    if "THEME-1" in event:
-      output += " AND "+tmr[event["THEME-1"]]["concept"]
+    if "THEME-1" in node:
+      output += " AND "+tmr[node["THEME-1"]]["concept"]
+    node = tmr[node["THEME"]]
   if "INSTRUMENT" in event:
     output += " WITH "+tmr[event["INSTRUMENT"]]["concept"]
   return output
 
 #determines whether a given token is utterance or action
 def is_utterance(token):
-  return type(token) is dict and 'results' in token and 'sentence' in token
+  #if type(token) is dict and 'results' in token and 'sentence' in token:
+  name = get_name_from_tmr(token)
+  if str.startswith(name, "REQUEST-ACTION TAKE") or str.startswith(name, "REQUEST-ACTION HOLD"):
+    return False
+  return True
 
 def is_action(token):
   return not is_utterance(token)
@@ -101,21 +112,24 @@ def is_about(tmr, actions):
   for key, value in find_main_event(tmr).items():
     if (str.startswith(key, "THEME") or str.startswith(key, "INSTRUMENT") or str.startswith(key, "DESTINATION")) and not str.endswith(key, "constraint_info"):
       about.append(re.split('-[0-9]+', value)[0])
-  themes = list(map(lambda action: action_mapper(action), actions))
+  themes = []
+  for action in actions:
+    themes.extend(find_themes(action))
   return len(set(about).intersection(set(themes))) > 0
 
-# Determines what an action is about.  This is a hack until we address the actual input of actions (probably full TMRs?).
-def action_mapper(action):
-  lookup = {
-    "DOWEL": "ARTIFACT",
-    "BRACKET-FRONT": "ARTIFACT",
-    "BRACKET-FOOT": "ARTIFACT"
-  }
+def find_themes(tmr):
+  event = find_main_event(tmr)
+  if event is None:
+    return []
 
-  theme = str.split(action, '-', 1)[1].upper()
-  if theme in lookup:
-    return lookup[theme]
-  return theme
+  themes = []
+
+  node = event
+  while "THEME" in node:
+    themes.append(re.split('-[0-9]+', node["THEME"])[0])
+    node = tmr[node["THEME"]]
+
+  return themes
 
 
 def subtract_lists(list1, list2):

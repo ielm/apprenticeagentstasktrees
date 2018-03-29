@@ -12,14 +12,14 @@ class TaskModelTestCase(ApprenticeAgentsTestCase):
         input = [
             demo[0],
             demo[1],
-            self.resource('resources/actions/get-screwdriver.json'),
+            demo[2],
             demo[3],
-            self.resource('resources/actions/get-bracket-foot.json'),
-            self.resource('resources/actions/get-bracket-front.json'),
-            self.resource('resources/actions/get-dowel.json'),
-            self.resource('resources/actions/hold-dowel.json'),
+            demo[4],
+            demo[5],
+            demo[6],
+            demo[7],
             demo[8],
-            self.resource('resources/actions/release-dowel.json'),
+            demo[9],
             demo[10],
         ]
 

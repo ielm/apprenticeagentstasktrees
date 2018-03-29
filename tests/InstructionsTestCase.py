@@ -1,16 +1,20 @@
-import unittest
 from instructions import Instructions
+from tests.ApprenticeAgentsTestCase import ApprenticeAgentsTestCase
 
 
-class InstructionsTestCase(unittest.TestCase):
+class InstructionsTestCase(ApprenticeAgentsTestCase):
 
-    tmr1 = {"results": None, "sentence": "tmr1"}
-    tmr2 = {"results": None, "sentence": "tmr2"}
-    tmr3 = {"results": None, "sentence": "tmr3"}
+    def setUp(self):
+        demo = self.resource('resources/DemoMay2018_TMRs.json')
 
-    action1 = {"action": 1}
-    action2 = {"action": 2}
-    action3 = {"action": 3}
+        self.tmr1 = demo[0]
+        self.tmr2 = demo[1]
+        self.tmr3 = demo[3]
+
+        self.action1 = demo[2]
+        self.action2 = demo[4]
+        self.action3 = demo[5]
+
 
     def test_tmr_sequence(self):
         ins = Instructions([

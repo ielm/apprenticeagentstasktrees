@@ -85,7 +85,7 @@ class TreeNode:
       return False
     actionNode = TreeNode()
     actionNode.type = "leaf"
-    actionNode.name = action["action"]
+    actionNode.setTmr(action)
     this.addChildNode(actionNode)
     return True    
   

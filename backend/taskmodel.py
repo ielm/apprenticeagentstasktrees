@@ -21,19 +21,20 @@ class TaskModel:
             if len(instruction_set) == 0:
                 raise Exception("Instructions generated an empty set.")
 
-            if is_utterance(instruction_set[0]):
-                self.handle_utterance(instruction_set[0])
+            # Currently, assume all inputs have exactly one TMR.
+            tmrs = list(map(lambda instruction: instruction["results"][0]["TMR"], instruction_set))
+
+            if is_utterance(tmrs[0]):
+                self.handle_utterance(tmrs[0])
             else:
-                self.handle_actions(instruction_set)
+                self.handle_actions(tmrs)
 
         maketree.settle_disputes(self.root)
         maketree.find_parallels(self.root)
 
         return self.root
 
-    def handle_utterance(self, utterance):
-        # Currently, assume all inputs have exactly one TMR.
-        tmr = utterance["results"][0]["TMR"]
+    def handle_utterance(self, tmr):
 
         # Skip phatic utterances for now.
         if find_main_event(tmr) is None:
@@ -72,7 +73,7 @@ class TaskModel:
 
         # If the active_node is a terminal, and actions are related to the input TMR, inject the new node.
         # Otherwise add the new node as a sibling to the current node.
-        if self.active_node.terminal and is_about(tmr, list(map(lambda child: child.name, self.active_node.children))):
+        if self.active_node.terminal and is_about(tmr, list(map(lambda child: child.tmr, self.active_node.children))):
             actions = list(self.active_node.children)
             for action in actions:
                 self.active_node.removeChildNode(action)

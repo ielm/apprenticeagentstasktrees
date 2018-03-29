@@ -14,7 +14,7 @@ class Instructions:
     def __generator(self):
         action_buffer = []
         for instruction in self.instructions:
-            if is_utterance(instruction):
+            if is_utterance(instruction["results"][0]["TMR"]):
                 if len(action_buffer) > 0:
                     yield action_buffer
                     action_buffer = []
