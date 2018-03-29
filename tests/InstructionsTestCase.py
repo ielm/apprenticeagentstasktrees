@@ -15,7 +15,6 @@ class InstructionsTestCase(ApprenticeAgentsTestCase):
         self.action2 = demo[4]
         self.action3 = demo[5]
 
-
     def test_tmr_sequence(self):
         ins = Instructions([
             self.tmr1, self.tmr2, self.tmr3

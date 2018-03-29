@@ -38,7 +38,7 @@ def get_name_from_tmr(tmr):
 def is_utterance(token):
   #if type(token) is dict and 'results' in token and 'sentence' in token:
   name = get_name_from_tmr(token)
-  if str.startswith(name, "REQUEST-ACTION TAKE") or str.startswith(name, "REQUEST-ACTION HOLD"):
+  if str.startswith(name, "REQUEST-ACTION TAKE") or str.startswith(name, "REQUEST-ACTION HOLD") or str.startswith(name, "REQUEST-ACTION RESTRAIN"):
     return False
   return True
 
@@ -53,7 +53,11 @@ def is_postfix_OLD(utterance):
   return find_main_event(tmr)["TIME"][0] == "<"
 
 def is_postfix(tmr):
-  return find_main_event(tmr)["TIME"][0] == "<"
+  event = find_main_event(tmr)
+  if event == None:
+    return False
+
+  return event["TIME"][0] == "<"
   
 def same_main_event(tmr1, tmr2):
   if tmr1 is None or tmr2 is None:
@@ -63,7 +67,8 @@ def same_main_event(tmr1, tmr2):
   event2 = find_main_event(tmr2)
   if event1["concept"] != event2["concept"]:
     return False
-  if "AGENT" in event1 and "AGENT" in event2 and tmr1[event1["AGENT"]]["concept"] != tmr2[event2["AGENT"]]["concept"]:
+  print("here")
+  if "AGENT" in event1 and "AGENT" in event2 and event1["AGENT"] in tmr1 and event2["AGENT"] in tmr2 and tmr1[event1["AGENT"]]["concept"] != tmr2[event2["AGENT"]]["concept"]:
     return False
   if ("THEME" in event1) != ("THEME" in event2):
     return False
@@ -131,6 +136,12 @@ def find_themes(tmr):
 
   return themes
 
+def find_objects(tmr):
+  objects = []
+  for instance in tmr:
+    if type(tmr[instance]) is dict and "is-in-subtree" in tmr[instance] and tmr[instance]["is-in-subtree"] == "OBJECT":
+      objects.append(tmr[instance]["concept"])
+  return objects
 
 def subtract_lists(list1, list2):
   for node in list2:

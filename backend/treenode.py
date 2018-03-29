@@ -49,10 +49,14 @@ class TreeNode:
     this.disputedWith = None
     this.type = "sequential" #Deprecated
     this.setTmr(tmr)
+    this.setOriginalTMR(tmr)
     
   def setTmr(this, tmr):
     this.name = "" if tmr is None else get_name_from_tmr(tmr)
     this.tmr = tmr
+
+  def setOriginalTMR(self, tmr):
+    self.originalTMR = tmr
 
   def addChildNode(this, child):
     this.children.append(child)

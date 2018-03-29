@@ -1,5 +1,7 @@
 from tmrutils import about_part_of
 from tmrutils import find_main_event
+from tmrutils import find_objects
+from tmrutils import find_themes
 from tmrutils import is_about
 from tmrutils import is_postfix
 from tmrutils import is_utterance
@@ -37,8 +39,8 @@ class TaskModel:
     def handle_utterance(self, tmr):
 
         # Skip phatic utterances for now.
-        if find_main_event(tmr) is None:
-            return
+        # if find_main_event(tmr) is None:
+        #     return
 
         if is_postfix(tmr):
             self.handle_postfix_utterance(tmr)
@@ -54,6 +56,12 @@ class TaskModel:
         # between the active node and those actions if this event uses any of those action's THEMEs as either
         # THEME or INSTRUMENT.  If all else fails, simply find the nearest non-terminal event to the current, and
         # add this event as a child.
+
+        # If there is no event, consider the nearest ancestor to the active_node whose THEME is any OBJECT in this
+        # utterance to be a sibling, and add this utterance as a "copy".  This handles things such as "Now, another leg."
+        if find_main_event(tmr) is None:
+            self.handle_prefix_utterance_with_no_event(tmr)
+            return
 
         candidate = self.active_node
 
@@ -87,6 +95,24 @@ class TaskModel:
         else:
             self.active_node.addChildNode(event)
             self.active_node = event
+
+    def handle_prefix_utterance_with_no_event(self, tmr):
+        objects = find_objects(tmr)
+
+        if len(objects) == 0:
+            return
+
+        candidate = self.active_node
+
+        while candidate.parent is not None:
+            if len(set.intersection(set(find_themes(candidate.tmr)), set(objects))) > 0:
+                event = TreeNode(candidate.tmr)
+                event.setOriginalTMR(tmr)
+                candidate.parent.addChildNode(event)
+                self.active_node = event
+                break
+            else:
+                candidate = candidate.parent
 
     def handle_postfix_utterance(self, tmr):
         # A postfix utterance should be matched to one of three distinct states:

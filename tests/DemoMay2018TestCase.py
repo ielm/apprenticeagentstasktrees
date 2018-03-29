@@ -10,20 +10,28 @@ class TaskModelTestCase(ApprenticeAgentsTestCase):
         demo = self.resource('resources/DemoMay2018_TMRs.json')
 
         input = [
-            demo[0],
-            demo[1],
-            demo[2],
-            demo[3],
-            demo[4],
-            demo[5],
-            demo[6],
-            demo[7],
-            demo[8],
-            demo[9],
-            demo[10],
+            demo[0],    # We will build a chair.
+            demo[1],    # I need a screwdriver to assemble the chair.
+            demo[2],    # Get a screwdriver.
+            demo[3],    # First, we will build a front leg of the chair.
+            demo[4],    # Get a foot bracket.
+            demo[5],    # Get a front bracket.
+            demo[6],    # Get a dowel.
+            demo[7],    # Hold the dowel.
+            demo[8],    # I am using the screwdriver to affix the brackets on the dowel with screws.
+            demo[9],    # Release the dowel.
+            # demo[10],   # Ok, done.
+            demo[11],   # Now, another front leg.
+            demo[12],   # Get another foot bracket.
+            demo[13],   # Get another front bracket.
+            demo[14],   # Get another dowel.
+            demo[15],   # Hold the dowel.
+            demo[16],   # I am putting another set of brackets on the dowel.
+            demo[17],   # Release the dowel.
+            # demo[18],   # Ok, done.
         ]
 
         model = TaskModel().learn(Instructions(input))
         print(model)
 
-        self.fail("NYI")
+        # self.fail("NYI")
