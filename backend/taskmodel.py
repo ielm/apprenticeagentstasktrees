@@ -223,7 +223,7 @@ class TaskModel:
 
         while candidate.parent is not None:
             candidate = candidate.parent
-            if candidate.tmr is None and candidate.terminal:
+            if candidate.tmr is None and candidate is not self.root:
                 candidate.setTmr(tmr)
                 return candidate.parent
 
