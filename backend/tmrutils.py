@@ -53,13 +53,18 @@ def is_postfix_OLD(utterance):
   return find_main_event(tmr)["TIME"][0] == "<"
 
 def is_postfix(tmr):
-  event = find_main_event(tmr)
-  if event == None:
-    return False
-
-  return event["TIME"][0] == "<"
-
+  # event = find_main_event(tmr)
+  # if event == None:
+  #   return False
+  #
   # return event["TIME"][0] == "<"
+
+  for instance in tmr:
+    if type(tmr[instance]) is dict and "is-in-subtree" in tmr[instance] and tmr[instance]["is-in-subtree"] == "EVENT":
+      if tmr[instance]["TIME"][0] == "<":
+        return True
+
+  return False
   
 def same_main_event(tmr1, tmr2):
   if tmr1 is None or tmr2 is None:
