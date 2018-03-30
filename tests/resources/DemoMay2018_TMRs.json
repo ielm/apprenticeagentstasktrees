@@ -1318,8 +1318,9 @@
             },
             "SCOPE-OF": "ASPECT-12",
             "from-sense": "ASSEMBLE-V1",
-            "TIME": [
-              "FIND-ANCHOR-TIME"
+              "TIME": [
+	      "<",
+               "FIND-ANCHOR-TIME"
             ],
             "sent-word-ind": [
               11,
@@ -2261,7 +2262,8 @@
               ]
             ],
             "token": "assembled",
-            "TIME": [
+              "TIME": [
+	      "<",
               "FIND-ANCHOR-TIME"
             ],
             "AGENT": "HUMAN-21",
@@ -3541,6 +3543,7 @@
             ],
             "token": "assembled",
             "TIME": [
+	      "<",
               "FIND-ANCHOR-TIME"
             ],
             "AGENT": "HUMAN-31",
@@ -4795,7 +4798,8 @@
             ],
             "token": "assembled",
             "TIME": [
-              "FIND-ANCHOR-TIME"
+		"<",
+		"FIND-ANCHOR-TIME"
             ],
             "AGENT": "HUMAN-40",
             "THEME": "ARTIFACT-LEG-40",
@@ -5468,6 +5472,7 @@
             },
             "SCOPE-OF": "ASPECT-46",
             "TIME": [
+	      "<",
               "FIND-ANCHOR-TIME"
             ],
             "from-sense": "ASSEMBLE-V1",
@@ -6692,7 +6697,8 @@
             },
             "SCOPE-OF": "ASPECT-56",
             "TIME": [
-              "FIND-ANCHOR-TIME"
+		"<",
+		"FIND-ANCHOR-TIME"
             ],
             "from-sense": "ASSEMBLE-V1",
             "sent-word-ind": [
@@ -7487,7 +7493,8 @@
               "matched_constraint": "PHYSICAL-OBJECT"
             },
             "TIME": [
-              "FIND-ANCHOR-TIME"
+		"<",
+		"FIND-ANCHOR-TIME"
             ],
             "sent-word-ind": [
               57,
@@ -7606,7 +7613,8 @@
             },
             "SCOPE-OF": "ASPECT-63",
             "TIME": [
-              "FIND-ANCHOR-TIME"
+		"<",
+		"FIND-ANCHOR-TIME"
             ],
             "from-sense": "ASSEMBLE-V1",
             "sent-word-ind": [
@@ -8227,7 +8235,8 @@
             "SCOPE-OF": "ASPECT-69",
             "from-sense": "MAKE-V1",
             "TIME": [
-              "FIND-ANCHOR-TIME"
+		"<",
+		"FIND-ANCHOR-TIME"
             ],
             "sent-word-ind": [
               62,
