@@ -1,4 +1,3 @@
-import json
 from taskmodel import TaskModel
 from instructions import Instructions
 from tests.ApprenticeAgentsTestCase import ApprenticeAgentsTestCase
@@ -99,5 +98,3 @@ class DemoMay2018TestCase(ApprenticeAgentsTestCase):
         print(model)
         # print("")
         # print(tm.active_node)
-
-        # self.fail("NYI")

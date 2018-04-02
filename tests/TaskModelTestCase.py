@@ -88,13 +88,19 @@ class TaskModelTestCase(ApprenticeAgentsTestCase):
     def test_model_closed_prefix(self):
         input = [
             self.resource('resources/tmrs/IPlanToBuildAChair.json'),
-            self.resource('resources/tmrs/ThatsIt.json'),
+            self.resource('resources/tmrs/IWillBuildALeg.json'),
+            self.resource('resources/actions/get-screwdriver.json'),
+            self.resource('resources/tmrs/IBuiltALeg.json'),
         ]
 
-        model = TaskModel().learn(Instructions(input))
+        tm = TaskModel()
+        model = tm.learn(Instructions(input))
 
         self.assertNode(model, children=1)
         self.assertNode(model.find(["BUILD CHAIR"]), name="BUILD CHAIR", children=0, terminal=False, type="sequential")
+        self.assertNode(model.find(["BUILD CHAIR", "BUILD ARTIFACT-LEG"]), name="BUILD ARTIFACT-LEG", children=1, terminal=True, type="sequential")
+        self.assertNode(model.find(["BUILD CHAIR", "BUILD ARTIFACT-LEG", "REQUEST-ACTION TAKE SCREWDRIVER"]), name="REQUEST-ACTION TAKE SCREWDRIVER", children=0, terminal=False, type="leaf")
+        self.assertEqual(tm.active_node, model.find(["BUILD CHAIR"]))
 
     def test_model_presumed_event(self):
         input = [

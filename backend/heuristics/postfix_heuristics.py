@@ -1,4 +1,3 @@
-from tmrutils import about_part_of, find_themes, same_main_event
 from treenode import TreeNode
 
 
@@ -10,22 +9,22 @@ class PostfixHeuristics(object):
 
         # a) Is the main event the same?
         candidate = self.active_node
-        if same_main_event(candidate.tmr, tmr):
+        if candidate.tmr is not None and candidate.tmr.has_same_main_event(tmr):
             return candidate.parent
 
         while candidate.parent is not None:
             candidate = candidate.parent
-            if same_main_event(candidate.tmr, tmr):
+            if candidate.tmr is not None and candidate.tmr.has_same_main_event(tmr):
                 return candidate.parent
 
         # b) Is the theme of the main event the same?  (This option was added to handle the BUILD/ASSEMBLE issue)
         candidate = self.active_node
-        if len(set(find_themes(candidate.tmr)).intersection(set(find_themes(tmr)))) > 0:
+        if candidate.tmr is not None and len(set(candidate.tmr.find_themes()).intersection(set(tmr.find_themes()))) > 0:
             return candidate.parent
 
         while candidate.parent is not None:
             candidate = candidate.parent
-            if len(set(find_themes(candidate.tmr)).intersection(set(find_themes(tmr)))) > 0:
+            if candidate.tmr is not None and len(set(candidate.tmr.find_themes()).intersection(set(tmr.find_themes()))) > 0:
                 return candidate.parent
 
         return None
@@ -51,14 +50,14 @@ class PostfixHeuristics(object):
         # Postfix Heuristic 3a
         # Check if this utterance must be injected between utterances in the ancestry.
 
-        if not about_part_of(self.active_node.tmr, tmr):
+        if self.active_node.tmr is not None and not self.active_node.tmr.about_part_of(tmr):
             return None
 
         candidate = self.active_node
-        while candidate.parent != self.root and about_part_of(candidate.parent.tmr, tmr):
+        while candidate.parent != self.root and candidate.parent is not None and candidate.parent.tmr.about_part_of(tmr):
             candidate = candidate.parent
 
-        if candidate.parent != self.root:
+        if candidate.parent != self.root and candidate.parent is not None:
             parent = candidate.parent
             parent.removeChildNode(candidate)
 
@@ -85,7 +84,7 @@ class PostfixHeuristics(object):
         if not self.active_node.terminal or len(self.active_node.children) == 0:
             return None
 
-        if about_part_of(tmr, self.active_node.tmr):
+        if tmr.about_part_of(self.active_node.tmr):
             event = TreeNode(tmr)
 
             actions = list(self.active_node.children)
@@ -105,7 +104,7 @@ class PostfixHeuristics(object):
         if not self.active_node.terminal or len(self.active_node.children) == 0:
             return None
 
-        if not about_part_of(tmr, self.active_node.tmr):
+        if not tmr.about_part_of(self.active_node.tmr):
             event = TreeNode(tmr)
 
             self.active_node.parent.addChildNode(event)

@@ -1,4 +1,3 @@
-from tmrutils import find_main_event, find_objects, find_themes, about_part_of, is_about
 from treenode import TreeNode
 
 
@@ -10,17 +9,17 @@ class PrefixHeuristics(object):
         # active_node whose THEME is any OBJECT in this utterance to be a sibling, and add this utterance as a "copy".
         # This handles things such as "Now, another leg."
 
-        if find_main_event(tmr) is not None:
+        if tmr.find_main_event() is not None:
             return None
 
-        objects = find_objects(tmr)
+        objects = tmr.find_objects()
 
         if len(objects) == 0:
             return None  # What does a TMR with no event or object mean?
 
         # a) First, look to see if any children are a match
         for child in self.active_node.children:
-            if len(set.intersection(set(find_themes(child.tmr)), set(objects))) > 0:
+            if len(set.intersection(set(child.tmr.find_themes()), set(objects))) > 0:
                 event = TreeNode(child.tmr)
                 event.setOriginalTMR(tmr)
                 self.active_node.addChildNode(event)
@@ -30,7 +29,7 @@ class PrefixHeuristics(object):
         candidate = self.active_node
 
         while candidate.parent is not None:
-            if len(set.intersection(set(find_themes(candidate.tmr)), set(objects))) > 0:
+            if len(set.intersection(set(candidate.tmr.find_themes()), set(objects))) > 0:
                 event = TreeNode(candidate.tmr)
                 event.setOriginalTMR(tmr)
                 candidate.parent.addChildNode(event)
@@ -49,7 +48,8 @@ class PrefixHeuristics(object):
 
         candidate = self.active_node
 
-        while candidate.parent is not None and not about_part_of(tmr, candidate.tmr):
+        # while candidate.parent is not None and not about_part_of(tmr, candidate.tmr):
+        while candidate.parent is not None and not tmr.about_part_of(candidate.tmr):
             candidate = candidate.parent
 
         if candidate.parent is None:
@@ -79,7 +79,7 @@ class PrefixHeuristics(object):
 
         event = TreeNode(tmr)
 
-        if self.active_node.terminal and is_about(tmr, list(map(lambda child: child.tmr, self.active_node.children))):
+        if self.active_node.terminal and tmr.is_about(list(map(lambda child: child.tmr, self.active_node.children))):
             actions = list(self.active_node.children)
             for action in actions:
                 self.active_node.removeChildNode(action)

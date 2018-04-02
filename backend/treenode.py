@@ -1,8 +1,5 @@
 import copy
 
-from tmrutils import get_name_from_tmr
-from tmrutils import same_node
-
 def traverse_tree(node, question_status=None):
   if question_status is None or (True in node.childrenStatus) == question_status:
     yield node
@@ -14,23 +11,12 @@ def update_children_relationships(a,b,mapping):
   for i in range(len(a.relationships)):
     for j in range(len(a.relationships[i])):
       if mapping[i] is None or mapping[j] is None:
-        #raise RuntimeError("Attempting to update relationships on incomplete mapping")
+        # raise RuntimeError("Attempting to update relationships on incomplete mapping")
         continue
-      #print("a.children:
-      assert same_node(a.children[i],b.children[mapping[i]])
-      assert same_node(a.children[j],b.children[mapping[j]])
-      # Set it to 0 if they are different, keep as-is if they are the same. In other words, multiply by (a==b)
-      #if a.relationships[i][j] != b.relationships[mapping[i]][mapping[j]]:
-        #print("parallelizing %s and %s based on mapping" % (a.children[i].name, a.children[j].name))
-        #print("a children:")
-        #print([c.name for c in a.children])
-        #print("a relationships:")
-        #print(a.relationships)
-        #print("b children:")
-        #print([c.name for c in b.children])
-        #print("b relationships:")
-        #print(b.relationships)
-        #print("\n")
+
+      assert a.children[i].name == b.children[mapping[i]].name
+      assert a.children[j].name == b.children[mapping[j]].name
+
       a.relationships[i][j] *= (a.relationships[i][j] == b.relationships[mapping[i]][mapping[j]])
       b.relationships[mapping[i]][mapping[j]] = a.relationships[i][j]
 
@@ -52,7 +38,7 @@ class TreeNode:
     this.setOriginalTMR(tmr)
     
   def setTmr(this, tmr):
-    this.name = "" if tmr is None else get_name_from_tmr(tmr)
+    this.name = "" if tmr is None else tmr.get_name()
     this.tmr = tmr
 
   def setOriginalTMR(self, tmr):
@@ -84,7 +70,6 @@ class TreeNode:
   def addAction(this, action):
     if len(this.children) == 0:
       this.terminal = True
-      #this.type = "leaf"
     if not this.terminal:
       return False
     actionNode = TreeNode()
@@ -116,17 +101,6 @@ class TreeNode:
       return all[0]
 
     return None
-    # if len(path) == 0: return None
-    #
-    # for child in self.children:
-    #   if child.name == path[0]:
-    #     if len(path) == 1:
-    #       return child
-    #     candidate = child.find(path[1:])
-    #     if candidate is not None:
-    #       return candidate
-    #
-    # return None
 
   def find_all(self, path):
     if len(path) == 0: return []

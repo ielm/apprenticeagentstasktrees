@@ -1,7 +1,6 @@
 from heuristics.postfix_heuristics import PostfixHeuristics
 from heuristics.prefix_heuristics import PrefixHeuristics
-from tmrutils import is_postfix
-from tmrutils import is_utterance
+from models.tmr import TMR
 from treenode import TreeNode
 
 import maketree
@@ -20,9 +19,9 @@ class TaskModel(PrefixHeuristics, PostfixHeuristics, object):
                 raise Exception("Instructions generated an empty set.")
 
             # Currently, assume all inputs have exactly one TMR.
-            tmrs = list(map(lambda instruction: instruction["results"][0]["TMR"], instruction_set))
+            tmrs = list(map(lambda instruction: TMR(instruction), instruction_set))
 
-            if is_utterance(tmrs[0]):
+            if tmrs[0].is_utterance():
                 self.handle_utterance(tmrs[0])
             else:
                 self.handle_actions(tmrs)
@@ -34,7 +33,7 @@ class TaskModel(PrefixHeuristics, PostfixHeuristics, object):
 
     def handle_utterance(self, tmr):
 
-        if is_postfix(tmr):
+        if tmr.is_postfix():
             self.handle_postfix_utterance(tmr)
         else:
             self.handle_prefix_utterance(tmr)
