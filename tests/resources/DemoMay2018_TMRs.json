@@ -554,12 +554,12 @@
     "results": [
       {
         "TMR": {
-          "ATRIFACT-5": {
+          "ARTIFACT-5": {
             "INSTRUMENT-OF": "ATTACH",
             "MADE-OF": "METAL",
             "SIDE-TB": "BOTTOM",
             "THEME-OF": "TAKE-5",
-            "concept": "ATRIFACT",
+            "concept": "ARTIFACT",
             "from-sense": "FOOT_BRACKET-N1",
             "preference": 4,
             "sem-preference": 0,
@@ -593,7 +593,7 @@
           },
           "TAKE-5": {
             "AGENT": "ROBOT",
-            "THEME": "ATRIFACT-5",
+            "THEME": "ARTIFACT-5",
             "THEME-1_constraint_info": {
               "match": "No-concept-in-ontology",
               "matched_constraint": "",
@@ -617,7 +617,7 @@
           "total-preference": 10
         },
         "concept_counts": {
-          "ATRIFACT": {
+          "ARTIFACT": {
             "count": 5,
             "word-info": [
               [
@@ -1497,12 +1497,12 @@
     "results": [
       {
         "TMR": {
-          "ATRIFACT-14": {
+          "ARTIFACT-14": {
             "INSTRUMENT-OF": "ATTACH",
             "MADE-OF": "METAL",
             "SIDE-TB": "BOTTOM",
             "THEME-OF": "TAKE-14",
-            "concept": "ATRIFACT",
+            "concept": "ARTIFACT",
             "from-sense": "FOOT_BRACKET-N1",
             "preference": 4,
             "sem-preference": 0,
@@ -1536,7 +1536,7 @@
           },
           "TAKE-14": {
             "AGENT": "ROBOT",
-            "THEME": "ATRIFACT-14",
+            "THEME": "ARTIFACT-14",
             "THEME-1_constraint_info": {
               "match": "No-concept-in-ontology",
               "matched_constraint": "",
@@ -1560,7 +1560,7 @@
           "total-preference": 10
         },
         "concept_counts": {
-          "ATRIFACT": {
+          "ARTIFACT": {
             "count": 14,
             "word-info": [
               [
@@ -2460,12 +2460,12 @@
     "results": [
       {
         "TMR": {
-          "ATRIFACT-23": {
+          "ARTIFACT-23": {
             "INSTRUMENT-OF": "ATTACH",
             "MADE-OF": "METAL",
             "SIDE-TB": "BOTTOM",
             "THEME-OF": "TAKE-23",
-            "concept": "ATRIFACT",
+            "concept": "ARTIFACT",
             "from-sense": "FOOT_BRACKET-N1",
             "preference": 4,
             "sem-preference": 0,
@@ -2499,7 +2499,7 @@
           },
           "TAKE-23": {
             "AGENT": "ROBOT",
-            "THEME": "ATRIFACT-23",
+            "THEME": "ARTIFACT-23",
             "THEME-1_constraint_info": {
               "match": "No-concept-in-ontology",
               "matched_constraint": "",
@@ -2523,7 +2523,7 @@
           "total-preference": 10
         },
         "concept_counts": {
-          "ATRIFACT": {
+          "ARTIFACT": {
             "count": 23,
             "word-info": [
               [
@@ -3457,12 +3457,12 @@
     "results": [
       {
         "TMR": {
-          "ATRIFACT-31": {
+          "ARTIFACT-31": {
             "INSTRUMENT-OF": "ATTACH",
             "MADE-OF": "METAL",
             "SIDE-TB": "BOTTOM",
             "THEME-OF": "TAKE-31",
-            "concept": "ATRIFACT",
+            "concept": "ARTIFACT",
             "from-sense": "FOOT_BRACKET-N1",
             "preference": 4,
             "sem-preference": 0,
@@ -3496,7 +3496,7 @@
           },
           "TAKE-31": {
             "AGENT": "ROBOT",
-            "THEME": "ATRIFACT-31",
+            "THEME": "ARTIFACT-31",
             "THEME-1_constraint_info": {
               "match": "No-concept-in-ontology",
               "matched_constraint": "",
@@ -3520,7 +3520,7 @@
           "total-preference": 10
         },
         "concept_counts": {
-          "ATRIFACT": {
+          "ARTIFACT": {
             "count": 31,
             "word-info": [
               [
