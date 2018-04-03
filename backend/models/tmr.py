@@ -2,6 +2,7 @@ from collections.abc import Mapping
 
 from mini_ontology import contains
 from models.instance import Instance
+from utils.YaleUtils import tmr_action_name
 
 
 class TMR(Mapping):
@@ -32,11 +33,16 @@ class TMR(Mapping):
         return len(self._storage)
 
     def is_utterance(self):
-        name = self.get_name()
-        if str.startswith(name, "REQUEST-ACTION TAKE") \
-                or str.startswith(name, "REQUEST-ACTION HOLD") \
-                or str.startswith(name, "REQUEST-ACTION RESTRAIN"):
-            return False
+        event = self.find_main_event()
+        if event is None:
+            return True
+
+        if event.concept == "REQUEST-ACTION":
+            options = ["TAKE", "HOLD", "RESTRAIN"]
+            theme_frames = [] if "THEME" not in event else list(map(lambda theme: theme, event["THEME"]))
+            theme_concepts = list(map(lambda theme: self[theme].concept, theme_frames))
+            return len(set(options).intersection(set(theme_concepts))) == 0
+
         return True
 
     def is_action(self):
@@ -46,6 +52,9 @@ class TMR(Mapping):
         event = self.find_main_event()
         if event is None:
             return ""
+
+        if self.is_action():
+            return tmr_action_name(self)
 
         output = event.concept
 
@@ -162,6 +171,9 @@ class TMR(Mapping):
                     return True # one is the plural of the other
 
         return False
+
+    def find_by_concept(self, concept):
+        return list(filter(lambda instance: instance.concept == concept, self.values()))
 
     def find_objects(self):
         objects = []
