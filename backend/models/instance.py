@@ -10,6 +10,7 @@ class Instance(Mapping):
         self.subtree = inst_dict["is-in-subtree"] if "is-in-subtree" in inst_dict else None
         self.concept = inst_dict["concept"]
         self.name = name if name is not None else self.concept + "-X"
+        self.token = inst_dict["token"] if "token" in inst_dict else None
         self.properties = {}
 
         for key in inst_dict:
