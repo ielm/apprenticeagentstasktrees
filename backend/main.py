@@ -1,3 +1,4 @@
+import json
 import traceback
 from flask import Flask, request, abort, send_from_directory
 from flask_cors import CORS
@@ -5,6 +6,7 @@ from flask_cors import CORS
 from instructions import Instructions
 from mini_ontology import init_from_file
 from taskmodel import TaskModel
+from utils.YaleUtils import format_treenode_yale
 
 app = Flask(__name__)
 CORS(app)
@@ -37,11 +39,21 @@ def start():
 
   instructions = Instructions(request.json)
   model = tm.learn(instructions)
-  return str(model)
+
+  return json.dumps(format_treenode_yale(model))
 
 
 @app.route('/alpha/gettree', methods=['GET'])
 def get_tree():
+  format = "pretty"
+  if "format" in request.args:
+    format = request.args["format"]
+
+  if format == "pretty":
+    return str(tm.root)
+  elif format == "json":
+    return json.dumps(format_treenode_yale(tm.root))
+
   return str(tm.root)
 
 

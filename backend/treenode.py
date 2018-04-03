@@ -129,7 +129,15 @@ class TreeNode:
 
   def __str__(self):
     indent = "  "
-    line = ("+" if self.type != "leaf" else "-[" + str(self.parent.order_of_action(self.name) + 1) + "]") + ("root" if self.name == "" else self.name) + ("" if self.disputedWith is None else " * " + self.disputedWith.name)
+
+    order = 0
+    if self.parent is not None:
+      order = self.parent.order_of_action(self.name)
+
+    line = ("+" if self.type != "leaf" else "-") + \
+           ("[" + str(order + 1) + "]" if self.type == "leaf" else "") + \
+           ("root" if self.name == "" else self.name) + \
+           ("" if self.disputedWith is None else " * " + self.disputedWith.name)
 
     for child in self.children:
       childstr = str(child)
@@ -137,3 +145,4 @@ class TreeNode:
         line += "\n" + indent + l
 
     return line
+
