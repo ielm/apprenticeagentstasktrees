@@ -1,4 +1,4 @@
-from treenode import *
+from backend.treenode import *
 
   
 def settle_disputes(tree, othertree=None):

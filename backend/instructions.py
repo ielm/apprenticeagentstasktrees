@@ -1,4 +1,4 @@
-from models.tmr import TMR
+from backend.models.tmr import TMR
 
 
 class Instructions:

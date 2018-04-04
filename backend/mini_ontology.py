@@ -3,6 +3,12 @@ import pickle
 ontology = {}  # pickle.load(open("../backend/resources/ontology_May_2017.p", "rb"))
 
 
+def init_default():
+    import os
+    path = os.path.relpath(__file__).replace("mini_ontology.py", "resources/ontology_May_2017.p")
+    init_from_file(path)
+
+
 def init_from_file(path):
     with open(path, mode="rb") as f:
         global ontology

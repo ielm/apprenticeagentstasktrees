@@ -1,12 +1,15 @@
-from taskmodel import TaskModel
-from instructions import Instructions
+import os
+
+from backend.taskmodel import TaskModel
+from backend.instructions import Instructions
 from tests.ApprenticeAgentsTestCase import ApprenticeAgentsTestCase
 
 
 class DemoMay2018TestCase(ApprenticeAgentsTestCase):
 
     def test_demo(self):
-        demo = self.resource('resources/DemoMay2018_TMRs.json')
+        file = os.path.abspath(__package__) + "/resources/DemoMay2018_TMRs.json"
+        demo = self.resource(file)
 
         input = [
             demo[0],    # We will build a chair.

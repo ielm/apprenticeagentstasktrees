@@ -1,9 +1,10 @@
-from heuristics.postfix_heuristics import PostfixHeuristics
-from heuristics.prefix_heuristics import PrefixHeuristics
-from models.tmr import TMR
-from treenode import TreeNode
+from backend.heuristics.postfix_heuristics import PostfixHeuristics
+from backend.heuristics.prefix_heuristics import PrefixHeuristics
+from backend.models.tmr import TMR
+from backend.treenode import TreeNode
 
-import maketree
+from backend.maketree import find_parallels
+from backend.maketree import settle_disputes
 
 
 class TaskModel(PrefixHeuristics, PostfixHeuristics, object):
@@ -26,8 +27,8 @@ class TaskModel(PrefixHeuristics, PostfixHeuristics, object):
             else:
                 self.handle_actions(tmrs)
 
-        maketree.settle_disputes(self.root)
-        maketree.find_parallels(self.root)
+        settle_disputes(self.root)
+        find_parallels(self.root)
 
         return self.root
 

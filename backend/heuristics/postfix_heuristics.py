@@ -1,4 +1,4 @@
-from treenode import TreeNode
+from backend.treenode import TreeNode
 
 
 class PostfixHeuristics(object):

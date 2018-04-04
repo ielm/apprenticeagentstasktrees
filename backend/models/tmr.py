@@ -1,8 +1,8 @@
 from collections.abc import Mapping
 
-from mini_ontology import contains, ancestors
-from models.instance import Instance
-from utils.YaleUtils import tmr_action_name
+from backend.mini_ontology import contains, ancestors
+from backend.models.instance import Instance
+from backend.utils.YaleUtils import tmr_action_name
 
 
 class TMR(Mapping):
