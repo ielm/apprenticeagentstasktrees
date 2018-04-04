@@ -27,6 +27,14 @@ class PostfixHeuristics(object):
             if candidate.tmr is not None and len(set(candidate.tmr.find_themes()).intersection(set(tmr.find_themes()))) > 0:
                 return candidate.parent
 
+        # c) Is this a generic event scoped by an ASPECT with PHASE = END?  ("We are done.")
+        candidate = self.active_node
+        event = tmr.find_main_event()
+        if event.concept == "EVENT":
+            for aspect in event["SCOPE-OF"]:
+                if "END" in tmr[aspect]["PHASE"]:
+                    return candidate.parent
+
         return None
 
     def handle_postfix_utterance_presumed_event(self, tmr):

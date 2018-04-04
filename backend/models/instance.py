@@ -30,13 +30,18 @@ class Instance(Mapping):
             self._storage[key] = value
 
     def __getitem__(self, key):
-        return self._storage[key]
+        if key in self._storage:
+            return self._storage[key]
+        return []
 
     def __iter__(self):
         return iter(self._storage)
 
     def __len__(self):
         return len(self._storage)
+
+    def __contains__(self, key):
+        return key in self._storage
 
     def is_event(self):
         return self.subtree == "EVENT"

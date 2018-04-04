@@ -1,6 +1,6 @@
 from collections.abc import Mapping
 
-from mini_ontology import contains
+from mini_ontology import contains, ancestors
 from models.instance import Instance
 from utils.YaleUtils import tmr_action_name
 
@@ -32,21 +32,30 @@ class TMR(Mapping):
     def __len__(self):
         return len(self._storage)
 
-    def is_utterance(self):
+    def is_action(self):
         event = self.find_main_event()
         if event is None:
-            return True
+            return False
 
+        # 1) Is the event a REQUEST-ACTION, where the AGENT = HUMAN, and the BENEFICIARY = ROBOT
         if event.concept == "REQUEST-ACTION":
-            options = ["TAKE", "HOLD", "RESTRAIN"]
-            theme_frames = [] if "THEME" not in event else list(map(lambda theme: theme, event["THEME"]))
-            theme_concepts = list(map(lambda theme: self[theme].concept, theme_frames))
-            return len(set(options).intersection(set(theme_concepts))) == 0
+            if "AGENT" in event \
+                    and "BENEFICIARY" in event \
+                    and "HUMAN" in event["AGENT"] \
+                    and "ROBOT" in event["BENEFICIARY"]:
+                return True
 
-        return True
+        # 2) Is the event a PHYSICAL-EVENT, where the AGENT = HUMAN, and the TIME is present-tense
+        if event.concept == "PHYSICAL-EVENT" or "PHYSICAL-EVENT" in ancestors(event.concept):
+            if "HUMAN" in list(map(lambda agent: agent if type(self[agent]) == str else self[agent].concept, event["AGENT"])):
+                if event["TIME"] == ["FIND-ANCHOR-TIME"]:
+                    return True
 
-    def is_action(self):
-        return not self.is_utterance()
+        return False
+
+    # TODO: rename - we are really testing if this is an HTN composition
+    def is_utterance(self):
+        return not self.is_action()
 
     def get_name(self):
         event = self.find_main_event()
