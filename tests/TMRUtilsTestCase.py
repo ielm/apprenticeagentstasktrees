@@ -13,6 +13,7 @@ class TaskModelTestCase(ApprenticeAgentsTestCase):
         self.assertTrue(TMR(demo[10]).is_utterance())
         self.assertTrue(TMR(demo[11]).is_utterance())
         self.assertTrue(TMR(demo[18]).is_utterance())
+        self.assertTrue(TMR(demo[38]).is_utterance())
 
         self.assertFalse(TMR(demo[2]).is_utterance())
         self.assertFalse(TMR(demo[4]).is_utterance())
@@ -43,3 +44,4 @@ class TaskModelTestCase(ApprenticeAgentsTestCase):
         self.assertFalse(TMR(demo[8]).is_postfix())
         self.assertTrue(TMR(demo[10]).is_postfix())
         self.assertFalse(TMR(demo[11]).is_postfix())
+        self.assertTrue(TMR(demo[38]).is_postfix())

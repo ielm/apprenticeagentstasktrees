@@ -102,6 +102,13 @@ class TMR(Mapping):
                 if instance["TIME"][0] == "<":
                     return True
 
+        # For closing generic events, such as "Finished."
+        for instance in self.values():
+            if instance.concept == "ASPECT":
+                if "END" in instance["PHASE"]:
+                    if "EVENT" in instance["SCOPE"]:
+                        return True
+
         return False
 
     def has_same_main_event(self, tmr):

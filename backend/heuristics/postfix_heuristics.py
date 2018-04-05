@@ -7,6 +7,15 @@ class PostfixHeuristics(object):
         # Postfix Heuristic 1
         # Check to see if this utterance was already mentioned in prefix (and bail out if so).
 
+        # pre) Is this a generic closing utterance (e.g., "Finished.")
+        if tmr.find_main_event() is None:
+            for aspect in tmr.find_by_concept("ASPECT"):
+                if "EVENT" in aspect["SCOPE"] and "END" in aspect["PHASE"]:
+                    candidate = self.active_node
+                    if candidate.type == "leaf":
+                        candidate = candidate.parent
+                    return candidate
+
         # a) Is the main event the same?
         candidate = self.active_node
         if candidate.tmr is not None and candidate.tmr.has_same_main_event(tmr):

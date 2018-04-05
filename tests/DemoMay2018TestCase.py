@@ -56,7 +56,7 @@ class DemoMay2018TestCase(ApprenticeAgentsTestCase):
             demo[35],   # Get the seat.
             demo[36],   # Hold the seat.
             demo[37],   # I am affixing the four legs to the seat.
-            # demo[38],   # Finished.
+            demo[38],   # Finished.
             demo[39],   # We have assembled the seat.
 
             demo[40],   # Now we need to assemble the back.
@@ -74,7 +74,7 @@ class DemoMay2018TestCase(ApprenticeAgentsTestCase):
             demo[50],   # Get the back.
             demo[51],   # Hold the back.
             demo[52],   # I am affixing the top bracket to the back of the chair.
-            # demo[53],   # Finished.
+            demo[53],   # Finished.
             demo[54],   # We have affixed the top bracket to the back of the chair.
             demo[55],   # We have assembled the back of the chair.
 
