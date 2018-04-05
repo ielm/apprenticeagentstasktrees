@@ -1,3 +1,5 @@
+from backend.heuristics.finish_heuristics import FinishHeuristics
+
 import copy
 
 def traverse_tree(node, question_status=None):
@@ -20,7 +22,7 @@ def update_children_relationships(a,b,mapping):
       a.relationships[i][j] *= (a.relationships[i][j] == b.relationships[mapping[i]][mapping[j]])
       b.relationships[mapping[i]][mapping[j]] = a.relationships[i][j]
 
-class TreeNode:
+class TreeNode(FinishHeuristics, object):
   """A class representing a node in the action hierarchy tree."""  
   id = 0
   
@@ -94,6 +96,17 @@ class TreeNode:
 
     self.disputedWith = event
     event.disputedWith = self
+
+  def finish(self):
+    # A series of heuristics to be called when a node is marked as "finished" (that is, it appears that no further
+    # activity is forthcoming for this node, so any presumed activities will need to be filled in).
+
+    heuristics = [
+      self.handle_finish_unmatched_hold_and_release_actions,
+    ]
+
+    for heuristic in heuristics:
+      heuristic()
 
   def find(self, path):
     all = self.find_all(path)

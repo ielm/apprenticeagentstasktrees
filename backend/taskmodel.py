@@ -54,6 +54,7 @@ class TaskModel(PrefixHeuristics, PostfixHeuristics, object):
         for heuristic in heuristics:
             candidate = heuristic(tmr)
             if candidate is not None:
+                self.active_node.finish()
                 self.active_node = candidate
                 break
 
@@ -89,6 +90,7 @@ class TaskModel(PrefixHeuristics, PostfixHeuristics, object):
         for heuristic in heuristics:
             candidate = heuristic(tmr)
             if candidate is not None:
+                self.active_node.finish()
                 self.active_node = candidate
                 break
 
