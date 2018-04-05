@@ -9,7 +9,7 @@ def format_treenode_yale(treenode):
     output["name"] = treenode.name
     output["combination"] = treenode.type
     output["attributes"] = []
-    output["children"] = list(map(lambda child: format_treenode_yale(child), treenode.children))
+    output["children"] = list(map(lambda child: format_treenode_yale(child), filter_treenode_children(treenode)))
 
     if treenode.name == "root":
         return {
@@ -17,6 +17,22 @@ def format_treenode_yale(treenode):
         }
     else:
         return output
+
+
+# Return only children of the treenode that should be part of the results to the Yale Robot
+def filter_treenode_children(treenode):
+    return list(filter(lambda child: filter_treenode(child), treenode.children))
+
+
+# True if the treenode should be returned as part of the results to the Yale Robot
+def filter_treenode(treenode):
+
+    # Don't return any "RELEASE" actions (RESTRAIN.AGENT = ROBOT)
+    for restrain in treenode.tmr.find_by_concept("RESTRAIN"):
+        if "ROBOT" in restrain["AGENT"]:
+            return False
+
+    return True
 
 
 def tmr_action_name(tmr):
