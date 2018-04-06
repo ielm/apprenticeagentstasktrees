@@ -4,15 +4,16 @@ from flask import Flask, request, abort, send_from_directory
 from flask_cors import CORS
 
 from instructions import Instructions
-from mini_ontology import init_from_file
+from mini_ontology import Ontology
 from taskmodel import TaskModel
-from utils.YaleUtils import format_treenode_yale
+from utils.YaleUtils import format_treenode_yale, input_to_tmrs
 
 app = Flask(__name__)
 CORS(app)
 
-init_from_file("resources/ontology_May_2017.p")
+Ontology.init_default()
 tm = TaskModel()
+ont = Ontology.ontology
 
 
 @app.errorhandler(Exception)
@@ -36,6 +37,9 @@ def servefile(filename):
 def start():
   if not request.json:
     abort(400)
+
+  from backend.mini_ontology import Ontology
+  Ontology.init_from_ontology(ont)
 
   instructions = Instructions(request.json)
   model = tm.learn(instructions)
@@ -63,6 +67,25 @@ def reset_tree():
   tm = TaskModel()
   return "Ok"
 
+
+@app.route('/learn', methods=['POST'])
+def learn():
+  if not request.json:
+    abort(400)
+
+  from backend.mini_ontology import Ontology
+  Ontology.init_from_ontology(ont)
+
+  data = request.json
+  tmrs = input_to_tmrs(data)
+
+  instructions = Instructions(tmrs)
+  model = tm.learn(instructions)
+  print(model)
+
+  return json.dumps(format_treenode_yale(model))
+
+
   
 if __name__ == '__main__':
-  app.run(host="0.0.0.0", debug=True, port=5000)
+  app.run(host="0.0.0.0", debug=True, port=5002)

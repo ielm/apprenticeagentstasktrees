@@ -1,14 +1,14 @@
 import json
 import unittest
 
-from backend import mini_ontology
+from backend.mini_ontology import Ontology
 
 
 class ApprenticeAgentsTestCase(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        mini_ontology.init_default()
+        Ontology.init_default()
 
     def resource(self, fp):
         r = None

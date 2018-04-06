@@ -1,3 +1,5 @@
+import json
+import requests
 
 
 def format_treenode_yale(treenode):
@@ -68,3 +70,44 @@ def tmr_action_name(tmr):
     action_theme = tmr[event["THEME"][0]].token
 
     return agent + " " + action + "(" + action_theme + ")"
+
+
+def input_to_tmrs(input):
+    tmrs = []
+
+    for i in range(len(input)):
+        if input[i][0] == "a":
+            tmrs.append(action_to_tmr([input[i][1]]))
+        elif input[i][0] == "u":
+            tmrs.append(analyze(input[i][1]))
+        else:
+            raise Exception("Unknown input type '" + input[i][0] + "'.")
+
+    return tmrs
+
+
+def action_to_tmr(action):
+    actions = {
+        "get-screwdriver": "Get a screwdriver.",
+        "get-bracket-foot": "Get a foot bracket.",
+        "get-bracket-front": "Get a front bracket.",
+        "get-bracket-back-right": "Get the back bracket on the right side.",
+        "get-bracket-back-left": "Get the back bracket on the left side.",
+        "get-dowel": "Get a dowel.",
+        "hold-dowel": "Hold the dowel.",
+        "release-dowel": "Release the dowel.",
+        "get-seat": "Get the seat.",
+        "hold-seat": "Hold the seat.",
+        "get-back": "Get the back.",
+        "hold-back": "Hold the back.",
+    }
+
+    if action in actions:
+        return analyze(actions[action])
+
+    raise Exception("Unknown action '" + action + "'.")
+
+
+def analyze(utterance):
+    response = requests.post(url="http://localhost:5001/analyze", data={"text":utterance})
+    return json.loads(response.text)[0]

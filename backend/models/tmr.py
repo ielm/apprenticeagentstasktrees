@@ -1,6 +1,6 @@
 from collections.abc import Mapping
 
-from backend.mini_ontology import contains, ancestors
+from backend.mini_ontology import Ontology
 from backend.models.instance import Instance
 from backend.utils.YaleUtils import tmr_action_name
 
@@ -46,7 +46,7 @@ class TMR(Mapping):
                 return True
 
         # 2) Is the event a PHYSICAL-EVENT, where the AGENT = HUMAN, and the TIME is present-tense
-        if event.concept == "PHYSICAL-EVENT" or "PHYSICAL-EVENT" in ancestors(event.concept):
+        if event.concept == "PHYSICAL-EVENT" or "PHYSICAL-EVENT" in Ontology.ancestors(event.concept):
             if "HUMAN" in list(map(lambda agent: agent if type(self[agent]) == str else self[agent].concept, event["AGENT"])):
                 if event["TIME"] == ["FIND-ANCHOR-TIME"]:
                     return True
@@ -181,7 +181,7 @@ class TMR(Mapping):
 
         for theme1 in themes1:
             for theme2 in themes2:
-                if contains(theme2.concept, "HAS-OBJECT-AS-PART", "SEM", theme1.concept):
+                if Ontology.contains(theme2.concept, "HAS-OBJECT-AS-PART", "SEM", theme1.concept):
                     return True
                 if "CARDINALITY" in theme2 and ">" in theme2["CARDINALITY"] and theme1.concept == theme2.concept:
                     return True # one is the plural of the other
