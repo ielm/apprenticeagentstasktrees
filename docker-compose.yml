@@ -2,7 +2,7 @@ version: '3.3'
 
 services:
   corenlp:
-    image: corenlp
+    image: ontosem            # Using the ontosem image here as it contains the entire corenlp stack as well (for now).
     container_name: corenlp
     ports:
       - 5000:5000
