@@ -81,7 +81,6 @@ def learn():
 
   instructions = Instructions(tmrs)
   model = tm.learn(instructions)
-  print(model)
 
   return json.dumps(format_treenode_yale(model))
 

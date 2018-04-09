@@ -77,7 +77,7 @@ def input_to_tmrs(input):
 
     for i in range(len(input)):
         if input[i][0] == "a":
-            tmrs.append(action_to_tmr([input[i][1]]))
+            tmrs.append(action_to_tmr(input[i][1]))
         elif input[i][0] == "u":
             tmrs.append(analyze(input[i][1]))
         else:
