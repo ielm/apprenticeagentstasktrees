@@ -1,6 +1,8 @@
 import json
 import requests
 
+from backend.config import ontosem_service
+
 
 def format_treenode_yale(treenode):
 
@@ -109,5 +111,5 @@ def action_to_tmr(action):
 
 
 def analyze(utterance):
-    response = requests.post(url="http://localhost:5001/analyze", data={"text":utterance})
+    response = requests.post(url=ontosem_service() + "/analyze", data={"text":utterance})
     return json.loads(response.text)[0]

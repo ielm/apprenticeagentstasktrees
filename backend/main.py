@@ -3,10 +3,10 @@ import traceback
 from flask import Flask, request, abort, send_from_directory
 from flask_cors import CORS
 
-from instructions import Instructions
-from mini_ontology import Ontology
-from taskmodel import TaskModel
-from utils.YaleUtils import format_treenode_yale, input_to_tmrs
+from backend.instructions import Instructions
+from backend.mini_ontology import Ontology
+from backend.taskmodel import TaskModel
+from backend.utils.YaleUtils import format_treenode_yale, input_to_tmrs
 
 app = Flask(__name__)
 CORS(app)
@@ -87,4 +87,19 @@ def learn():
 
   
 if __name__ == '__main__':
-  app.run(host="0.0.0.0", debug=True, port=5002)
+  host = "127.0.0.1"
+  port = 5002
+
+  import sys
+
+  for arg in sys.argv:
+    if '=' in arg:
+      k = arg.split("=")[0]
+      v = arg.split("=")[1]
+
+      if k == "host":
+        host = v
+      if k == "port":
+        port = int(v)
+
+  app.run(host=host, port=port, debug=False)
