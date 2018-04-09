@@ -2,7 +2,7 @@ version: '3.3'
 
 services:
   corenlp:
-    image: ontosem            # Using the ontosem image here as it contains the entire corenlp stack as well (for now).
+    image: leia/ontosem:1.0.0        # Using the ontosem image here as it contains the entire corenlp stack as well (for now).
     container_name: corenlp
     ports:
       - 5000:5000
@@ -15,7 +15,7 @@ services:
       - "port=5000"
 
   ontosem:
-    image: ontosem
+    image: leia/ontosem:1.0.0
     container_name: ontosem
     ports:
       - 5001:5001
@@ -31,7 +31,7 @@ services:
       - CORENLP_PORT=5000
 
   agents:
-    image: agents
+    image: leia/agents:0.5.0
     container_name: agents
     ports:
       - 5002:5002
