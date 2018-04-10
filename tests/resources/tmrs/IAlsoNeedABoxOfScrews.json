@@ -1,0 +1,111 @@
+{
+  "results": [
+    {
+      "TMR": {
+        "BOX-3": {
+          "CONTAINS": "SCREW-3",
+          "INSTRUMENT-OF": "EVENT-3",
+          "concept": "BOX",
+          "from-sense": "BOX-N1",
+          "is-in-subtree": "OBJECT",
+          "preference": 2,
+          "sem-preference": 1,
+          "sent-word-ind": [
+            2,
+            [
+              4
+            ]
+          ],
+          "token": "box"
+        },
+        "DISCOURSE-RELATION-3": {
+          "concept": "DISCOURSE-RELATION",
+          "from-sense": "ALSO-ADV1",
+          "is-in-subtree": "PROPERTY",
+          "preference": -1,
+          "sem-preference": 0,
+          "sent-word-ind": [
+            2,
+            [
+              1
+            ]
+          ],
+          "token": "also"
+        },
+        "EVENT-3": {
+          "INSTRUMENT": "BOX-3",
+          "SCOPE-OF": "MODALITY-3",
+          "TIME": [
+            "FIND-ANCHOR-TIME"
+          ],
+          "concept": "EVENT",
+          "from-sense": "NEED-V8",
+          "is-in-subtree": "EVENT",
+          "preference": 0,
+          "sem-preference": 2,
+          "sent-word-ind": [
+            2,
+            [
+              2
+            ]
+          ],
+          "token": "need"
+        },
+        "HUMAN-3": {
+          "ATTRIBUTION": "MODALITY-3",
+          "concept": "HUMAN",
+          "from-sense": "I-N1",
+          "is-in-subtree": "OBJECT",
+          "preference": 0,
+          "sem-preference": 0,
+          "sent-word-ind": [
+            2,
+            [
+              0
+            ]
+          ],
+          "token": "I"
+        },
+        "MODALITY-3": {
+          "ATTRIBUTED-TO": "HUMAN-3",
+          "SCOPE": "EVENT-3",
+          "TYPE": "OBLIGATIVE",
+          "VALUE": 1,
+          "concept": "MODALITY",
+          "from-sense": "NEED-V8",
+          "sent-word-ind": [
+            2,
+            [
+              2
+            ]
+          ],
+          "token": "need"
+        },
+        "SCREW-3": {
+          "CARDINALITY": [
+            ">",
+            1
+          ],
+          "CONTAINED-IN": "BOX-3",
+          "concept": "SCREW",
+          "from-sense": "SCREW-N1",
+          "is-in-subtree": "OBJECT",
+          "preference": 0,
+          "sem-preference": 0,
+          "sent-word-ind": [
+            2,
+            [
+              6
+            ]
+          ],
+          "token": "screws"
+        },
+        "total-confidence": 4,
+        "total-preference": 1
+      }
+    }
+  ],
+  "sent-num": 2,
+  "sentence": "I also need a box of screws.",
+  "timestamp": "2017-May-23 21:07:06"
+}

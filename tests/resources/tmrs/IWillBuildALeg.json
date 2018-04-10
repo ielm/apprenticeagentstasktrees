@@ -1,0 +1,63 @@
+{
+  "results": [
+    {
+      "TMR": {
+        "ARTIFACT-LEG-4": {
+          "THEME-OF": "BUILD-4",
+          "concept": "ARTIFACT-LEG",
+          "from-sense": "LEG-N2",
+          "is-in-subtree": "OBJECT",
+          "preference": 0,
+          "sem-preference": 0,
+          "sent-word-ind": [
+            3,
+            [
+              3
+            ]
+          ],
+          "token": "leg"
+        },
+        "BUILD-4": {
+          "AGENT": "HUMAN-4",
+          "THEME": "ARTIFACT-LEG-4",
+          "TIME": [
+            ">",
+            "FIND-ANCHOR-TIME"
+          ],
+          "concept": "BUILD",
+          "from-sense": "BUILD-V1",
+          "is-in-subtree": "EVENT",
+          "preference": 0,
+          "sem-preference": 2,
+          "sent-word-ind": [
+            3,
+            [
+              1
+            ]
+          ],
+          "token": "built"
+        },
+        "HUMAN-4": {
+          "AGENT-OF": "BUILD-4",
+          "concept": "HUMAN",
+          "from-sense": "I-N1",
+          "is-in-subtree": "OBJECT",
+          "preference": 0,
+          "sem-preference": 0,
+          "sent-word-ind": [
+            3,
+            [
+              0
+            ]
+          ],
+          "token": "I"
+        },
+        "total-confidence": 2,
+        "total-preference": 0
+      }
+    }
+  ],
+  "sent-num": 3,
+  "sentence": "I will build a leg.",
+  "timestamp": "2017-May-23 21:07:07"
+}

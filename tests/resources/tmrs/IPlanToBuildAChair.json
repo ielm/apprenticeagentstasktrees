@@ -1,0 +1,111 @@
+{
+  "OriginalSentence": "We will build a chair.",
+  "results": [
+    {
+      "TMR": {
+        "BUILD-1": {
+          "AGENT": "SET-1",
+          "THEME": "CHAIR-1",
+          "THEME_constraint_info": {
+            "match": "SEM",
+            "matched_constraint": "ARTIFACT",
+            "type": "onto",
+            "variable": "^$VAR2"
+          },
+          "TIME": [
+            ">",
+            "FIND-ANCHOR-TIME"
+          ],
+          "concept": "BUILD",
+          "from-sense": "BUILD-V1",
+          "is-in-subtree": "EVENT",
+          "preference": 7,
+          "sem-preference": 1,
+          "sent-word-ind": [
+            1,
+            [
+              2
+            ]
+          ],
+          "token": "build"
+        },
+        "CHAIR-1": {
+          "THEME-OF": "BUILD-1",
+          "concept": "CHAIR",
+          "from-sense": "CHAIR-N1",
+          "is-in-subtree": "OBJECT",
+          "preference": 4,
+          "sem-preference": 0,
+          "sent-word-ind": [
+            1,
+            [
+              4
+            ]
+          ],
+          "token": "chair"
+        },
+        "SET-1": {
+          "AGENT-OF": "BUILD-1",
+          "CARDINALITY": [
+            ">",
+            1
+          ],
+          "MEMBER-TYPE": "HUMAN",
+          "concept": "SET",
+          "from-sense": "WE-N1",
+          "is-in-subtree": "PROPERTY",
+          "preference": 2,
+          "sem-preference": 0,
+          "sent-word-ind": [
+            1,
+            [
+              0
+            ]
+          ],
+          "token": "We"
+        },
+        "total-confidence": 14,
+        "total-preference": 13
+      },
+      "concept_counts": {
+        "BUILD": {
+          "count": 1,
+          "word-info": [
+            [
+              2,
+              "top"
+            ]
+          ]
+        },
+        "CHAIR": {
+          "count": 1,
+          "word-info": [
+            [
+              4,
+              "top"
+            ]
+          ]
+        },
+        "SET": {
+          "count": 1,
+          "word-info": [
+            [
+              0,
+              "top"
+            ]
+          ]
+        }
+      },
+      "words": {
+        "0": "WE-N1",
+        "1": "WILL-AUX1",
+        "2": "BUILD-V1",
+        "4": "CHAIR-N1",
+        "5": ".-PUNCT1"
+      }
+    }
+  ],
+  "sent-num": 1,
+  "sentence": "We will build a chair.",
+  "timestamp": "2018-Mar-30 18:15:57"
+}

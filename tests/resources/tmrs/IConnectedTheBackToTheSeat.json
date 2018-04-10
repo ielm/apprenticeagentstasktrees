@@ -1,0 +1,151 @@
+{
+  "results": [
+    {
+      "TMR": {
+        "ATTACH-9": {
+          "AGENT": "HUMAN-9",
+          "THEME": "CHAIR-BACK-9",
+          "THEME-1": "SEAT-9",
+          "TIME": [
+            "<",
+            "FIND-ANCHOR-TIME"
+          ],
+          "concept": "ATTACH",
+          "from-sense": "CONNECT-V2",
+          "is-in-subtree": "EVENT",
+          "preference": 1,
+          "sem-preference": 3,
+          "sent-word-ind": [
+            8,
+            [
+              1
+            ]
+          ],
+          "token": "connected"
+        },
+        "CHAIR-BACK-9": {
+          "THEME-OF": "ATTACH-9",
+          "concept": "CHAIR-BACK",
+          "from-sense": "BACK-N1",
+          "is-in-subtree": "OBJECT",
+          "preference": 0,
+          "sem-preference": 0,
+          "sent-word-ind": [
+            8,
+            [
+              3
+            ]
+          ],
+          "token": "back"
+        },
+        "HUMAN-9": {
+          "AGENT-OF": "ATTACH-9",
+          "concept": "HUMAN",
+          "from-sense": "I-N1",
+          "is-in-subtree": "OBJECT",
+          "preference": 0,
+          "sem-preference": 0,
+          "sent-word-ind": [
+            8,
+            [
+              0
+            ]
+          ],
+          "token": "I"
+        },
+        "SEAT-9": {
+          "THEME-OF-1": "ATTACH-9",
+          "concept": "SEAT",
+          "from-sense": "SEAT-N1",
+          "is-in-subtree": "OBJECT",
+          "preference": 0,
+          "sem-preference": 0,
+          "sent-word-ind": [
+            8,
+            [
+              6
+            ]
+          ],
+          "token": "seat"
+        },
+        "total-confidence": 4,
+        "total-preference": 1
+      }
+    },
+    {
+      "TMR": {
+        "ATTACH-9": {
+          "AGENT": "HUMAN-9",
+          "THEME": "CHAIR-BACK-9",
+          "THEME-1": "SEATING-FURNITURE-9",
+          "TIME": [
+            "<",
+            "FIND-ANCHOR-TIME"
+          ],
+          "concept": "ATTACH",
+          "from-sense": "CONNECT-V2",
+          "is-in-subtree": "EVENT",
+          "preference": 1,
+          "sem-preference": 3,
+          "sent-word-ind": [
+            8,
+            [
+              1
+            ]
+          ],
+          "token": "connected"
+        },
+        "CHAIR-BACK-9": {
+          "THEME-OF": "ATTACH-9",
+          "concept": "CHAIR-BACK",
+          "from-sense": "BACK-N1",
+          "is-in-subtree": "OBJECT",
+          "preference": 0,
+          "sem-preference": 0,
+          "sent-word-ind": [
+            8,
+            [
+              3
+            ]
+          ],
+          "token": "back"
+        },
+        "HUMAN-9": {
+          "AGENT-OF": "ATTACH-9",
+          "concept": "HUMAN",
+          "from-sense": "I-N1",
+          "is-in-subtree": "OBJECT",
+          "preference": 0,
+          "sem-preference": 0,
+          "sent-word-ind": [
+            8,
+            [
+              0
+            ]
+          ],
+          "token": "I"
+        },
+        "SEATING-FURNITURE-9": {
+          "THEME-OF-1": "ATTACH-9",
+          "concept": "SEATING-FURNITURE",
+          "from-sense": "SEAT-N2",
+          "is-in-subtree": "OBJECT",
+          "preference": 0,
+          "sem-preference": 0,
+          "sent-word-ind": [
+            8,
+            [
+              6
+            ]
+          ],
+          "token": "seat"
+        },
+        "total-confidence": 4,
+        "total-preference": 1
+      }
+    }
+  ],
+  "sent-num": 8,
+  "sentence": "I connected the back to the seat.",
+  "timestamp": "2017-May-23 21:07:10"
+}

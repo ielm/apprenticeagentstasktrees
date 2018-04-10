@@ -1,0 +1,105 @@
+{
+    "sent-num": 3,
+    "OriginalSentence": "Get a screwdriver.",
+    "results": [
+      {
+        "words": {
+          "0": "GET-V800",
+          "2": "SCREWDRIVER-N1",
+          "3": ".-PUNCT1"
+        },
+        "concept_counts": {
+          "TAKE": {
+            "word-info": [
+              [
+                1001,
+                "top"
+              ]
+            ],
+            "count": 3
+          },
+          "REQUEST-ACTION": {
+            "word-info": [
+              [
+                0,
+                "top"
+              ]
+            ],
+            "count": 3
+          },
+          "SCREWDRIVER": {
+            "word-info": [
+              [
+                2,
+                "top"
+              ]
+            ],
+            "count": 3
+          }
+        },
+        "TMR": {
+          "total-preference": 10,
+          "SCREWDRIVER-3": {
+            "concept": "SCREWDRIVER",
+            "THEME-OF": "TAKE-3",
+            "token": "screwdriver",
+            "sent-word-ind": [
+              3,
+              [
+                2
+              ]
+            ],
+            "from-sense": "SCREWDRIVER-N1",
+            "sem-preference": 0,
+            "preference": 4,
+            "is-in-subtree": "OBJECT"
+          },
+          "TAKE-3": {
+            "concept": "TAKE",
+            "THEME": "SCREWDRIVER-3",
+            "THEME-1_constraint_info": {
+              "match": "SEM",
+              "matched_constraint": "OBJECT",
+              "variable": "^$VAR1",
+              "type": "onto"
+            },
+            "token": "Get",
+            "AGENT": "ROBOT",
+            "sem-preference": 1,
+            "from-refsem": "REFSEM1",
+            "sent-word-ind": [
+              3,
+              [
+                0
+              ]
+            ],
+            "from-sense": "GET-V800",
+            "THEME-OF": "REQUEST-ACTION-3"
+          },
+          "total-confidence": 11,
+          "REQUEST-ACTION-3": {
+            "concept": "REQUEST-ACTION",
+            "THEME": "TAKE-3",
+            "token": "Get",
+            "AGENT": "HUMAN",
+            "BENEFICIARY": "ROBOT",
+            "TIME": [
+              "FIND-ANCHOR-TIME"
+            ],
+            "sem-preference": 0,
+            "sent-word-ind": [
+              3,
+              [
+                0
+              ]
+            ],
+            "from-sense": "GET-V800",
+            "preference": 6,
+            "is-in-subtree": "EVENT"
+          }
+        }
+      }
+    ],
+    "sentence": "Get a screwdriver.",
+    "timestamp": "2018-Mar-25 21:13:35"
+  }

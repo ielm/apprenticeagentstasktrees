@@ -1,0 +1,52 @@
+version: '3.3'
+
+services:
+  corenlp:
+    image: leia/ontosem:1.0.0        # Using the ontosem image here as it contains the entire corenlp stack as well (for now).
+    container_name: corenlp
+    ports:
+      - 5000:5000
+    networks:
+      - leia
+    command:
+      - "python3.6"
+      - "SmallSem/corenlp_server.py"
+      - "host=0.0.0.0"
+      - "port=5000"
+
+  ontosem:
+    image: leia/ontosem:1.0.0
+    container_name: ontosem
+    ports:
+      - 5001:5001
+    networks:
+      - leia
+    command:
+      - "python3.6"
+      - "ontosem_server.py"
+      - "host=0.0.0.0"
+      - "port=5001"
+    environment:
+      - CORENLP_HOST=corenlp
+      - CORENLP_PORT=5000
+
+  agents:
+    image: leia/agents:0.5.0
+    container_name: agents
+    ports:
+      - 5002:5002
+    networks:
+      - leia
+    command:
+      - "python3.6"
+      - "-m"
+      - "backend.main"
+      - "host=0.0.0.0"
+      - "port=5002"
+    environment:
+      - ONTOSEM_HOST=ontosem
+      - ONTOSEM_PORT=5001
+
+networks:
+  leia:
+    driver: bridge
