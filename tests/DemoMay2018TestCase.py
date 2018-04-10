@@ -1,7 +1,7 @@
 import os
 
 from backend.taskmodel import TaskModel
-from backend.instructions import Instructions
+from models.instructions import Instructions
 from tests.ApprenticeAgentsTestCase import ApprenticeAgentsTestCase
 
 
@@ -101,3 +101,7 @@ class DemoMay2018TestCase(ApprenticeAgentsTestCase):
         print(model)
         # print("")
         # print(tm.active_node)
+
+        with open("resources/DemoMay2018_ExpectedOutput.txt", "r") as file:
+            expected = file.read()
+            self.assertEqual(str(model), expected)

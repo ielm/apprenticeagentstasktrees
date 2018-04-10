@@ -1,7 +1,5 @@
 import pickle
 
-#ontology = {}  # pickle.load(open("../backend/resources/ontology_May_2017.p", "rb"))
-
 
 class Ontology(object):
     ontology = {}
@@ -12,7 +10,7 @@ class Ontology(object):
     @classmethod
     def init_default(cls):
         import os
-        path = os.path.relpath(__file__).replace("mini_ontology.py", "resources/ontology_May_2017.p")
+        path = os.path.relpath(__file__).replace("ontology.py", "resources/ontology_May_2017.p")
         cls.init_from_file(path)
 
     @classmethod

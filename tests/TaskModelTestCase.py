@@ -1,5 +1,5 @@
 from taskmodel import TaskModel
-from instructions import Instructions
+from models.instructions import Instructions
 from tests.ApprenticeAgentsTestCase import ApprenticeAgentsTestCase
 
 

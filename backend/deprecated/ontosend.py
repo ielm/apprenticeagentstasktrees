@@ -3,8 +3,6 @@
 import pymongo
 from datetime import datetime
 
-import treenode
-from tmrutils import *
 
 onto = pymongo.MongoClient().after.inventory
 
@@ -19,7 +17,7 @@ def add_concepts_from_tree(node, timestamp = None):
   if timestamp is None:
     timestamp = datetime.utcnow().isoformat(sep=" ")
 
-  event = find_main_event(node.tmr)
+  event = node.tmr.find_main_event()
   if event is None:
     for child in node.children:
       add_concepts_from_tree(child, timestamp)

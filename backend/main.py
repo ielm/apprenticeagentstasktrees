@@ -3,8 +3,8 @@ import traceback
 from flask import Flask, request, abort, send_from_directory
 from flask_cors import CORS
 
-from backend.instructions import Instructions
-from backend.mini_ontology import Ontology
+from models.instructions import Instructions
+from backend.ontology import Ontology
 from backend.taskmodel import TaskModel
 from backend.utils.YaleUtils import format_treenode_yale, input_to_tmrs
 
@@ -38,7 +38,7 @@ def start():
   if not request.json:
     abort(400)
 
-  from backend.mini_ontology import Ontology
+  from backend.ontology import Ontology
   Ontology.init_from_ontology(ont)
 
   instructions = Instructions(request.json)
@@ -70,13 +70,13 @@ def reset_tree():
 
 @app.route('/learn', methods=['POST'])
 def learn():
-  if not request.json:
+  if not request.get_json():
     abort(400)
 
-  from backend.mini_ontology import Ontology
+  from backend.ontology import Ontology
   Ontology.init_from_ontology(ont)
 
-  data = request.json
+  data = request.get_json()
   tmrs = input_to_tmrs(data)
 
   instructions = Instructions(tmrs)

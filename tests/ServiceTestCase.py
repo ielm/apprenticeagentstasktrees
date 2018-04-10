@@ -12,6 +12,12 @@ class ServiceTestCase(unittest.TestCase):
 
     def test_learn(self):
 
+        from backend.config import networking
+        networking["ontosem-port"] = "5001"
+
+        from backend.treenode import TreeNode
+        TreeNode.id = 1
+
         rv = self.app.post("/learn", data=json.dumps([["u", "We will build a chair."], ["a", "get-screwdriver"]]), content_type='application/json')
         tree = json.loads(rv.data)
 

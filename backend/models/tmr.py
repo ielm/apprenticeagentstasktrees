@@ -1,6 +1,6 @@
 from collections.abc import Mapping
 
-from backend.mini_ontology import Ontology
+from backend.ontology import Ontology
 from backend.models.instance import Instance
 from backend.utils.YaleUtils import tmr_action_name
 

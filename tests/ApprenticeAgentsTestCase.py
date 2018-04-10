@@ -1,7 +1,7 @@
 import json
 import unittest
 
-from backend.mini_ontology import Ontology
+from backend.ontology import Ontology
 
 
 class ApprenticeAgentsTestCase(unittest.TestCase):

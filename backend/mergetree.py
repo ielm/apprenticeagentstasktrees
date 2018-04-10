@@ -1,7 +1,5 @@
 from multiset import Multiset
 
-from maketree import *
-
 def collect_leaves(node):
   leaves = []#Multiset()
   if len(node.children) == 0:

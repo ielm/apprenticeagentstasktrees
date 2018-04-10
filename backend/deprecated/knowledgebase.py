@@ -2,9 +2,8 @@
 
 instruments = dict()
 affordances = dict()
- 
-import tmrutils
- 
+
+
 class RelationalConcept:
   def __init__(this):
     this.count = 0
@@ -32,7 +31,7 @@ def add_instrument_relationship(action, instrument):
   
 def update_knowledge_base(tmr):
 
-  action = tmrutils.find_main_event(tmr)
+  action = tmr.find_main_event()
   if "INSTRUMENT" in action:
     instrument = tmr[action["INSTRUMENT"]]["concept"]
     add_instrument_relationship(action["concept"], instrument)
