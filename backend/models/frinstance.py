@@ -1,0 +1,124 @@
+# FR Instances deviate a bit from regular instances in that each property (triple) they contain is subject to
+# both a confidence value (0.0 - 1.0) and a list of ambiguities (in the case of imperfect resolution).  Further,
+# properties are "learned" at distinct times - while many properties may be learned at once, it is possible to
+# then learn new properties at a notable point in the future, so each property also maintains an abstract
+# timestamp (incrementing integer).
+
+# It is perfectly reasonable for an instance to be a THEME-OF A-1, THEME-OF B-1, and also be a THEME-OF (A-1 or B-1).
+# That is to say:
+#  1) at time 0 (or later, but not later than time n), it is known that the instance is a THEME-OF A-1;
+#  2) at time 0 (or later, but not later than time n), it is also known that the instance is a THEME-OF B-1;
+#  3) at time n (or later), it is ambiguously reported that the instance is a THEME-OF either A-1 or B-1
+# We make this distinction because we have unambiguous evidence prior that A-1 and B-1 are both unique fillers
+# of the property; finding that they are later ambiguous only relates to *that timestamp*, which is a new and
+# unique triple, and therefore the ambiguity must be tied to only that triple, and should not impact the other data.
+
+# To handle these requirements, the FRInstance behaves like a dictionary (similar to Instances); it will return
+# a list of fillers for a given key, or an empty list; and will return False if the fillers list is empty when
+# using contains().  However, rather than returning just IDs (or attribute values) as fillers, it returns
+# FRFiller objects, which contain the filler, along with the other meta-data, including links to ambiguities.
+# In the above example, four fillers would be returned, A-1 (t=0), B-1 (t=0), A-1 (t=0, amb=#4), B-1 (t=0, amb=#3),
+# where #3 and #4 are IDs referring to specific FRFillers.
+
+# Finally, we must maintain the current abstract time reference (self._time, default to 0).  There is an explicit
+# call that must be made to advance time - this should be called after all data from one TMR has been populated
+# into the FRInstance, to maintain proper ambiguity tracking.
+
+
+class FRInstance(object):
+
+    def __init__(self, name, concept):
+        self.concept = concept
+        self.name = name
+
+        self._time = 0
+        self._storage = dict()
+        self._ambiguities = []
+
+    def __setitem__(self, key, value):
+        if not type(value) == FRInstance.FRFiller:
+            raise Exception("Values must be FRFiller objects.")
+
+        value = [value] if not type(value) == list else value
+
+        if key in self._storage:
+            self._storage[key].extend(value)
+        else:
+            self._storage[key] = value
+
+    def __getitem__(self, key):
+        if key in self._storage:
+            return self._storage[key]
+        return []
+
+    def __iter__(self):
+        return iter(self._storage)
+
+    def __len__(self):
+        return len(self._storage)
+
+    def __contains__(self, key):
+        return key in self._storage
+
+    # Use this method to add values to the instance.  Provide the property, and a list of ambiguous values
+    # to record.  Note, if the values are not ambiguous (but rather, just multiple values), pass a singleton list
+    # and call this method once for each unique value.  Any list of size greater than one will be assumed to be
+    # ambiguous.
+    def remember(self, property, values):
+        if not type(values) == list:
+            values = [values]
+
+        fillers = list(map(lambda value: FRInstance.FRFiller(self._time, value), values))
+        ids = list(map(lambda filler: filler.id, fillers))
+        for filler in fillers:
+            for id in ids:
+                filler.add_ambiguity(id)
+
+        for filler in fillers:
+            self[property] = filler
+
+    def advance(self):
+        self._time += 1
+
+    class FRFiller(object):
+
+        id_index = 0
+
+        def __init__(self, time, value, ambiguities=None):
+            self.id = FRInstance.FRFiller.id_index
+            FRInstance.FRFiller.id_index += 1
+
+            self.time = time
+            self.value = value
+
+            if ambiguities is not None and type(ambiguities) == set:
+                self.ambiguities = ambiguities
+            else:
+                self.ambiguities = set()
+
+        def add_ambiguity(self, id):
+            if id == self.id:
+                return
+
+            self.ambiguities.add(id)
+
+        def remove_ambiguity(self, id):
+            self.ambiguities.remove(id)
+
+        def is_ambiguous(self):
+            return len(self.ambiguities) > 0
+
+        def __eq__(self, other):
+            if not type(other) == FRInstance.FRFiller:
+                return False
+
+            if self.time != other.time:
+                return False
+
+            if self.value != other.value:
+                return False
+
+            if self.ambiguities != other.ambiguities:
+                return False
+
+            return True
