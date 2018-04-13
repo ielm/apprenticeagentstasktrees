@@ -30,7 +30,7 @@ class FRInstanceTestCase(unittest.TestCase):
     def test_add_multiple_values(self):
         instance = FRInstance("name", "concept")
         instance.remember("PROPERTY-A", "VALUE-1")
-        instance.remember("PROPERTY-A", ["VALUE-2"])
+        instance.remember("PROPERTY-A", {"VALUE-2"})
         instance.remember("PROPERTY-B", "VALUE-1")
 
         property_a = instance["PROPERTY-A"]
@@ -53,13 +53,19 @@ class FRInstanceTestCase(unittest.TestCase):
 
     def test_add_ambiguous_values(self):
         instance = FRInstance("name", "concept")
-        instance.remember("PROPERTY", ["VALUE-1", "VALUE-2"])
+        instance.remember("PROPERTY", {"VALUE-1", "VALUE-2"})
 
         values = instance["PROPERTY"]
+        value1 = values[0]
+        value2 = values[1]
+
+        if value1.value == "VALUE-2":
+            value1 = values[1]
+            value2 = values[0]
 
         self.assertEqual(2, len(values))
-        self.assertEqual(values[0], FRInstance.FRFiller(0, "VALUE-1", {values[1].id}))
-        self.assertEqual(values[1], FRInstance.FRFiller(0, "VALUE-2", {values[0].id}))
+        self.assertTrue(FRInstance.FRFiller(0, "VALUE-1", {value2.id}) in values)
+        self.assertTrue(FRInstance.FRFiller(0, "VALUE-2", {value1.id}) in values)
 
     def test_advance_time(self):
         instance = FRInstance("name", "concept")

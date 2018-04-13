@@ -115,166 +115,54 @@
     "results": [
       {
         "TMR": {
-          "CHAIR-2": {
-            "THEME-OF": "FASTEN-2",
+          "CHAIR-1": {
+            "THEME-OF": "FASTEN-1",
             "concept": "CHAIR",
             "from-sense": "CHAIR-N1",
-            "is-in-subtree": "OBJECT",
-            "preference": 4,
-            "sem-preference": 0,
-            "sent-word-ind": [
-              2,
-              [
-                7
-              ]
-            ],
-            "token": "chair"
+            "token": "chair",
+            "is-in-subtree": "OBJECT"
           },
-          "FASTEN-2": {
-            "AGENT": "HUMAN",
-            "INSTRUMENT": "SCREWDRIVER-2",
-            "INSTRUMENT-1_constraint_info": {
-              "match": "DEFAULT",
-              "matched_constraint": "IMPLEMENT",
-              "type": "onto",
-              "variable": "^$VAR2"
-            },
-            "THEME": "CHAIR-2",
-            "THEME-2_constraint_info": {
-              "match": "SEM",
-              "matched_constraint": "PHYSICAL-OBJECT",
-              "type": "onto",
-              "variable": "^$VAR5"
-            },
+          "FASTEN-1": {
+            "AGENT": "HUMAN-1",
+            "INSTRUMENT": "SCREWDRIVER-1",
+            "PURPOSE-OF": "POSSESSION-EVENT-1",
+            "THEME": "CHAIR-1",
             "concept": "FASTEN",
-            "from-refsem": "REFSEM2",
-            "from-sense": "NEED-V800",
-            "sem-preference": 3,
-            "sent-word-ind": [
-              2,
-              [
-                1
-              ]
-            ],
-            "token": "need"
-          },
-          "GIVE-2": {
-            "AGENT": "ROBOT",
-            "BENEFICIARY": "HUMAN",
-            "THEME": "SCREWDRIVER-2",
-            "THEME-1_constraint_info": {
-              "match": "SEM",
-              "matched_constraint": "OBJECT",
-              "type": "onto",
-              "variable": "^$VAR2"
-            },
-            "THEME-OF": "REQUEST-ACTION-2",
-            "concept": "GIVE",
             "from-refsem": "REFSEM1",
             "from-sense": "NEED-V800",
-            "sem-preference": 1,
-            "sent-word-ind": [
-              2,
-              [
-                1
-              ]
-            ],
-            "token": "need"
+            "token": "need",
+            "is-in-subtree": "EVENT"
           },
-          "REQUEST-ACTION-2": {
-            "AGENT": "HUMAN",
-            "BENEFICARY": "ROBOT",
-            "THEME": "GIVE-2",
+          "HUMAN-1": {
+            "AGENT-OF": "POSSESSION-EVENT-1",
+            "AGENT-OF-1": "FASTEN-1",
+            "concept": "HUMAN",
+            "from-sense": "I-N1",
+            "token": "I",
+            "is-in-subtree": "OBJECT"
+          },
+          "POSSESSION-EVENT-1": {
+            "AGENT": "HUMAN-1",
+            "PURPOSE": "FASTEN-1",
+            "THEME": "SCREWDRIVER-1",
             "TIME": [
               "FIND-ANCHOR-TIME"
             ],
-            "concept": "REQUEST-ACTION",
+            "concept": "POSSESSION-EVENT",
             "from-sense": "NEED-V800",
-            "is-in-subtree": "EVENT",
-            "preference": 11,
-            "sem-preference": 0,
-            "sent-word-ind": [
-              2,
-              [
-                1
-              ]
-            ],
-            "token": "need"
+            "token": "need",
+            "is-in-subtree": "EVENT"
           },
-          "SCREWDRIVER-2": {
-            "INSTRUMENT-OF": "FASTEN-2",
-            "THEME-OF": "GIVE-2",
+          "SCREWDRIVER-1": {
+            "INSTRUMENT-OF": "FASTEN-1",
+            "THEME-OF": "POSSESSION-EVENT-1",
             "concept": "SCREWDRIVER",
             "from-sense": "SCREWDRIVER-N1",
-            "is-in-subtree": "OBJECT",
-            "preference": 4,
-            "sem-preference": 0,
-            "sent-word-ind": [
-              2,
-              [
-                3
-              ]
-            ],
-            "token": "screwdriver"
+            "token": "screwdriver",
+            "is-in-subtree": "OBJECT"
           },
-          "total-confidence": 25,
+          "total-confidence": 21,
           "total-preference": 21
-        },
-        "concept_counts": {
-          "CHAIR": {
-            "count": 2,
-            "word-info": [
-              [
-                7,
-                "top"
-              ]
-            ]
-          },
-          "FASTEN": {
-            "count": 2,
-            "word-info": [
-              [
-                1002,
-                "top"
-              ]
-            ]
-          },
-          "GIVE": {
-            "count": 2,
-            "word-info": [
-              [
-                1001,
-                "top"
-              ]
-            ]
-          },
-          "HUMAN": {
-            "count": 2,
-            "word-info": [
-              [
-                0,
-                "top"
-              ]
-            ]
-          },
-          "REQUEST-ACTION": {
-            "count": 2,
-            "word-info": [
-              [
-                1,
-                "top"
-              ]
-            ]
-          },
-          "SCREWDRIVER": {
-            "count": 2,
-            "word-info": [
-              [
-                3,
-                "top"
-              ]
-            ]
-          }
         },
         "words": {
           "0": "I-N1",
@@ -285,9 +173,9 @@
         }
       }
     ],
-    "sent-num": 2,
+    "sent-num": 1,
     "sentence": "I need a screwdriver to assemble a chair.",
-    "timestamp": "2018-Mar-30 18:15:57"
+    "timestamp": "2018-Apr-12 19:01:57"
   },
   {
     "OriginalSentence": "Get a screwdriver.",

@@ -1,7 +1,9 @@
 from backend.models.frinstance import FRInstance
+from backend.ontology import Ontology
+from backend.heuristics.fr_heuristics import FRHeuristics
 
 
-class FR(object):
+class FR(FRHeuristics, object):
 
     def __init__(self):
         self._instances = dict()
@@ -25,11 +27,19 @@ class FR(object):
         self._instances[fr_id] = fr_instance
         return fr_instance
 
+    def search(self, concept=None):
+        results = list(self._instances.values())
+
+        if concept is not None:
+            results = list(filter(lambda instance: instance.concept == concept, results))
+
+        return results
+
     # Fills an existing FR Instance with properties found in an Instance object; the properties must be resolved
     # to existing FR Instances to be added.
     # fr_id: The id/name of an existing FR Instance (e.g., OBJECT-FR1).
     # instance: A Instance object whose properties will be merged into the FR Instance.
-    # resolves: A map of TMR instance IDs (found in the Instance) to either None, [], or a list of fr_ids.
+    # resolves: A map of TMR instance IDs (found in the Instance) to either None, {}, or a set of fr_ids.
     #           These are the FR Instance(s) that the ID is resolved to.  Multiple implies ambiguity.
     def populate(self, fr_id, instance, resolves):
         fr_instance = self[fr_id]
@@ -50,12 +60,21 @@ class FR(object):
         results = dict()
         results[instance.name] = None
         for property in instance:
-            # TODO: verify only relations are inspected here
-            for value in instance[property]:
-                results[value] = None
+            if property in Ontology.ontology and 'RELATION' in Ontology.ancestors(property):
+                for value in instance[property]:
+                    results[value] = None
+
         for id in results:
             if id in resolves:
                 results[id] = resolves[id]
+
+        heuristics = [
+            self.resolve_human_and_robot_as_singletons,
+        ]
+
+        for heuristic in heuristics:
+            if results[instance.name] is None:
+                heuristic(instance, results, tmr=tmr)
 
         return results
 
@@ -73,7 +92,7 @@ class FR(object):
                     if id not in resolves:
                         resolves[id] = iresolves[id]
                     elif iresolves[id] is not None and resolves[id] is not None:
-                        resolves[id].extend(iresolves[id])
+                        resolves[id].update(iresolves[id])
                     elif iresolves[id] is not None:
                         resolves[id] = iresolves[id]
 
@@ -84,11 +103,13 @@ class FR(object):
             keep_trying = current_resolves != resolves
 
         for id in resolves:
-            if resolves[id] is None:
-                resolves[id] = self.register(tmr[id].concept).name
+            if resolves[id] is None and id in tmr:
+                concept = tmr[id] if type(tmr[id]) == str else tmr[id].concept
+                resolves[id] = {self.register(concept).name}
 
         for instance in tmr:
-            self.populate(resolves[instance], tmr[instance], resolves)
+            for resolved in resolves[instance]:
+                self.populate(resolved, tmr[instance], resolves)
 
     def __next_index(self, concept):
         if concept in self._indexes:
@@ -98,3 +119,9 @@ class FR(object):
 
         self._indexes[concept] = 1
         return 1
+
+    def __str__(self):
+        lines = ["Fact Repository"]
+        for instance in self:
+            lines.extend(list(map(lambda line: "  " + line, str(self[instance]).split("\n"))))
+        return "\n".join(lines)

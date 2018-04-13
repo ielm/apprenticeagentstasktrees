@@ -3,6 +3,7 @@ from backend.heuristics.prefix_heuristics import PrefixHeuristics
 from backend.heuristics.resolution_heuristics import ResolutionHeuristics
 from backend.models.tmr import TMR
 from backend.treenode import TreeNode
+from backend.models.fr import FR
 
 
 class TaskModel(PrefixHeuristics, PostfixHeuristics, ResolutionHeuristics, object):
@@ -10,6 +11,7 @@ class TaskModel(PrefixHeuristics, PostfixHeuristics, ResolutionHeuristics, objec
     def __init__(self):
         self.root = TreeNode()
         self.active_node = self.root
+        self.fr = FR()
 
     def learn(self, instructions):
 
@@ -24,6 +26,9 @@ class TaskModel(PrefixHeuristics, PostfixHeuristics, ResolutionHeuristics, objec
                 self.handle_utterance(tmrs[0])
             else:
                 self.handle_actions(tmrs)
+
+            for tmr in tmrs:
+                self.fr.learn_tmr(tmr)
 
         heuristics = [
             self.settle_disputes,

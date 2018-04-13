@@ -90,16 +90,21 @@ class TMR(Mapping):
         if self is None:
             return None
 
+        event = None
         for instance in self.values():
             if instance.is_event():
-                return instance
+                event = instance
+                break
 
-        return None
+        while event is not None and "PURPOSE-OF" in event:
+            event = self[event["PURPOSE-OF"][0]]
+
+        return event
 
     def is_postfix(self):
         for instance in self.values():
             if instance.is_event():
-                if instance["TIME"][0] == "<":
+                if "TIME" in instance and instance["TIME"][0] == "<":
                     return True
 
         # For closing generic events, such as "Finished."
@@ -174,8 +179,6 @@ class TMR(Mapping):
         if not ("THEME" in event1 and "THEME" in event2):
             return False
 
-        # concept1 = self[event1["THEME"]]["concept"]
-        # concept2 = tmr[event2["THEME"]]["concept"]
         themes1 = list(map(lambda theme: self[theme], event1["THEME"]))
         themes2 = list(map(lambda theme: tmr[theme], event2["THEME"]))
 
@@ -187,6 +190,27 @@ class TMR(Mapping):
                     return True # one is the plural of the other
 
         return False
+
+    # Here we verify that the event subtypes are broadly the same; concerning only with the immediate children
+    # of EVENT in the ontology.
+    # Every EVENT subtype in this TMR must also be present in the input TMR = if they are not the same (even a
+    # subset), then we must consider these two events distinctly different enough that even a correlation in
+    # HAS-OBJECT-AS-PART is not sufficient.
+    def about_same_events(self, tmr):
+        if self is None or tmr is None:
+            return False
+
+        event1 = self.find_main_event()
+        event2 = tmr.find_main_event()
+
+        if event1 is None or event2 is None:
+            return False
+
+        event_types = Ontology.ontology["EVENT"]["SUBCLASSES"]["VALUE"]
+        event1_types = set(Ontology.ancestors(event1.concept, include_self=True)).intersection(set(event_types))
+        event2_types = set(Ontology.ancestors(event2.concept, include_self=True)).intersection(set(event_types))
+
+        return len(event1_types.intersection(event2_types)) == len(event1_types)
 
     def find_by_concept(self, concept):
         return list(filter(lambda instance: instance.concept == concept, self.values()))

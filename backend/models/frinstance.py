@@ -60,13 +60,13 @@ class FRInstance(object):
     def __contains__(self, key):
         return key in self._storage
 
-    # Use this method to add values to the instance.  Provide the property, and a list of ambiguous values
-    # to record.  Note, if the values are not ambiguous (but rather, just multiple values), pass a singleton list
+    # Use this method to add values to the instance.  Provide the property, and a set of ambiguous values
+    # to record.  Note, if the values are not ambiguous (but rather, just multiple values), pass a set
     # and call this method once for each unique value.  Any list of size greater than one will be assumed to be
     # ambiguous.
     def remember(self, property, values):
-        if not type(values) == list:
-            values = [values]
+        if not type(values) == set:
+            values = {values}
 
         fillers = list(map(lambda value: FRInstance.FRFiller(self._time, value), values))
         ids = list(map(lambda filler: filler.id, fillers))
@@ -79,6 +79,16 @@ class FRInstance(object):
 
     def advance(self):
         self._time += 1
+
+    def __str__(self):
+        lines = [self.name]
+        for property in self:
+            line = "  " + property + " = " + ", ".join(list(map(lambda filler: str(filler), self[property])))
+            lines.append(line)
+        return "\n".join(lines)
+
+    def __repr__(self):
+        return self.name
 
     class FRFiller(object):
 
@@ -122,3 +132,10 @@ class FRInstance(object):
                 return False
 
             return True
+
+        def __str__(self):
+            ambiguity = ""
+            if len(self.ambiguities) > 0:
+                ambiguity = " ambiguous with " + ", ".join(list(map(lambda id: str(id), self.ambiguities)))
+
+            return "[" + str(self.id) + "]" + self.value + ambiguity

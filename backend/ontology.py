@@ -43,10 +43,13 @@ class Ontology(object):
         return len(set(values).intersection(set(candidates))) > 0
 
     @classmethod
-    def ancestors(cls, concept):
+    def ancestors(cls, concept, include_self=False):
         c = Ontology.ontology[concept]
 
         results = []
+        if include_self:
+            results.append(concept)
+
         if c['IS-A']['VALUE'] is not None:
 
             isa = c['IS-A']['VALUE']

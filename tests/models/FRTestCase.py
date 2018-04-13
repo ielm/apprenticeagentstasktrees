@@ -4,9 +4,10 @@ from backend.models.fr import FR
 from backend.models.instance import Instance
 from backend.models.frinstance import FRInstance
 from backend.models.tmr import TMR
+from tests.ApprenticeAgentsTestCase import ApprenticeAgentsTestCase
 
 
-class FRInstanceTestCase(unittest.TestCase):
+class FRInstanceTestCase(ApprenticeAgentsTestCase):
 
     def test_register(self):
         fr = FR()
@@ -53,14 +54,23 @@ class FRInstanceTestCase(unittest.TestCase):
         })
 
         resolves = {
-            "VALUE-123": ["CONCEPT-FR2", "CONCEPT-FR3"]
+            "VALUE-123": {"CONCEPT-FR2", "CONCEPT-FR3"}
         }
 
         fr.populate(fr_id, instance, resolves)
 
         fr_instance = fr[fr_id]
-        self.assertEqual(fr_instance["PROPERTY"][0], FRInstance.FRFiller(0, "CONCEPT-FR2", ambiguities={fr_instance["PROPERTY"][1].id}))
-        self.assertEqual(fr_instance["PROPERTY"][1], FRInstance.FRFiller(0, "CONCEPT-FR3", ambiguities={fr_instance["PROPERTY"][0].id}))
+
+        fr2 = fr_instance["PROPERTY"][0]
+        fr3 = fr_instance["PROPERTY"][1]
+        if fr2.value == "CONCEPT-FR3":
+            fr2 = fr_instance["PROPERTY"][1]
+            fr3 = fr_instance["PROPERTY"][0]
+
+        self.assertTrue(FRInstance.FRFiller(0, "CONCEPT-FR2", ambiguities={fr3.id}) in fr_instance["PROPERTY"])
+        self.assertTrue(FRInstance.FRFiller(0, "CONCEPT-FR3", ambiguities={fr2.id}) in fr_instance["PROPERTY"])
+        # self.assertEqual(fr_instance["PROPERTY"][0], FRInstance.FRFiller(0, "CONCEPT-FR2", ambiguities={fr_instance["PROPERTY"][1].id}))
+        # self.assertEqual(fr_instance["PROPERTY"][1], FRInstance.FRFiller(0, "CONCEPT-FR3", ambiguities={fr_instance["PROPERTY"][0].id}))
 
     def test_populate_unresolved(self):
         fr = FR()
@@ -99,8 +109,8 @@ class FRInstanceTestCase(unittest.TestCase):
 
         instance = Instance({
             "concept": "CONCEPT",
-            "RELATION1": ["CONCEPT-123", "CONCEPT-456"],
-            "RELATION2": ["CONCEPT-123"]
+            "OBJECT-RELATION": ["CONCEPT-123", "CONCEPT-456"],
+            "TEMPORAL-RELATION": ["CONCEPT-123"]
         })
 
         resolves = {}
@@ -118,8 +128,8 @@ class FRInstanceTestCase(unittest.TestCase):
 
         instance = Instance({
             "concept": "CONCEPT",
-            "RELATION1": ["CONCEPT-123", "CONCEPT-456"],
-            "RELATION2": ["CONCEPT-123"]
+            "OBJECT-RELATION": ["CONCEPT-123", "CONCEPT-456"],
+            "TEMPORAL-RELATION": ["CONCEPT-123"]
         })
 
         resolves = {

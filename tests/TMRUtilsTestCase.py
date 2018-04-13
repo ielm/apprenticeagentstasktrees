@@ -45,3 +45,8 @@ class TaskModelTestCase(ApprenticeAgentsTestCase):
         self.assertTrue(TMR(demo[10]).is_postfix())
         self.assertFalse(TMR(demo[11]).is_postfix())
         self.assertTrue(TMR(demo[38]).is_postfix())
+
+    def test_find_main_event(self):
+        demo = self.resource('resources/DemoMay2018_TMRs.json')
+
+        self.assertEqual("POSSESSION-EVENT", TMR(demo[1]).find_main_event().concept)
