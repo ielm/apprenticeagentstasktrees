@@ -36,6 +36,9 @@ class FRInstance(object):
         self._storage = dict()
         self._ambiguities = []
 
+        self._from = []         # Used to track TMR instances that derived this instance
+        self._context = {}      # Used to track context-sensitive learning properties
+
     def __setitem__(self, key, value):
         if not type(value) == FRInstance.FRFiller:
             raise Exception("Values must be FRFiller objects.")
@@ -60,6 +63,27 @@ class FRInstance(object):
 
     def __contains__(self, key):
         return key in self._storage
+
+    def attribute_to(self, tmrinstance):
+        self._from.append(tmrinstance)
+
+    def is_attributed_to(self, tmrinstance):
+        return tmrinstance in self._from
+
+    def set_context(self, context, value):
+        self._context[context] = value
+
+    def does_match_context(self, context):
+        if type(context) is not dict:
+            raise Exception("Context must be a dictionary.")
+
+        for c in context:
+            if c not in self._context:
+                return False
+            if self._context[c] != context[c]:
+                return False
+
+        return True
 
     # Use this method to add values to the instance.  Provide the property, and a set of ambiguous values
     # to record.  Note, if the values are not ambiguous (but rather, just multiple values), pass a set
@@ -87,10 +111,14 @@ class FRInstance(object):
         self._time += 1
 
     def __str__(self):
-        lines = [self.name]
+        lines = [self.name + " (" + ", ".join(list(map(lambda tmrinstance: tmrinstance.name, self._from))) + ")"]
         for property in self:
             line = "  " + property + " = " + ", ".join(list(map(lambda filler: str(filler), self[property])))
             lines.append(line)
+        for c in self._context:
+            line = "  *" + c + " = " + str(self._context[c])
+            lines.append(line)
+
         return "\n".join(lines)
 
     def __repr__(self):

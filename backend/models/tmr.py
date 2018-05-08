@@ -103,6 +103,9 @@ class TMR(Mapping):
 
         return event
 
+    def is_prefix(self):
+        return not self.is_postfix()
+
     def is_postfix(self):
         for instance in self.values():
             if instance.is_event():

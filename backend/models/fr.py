@@ -28,11 +28,17 @@ class FR(FRHeuristics, object):
         self._instances[fr_name] = fr_instance
         return fr_instance
 
-    def search(self, concept=None):
+    def search(self, concept=None, attributed_tmr_instance=None, context=None):
         results = list(self._instances.values())
 
         if concept is not None:
             results = list(filter(lambda instance: instance.concept == concept, results))
+
+        if attributed_tmr_instance is not None:
+            results = list(filter(lambda instance: instance.is_attributed_to(attributed_tmr_instance), results))
+
+        if context is not None:
+            results = list(filter(lambda instance: instance.does_match_context(context), results))
 
         return results
 
@@ -44,6 +50,7 @@ class FR(FRHeuristics, object):
     #           These are the FR Instance(s) that the ID is resolved to.  Multiple implies ambiguity.
     def populate(self, fr_id, instance, resolves):
         fr_instance = self[fr_id]
+        fr_instance.attribute_to(instance)
 
         for property in instance:
             # TODO: handle attributes
