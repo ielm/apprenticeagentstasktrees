@@ -22,9 +22,10 @@ class FR(FRHeuristics, object):
         return len(self._instances)
 
     def register(self, concept):
-        fr_id = concept + "-FR" + str(self.__next_index(concept))
-        fr_instance = FRInstance(fr_id, concept)
-        self._instances[fr_id] = fr_instance
+        fr_index = self.__next_index(concept)
+        fr_name = concept + "-FR" + str(fr_index)
+        fr_instance = FRInstance(fr_name, concept, fr_index)
+        self._instances[fr_name] = fr_instance
         return fr_instance
 
     def search(self, concept=None):
@@ -70,6 +71,8 @@ class FR(FRHeuristics, object):
 
         heuristics = [
             self.resolve_human_and_robot_as_singletons,
+            self.resolve_determined_objects,
+            self.resolve_sets_with_identical_members,
         ]
 
         for heuristic in heuristics:

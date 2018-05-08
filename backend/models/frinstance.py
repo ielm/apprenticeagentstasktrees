@@ -27,9 +27,10 @@
 
 class FRInstance(object):
 
-    def __init__(self, name, concept):
+    def __init__(self, name, concept, index):
         self.concept = concept
         self.name = name
+        self.index = index
 
         self._time = 0
         self._storage = dict()
@@ -67,6 +68,11 @@ class FRInstance(object):
     def remember(self, property, values):
         if not type(values) == set:
             values = {values}
+
+        # Here we find all of the current values of the property, and filter out any redundancy (just being sure
+        # not to add the exact same value twice).
+        current_values = map(lambda filler: filler.value, self[property])
+        values = filter(lambda value: value not in current_values, values)
 
         fillers = list(map(lambda value: FRInstance.FRFiller(self._time, value), values))
         ids = list(map(lambda filler: filler.id, fillers))
