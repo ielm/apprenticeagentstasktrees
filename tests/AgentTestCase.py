@@ -18,9 +18,9 @@ class AgentTestCase(ApprenticeAgentsTestCase):
 
             demo[3],  # First, we will build a front leg of the chair.
             demo[4],  # Get a foot bracket.
-            # demo[5],  # Get a front bracket.
-            # demo[6],  # Get a dowel.
-            # demo[7],  # Hold the dowel.
+            demo[5],  # Get a front bracket.
+            demo[6],  # Get a dowel.
+            demo[7],  # Hold the dowel.
             # demo[8],  # I am using the screwdriver to affix the brackets on the dowel with screws.
             # demo[9],  # Release the dowel.
             # demo[10],  # We have assembled a front leg.
