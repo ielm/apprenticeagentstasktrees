@@ -70,8 +70,8 @@ class FRInstance(object):
     def is_attributed_to(self, tmrinstance):
         return tmrinstance in self._from
 
-    def set_context(self, context, value):
-        self._context[context] = value
+    def context(self):
+        return self._context
 
     def does_match_context(self, context):
         if type(context) is not dict:
@@ -89,14 +89,16 @@ class FRInstance(object):
     # to record.  Note, if the values are not ambiguous (but rather, just multiple values), pass a set
     # and call this method once for each unique value.  Any list of size greater than one will be assumed to be
     # ambiguous.
-    def remember(self, property, values):
+    def remember(self, property, values, filter_redundant=True):
         if not type(values) == set:
             values = {values}
 
         # Here we find all of the current values of the property, and filter out any redundancy (just being sure
         # not to add the exact same value twice).
-        current_values = map(lambda filler: filler.value, self[property])
-        values = filter(lambda value: value not in current_values, values)
+        if filter_redundant and len(self[property]) > 0:
+            current_fillers = filter(lambda filler: filler.time == self._time, self[property])
+            current_values = map(lambda filler: filler.value, current_fillers)
+            values = filter(lambda value: value not in current_values, values)
 
         fillers = list(map(lambda value: FRInstance.FRFiller(self._time, value), values))
         ids = list(map(lambda filler: filler.id, fillers))
@@ -116,7 +118,7 @@ class FRInstance(object):
             line = "  " + property + " = " + ", ".join(list(map(lambda filler: str(filler), self[property])))
             lines.append(line)
         for c in self._context:
-            line = "  *" + c + " = " + str(self._context[c])
+            line = "  " + c + " = " + str(self._context[c])
             lines.append(line)
 
         return "\n".join(lines)

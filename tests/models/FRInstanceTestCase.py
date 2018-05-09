@@ -17,7 +17,7 @@ class FRInstanceTestCase(unittest.TestCase):
         self.assertEqual(filler1, filler2)
 
     def test_add_single_value(self):
-        instance = FRInstance("name", "concept")
+        instance = FRInstance("name", "concept", 1)
         instance.remember("PROPERTY", "VALUE-1")
 
         values = instance["PROPERTY"]
@@ -28,7 +28,7 @@ class FRInstanceTestCase(unittest.TestCase):
         self.assertFalse(values[0].is_ambiguous())
 
     def test_add_multiple_values(self):
-        instance = FRInstance("name", "concept")
+        instance = FRInstance("name", "concept", 1)
         instance.remember("PROPERTY-A", "VALUE-1")
         instance.remember("PROPERTY-A", {"VALUE-2"})
         instance.remember("PROPERTY-B", "VALUE-1")
@@ -44,7 +44,7 @@ class FRInstanceTestCase(unittest.TestCase):
         self.assertEqual(property_b[0], FRInstance.FRFiller(0, "VALUE-1"))
 
     def test_id_increases(self):
-        instance = FRInstance("name", "concept")
+        instance = FRInstance("name", "concept", 1)
         instance.remember("PROPERTY", "VALUE-1")
         instance.remember("PROPERTY", "VALUE-2")
 
@@ -52,7 +52,7 @@ class FRInstanceTestCase(unittest.TestCase):
         self.assertEqual(values[0].id + 1, values[1].id)
 
     def test_add_ambiguous_values(self):
-        instance = FRInstance("name", "concept")
+        instance = FRInstance("name", "concept", 1)
         instance.remember("PROPERTY", {"VALUE-1", "VALUE-2"})
 
         values = instance["PROPERTY"]
@@ -67,8 +67,20 @@ class FRInstanceTestCase(unittest.TestCase):
         self.assertTrue(FRInstance.FRFiller(0, "VALUE-1", {value2.id}) in values)
         self.assertTrue(FRInstance.FRFiller(0, "VALUE-2", {value1.id}) in values)
 
+    def test_add_redundant_values(self):
+        instance = FRInstance("name", "concept", 1)
+
+        instance.remember("PROPERTY", "VALUE-1")
+        self.assertEqual(instance["PROPERTY"], [FRInstance.FRFiller(0, "VALUE-1")])
+
+        instance.remember("PROPERTY", "VALUE-1")
+        self.assertEqual(instance["PROPERTY"], [FRInstance.FRFiller(0, "VALUE-1")])
+
+        instance.remember("PROPERTY", "VALUE-1", filter_redundant=False)
+        self.assertEqual(instance["PROPERTY"], [FRInstance.FRFiller(0, "VALUE-1"), FRInstance.FRFiller(0, "VALUE-1")])
+
     def test_advance_time(self):
-        instance = FRInstance("name", "concept")
+        instance = FRInstance("name", "concept", 1)
         instance.remember("PROPERTY", "VALUE-1")
         instance.advance()
         instance.remember("PROPERTY", "VALUE-1")

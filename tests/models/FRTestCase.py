@@ -150,17 +150,26 @@ class FRInstanceTestCase(ApprenticeAgentsTestCase):
 
         tmr = TMR({
             "sentence": "Test.",
-            "results": [{
-                "TMR": {
-                    "CONCEPT-1": {
-                        "concept": "CONCEPT",
-                        "AGENT": ["THING-2"]
-                    },
-                    "THING-2": {
-                        "concept": "THING",
-                        "AGENT-OF": ["CONCEPT-1"]
-                    },
-                }
+            "tmr": [{
+                "results": [{
+                    "TMR": {
+                        "CONCEPT-1": {
+                            "concept": "CONCEPT",
+                            "AGENT": ["THING-2"],
+                            "sent-word-ind": [1, [0]]
+                        },
+                        "THING-2": {
+                            "concept": "THING",
+                            "AGENT-OF": ["CONCEPT-1"],
+                            "sent-word-ind": [1, [1]]
+                        },
+                    }
+                }]
+            }],
+            "syntax": [{
+                "0": {},
+                "1": {},
+                "basicDeps": []
             }]
         })
 
