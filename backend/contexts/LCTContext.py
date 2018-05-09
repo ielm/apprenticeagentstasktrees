@@ -24,8 +24,9 @@ class LCTContext(AgentContext):
         if tmr.is_prefix():
             event = tmr.find_main_event()
             fr_event = self.agent.st_memory.search(attributed_tmr_instance=event)[0]
+            print(fr_event.name + " = " + event.name)
 
-            fr_currently_learning_events = self.agent.st_memory.search(context={self.LEARNING: True})
+            fr_currently_learning_events = self.agent.st_memory.search(context={self.LEARNING: True, self.CURRENT: True})
             for fr_current_event in fr_currently_learning_events:
                 fr_current_event.context()[self.CURRENT] = False
                 fr_current_event.context()[self.WAITING_ON] = fr_event.name

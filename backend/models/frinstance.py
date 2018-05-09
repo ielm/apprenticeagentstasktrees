@@ -36,7 +36,7 @@ class FRInstance(object):
         self._storage = dict()
         self._ambiguities = []
 
-        self._from = []         # Used to track TMR instances that derived this instance
+        self._from = {}         # Used to track TMR instances that derived this instance
         self._context = {}      # Used to track context-sensitive learning properties
 
     def __setitem__(self, key, value):
@@ -65,10 +65,10 @@ class FRInstance(object):
         return key in self._storage
 
     def attribute_to(self, tmrinstance):
-        self._from.append(tmrinstance)
+        self._from[tmrinstance.uuid] = tmrinstance
 
     def is_attributed_to(self, tmrinstance):
-        return tmrinstance in self._from
+        return tmrinstance.uuid in self._from
 
     def context(self):
         return self._context
@@ -113,7 +113,7 @@ class FRInstance(object):
         self._time += 1
 
     def __str__(self):
-        lines = [self.name + " (" + ", ".join(list(map(lambda tmrinstance: tmrinstance.name, self._from))) + ")"]
+        lines = [self.name]
         for property in self:
             line = "  " + property + " = " + ", ".join(list(map(lambda filler: str(filler), self[property])))
             lines.append(line)
