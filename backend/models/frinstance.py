@@ -112,6 +112,25 @@ class FRInstance(object):
     def advance(self):
         self._time += 1
 
+    def has_fillers(self, query, expand_sets={}):
+        for key in query:
+            if key not in self:
+                return False
+
+            value = query[key]
+            fillers = self[key]
+
+            filler_values = list(map(lambda filler: filler.value, fillers))
+            sets_to_expand = list(filter(lambda set: set in filler_values, expand_sets.keys()))
+            expanded_values = list(map(lambda set: expand_sets[set]["MEMBER-TYPE"], sets_to_expand))
+            for ev in expanded_values:
+                filler_values.extend(map(lambda filler: filler.value, ev))
+
+            if value not in filler_values:
+                return False
+
+        return True
+
     def __str__(self):
         lines = [self.name]
         for property in self:

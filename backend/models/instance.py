@@ -1,4 +1,5 @@
 from collections.abc import Mapping
+from uuid import uuid4
 import re
 
 
@@ -12,6 +13,7 @@ class Instance(Mapping):
         self.name = name if name is not None else self.concept + "-X"
         self.token = inst_dict["token"] if "token" in inst_dict else None
         self.properties = {}
+        self.uuid = uuid4()
 
         for key in inst_dict:
             if "_constraint_info" in key:

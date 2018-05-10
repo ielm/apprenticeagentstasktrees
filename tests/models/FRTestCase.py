@@ -69,8 +69,6 @@ class FRInstanceTestCase(ApprenticeAgentsTestCase):
 
         self.assertTrue(FRInstance.FRFiller(0, "CONCEPT-FR2", ambiguities={fr3.id}) in fr_instance["PROPERTY"])
         self.assertTrue(FRInstance.FRFiller(0, "CONCEPT-FR3", ambiguities={fr2.id}) in fr_instance["PROPERTY"])
-        # self.assertEqual(fr_instance["PROPERTY"][0], FRInstance.FRFiller(0, "CONCEPT-FR2", ambiguities={fr_instance["PROPERTY"][1].id}))
-        # self.assertEqual(fr_instance["PROPERTY"][1], FRInstance.FRFiller(0, "CONCEPT-FR3", ambiguities={fr_instance["PROPERTY"][0].id}))
 
     def test_populate_unresolved(self):
         fr = FR()

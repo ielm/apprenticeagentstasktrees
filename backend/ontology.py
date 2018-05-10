@@ -61,3 +61,20 @@ class Ontology(object):
                 results.extend(cls.ancestors(parent))
 
         return set(results)
+
+    @classmethod
+    def add_filler(cls, concept, slot, facet, filler):
+        c = Ontology.ontology[concept]
+
+        if slot not in c:
+            c[slot] = {}
+
+        s = c[slot]
+
+        if facet not in s:
+            s[facet] = []
+        if type(s[facet]) != list:
+            s[facet] = [s[facet]]
+
+        f = s[facet]
+        f.append(filler)

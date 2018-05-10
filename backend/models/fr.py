@@ -3,11 +3,17 @@ from backend.ontology import Ontology
 from backend.heuristics.fr_heuristics import FRHeuristics
 
 
-class FR(FRHeuristics, object):
+class FR(object):
 
     def __init__(self):
         self._instances = dict()
         self._indexes = dict()
+
+        self.heuristics = [
+            FRHeuristics.resolve_human_and_robot_as_singletons,
+            FRHeuristics.resolve_determined_objects,
+            FRHeuristics.resolve_sets_with_identical_members,
+        ]
 
     def __setitem__(self, key, value):
         self._instances[key] = value
@@ -28,7 +34,7 @@ class FR(FRHeuristics, object):
         self._instances[fr_name] = fr_instance
         return fr_instance
 
-    def search(self, concept=None, attributed_tmr_instance=None, context=None):
+    def search(self, concept=None, attributed_tmr_instance=None, context=None, has_fillers=None):
         results = list(self._instances.values())
 
         if concept is not None:
@@ -39,6 +45,10 @@ class FR(FRHeuristics, object):
 
         if context is not None:
             results = list(filter(lambda instance: instance.does_match_context(context), results))
+
+        if has_fillers is not None:
+            sets = dict((s.name, s) for s in self.search(concept="SET"))
+            results = list(filter(lambda instance: instance.has_fillers(has_fillers, expand_sets=sets), results))
 
         return results
 
@@ -76,15 +86,9 @@ class FR(FRHeuristics, object):
             if id in resolves:
                 results[id] = resolves[id]
 
-        heuristics = [
-            self.resolve_human_and_robot_as_singletons,
-            self.resolve_determined_objects,
-            self.resolve_sets_with_identical_members,
-        ]
-
-        for heuristic in heuristics:
+        for heuristic in self.heuristics:
             if results[instance.name] is None:
-                heuristic(instance, results, tmr=tmr)
+                heuristic(self, instance, results, tmr=tmr)
 
         return results
 
