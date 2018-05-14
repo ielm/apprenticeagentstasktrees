@@ -172,6 +172,10 @@ def action_to_tmr(action):
         "hold-seat": "Hold the seat.",
         "get-back": "Get the back.",
         "hold-back": "Hold the back.",
+        "get-top-bracket": "Get a top bracket.",
+        "get-top-dowel": "Get the top dowel.",
+        "hold-top-dowel": "Hold the top dowel.",
+        "release-top-dowel": "Release the top dowel.",
     }
 
     if action in actions:
