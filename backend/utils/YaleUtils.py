@@ -6,21 +6,91 @@ from backend.config import ontosem_service
 
 def format_treenode_yale(treenode):
 
-    output = dict()
+    # 1) Turn the treenode into the correct structure (per node) for the expected Yale formatted output.
+    def _format(treenode):
+        output = dict()
 
-    output["id"] = treenode.id
-    output["parent"] = None if treenode.parent is None else treenode.parent.id
-    output["name"] = treenode.name
-    output["combination"] = treenode.type
-    output["attributes"] = []
-    output["children"] = list(map(lambda child: format_treenode_yale(child), filter_treenode_children(treenode)))
+        output["id"] = treenode.id
+        output["parent"] = None if treenode.parent is None else treenode.parent.id
+        output["name"] = treenode.name
+        output["combination"] = "Sequential"
+        output["attributes"] = []
+        output["children"] = list(map(lambda child: _format(child), filter_treenode_children(treenode)))
+        output["order"] = treenode.parent.order_of_action(treenode.name) if treenode.parent is not None else None
 
-    if treenode.name == "root":
+        return output
+
+    output = _format(treenode)
+
+    # 2) Any nodes with an identical order need to be grouped (a grouping node is injected; this allows for
+    #    marking of parallel actions.
+    def _group(output):
+        grouped_children = []
+        current_order = 0
+        current_group = []
+        for child in output["children"]:
+            order = child["order"] if child["order"] is not None else current_order + 1
+
+            if order > current_order:
+                current_order = order
+                if len(current_group) > 0:
+                    grouped_children.append(make_grouped_node(current_group, output["name"], output["id"]))
+                current_group = []
+
+            current_group.append(child)
+
+        if len(current_group) > 0:
+            grouped_children.append(make_grouped_node(current_group, output["name"], output["id"]))
+
+        for child in output["children"]:
+            _group(child)
+
+        output["children"] = grouped_children
+        return output
+
+    output = _group(output)
+
+    # 3) Remove any unneeded fields (e.g. "order").
+    def _clean(output):
+        del output["order"]
+        for child in output["children"]:
+            _clean(child)
+
+        return output
+
+    output = _clean(output)
+
+    if output["name"] == "":
+        output["name"] = "Start"
         return {
             "nodes": output
         }
     else:
         return output
+
+
+def make_grouped_node(group, parent_name, parent_id):
+    if len(group) == 1:
+        return group[0]
+
+    output = dict()
+
+    from backend.treenode import TreeNode
+    output["id"] = TreeNode.id
+    TreeNode.id += 1
+
+    output["parent"] = parent_id
+    output["name"] = "Parallelized Subtasks of " + parent_name
+    output["combination"] = "Sequential"
+    output["attributes"] = []
+    output["children"] = group
+    output["order"] = None
+
+    for child in group:
+        child["parent"] = output["id"]
+        child["combination"] = "Parallel"
+
+    return output
 
 
 # Return only children of the treenode that should be part of the results to the Yale Robot

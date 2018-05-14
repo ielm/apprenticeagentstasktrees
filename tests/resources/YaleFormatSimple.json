@@ -1,0 +1,69 @@
+{
+  "nodes": {
+    "attributes": [],
+    "children": [
+      {
+        "attributes": [],
+        "children": [
+          {
+            "attributes": [],
+            "children": [
+              {
+                "attributes": [],
+                "children": [],
+                "combination": "Sequential",
+                "id": 3,
+                "name": "ROBOT GET(FOOT_BRACKET)",
+                "parent": 2
+              },
+              {
+                "attributes": [],
+                "children": [],
+                "combination": "Sequential",
+                "id": 4,
+                "name": "ROBOT GET(bracket)",
+                "parent": 2
+              },
+              {
+                "attributes": [],
+                "children": [],
+                "combination": "Sequential",
+                "id": 5,
+                "name": "ROBOT GET(dowel)",
+                "parent": 2
+              },
+              {
+                "attributes": [],
+                "children": [],
+                "combination": "Sequential",
+                "id": 6,
+                "name": "ROBOT HOLD(dowel)",
+                "parent": 2
+              },
+              {
+                "attributes": [],
+                "children": [],
+                "combination": "Sequential",
+                "id": 7,
+                "name": "HUMAN FASTEN(brackets)",
+                "parent": 2
+              }
+            ],
+            "combination": "Sequential",
+            "id": 2,
+            "name": "BUILD ARTIFACT-LEG",
+            "parent": 1
+          }
+        ],
+        "combination": "Sequential",
+        "id": 1,
+        "name": "BUILD CHAIR",
+        "parent": 0
+      }
+    ],
+    "combination": "Sequential",
+    "id": 0,
+    "name": "Start",
+    "parent": null
+  }
+}
