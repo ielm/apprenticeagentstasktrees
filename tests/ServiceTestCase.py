@@ -10,6 +10,7 @@ class ServiceTestCase(unittest.TestCase):
     def setUp(self):
         self.app = app.test_client()
 
+    @unittest.skip("This requires both the ontosem and corenlp service to be running, otherwise it will fail.")
     def test_learn(self):
 
         from backend.config import networking
@@ -21,6 +22,33 @@ class ServiceTestCase(unittest.TestCase):
         rv = self.app.post("/learn", data=json.dumps([["u", "We will build a chair."], ["a", "get-screwdriver"]]), content_type='application/json')
         tree = json.loads(rv.data)
 
-        expected = {"id": 0, "parent": None, "name": "", "combination": "sequential", "attributes": [], "children": [{"id": 1, "parent": 0, "name": "BUILD CHAIR", "combination": "sequential", "attributes": [], "children": [{"id": 2, "parent": 1, "name": "ROBOT GET(screwdriver)", "combination": "leaf", "attributes": [], "children": []}]}]}
+        expected = {
+            "nodes": {
+                "id": 0,
+                "parent": None,
+                "name": "Start",
+                "combination": "Sequential",
+                "attributes": [],
+                "children": [
+                    {
+                        "id": 1,
+                        "parent": 0,
+                        "name": "BUILD CHAIR",
+                        "combination": "Sequential",
+                        "attributes": [],
+                        "children": [
+                            {
+                                "id": 2,
+                                "parent": 1,
+                                "name": "ROBOT GET(screwdriver)",
+                                "combination": "Sequential",
+                                "children": [],
+                                "attributes": []
+                            }
+                        ]
+                    }
+                ]
+            }
+        }
 
         self.assertEqual(tree, expected)

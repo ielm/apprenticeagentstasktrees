@@ -1,0 +1,145 @@
+{
+  "nodes": {
+    "id": 0,
+    "parent": null,
+    "name": "Start",
+    "combination": "Sequential",
+    "attributes": [],
+    "children": [
+      {
+        "id": 1,
+        "parent": 0,
+        "name": "BUILD CHAIR",
+        "combination": "Sequential",
+        "attributes": [],
+        "children": [
+          {
+            "id": 2,
+            "parent": 1,
+            "name": "BUILD ARTIFACT-LEG",
+            "combination": "Sequential",
+            "attributes": [],
+            "children": [
+              {
+                "id": 17,
+                "parent": 2,
+                "name": "Parallelized Subtasks of BUILD ARTIFACT-LEG",
+                "combination": "Sequential",
+                "attributes": [],
+                "children": [
+                  {
+                    "id": 3,
+                    "parent": 17,
+                    "name": "ROBOT GET(FOOT_BRACKET)",
+                    "combination": "Parallel",
+                    "attributes": [],
+                    "children": []
+                  },
+                  {
+                    "id": 4,
+                    "parent": 17,
+                    "name": "ROBOT GET(bracket)",
+                    "combination": "Parallel",
+                    "attributes": [],
+                    "children": []
+                  },
+                  {
+                    "id": 5,
+                    "parent": 17,
+                    "name": "ROBOT GET(dowel)",
+                    "combination": "Parallel",
+                    "attributes": [],
+                    "children": []
+                  }
+                ]
+              },
+              {
+                "id": 6,
+                "parent": 2,
+                "name": "ROBOT HOLD(dowel)",
+                "combination": "Sequential",
+                "attributes": [],
+                "children": []
+              },
+              {
+                "id": 7,
+                "parent": 2,
+                "name": "HUMAN FASTEN(brackets)",
+                "combination": "Sequential",
+                "attributes": [],
+                "children": []
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": 9,
+        "parent": 0,
+        "name": "BUILD CHAIR",
+        "combination": "Sequential",
+        "attributes": [],
+        "children": [
+          {
+            "id": 10,
+            "parent": 9,
+            "name": "BUILD ARTIFACT-LEG",
+            "combination": "Sequential",
+            "attributes": [],
+            "children": [
+              {
+                "id": 18,
+                "parent": 10,
+                "name": "Parallelized Subtasks of BUILD ARTIFACT-LEG",
+                "combination": "Sequential",
+                "attributes": [],
+                "children": [
+                  {
+                    "id": 11,
+                    "parent": 18,
+                    "name": "ROBOT GET(dowel)",
+                    "combination": "Parallel",
+                    "attributes": [],
+                    "children": []
+                  },
+                  {
+                    "id": 12,
+                    "parent": 18,
+                    "name": "ROBOT GET(bracket)",
+                    "combination": "Parallel",
+                    "attributes": [],
+                    "children": []
+                  },
+                  {
+                    "id": 13,
+                    "parent": 18,
+                    "name": "ROBOT GET(FOOT_BRACKET)",
+                    "combination": "Parallel",
+                    "attributes": [],
+                    "children": []
+                  }
+                ]
+              },
+              {
+                "id": 14,
+                "parent": 10,
+                "name": "ROBOT HOLD(dowel)",
+                "combination": "Sequential",
+                "attributes": [],
+                "children": []
+              },
+              {
+                "id": 15,
+                "parent": 10,
+                "name": "HUMAN FASTEN(brackets)",
+                "combination": "Sequential",
+                "attributes": [],
+                "children": []
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

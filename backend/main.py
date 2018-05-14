@@ -3,10 +3,11 @@ import traceback
 from flask import Flask, request, abort, send_from_directory
 from flask_cors import CORS
 
-from models.instructions import Instructions
+from backend.models.instructions import Instructions
 from backend.ontology import Ontology
 from backend.taskmodel import TaskModel
 from backend.utils.YaleUtils import format_treenode_yale, input_to_tmrs
+from backend.treenode import TreeNode
 
 app = Flask(__name__)
 CORS(app)
@@ -65,6 +66,7 @@ def get_tree():
 def reset_tree():
   global tm
   tm = TaskModel()
+  TreeNode.id = 1
   return "Ok"
 
 
@@ -82,7 +84,7 @@ def learn():
   instructions = Instructions(tmrs)
   model = tm.learn(instructions)
 
-  return json.dumps(format_treenode_yale(model))
+  return json.dumps(format_treenode_yale(model), indent=4)
 
 
   
