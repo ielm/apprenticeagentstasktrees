@@ -65,8 +65,8 @@ def get_tree():
 @app.route('/alpha/reset', methods=['DELETE'])
 def reset_tree():
   global tm
+  TreeNode.id = 0
   tm = TaskModel()
-  TreeNode.id = 1
   return "Ok"
 
 
