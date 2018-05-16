@@ -81,14 +81,14 @@ def make_grouped_node(group, parent_name, parent_id):
 
     output["parent"] = parent_id
     output["name"] = "Parallelized Subtasks of " + parent_name
-    output["combination"] = "Sequential"
+    output["combination"] = "Parallel"
     output["attributes"] = []
     output["children"] = group
     output["order"] = None
 
     for child in group:
         child["parent"] = output["id"]
-        child["combination"] = "Parallel"
+        child["combination"] = ""
 
     return output
 

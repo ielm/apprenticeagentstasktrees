@@ -57,7 +57,7 @@ def get_tree():
   if format == "pretty":
     return str(tm.root)
   elif format == "json":
-    return json.dumps(format_treenode_yale(tm.root))
+    return json.dumps(format_treenode_yale(tm.root), indent=4)
 
   return str(tm.root)
 

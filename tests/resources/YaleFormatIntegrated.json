@@ -24,14 +24,14 @@
                 "id": 17,
                 "parent": 2,
                 "name": "Parallelized Subtasks of BUILD ARTIFACT-LEG",
-                "combination": "Sequential",
+                "combination": "Parallel",
                 "attributes": [],
                 "children": [
                   {
                     "id": 3,
                     "parent": 17,
                     "name": "ROBOT GET(FOOT_BRACKET)",
-                    "combination": "Parallel",
+                    "combination": "",
                     "attributes": [],
                     "children": []
                   },
@@ -39,7 +39,7 @@
                     "id": 4,
                     "parent": 17,
                     "name": "ROBOT GET(bracket)",
-                    "combination": "Parallel",
+                    "combination": "",
                     "attributes": [],
                     "children": []
                   },
@@ -47,7 +47,7 @@
                     "id": 5,
                     "parent": 17,
                     "name": "ROBOT GET(dowel)",
-                    "combination": "Parallel",
+                    "combination": "",
                     "attributes": [],
                     "children": []
                   }
@@ -91,14 +91,14 @@
                 "id": 18,
                 "parent": 10,
                 "name": "Parallelized Subtasks of BUILD ARTIFACT-LEG",
-                "combination": "Sequential",
+                "combination": "Parallel",
                 "attributes": [],
                 "children": [
                   {
                     "id": 11,
                     "parent": 18,
                     "name": "ROBOT GET(dowel)",
-                    "combination": "Parallel",
+                    "combination": "",
                     "attributes": [],
                     "children": []
                   },
@@ -106,7 +106,7 @@
                     "id": 12,
                     "parent": 18,
                     "name": "ROBOT GET(bracket)",
-                    "combination": "Parallel",
+                    "combination": "",
                     "attributes": [],
                     "children": []
                   },
@@ -114,7 +114,7 @@
                     "id": 13,
                     "parent": 18,
                     "name": "ROBOT GET(FOOT_BRACKET)",
-                    "combination": "Parallel",
+                    "combination": "",
                     "attributes": [],
                     "children": []
                   }

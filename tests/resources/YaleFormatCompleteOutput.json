@@ -1,0 +1,459 @@
+{
+  "nodes": {
+    "id": 0,
+    "parent": null,
+    "name": "Start",
+    "combination": "Sequential",
+    "attributes": [],
+    "children": [
+      {
+        "id": 1,
+        "parent": 0,
+        "name": "BUILD CHAIR",
+        "combination": "Sequential",
+        "attributes": [],
+        "children": [
+          {
+            "id": 2,
+            "parent": 1,
+            "name": "REQUEST-ACTION GIVE SCREWDRIVER",
+            "combination": "Sequential",
+            "attributes": [],
+            "children": [
+              {
+                "id": 3,
+                "parent": 2,
+                "name": "ROBOT GET(screwdriver)",
+                "combination": "Sequential",
+                "attributes": [],
+                "children": []
+              }
+            ]
+          },
+          {
+            "id": 4,
+            "parent": 1,
+            "name": "BUILD ARTIFACT-LEG",
+            "combination": "Sequential",
+            "attributes": [],
+            "children": [
+              {
+                "id": 5,
+                "parent": 4,
+                "name": "ROBOT GET(FOOT_BRACKET)",
+                "combination": "Sequential",
+                "attributes": [],
+                "children": []
+              },
+              {
+                "id": 6,
+                "parent": 4,
+                "name": "ROBOT GET(bracket)",
+                "combination": "Sequential",
+                "attributes": [],
+                "children": []
+              },
+              {
+                "id": 7,
+                "parent": 4,
+                "name": "ROBOT GET(dowel)",
+                "combination": "Sequential",
+                "attributes": [],
+                "children": []
+              },
+              {
+                "id": 8,
+                "parent": 4,
+                "name": "ROBOT HOLD(dowel)",
+                "combination": "Sequential",
+                "attributes": [],
+                "children": []
+              },
+              {
+                "id": 9,
+                "parent": 4,
+                "name": "HUMAN FASTEN(brackets)",
+                "combination": "Sequential",
+                "attributes": [],
+                "children": []
+              }
+            ]
+          },
+          {
+            "id": 11,
+            "parent": 1,
+            "name": "BUILD ARTIFACT-LEG",
+            "combination": "Sequential",
+            "attributes": [],
+            "children": [
+              {
+                "id": 12,
+                "parent": 11,
+                "name": "ROBOT GET(FOOT_BRACKET)",
+                "combination": "Sequential",
+                "attributes": [],
+                "children": []
+              },
+              {
+                "id": 13,
+                "parent": 11,
+                "name": "ROBOT GET(bracket)",
+                "combination": "Sequential",
+                "attributes": [],
+                "children": []
+              },
+              {
+                "id": 14,
+                "parent": 11,
+                "name": "ROBOT GET(dowel)",
+                "combination": "Sequential",
+                "attributes": [],
+                "children": []
+              },
+              {
+                "id": 15,
+                "parent": 11,
+                "name": "ROBOT HOLD(dowel)",
+                "combination": "Sequential",
+                "attributes": [],
+                "children": []
+              },
+              {
+                "id": 16,
+                "parent": 11,
+                "name": "HUMAN FASTEN(putting)",
+                "combination": "Sequential",
+                "attributes": [],
+                "children": []
+              }
+            ]
+          },
+          {
+            "id": 18,
+            "parent": 1,
+            "name": "BUILD ARTIFACT-LEG",
+            "combination": "Sequential",
+            "attributes": [],
+            "children": [
+              {
+                "id": 19,
+                "parent": 18,
+                "name": "ROBOT GET(FOOT_BRACKET)",
+                "combination": "Sequential",
+                "attributes": [],
+                "children": []
+              },
+              {
+                "id": 20,
+                "parent": 18,
+                "name": "ROBOT GET(bracket)",
+                "combination": "Sequential",
+                "attributes": [],
+                "children": []
+              },
+              {
+                "id": 21,
+                "parent": 18,
+                "name": "ROBOT GET(dowel)",
+                "combination": "Sequential",
+                "attributes": [],
+                "children": []
+              },
+              {
+                "id": 22,
+                "parent": 18,
+                "name": "ROBOT HOLD(dowel)",
+                "combination": "Sequential",
+                "attributes": [],
+                "children": []
+              },
+              {
+                "id": 23,
+                "parent": 18,
+                "name": "HUMAN FASTEN(putting)",
+                "combination": "Sequential",
+                "attributes": [],
+                "children": []
+              }
+            ]
+          },
+          {
+            "id": 25,
+            "parent": 1,
+            "name": "ASSEMBLE ARTIFACT-LEG",
+            "combination": "Sequential",
+            "attributes": [],
+            "children": [
+              {
+                "id": 26,
+                "parent": 25,
+                "name": "ROBOT GET(FOOT_BRACKET)",
+                "combination": "Sequential",
+                "attributes": [],
+                "children": []
+              },
+              {
+                "id": 27,
+                "parent": 25,
+                "name": "ROBOT GET(bracket)",
+                "combination": "Sequential",
+                "attributes": [],
+                "children": []
+              },
+              {
+                "id": 28,
+                "parent": 25,
+                "name": "ROBOT GET(dowel)",
+                "combination": "Sequential",
+                "attributes": [],
+                "children": []
+              },
+              {
+                "id": 29,
+                "parent": 25,
+                "name": "ROBOT HOLD(dowel)",
+                "combination": "Sequential",
+                "attributes": [],
+                "children": []
+              },
+              {
+                "id": 30,
+                "parent": 25,
+                "name": "HUMAN FASTEN(putting)",
+                "combination": "Sequential",
+                "attributes": [],
+                "children": []
+              }
+            ]
+          },
+          {
+            "id": 32,
+            "parent": 1,
+            "name": "ASSEMBLE SEAT",
+            "combination": "Sequential",
+            "attributes": [],
+            "children": [
+              {
+                "id": 33,
+                "parent": 32,
+                "name": "ROBOT GET(seat)",
+                "combination": "Sequential",
+                "attributes": [],
+                "children": []
+              },
+              {
+                "id": 34,
+                "parent": 32,
+                "name": "ROBOT HOLD(seat)",
+                "combination": "Sequential",
+                "attributes": [],
+                "children": []
+              },
+              {
+                "id": 35,
+                "parent": 32,
+                "name": "HUMAN FASTEN(legs)",
+                "combination": "Sequential",
+                "attributes": [],
+                "children": []
+              }
+            ]
+          },
+          {
+            "id": 37,
+            "parent": 1,
+            "name": "ASSEMBLE BACK-OF-OBJECT",
+            "combination": "Sequential",
+            "attributes": [],
+            "children": [
+              {
+                "id": 38,
+                "parent": 37,
+                "name": "ASSEMBLE TOP-OF-OBJECT",
+                "combination": "Sequential",
+                "attributes": [],
+                "children": [
+                  {
+                    "id": 60,
+                    "parent": 38,
+                    "name": "Parallelized Subtasks of ASSEMBLE TOP-OF-OBJECT",
+                    "combination": "Parallel",
+                    "attributes": [],
+                    "children": [
+                      {
+                        "id": 39,
+                        "parent": 60,
+                        "name": "ROBOT GET(bracket)",
+                        "combination": "",
+                        "attributes": [],
+                        "children": []
+                      },
+                      {
+                        "id": 40,
+                        "parent": 60,
+                        "name": "ROBOT GET(bracket)",
+                        "combination": "",
+                        "attributes": [],
+                        "children": []
+                      }
+                    ]
+                  },
+                  {
+                    "id": 61,
+                    "parent": 38,
+                    "name": "Parallelized Subtasks of ASSEMBLE TOP-OF-OBJECT",
+                    "combination": "Parallel",
+                    "attributes": [],
+                    "children": [
+                      {
+                        "id": 41,
+                        "parent": 61,
+                        "name": "ROBOT GET(dowel)",
+                        "combination": "",
+                        "attributes": [],
+                        "children": []
+                      },
+                      {
+                        "id": 42,
+                        "parent": 61,
+                        "name": "ROBOT GET(dowel)",
+                        "combination": "",
+                        "attributes": [],
+                        "children": []
+                      }
+                    ]
+                  },
+                  {
+                    "id": 43,
+                    "parent": 38,
+                    "name": "ROBOT HOLD(dowel)",
+                    "combination": "Sequential",
+                    "attributes": [],
+                    "children": []
+                  },
+                  {
+                    "id": 44,
+                    "parent": 38,
+                    "name": "HUMAN FASTEN(brackets)",
+                    "combination": "Sequential",
+                    "attributes": [],
+                    "children": []
+                  }
+                ]
+              },
+              {
+                "id": 46,
+                "parent": 37,
+                "name": "ASSEMBLE BACK-OF-OBJECT",
+                "combination": "Sequential",
+                "attributes": [],
+                "children": [
+                  {
+                    "id": 51,
+                    "parent": 46,
+                    "name": "FASTEN ARTIFACT",
+                    "combination": "Sequential",
+                    "attributes": [],
+                    "children": [
+                      {
+                        "id": 47,
+                        "parent": 51,
+                        "name": "ROBOT GET(back)",
+                        "combination": "Sequential",
+                        "attributes": [],
+                        "children": []
+                      },
+                      {
+                        "id": 48,
+                        "parent": 51,
+                        "name": "ROBOT HOLD(back)",
+                        "combination": "Sequential",
+                        "attributes": [],
+                        "children": []
+                      },
+                      {
+                        "id": 49,
+                        "parent": 51,
+                        "name": "HUMAN FASTEN(bracket)",
+                        "combination": "Sequential",
+                        "attributes": [],
+                        "children": []
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": 52,
+            "parent": 1,
+            "name": "FASTEN ARTIFACT",
+            "combination": "Sequential",
+            "attributes": [],
+            "children": [
+              {
+                "id": 53,
+                "parent": 52,
+                "name": "ROBOT GET(dowel)",
+                "combination": "Sequential",
+                "attributes": [],
+                "children": []
+              },
+              {
+                "id": 54,
+                "parent": 52,
+                "name": "HUMAN INSERT(dowel)",
+                "combination": "Sequential",
+                "attributes": [],
+                "children": []
+              }
+            ]
+          },
+          {
+            "id": 55,
+            "parent": 1,
+            "name": "FASTEN ARTIFACT",
+            "combination": "Sequential",
+            "attributes": [],
+            "children": [
+              {
+                "id": 56,
+                "parent": 55,
+                "name": "ROBOT GET(dowel)",
+                "combination": "Sequential",
+                "attributes": [],
+                "children": []
+              },
+              {
+                "id": 57,
+                "parent": 55,
+                "name": "HUMAN INSERT(dowel)",
+                "combination": "Sequential",
+                "attributes": [],
+                "children": []
+              }
+            ]
+          },
+          {
+            "id": 58,
+            "parent": 1,
+            "name": "FASTEN BACK-OF-OBJECT",
+            "combination": "Sequential",
+            "attributes": [],
+            "children": [
+              {
+                "id": 59,
+                "parent": 58,
+                "name": "HUMAN FASTEN(back)",
+                "combination": "Sequential",
+                "attributes": [],
+                "children": []
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}
