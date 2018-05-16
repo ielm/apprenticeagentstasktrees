@@ -30,25 +30,25 @@
                   {
                     "id": 3,
                     "parent": 17,
-                    "name": "ROBOT GET(FOOT_BRACKET)",
+                    "name": "GET(FOOT_BRACKET)",
                     "combination": "",
-                    "attributes": [],
+                    "attributes": ["ROBOT"],
                     "children": []
                   },
                   {
                     "id": 4,
                     "parent": 17,
-                    "name": "ROBOT GET(bracket)",
+                    "name": "GET(bracket)",
                     "combination": "",
-                    "attributes": [],
+                    "attributes": ["ROBOT"],
                     "children": []
                   },
                   {
                     "id": 5,
                     "parent": 17,
-                    "name": "ROBOT GET(dowel)",
+                    "name": "GET(dowel)",
                     "combination": "",
-                    "attributes": [],
+                    "attributes": ["ROBOT"],
                     "children": []
                   }
                 ]
@@ -56,17 +56,17 @@
               {
                 "id": 6,
                 "parent": 2,
-                "name": "ROBOT HOLD(dowel)",
+                "name": "HOLD(dowel)",
                 "combination": "Sequential",
-                "attributes": [],
+                "attributes": ["ROBOT"],
                 "children": []
               },
               {
                 "id": 7,
                 "parent": 2,
-                "name": "HUMAN FASTEN(brackets)",
+                "name": "FASTEN(brackets)",
                 "combination": "Sequential",
-                "attributes": [],
+                "attributes": ["HUMAN"],
                 "children": []
               }
             ]
@@ -97,25 +97,25 @@
                   {
                     "id": 11,
                     "parent": 18,
-                    "name": "ROBOT GET(dowel)",
+                    "name": "GET(dowel)",
                     "combination": "",
-                    "attributes": [],
+                    "attributes": ["ROBOT"],
                     "children": []
                   },
                   {
                     "id": 12,
                     "parent": 18,
-                    "name": "ROBOT GET(bracket)",
+                    "name": "GET(bracket)",
                     "combination": "",
-                    "attributes": [],
+                    "attributes": ["ROBOT"],
                     "children": []
                   },
                   {
                     "id": 13,
                     "parent": 18,
-                    "name": "ROBOT GET(FOOT_BRACKET)",
+                    "name": "GET(FOOT_BRACKET)",
                     "combination": "",
-                    "attributes": [],
+                    "attributes": ["ROBOT"],
                     "children": []
                   }
                 ]
@@ -123,17 +123,17 @@
               {
                 "id": 14,
                 "parent": 10,
-                "name": "ROBOT HOLD(dowel)",
+                "name": "HOLD(dowel)",
                 "combination": "Sequential",
-                "attributes": [],
+                "attributes": ["ROBOT"],
                 "children": []
               },
               {
                 "id": 15,
                 "parent": 10,
-                "name": "HUMAN FASTEN(brackets)",
+                "name": "FASTEN(brackets)",
                 "combination": "Sequential",
-                "attributes": [],
+                "attributes": ["HUMAN"],
                 "children": []
               }
             ]

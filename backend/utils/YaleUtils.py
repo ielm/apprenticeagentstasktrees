@@ -18,6 +18,14 @@ def format_treenode_yale(treenode):
         output["children"] = list(map(lambda child: _format(child), filter_treenode_children(treenode)))
         output["order"] = treenode.parent.order_of_action(treenode.name) if treenode.parent is not None else None
 
+        if output["name"].startswith("ROBOT "):
+            output["name"] = output["name"].replace("ROBOT ", "")
+            output["attributes"].append("ROBOT")
+
+        if output["name"].startswith("HUMAN "):
+            output["name"] = output["name"].replace("HUMAN ", "")
+            output["attributes"].append("HUMAN")
+
         return output
 
     output = _format(treenode)
