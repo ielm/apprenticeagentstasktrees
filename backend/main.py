@@ -87,6 +87,26 @@ def learn():
   return json.dumps(format_treenode_yale(model), indent=4)
 
 
+@app.route("/query", methods=["POST"])
+def query():
+  if not request.get_json():
+    abort(400)
+
+  from backend.ontology import Ontology
+  Ontology.init_from_ontology(ont)
+
+  data = request.get_json()
+  tmrs = input_to_tmrs(data)
+
+  if len(tmrs) != 1:
+    abort(400)
+
+  from backend.models.tmr import TMR
+  tmr = TMR(tmrs[0])
+  model = tm.query(tmr)
+
+  return json.dumps(format_treenode_yale(model), indent=4)
+
   
 if __name__ == '__main__':
   host = "127.0.0.1"

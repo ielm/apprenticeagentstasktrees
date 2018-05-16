@@ -247,3 +247,43 @@ class TaskModelTestCase(ApprenticeAgentsTestCase):
         self.assertNode(model, children=1)
         self.assertNode(model.find(["BUILD CHAIR"]), name="BUILD CHAIR", children=1, terminal=True, type="sequential")
         self.assertNode(model.find(["BUILD CHAIR", "ROBOT GET(screwdriver)"]), name="ROBOT GET(screwdriver)", children=0, type="leaf")
+
+    def test_model_query(self):
+        import os
+        file = os.path.abspath(__package__) + "/resources/DemoMay2018_TMRs.json"
+        demo = self.resource(file)
+
+        input = [
+            demo[0],  # We will build a chair.
+
+            demo[3],  # First, we will build a front leg of the chair.
+            demo[4],  # Get a foot bracket.
+            demo[10],  # We have assembled a front leg.
+
+            demo[40],  # Now we need to assemble the back.
+            demo[42],  # Get a top bracket.
+            demo[56],  # We have assembled the back.
+
+            demo[68],  # We finished assembling the chair.
+        ]
+
+        tm = TaskModel()
+        model = tm.learn(Instructions(input))
+
+        self.assertNode(model, children=1)
+        self.assertNode(model.find(["BUILD CHAIR"]), name="BUILD CHAIR", children=2, type="sequential")
+        self.assertNode(model.find(["BUILD CHAIR", "BUILD ARTIFACT-LEG"]), name="BUILD ARTIFACT-LEG", children=1, terminal=True, type="sequential")
+        self.assertNode(model.find(["BUILD CHAIR", "BUILD ARTIFACT-LEG", "ROBOT GET(FOOT_BRACKET)"]), name="ROBOT GET(FOOT_BRACKET)", children=0, type="leaf")
+        self.assertNode(model.find(["BUILD CHAIR", "BUILD BACK-OF-OBJECT"]), name="BUILD BACK-OF-OBJECT", children=1, terminal=True, type="sequential")
+        self.assertNode(model.find(["BUILD CHAIR", "BUILD BACK-OF-OBJECT", "ROBOT GET(bracket)"]), name="ROBOT GET(bracket)", children=0, type="leaf")
+
+        query = demo[69]  # We will build the back first.
+
+        from backend.models.tmr import TMR
+        model = tm.query(TMR(query))
+
+        self.assertNode(model, children=1)
+        self.assertNode(model.find(["BUILD CHAIR"]), name="BUILD CHAIR", children=2, type="sequential")
+        self.assertEqual(list(map(lambda node: node.name, model.find(["BUILD CHAIR"]).children)), ["BUILD BACK-OF-OBJECT", "BUILD ARTIFACT-LEG"])
+
+        self.assertEqual(list(map(lambda node: node.name, tm.root.find(["BUILD CHAIR"]).children)), ["BUILD ARTIFACT-LEG", "BUILD BACK-OF-OBJECT"])

@@ -9257,5 +9257,111 @@
     "sent-num": 69,
     "sentence": "We finished assembling the chair.",
     "timestamp": "2018-Mar-30 18:15:57"
+  },
+  {
+    "OriginalSentence": "We will build the back first.",
+    "sentence": "We will build the back first.",
+    "sent-num": 1,
+    "results": [
+        {
+            "words": {
+                "0": "WE-N1",
+                "1": "WILL-AUX1",
+                "2": "BUILD-V1",
+                "4": "BACK-N3",
+                "5": "NOW-ADV800",
+                "6": ".-PUNCT1"
+            },
+            "concept_counts": {
+                "SET": {
+                    "count": 1,
+                    "word-info": [
+                        [
+                            0,
+                            "top"
+                        ]
+                    ]
+                },
+                "BUILD": {
+                    "count": 1,
+                    "word-info": [
+                        [
+                            2,
+                            "top"
+                        ]
+                    ]
+                },
+                "BACK-OF-OBJECT": {
+                    "count": 1,
+                    "word-info": [
+                        [
+                            4,
+                            "top"
+                        ]
+                    ]
+                }
+            },
+            "TMR": {
+                "SET-1": {
+                    "from-sense": "WE-N1",
+                    "concept": "SET",
+                    "sent-word-ind": [
+                        1,
+                        [
+                            0
+                        ]
+                    ],
+                    "token": "We",
+                    "MEMBER-TYPE": "HUMAN",
+                    "CARDINALITY": [
+                        ">",
+                        1
+                    ],
+                    "is-in-subtree": "PROPERTY",
+                    "preference": 2,
+                    "AGENT-OF": "BUILD-1",
+                    "sem-preference": 0
+                },
+                "BUILD-1": {
+                    "from-sense": "BUILD-V1",
+                    "concept": "BUILD",
+                    "sent-word-ind": [
+                        1,
+                        [
+                            2
+                        ]
+                    ],
+                    "token": "build",
+                    "AGENT": "SET-1",
+                    "THEME": "BACK-OF-OBJECT-1",
+                    "TIME": [
+                        ">",
+                        "FIND-ANCHOR-TIME"
+                    ],
+                    "is-in-subtree": "EVENT",
+                    "preference": 7,
+                    "sem-preference": 0
+                },
+                "BACK-OF-OBJECT-1": {
+                    "from-sense": "BACK-N3",
+                    "concept": "BACK-OF-OBJECT",
+                    "sent-word-ind": [
+                        1,
+                        [
+                            4
+                        ]
+                    ],
+                    "token": "back",
+                    "is-in-subtree": "OBJECT",
+                    "preference": 4,
+                    "THEME-OF": "BUILD-1",
+                    "sem-preference": 0
+                },
+                "total-preference": 13,
+                "total-confidence": 13
+            }
+        }
+    ],
+    "timestamp": "2018-May-16 14:33:03"
   }
 ]
