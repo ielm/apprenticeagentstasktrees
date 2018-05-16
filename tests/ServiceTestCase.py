@@ -19,6 +19,8 @@ class ServiceTestCase(unittest.TestCase):
         from backend.treenode import TreeNode
         TreeNode.id = 1
 
+        self.app.delete("/alpha/reset")
+
         rv = self.app.post("/learn", data=json.dumps([["u", "We will build a chair."], ["a", "get-screwdriver"]]), content_type='application/json')
         tree = json.loads(rv.data)
 
@@ -43,7 +45,7 @@ class ServiceTestCase(unittest.TestCase):
                                 "name": "GET(screwdriver)",
                                 "combination": "Sequential",
                                 "children": [],
-                                "attributes": ["ROBOT"]
+                                "attributes": ["robot"]
                             }
                         ]
                     }
@@ -53,7 +55,6 @@ class ServiceTestCase(unittest.TestCase):
 
         self.assertEqual(tree, expected)
 
-
     @unittest.skip("This requires both the ontosem and corenlp service to be running, otherwise it will fail.")
     def test_query(self):
         from backend.config import networking
@@ -61,6 +62,8 @@ class ServiceTestCase(unittest.TestCase):
 
         from backend.treenode import TreeNode
         TreeNode.id = 1
+
+        self.app.delete("/alpha/reset")
 
         input = [
             ["u", "We will build a chair."],

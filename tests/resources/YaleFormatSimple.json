@@ -9,7 +9,7 @@
             "attributes": [],
             "children": [
               {
-                "attributes": ["ROBOT"],
+                "attributes": ["robot"],
                 "children": [],
                 "combination": "Sequential",
                 "id": 3,
@@ -17,7 +17,7 @@
                 "parent": 2
               },
               {
-                "attributes": ["ROBOT"],
+                "attributes": ["robot"],
                 "children": [],
                 "combination": "Sequential",
                 "id": 4,
@@ -25,7 +25,7 @@
                 "parent": 2
               },
               {
-                "attributes": ["ROBOT"],
+                "attributes": ["robot"],
                 "children": [],
                 "combination": "Sequential",
                 "id": 5,
@@ -33,7 +33,7 @@
                 "parent": 2
               },
               {
-                "attributes": ["ROBOT"],
+                "attributes": ["robot"],
                 "children": [],
                 "combination": "Sequential",
                 "id": 6,
@@ -41,7 +41,7 @@
                 "parent": 2
               },
               {
-                "attributes": ["HUMAN"],
+                "attributes": ["human"],
                 "children": [],
                 "combination": "Sequential",
                 "id": 7,

@@ -20,11 +20,11 @@ def format_treenode_yale(treenode):
 
         if output["name"].startswith("ROBOT "):
             output["name"] = output["name"].replace("ROBOT ", "")
-            output["attributes"].append("ROBOT")
+            output["attributes"].append("robot")
 
         if output["name"].startswith("HUMAN "):
             output["name"] = output["name"].replace("HUMAN ", "")
-            output["attributes"].append("HUMAN")
+            output["attributes"].append("human")
 
         return output
 
