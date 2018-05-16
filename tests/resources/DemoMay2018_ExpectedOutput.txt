@@ -23,27 +23,27 @@
       -[4]ROBOT HOLD(dowel)
       -[5]HUMAN FASTEN(putting)
       -[6]ROBOT RELEASE(dowel)
-    +ASSEMBLE ARTIFACT-LEG
+    +BUILD ARTIFACT-LEG
       -[1]ROBOT GET(FOOT_BRACKET)
       -[2]ROBOT GET(bracket)
       -[3]ROBOT GET(dowel)
       -[4]ROBOT HOLD(dowel)
       -[5]HUMAN FASTEN(putting)
       -[6]ROBOT RELEASE(dowel)
-    +ASSEMBLE SEAT
+    +BUILD SEAT
       -[1]ROBOT GET(seat)
       -[2]ROBOT HOLD(seat)
       -[3]HUMAN FASTEN(legs)
       -[4]ROBOT RELEASE(seat)
-    +ASSEMBLE BACK-OF-OBJECT
-      +ASSEMBLE TOP-OF-OBJECT
+    +BUILD BACK-OF-OBJECT
+      +BUILD TOP-OF-OBJECT
         -[1]ROBOT GET(bracket)
         -[1]ROBOT GET(bracket)
         -[3]ROBOT GET(dowel)
         -[4]ROBOT HOLD(dowel)
         -[5]HUMAN FASTEN(brackets)
         -[6]ROBOT RELEASE(dowel)
-      +ASSEMBLE BACK-OF-OBJECT
+      +BUILD BACK-OF-OBJECT
         +FASTEN ARTIFACT
           -[1]ROBOT GET(back)
           -[2]ROBOT HOLD(back)

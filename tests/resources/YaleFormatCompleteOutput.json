@@ -180,7 +180,7 @@
           {
             "id": 25,
             "parent": 1,
-            "name": "ASSEMBLE ARTIFACT-LEG",
+            "name": "BUILD ARTIFACT-LEG",
             "combination": "Sequential",
             "attributes": [],
             "children": [
@@ -229,7 +229,7 @@
           {
             "id": 32,
             "parent": 1,
-            "name": "ASSEMBLE SEAT",
+            "name": "BUILD SEAT",
             "combination": "Sequential",
             "attributes": [],
             "children": [
@@ -262,21 +262,21 @@
           {
             "id": 37,
             "parent": 1,
-            "name": "ASSEMBLE BACK-OF-OBJECT",
+            "name": "BUILD BACK-OF-OBJECT",
             "combination": "Sequential",
             "attributes": [],
             "children": [
               {
                 "id": 38,
                 "parent": 37,
-                "name": "ASSEMBLE TOP-OF-OBJECT",
+                "name": "BUILD TOP-OF-OBJECT",
                 "combination": "Sequential",
                 "attributes": [],
                 "children": [
                   {
                     "id": 60,
                     "parent": 38,
-                    "name": "Parallelized Subtasks of ASSEMBLE TOP-OF-OBJECT",
+                    "name": "Parallelized Subtasks of BUILD TOP-OF-OBJECT",
                     "combination": "Parallel",
                     "attributes": [],
                     "children": [
@@ -301,7 +301,7 @@
                   {
                     "id": 61,
                     "parent": 38,
-                    "name": "Parallelized Subtasks of ASSEMBLE TOP-OF-OBJECT",
+                    "name": "Parallelized Subtasks of BUILD TOP-OF-OBJECT",
                     "combination": "Parallel",
                     "attributes": [],
                     "children": [
@@ -344,7 +344,7 @@
               {
                 "id": 46,
                 "parent": 37,
-                "name": "ASSEMBLE BACK-OF-OBJECT",
+                "name": "BUILD BACK-OF-OBJECT",
                 "combination": "Sequential",
                 "attributes": [],
                 "children": [

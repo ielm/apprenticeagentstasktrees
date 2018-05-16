@@ -15,7 +15,8 @@ class TMR(Mapping):
         result = tmr_dict["results"][0]["TMR"]
         for key in result:
             if key == key.upper():
-                self[key] = Instance(result[key], name=key)
+                modified_key = self._modify_key(key)
+                self[modified_key] = Instance(result[key], name=modified_key)
 
     def __setitem__(self, key, value):
         self._storage[key] = value
@@ -26,11 +27,18 @@ class TMR(Mapping):
 
         return self._storage[key]
 
+    def __delitem__(self, key):
+        del self._storage[key]
+
     def __iter__(self):
         return iter(self._storage)
 
     def __len__(self):
         return len(self._storage)
+
+    def _modify_key(self, key):
+        modified_key = key if not key.startswith("ASSEMBLE") else key.replace("ASSEMBLE", "BUILD") + "X"
+        return modified_key
 
     def is_action(self):
         event = self.find_main_event()
