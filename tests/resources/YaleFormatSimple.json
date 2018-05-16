@@ -9,43 +9,43 @@
             "attributes": [],
             "children": [
               {
-                "attributes": [],
+                "attributes": ["ROBOT"],
                 "children": [],
                 "combination": "Sequential",
                 "id": 3,
-                "name": "ROBOT GET(FOOT_BRACKET)",
+                "name": "GET(FOOT_BRACKET)",
                 "parent": 2
               },
               {
-                "attributes": [],
+                "attributes": ["ROBOT"],
                 "children": [],
                 "combination": "Sequential",
                 "id": 4,
-                "name": "ROBOT GET(bracket)",
+                "name": "GET(bracket)",
                 "parent": 2
               },
               {
-                "attributes": [],
+                "attributes": ["ROBOT"],
                 "children": [],
                 "combination": "Sequential",
                 "id": 5,
-                "name": "ROBOT GET(dowel)",
+                "name": "GET(dowel)",
                 "parent": 2
               },
               {
-                "attributes": [],
+                "attributes": ["ROBOT"],
                 "children": [],
                 "combination": "Sequential",
                 "id": 6,
-                "name": "ROBOT HOLD(dowel)",
+                "name": "HOLD(dowel)",
                 "parent": 2
               },
               {
-                "attributes": [],
+                "attributes": ["HUMAN"],
                 "children": [],
                 "combination": "Sequential",
                 "id": 7,
-                "name": "HUMAN FASTEN(brackets)",
+                "name": "FASTEN(brackets)",
                 "parent": 2
               }
             ],

@@ -24,31 +24,31 @@
                 "id": 17,
                 "parent": 2,
                 "name": "Parallelized Subtasks of BUILD ARTIFACT-LEG",
-                "combination": "Sequential",
+                "combination": "Parallel",
                 "attributes": [],
                 "children": [
                   {
                     "id": 3,
                     "parent": 17,
-                    "name": "ROBOT GET(FOOT_BRACKET)",
-                    "combination": "Parallel",
-                    "attributes": [],
+                    "name": "GET(FOOT_BRACKET)",
+                    "combination": "",
+                    "attributes": ["ROBOT"],
                     "children": []
                   },
                   {
                     "id": 4,
                     "parent": 17,
-                    "name": "ROBOT GET(bracket)",
-                    "combination": "Parallel",
-                    "attributes": [],
+                    "name": "GET(bracket)",
+                    "combination": "",
+                    "attributes": ["ROBOT"],
                     "children": []
                   },
                   {
                     "id": 5,
                     "parent": 17,
-                    "name": "ROBOT GET(dowel)",
-                    "combination": "Parallel",
-                    "attributes": [],
+                    "name": "GET(dowel)",
+                    "combination": "",
+                    "attributes": ["ROBOT"],
                     "children": []
                   }
                 ]
@@ -56,17 +56,17 @@
               {
                 "id": 6,
                 "parent": 2,
-                "name": "ROBOT HOLD(dowel)",
+                "name": "HOLD(dowel)",
                 "combination": "Sequential",
-                "attributes": [],
+                "attributes": ["ROBOT"],
                 "children": []
               },
               {
                 "id": 7,
                 "parent": 2,
-                "name": "HUMAN FASTEN(brackets)",
+                "name": "FASTEN(brackets)",
                 "combination": "Sequential",
-                "attributes": [],
+                "attributes": ["HUMAN"],
                 "children": []
               }
             ]
@@ -91,31 +91,31 @@
                 "id": 18,
                 "parent": 10,
                 "name": "Parallelized Subtasks of BUILD ARTIFACT-LEG",
-                "combination": "Sequential",
+                "combination": "Parallel",
                 "attributes": [],
                 "children": [
                   {
                     "id": 11,
                     "parent": 18,
-                    "name": "ROBOT GET(dowel)",
-                    "combination": "Parallel",
-                    "attributes": [],
+                    "name": "GET(dowel)",
+                    "combination": "",
+                    "attributes": ["ROBOT"],
                     "children": []
                   },
                   {
                     "id": 12,
                     "parent": 18,
-                    "name": "ROBOT GET(bracket)",
-                    "combination": "Parallel",
-                    "attributes": [],
+                    "name": "GET(bracket)",
+                    "combination": "",
+                    "attributes": ["ROBOT"],
                     "children": []
                   },
                   {
                     "id": 13,
                     "parent": 18,
-                    "name": "ROBOT GET(FOOT_BRACKET)",
-                    "combination": "Parallel",
-                    "attributes": [],
+                    "name": "GET(FOOT_BRACKET)",
+                    "combination": "",
+                    "attributes": ["ROBOT"],
                     "children": []
                   }
                 ]
@@ -123,17 +123,17 @@
               {
                 "id": 14,
                 "parent": 10,
-                "name": "ROBOT HOLD(dowel)",
+                "name": "HOLD(dowel)",
                 "combination": "Sequential",
-                "attributes": [],
+                "attributes": ["ROBOT"],
                 "children": []
               },
               {
                 "id": 15,
                 "parent": 10,
-                "name": "HUMAN FASTEN(brackets)",
+                "name": "FASTEN(brackets)",
                 "combination": "Sequential",
-                "attributes": [],
+                "attributes": ["HUMAN"],
                 "children": []
               }
             ]
