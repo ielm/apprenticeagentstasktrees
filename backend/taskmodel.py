@@ -54,6 +54,7 @@ class TaskModel(QueryHeuristics, PrefixHeuristics, PostfixHeuristics, Resolution
 
         heuristics = [
             self.handle_prefix_utterance_with_no_event,
+            self.handle_prefix_utterance_destination_is_known,
             self.handle_prefix_utterance_about_existing_event,
             self.handle_prefix_utterance_fallback_behavior,
         ]

@@ -39,8 +39,50 @@ class PrefixHeuristics(object):
 
         return None
 
-    def handle_prefix_utterance_about_existing_event(self, tmr):
+    def handle_prefix_utterance_destination_is_known(self, tmr):
         # Prefix Heuristic 2
+        # Find the nearest ancestor whose THEME is the same type (hierarchically) as the DESTINATION of the input
+        # TMR.  This handles cases such as:
+        # "Now, we affix the verticals."  THEME = verticals
+        #    "Now we must affix the back to the vertical pieces."  DESTINATION = verticals
+
+        def _compare_theme_to_destination(tmr_with_theme, tmr_with_destination):
+            if tmr_with_theme is None or tmr_with_destination is None:
+                return False
+
+            themes = tmr_with_theme.find_main_event()["THEME"]
+            destinations = tmr_with_destination.find_main_event()["DESTINATION"]
+
+            themes = set(map(lambda theme: tmr_with_theme[theme].concept, themes))
+            destinations = set(map(lambda destination: tmr_with_destination[destination].concept, destinations))
+
+            return len(themes.intersection(destinations)) > 0
+
+        candidate = self.active_node
+
+        # while candidate.parent is not None and not candidate.theme = tmr.destination:
+        while candidate is not None and not _compare_theme_to_destination(candidate.tmr, tmr):
+            candidate = candidate.parent
+
+        if candidate is None:
+            return None
+
+        event = TreeNode(tmr)
+
+        if not candidate.terminal:
+            candidate.addChildNode(event)
+            return event
+        else:
+            actions = list(candidate.children)
+            for action in actions:
+                candidate.removeChildNode(action)
+                event.addChildNode(action)
+
+            candidate.addChildNode(event)
+            return event
+
+    def handle_prefix_utterance_about_existing_event(self, tmr):
+        # Prefix Heuristic 3
         # Find the nearest ancestor (starting with active_node) where the THEME of this tmr is a part of the THEME
         # of the ancestor tmr (using HAS-OBJECT-AS-PART).  If one is found, add the new node in one of two ways:
         # 1) The active node is non-terminal = add the node as a child.
@@ -70,7 +112,7 @@ class PrefixHeuristics(object):
             return event
 
     def handle_prefix_utterance_fallback_behavior(self, tmr):
-        # Prefix Heuristic 3
+        # Prefix Heuristic 4
         # If the previous heuristics could not be matched, assume that the active node must be the parent.  Add the
         # new node in one of three ways:
         # 1) The active node is terminal, and the new node is about the active node's children = inject the node.
