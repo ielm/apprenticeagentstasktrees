@@ -99,11 +99,14 @@ class DemoMay2018TestCase(ApprenticeAgentsTestCase):
 
         tm = TaskModel()
         model = tm.learn(Instructions(input))
-        print(model)
 
         with open("resources/DemoMay2018_ExpectedOutput.txt", "r") as file:
             expected = file.read()
             self.assertEqual(str(model), expected)
+
+        from backend.models.tmr import TMR
+        model = tm.query(TMR(demo[69]))
+        print(model)
 
     def test_multiple_trees(self):
         file = os.path.abspath(__package__) + "/resources/DemoMay2018_TMRs.json"
@@ -205,7 +208,7 @@ class DemoMay2018TestCase(ApprenticeAgentsTestCase):
             ["a", "hold-top-dowel"],
             ["u", "I am affixing the top brackets on the top dowel."],
             ["a", "release-top-dowel"],
-            ["u","We have assembled the top of the back."],
+            ["u", "We have assembled the top of the back."],
             ["u", "Next, we assemble the back of the chair."],
             ["a","get-back"],
             ["a", "hold-back"],
