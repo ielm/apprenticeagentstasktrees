@@ -1,0 +1,66 @@
++root
+  +BUILD CHAIR
+    +BUILD BACK-OF-OBJECT
+      +BUILD TOP-OF-OBJECT
+        -[1]ROBOT GET(bracket-top)
+        -[1]ROBOT GET(bracket-top)
+        -[3]ROBOT GET(dowel-top)
+        -[4]ROBOT HOLD(dowel)
+        -[5]HUMAN FASTEN(brackets)
+        -[6]ROBOT RELEASE(dowel)
+      +FASTEN VERTICAL ARTIFACTs
+        +FASTEN VERTICAL ARTIFACT
+          -[1]ROBOT GET(dowel)
+          -[2]ROBOT HOLD(dowel)
+          -[3]HUMAN INSERT(dowel)
+          -[4]ROBOT RELEASE(dowel)
+        +FASTEN VERTICAL ARTIFACT
+          -[1]ROBOT GET(dowel)
+          -[2]ROBOT HOLD(dowel)
+          -[3]HUMAN INSERT(dowel)
+          -[4]ROBOT RELEASE(dowel)
+        +FASTEN BACK-OF-OBJECT TO ARTIFACT
+          -[1]ROBOT GET(back)
+          -[2]ROBOT HOLD(back)
+          -[3]HUMAN FASTEN(back)
+          -[4]ROBOT RELEASE(back)
+      +FASTEN TOP ARTIFACTs TO BACK-OF-OBJECT
+        -[1]ROBOT HOLD(back)
+        -[2]HUMAN FASTEN(brackets)
+        -[3]ROBOT RELEASE(back)
+    +REQUEST-ACTION GIVE SCREWDRIVER
+      -[1]ROBOT GET(screwdriver)
+    +BUILD SEAT
+      +BUILD ARTIFACT-LEG
+        -[1]ROBOT GET(FOOT_BRACKET)
+        -[2]ROBOT GET(bracket-front)
+        -[3]ROBOT GET(dowel)
+        -[4]ROBOT HOLD(dowel)
+        -[5]HUMAN FASTEN(brackets)
+        -[6]ROBOT RELEASE(dowel)
+      +BUILD ARTIFACT-LEG
+        -[1]ROBOT GET(FOOT_BRACKET)
+        -[2]ROBOT GET(bracket-front)
+        -[3]ROBOT GET(dowel)
+        -[4]ROBOT HOLD(dowel)
+        -[5]HUMAN FASTEN(brackets)
+        -[6]ROBOT RELEASE(dowel)
+      +BUILD ARTIFACT-LEG
+        -[1]ROBOT GET(FOOT_BRACKET)
+        -[2]ROBOT GET(bracket-back-right)
+        -[3]ROBOT GET(dowel)
+        -[4]ROBOT HOLD(dowel)
+        -[5]HUMAN FASTEN(brackets)
+        -[6]ROBOT RELEASE(dowel)
+      +BUILD ARTIFACT-LEG
+        -[1]ROBOT GET(FOOT_BRACKET)
+        -[2]ROBOT GET(bracket-back-left)
+        -[3]ROBOT GET(dowel)
+        -[4]ROBOT HOLD(dowel)
+        -[5]HUMAN FASTEN(brackets)
+        -[6]ROBOT RELEASE(dowel)
+      +FASTEN ARTIFACT-LEGs TO SEAT
+        -[1]ROBOT GET(seat)
+        -[2]ROBOT HOLD(seat)
+        -[3]HUMAN FASTEN(legs)
+        -[4]ROBOT RELEASE(seat)
