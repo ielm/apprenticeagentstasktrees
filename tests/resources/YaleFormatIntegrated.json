@@ -38,7 +38,7 @@
                   {
                     "id": 4,
                     "parent": 17,
-                    "name": "GET(bracket)",
+                    "name": "GET(bracket-front)",
                     "combination": "",
                     "attributes": ["robot"],
                     "children": []
@@ -105,7 +105,7 @@
                   {
                     "id": 12,
                     "parent": 18,
-                    "name": "GET(bracket)",
+                    "name": "GET(bracket-front)",
                     "combination": "",
                     "attributes": ["robot"],
                     "children": []

@@ -48,7 +48,7 @@
               {
                 "id": 6,
                 "parent": 4,
-                "name": "GET(bracket)",
+                "name": "GET(bracket-front)",
                 "combination": "Sequential",
                 "attributes": ["robot"],
                 "children": []
@@ -97,7 +97,7 @@
               {
                 "id": 13,
                 "parent": 11,
-                "name": "GET(bracket)",
+                "name": "GET(bracket-front)",
                 "combination": "Sequential",
                 "attributes": ["robot"],
                 "children": []
@@ -121,7 +121,7 @@
               {
                 "id": 16,
                 "parent": 11,
-                "name": "FASTEN(putting)",
+                "name": "FASTEN(brackets)",
                 "combination": "Sequential",
                 "attributes": ["human"],
                 "children": []
@@ -146,7 +146,7 @@
               {
                 "id": 20,
                 "parent": 18,
-                "name": "GET(bracket)",
+                "name": "GET(bracket-back-right)",
                 "combination": "Sequential",
                 "attributes": ["robot"],
                 "children": []
@@ -170,7 +170,7 @@
               {
                 "id": 23,
                 "parent": 18,
-                "name": "FASTEN(putting)",
+                "name": "FASTEN(brackets)",
                 "combination": "Sequential",
                 "attributes": ["human"],
                 "children": []
@@ -195,7 +195,7 @@
               {
                 "id": 27,
                 "parent": 25,
-                "name": "GET(bracket)",
+                "name": "GET(bracket-back-left)",
                 "combination": "Sequential",
                 "attributes": ["robot"],
                 "children": []
@@ -219,7 +219,7 @@
               {
                 "id": 30,
                 "parent": 25,
-                "name": "FASTEN(putting)",
+                "name": "FASTEN(brackets)",
                 "combination": "Sequential",
                 "attributes": ["human"],
                 "children": []
@@ -283,7 +283,7 @@
                       {
                         "id": 39,
                         "parent": 60,
-                        "name": "GET(bracket)",
+                        "name": "GET(bracket-top)",
                         "combination": "",
                         "attributes": ["robot"],
                         "children": []
@@ -291,7 +291,7 @@
                       {
                         "id": 40,
                         "parent": 60,
-                        "name": "GET(bracket)",
+                        "name": "GET(bracket-top)",
                         "combination": "",
                         "attributes": ["robot"],
                         "children": []
@@ -308,7 +308,7 @@
                       {
                         "id": 41,
                         "parent": 61,
-                        "name": "GET(dowel)",
+                        "name": "GET(dowel-top)",
                         "combination": "",
                         "attributes": ["robot"],
                         "children": []
@@ -316,7 +316,7 @@
                       {
                         "id": 42,
                         "parent": 61,
-                        "name": "GET(dowel)",
+                        "name": "GET(dowel-top)",
                         "combination": "",
                         "attributes": ["robot"],
                         "children": []
@@ -351,7 +351,7 @@
                   {
                     "id": 51,
                     "parent": 46,
-                    "name": "FASTEN ARTIFACT",
+                    "name": "FASTEN TOP ARTIFACTs TO BACK-OF-OBJECT",
                     "combination": "Sequential",
                     "attributes": [],
                     "children": [
@@ -388,7 +388,7 @@
           {
             "id": 52,
             "parent": 1,
-            "name": "FASTEN ARTIFACT",
+            "name": "FASTEN VERTICAL ARTIFACTs",
             "combination": "Sequential",
             "attributes": [],
             "children": [
@@ -413,7 +413,7 @@
           {
             "id": 55,
             "parent": 1,
-            "name": "FASTEN ARTIFACT",
+            "name": "FASTEN VERTICAL ARTIFACT",
             "combination": "Sequential",
             "attributes": [],
             "children": [
@@ -438,7 +438,7 @@
           {
             "id": 58,
             "parent": 1,
-            "name": "FASTEN BACK-OF-OBJECT",
+            "name": "FASTEN BACK-OF-OBJECT TO ARTIFACT",
             "combination": "Sequential",
             "attributes": [],
             "children": [

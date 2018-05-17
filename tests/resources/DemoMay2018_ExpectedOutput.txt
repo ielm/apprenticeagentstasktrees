@@ -4,7 +4,7 @@
       -[1]ROBOT GET(screwdriver)
     +BUILD ARTIFACT-LEG
       -[1]ROBOT GET(FOOT_BRACKET)
-      -[2]ROBOT GET(bracket)
+      -[2]ROBOT GET(bracket-front)
       -[3]ROBOT GET(dowel)
       -[4]ROBOT HOLD(dowel)
       -[5]HUMAN FASTEN(brackets)
@@ -14,21 +14,21 @@
       -[2]ROBOT GET(bracket)
       -[3]ROBOT GET(dowel)
       -[4]ROBOT HOLD(dowel)
-      -[5]HUMAN FASTEN(putting)
+      -[5]HUMAN FASTEN(brackets)
       -[6]ROBOT RELEASE(dowel)
     +BUILD ARTIFACT-LEG
       -[1]ROBOT GET(FOOT_BRACKET)
-      -[2]ROBOT GET(bracket)
+      -[2]ROBOT GET(bracket-back-right)
       -[3]ROBOT GET(dowel)
       -[4]ROBOT HOLD(dowel)
-      -[5]HUMAN FASTEN(putting)
+      -[5]HUMAN FASTEN(brackets)
       -[6]ROBOT RELEASE(dowel)
     +BUILD ARTIFACT-LEG
       -[1]ROBOT GET(FOOT_BRACKET)
-      -[2]ROBOT GET(bracket)
+      -[2]ROBOT GET(bracket-back-left)
       -[3]ROBOT GET(dowel)
       -[4]ROBOT HOLD(dowel)
-      -[5]HUMAN FASTEN(putting)
+      -[5]HUMAN FASTEN(brackets)
       -[6]ROBOT RELEASE(dowel)
     +BUILD SEAT
       -[1]ROBOT GET(seat)
@@ -37,22 +37,22 @@
       -[4]ROBOT RELEASE(seat)
     +BUILD BACK-OF-OBJECT
       +BUILD TOP-OF-OBJECT
-        -[1]ROBOT GET(bracket)
-        -[1]ROBOT GET(bracket)
-        -[3]ROBOT GET(dowel)
+        -[1]ROBOT GET(bracket-top)
+        -[2]ROBOT GET(bracket)
+        -[3]ROBOT GET(dowel-top)
         -[4]ROBOT HOLD(dowel)
         -[5]HUMAN FASTEN(brackets)
         -[6]ROBOT RELEASE(dowel)
       +BUILD BACK-OF-OBJECT
-        +FASTEN ARTIFACT
+        +FASTEN TOP ARTIFACTs TO BACK-OF-OBJECT
           -[1]ROBOT GET(back)
           -[2]ROBOT HOLD(back)
           -[3]HUMAN FASTEN(bracket)
           -[4]ROBOT RELEASE(back)
-    +FASTEN ARTIFACT
-      +CREATE-ARTIFACT ARTIFACT
+    +FASTEN VERTICAL ARTIFACTs
+      +CREATE-ARTIFACT VERTICAL ARTIFACT
         -[1]ROBOT GET(dowel)
-      +CREATE-ARTIFACT ARTIFACT
+      +CREATE-ARTIFACT VERTICAL ARTIFACT
         -[1]ROBOT GET(dowel)
-    +FASTEN BACK-OF-OBJECT
+    +FASTEN BACK-OF-OBJECT TO ARTIFACT
       -[1]HUMAN FASTEN(back)

@@ -21,7 +21,7 @@
                 "children": [],
                 "combination": "Sequential",
                 "id": 4,
-                "name": "GET(bracket)",
+                "name": "GET(bracket-front)",
                 "parent": 2
               },
               {

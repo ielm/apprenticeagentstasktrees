@@ -75,10 +75,21 @@ class TMR(Mapping):
 
         output = event.concept
 
+        def _name_theme(instance):
+            name = instance.concept
+            if ">" in instance["CARDINALITY"]:
+                name += "s"
+            if "SPATIAL-ORIENTATION" in instance:
+                name = " ".join(instance["SPATIAL-ORIENTATION"]) + " " + name
+            if "SIDE-TB" in instance:
+                name = " ".join(instance["SIDE-TB"]) + " " + name
+            return name
+
         node = event
         while "THEME" in node:
 
-            output += " " + " AND ".join(list(map(lambda theme: self[theme].concept, node["THEME"])))
+            # output += " " + " AND ".join(list(map(lambda theme: self[theme].concept, node["THEME"])))
+            output += " " + " AND ".join(list(map(lambda theme: _name_theme(self[theme]), node["THEME"])))
             output = output.strip()
 
             # output += " " + self[node["THEME"]]["concept"]
@@ -91,6 +102,9 @@ class TMR(Mapping):
 
         if "INSTRUMENT" in event:
             output += " WITH " + " AND ".join(list(map(lambda instrument: self[instrument].concept, event["INSTRUMENT"])))
+
+        if "DESTINATION" in event:
+            output += " TO " + " AND ".join(list(map(lambda destination: self[destination].concept, event["DESTINATION"])))
 
         return output
 
