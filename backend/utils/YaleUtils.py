@@ -118,6 +118,16 @@ def filter_treenode(treenode):
 
 
 def tmr_action_name(tmr):
+    # specified_action_types = {
+    #     "Get the back bracket on the right side.": "GET(bracket-back-right)",
+    #     "Get the back bracket on the left side.": "GET(bracket-back-left)",
+    #     "Get a front bracket.": "GET(bracket-front)",
+    #     "Get a top bracket.": "GET(bracket-top)",
+    #     "Get the top dowel.": "GET(dowel-top)",
+    # }
+    #
+    # if tmr.sentence in specified_action_types:
+    #     return specified_action_types[tmr.sentence]
 
     actions = {
         "TAKE": "GET",
@@ -148,6 +158,8 @@ def tmr_action_name(tmr):
 
     action = actions[event.concept] if event.concept in actions else event.concept
     action_theme = tmr[event["THEME"][0]].token
+    if tmr[event["THEME"][0]].concept == "SET":
+        action_theme = tmr[tmr[event["THEME"][0]]["MEMBER-TYPE"][0]].token
 
     return agent + " " + action + "(" + action_theme + ")"
 
