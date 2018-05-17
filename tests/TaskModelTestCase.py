@@ -275,7 +275,7 @@ class TaskModelTestCase(ApprenticeAgentsTestCase):
         self.assertNode(model.find(["BUILD CHAIR", "BUILD ARTIFACT-LEG"]), name="BUILD ARTIFACT-LEG", children=1, terminal=True, type="sequential")
         self.assertNode(model.find(["BUILD CHAIR", "BUILD ARTIFACT-LEG", "ROBOT GET(FOOT_BRACKET)"]), name="ROBOT GET(FOOT_BRACKET)", children=0, type="leaf")
         self.assertNode(model.find(["BUILD CHAIR", "BUILD BACK-OF-OBJECT"]), name="BUILD BACK-OF-OBJECT", children=1, terminal=True, type="sequential")
-        self.assertNode(model.find(["BUILD CHAIR", "BUILD BACK-OF-OBJECT", "ROBOT GET(bracket)"]), name="ROBOT GET(bracket)", children=0, type="leaf")
+        self.assertNode(model.find(["BUILD CHAIR", "BUILD BACK-OF-OBJECT", "ROBOT GET(bracket-top)"]), name="ROBOT GET(bracket-top)", children=0, type="leaf")
 
         query = demo[69]  # We will build the back first.
 

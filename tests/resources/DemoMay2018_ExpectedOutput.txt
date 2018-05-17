@@ -4,7 +4,7 @@
       -[1]ROBOT GET(screwdriver)
     +BUILD ARTIFACT-LEG
       -[1]ROBOT GET(FOOT_BRACKET)
-      -[2]ROBOT GET(bracket)
+      -[2]ROBOT GET(bracket-front)
       -[3]ROBOT GET(dowel)
       -[4]ROBOT HOLD(dowel)
       -[5]HUMAN FASTEN(brackets)
@@ -18,14 +18,14 @@
       -[6]ROBOT RELEASE(dowel)
     +BUILD ARTIFACT-LEG
       -[1]ROBOT GET(FOOT_BRACKET)
-      -[2]ROBOT GET(bracket)
+      -[2]ROBOT GET(bracket-back-right)
       -[3]ROBOT GET(dowel)
       -[4]ROBOT HOLD(dowel)
       -[5]HUMAN FASTEN(brackets)
       -[6]ROBOT RELEASE(dowel)
     +BUILD ARTIFACT-LEG
       -[1]ROBOT GET(FOOT_BRACKET)
-      -[2]ROBOT GET(bracket)
+      -[2]ROBOT GET(bracket-back-left)
       -[3]ROBOT GET(dowel)
       -[4]ROBOT HOLD(dowel)
       -[5]HUMAN FASTEN(brackets)
@@ -37,9 +37,9 @@
       -[4]ROBOT RELEASE(seat)
     +BUILD BACK-OF-OBJECT
       +BUILD TOP-OF-OBJECT
-        -[1]ROBOT GET(bracket)
-        -[1]ROBOT GET(bracket)
-        -[3]ROBOT GET(dowel)
+        -[1]ROBOT GET(bracket-top)
+        -[2]ROBOT GET(bracket)
+        -[3]ROBOT GET(dowel-top)
         -[4]ROBOT HOLD(dowel)
         -[5]HUMAN FASTEN(brackets)
         -[6]ROBOT RELEASE(dowel)

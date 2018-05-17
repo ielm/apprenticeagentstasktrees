@@ -118,16 +118,16 @@ def filter_treenode(treenode):
 
 
 def tmr_action_name(tmr):
-    # specified_action_types = {
-    #     "Get the back bracket on the right side.": "GET(bracket-back-right)",
-    #     "Get the back bracket on the left side.": "GET(bracket-back-left)",
-    #     "Get a front bracket.": "GET(bracket-front)",
-    #     "Get a top bracket.": "GET(bracket-top)",
-    #     "Get the top dowel.": "GET(dowel-top)",
-    # }
-    #
-    # if tmr.sentence in specified_action_types:
-    #     return specified_action_types[tmr.sentence]
+    specified_action_types = {
+        "Get the back bracket on the right side.": "ROBOT GET(bracket-back-right)",
+        "Get the back bracket on the left side.": "ROBOT GET(bracket-back-left)",
+        "Get a front bracket.": "ROBOT GET(bracket-front)",
+        "Get a top bracket.": "ROBOT GET(bracket-top)",
+        "Get the top dowel.": "ROBOT GET(dowel-top)",
+    }
+
+    if tmr.sentence in specified_action_types:
+        return specified_action_types[tmr.sentence]
 
     actions = {
         "TAKE": "GET",

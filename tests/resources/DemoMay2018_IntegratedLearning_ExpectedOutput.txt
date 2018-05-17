@@ -2,7 +2,7 @@
   +BUILD CHAIR
     +BUILD ARTIFACT-LEG
       -[1]ROBOT GET(FOOT_BRACKET)
-      -[1]ROBOT GET(bracket)
+      -[1]ROBOT GET(bracket-front)
       -[1]ROBOT GET(dowel)
       -[4]ROBOT HOLD(dowel)
       -[5]HUMAN FASTEN(brackets)
@@ -10,7 +10,7 @@
   +BUILD CHAIR
     +BUILD ARTIFACT-LEG
       -[1]ROBOT GET(dowel)
-      -[1]ROBOT GET(bracket)
+      -[1]ROBOT GET(bracket-front)
       -[1]ROBOT GET(FOOT_BRACKET)
       -[4]ROBOT HOLD(dowel)
       -[5]HUMAN FASTEN(brackets)

@@ -48,7 +48,7 @@
               {
                 "id": 6,
                 "parent": 4,
-                "name": "GET(bracket)",
+                "name": "GET(bracket-front)",
                 "combination": "Sequential",
                 "attributes": ["robot"],
                 "children": []
@@ -97,7 +97,7 @@
               {
                 "id": 13,
                 "parent": 11,
-                "name": "GET(bracket)",
+                "name": "GET(bracket-front)",
                 "combination": "Sequential",
                 "attributes": ["robot"],
                 "children": []
@@ -146,7 +146,7 @@
               {
                 "id": 20,
                 "parent": 18,
-                "name": "GET(bracket)",
+                "name": "GET(bracket-back-right)",
                 "combination": "Sequential",
                 "attributes": ["robot"],
                 "children": []
@@ -195,7 +195,7 @@
               {
                 "id": 27,
                 "parent": 25,
-                "name": "GET(bracket)",
+                "name": "GET(bracket-back-left)",
                 "combination": "Sequential",
                 "attributes": ["robot"],
                 "children": []
@@ -283,7 +283,7 @@
                       {
                         "id": 39,
                         "parent": 60,
-                        "name": "GET(bracket)",
+                        "name": "GET(bracket-top)",
                         "combination": "",
                         "attributes": ["robot"],
                         "children": []
@@ -291,7 +291,7 @@
                       {
                         "id": 40,
                         "parent": 60,
-                        "name": "GET(bracket)",
+                        "name": "GET(bracket-top)",
                         "combination": "",
                         "attributes": ["robot"],
                         "children": []
@@ -308,7 +308,7 @@
                       {
                         "id": 41,
                         "parent": 61,
-                        "name": "GET(dowel)",
+                        "name": "GET(dowel-top)",
                         "combination": "",
                         "attributes": ["robot"],
                         "children": []
@@ -316,7 +316,7 @@
                       {
                         "id": 42,
                         "parent": 61,
-                        "name": "GET(dowel)",
+                        "name": "GET(dowel-top)",
                         "combination": "",
                         "attributes": ["robot"],
                         "children": []
