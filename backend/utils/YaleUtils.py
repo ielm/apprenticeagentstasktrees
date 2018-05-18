@@ -6,21 +6,102 @@ from backend.config import ontosem_service
 
 def format_treenode_yale(treenode):
 
-    output = dict()
+    # 1) Turn the treenode into the correct structure (per node) for the expected Yale formatted output.
+    def _format(treenode):
+        output = dict()
 
-    output["id"] = treenode.id
-    output["parent"] = None if treenode.parent is None else treenode.parent.id
-    output["name"] = treenode.name
-    output["combination"] = treenode.type
-    output["attributes"] = []
-    output["children"] = list(map(lambda child: format_treenode_yale(child), filter_treenode_children(treenode)))
+        output["id"] = treenode.id
+        output["parent"] = None if treenode.parent is None else treenode.parent.id
+        output["name"] = treenode.name
+        output["combination"] = "Sequential"
+        output["attributes"] = []
+        output["children"] = list(map(lambda child: _format(child), filter_treenode_children(treenode)))
+        output["order"] = treenode.parent.order_of_action(treenode.name) if treenode.parent is not None else None
 
-    if treenode.name == "root":
+        if output["name"].startswith("ROBOT "):
+            output["name"] = output["name"].replace("ROBOT ", "")
+            output["attributes"].append("robot")
+
+        if output["name"].startswith("HUMAN "):
+            output["name"] = output["name"].replace("HUMAN ", "")
+            output["attributes"].append("human")
+
+        if len(output["children"]) == 0:
+            output["combination"] = ""
+
+        return output
+
+    output = _format(treenode)
+
+    # 2) Any nodes with an identical order need to be grouped (a grouping node is injected; this allows for
+    #    marking of parallel actions.
+    def _group(output):
+        grouped_children = []
+        current_order = 0
+        current_group = []
+        for child in output["children"]:
+            order = child["order"] if child["order"] is not None else current_order + 1
+
+            if order > current_order:
+                current_order = order
+                if len(current_group) > 0:
+                    grouped_children.append(make_grouped_node(current_group, output["name"], output["id"]))
+                current_group = []
+
+            current_group.append(child)
+
+        if len(current_group) > 0:
+            grouped_children.append(make_grouped_node(current_group, output["name"], output["id"]))
+
+        for child in output["children"]:
+            _group(child)
+
+        output["children"] = grouped_children
+        return output
+
+    output = _group(output)
+
+    # 3) Remove any unneeded fields (e.g. "order").
+    def _clean(output):
+        del output["order"]
+        for child in output["children"]:
+            _clean(child)
+
+        return output
+
+    output = _clean(output)
+
+    if output["name"] == "":
+        output["name"] = "Start"
         return {
             "nodes": output
         }
     else:
         return output
+
+
+def make_grouped_node(group, parent_name, parent_id):
+    if len(group) == 1:
+        return group[0]
+
+    output = dict()
+
+    from backend.treenode import TreeNode
+    output["id"] = TreeNode.id
+    TreeNode.id += 1
+
+    output["parent"] = parent_id
+    output["name"] = "Parallelized Subtasks of " + parent_name
+    output["combination"] = "Parallel"
+    output["attributes"] = []
+    output["children"] = group
+    output["order"] = None
+
+    for child in group:
+        child["parent"] = output["id"]
+        child["combination"] = ""
+
+    return output
 
 
 # Return only children of the treenode that should be part of the results to the Yale Robot
@@ -40,6 +121,16 @@ def filter_treenode(treenode):
 
 
 def tmr_action_name(tmr):
+    specified_action_types = {
+        "Get the back bracket on the right side.": "ROBOT GET(bracket-back-right)",
+        "Get the back bracket on the left side.": "ROBOT GET(bracket-back-left)",
+        "Get a front bracket.": "ROBOT GET(bracket-front)",
+        "Get a top bracket.": "ROBOT GET(bracket-top)",
+        "Get the top dowel.": "ROBOT GET(dowel-top)",
+    }
+
+    if tmr.sentence in specified_action_types:
+        return specified_action_types[tmr.sentence]
 
     actions = {
         "TAKE": "GET",
@@ -70,6 +161,8 @@ def tmr_action_name(tmr):
 
     action = actions[event.concept] if event.concept in actions else event.concept
     action_theme = tmr[event["THEME"][0]].token
+    if tmr[event["THEME"][0]].concept == "SET":
+        action_theme = tmr[tmr[event["THEME"][0]]["MEMBER-TYPE"][0]].token
 
     return agent + " " + action + "(" + action_theme + ")"
 
@@ -102,6 +195,10 @@ def action_to_tmr(action):
         "hold-seat": "Hold the seat.",
         "get-back": "Get the back.",
         "hold-back": "Hold the back.",
+        "get-top-bracket": "Get a top bracket.",
+        "get-top-dowel": "Get the top dowel.",
+        "hold-top-dowel": "Hold the top dowel.",
+        "release-top-dowel": "Release the top dowel.",
     }
 
     if action in actions:

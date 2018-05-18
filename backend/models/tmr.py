@@ -2,7 +2,7 @@ from collections.abc import Mapping
 
 from backend.ontology import Ontology
 from backend.models.syntax import Syntax
-from backend.models.tmrinstance import TMRInstance
+from backend.models.instance import Instance
 from backend.utils.YaleUtils import tmr_action_name
 
 
@@ -17,7 +17,8 @@ class TMR(Mapping):
         result = tmr_dict["tmr"][0]["results"][0]["TMR"]
         for key in result:
             if key == key.upper():
-                self[key] = TMRInstance(result[key], name=key)
+                modified_key = self._modify_key(key)
+                self[modified_key] = Instance(result[key], name=modified_key)
 
     def __setitem__(self, key, value):
         self._storage[key] = value
@@ -28,11 +29,18 @@ class TMR(Mapping):
 
         return self._storage[key]
 
+    def __delitem__(self, key):
+        del self._storage[key]
+
     def __iter__(self):
         return iter(self._storage)
 
     def __len__(self):
         return len(self._storage)
+
+    def _modify_key(self, key):
+        modified_key = key if not key.startswith("ASSEMBLE") else key.replace("ASSEMBLE", "BUILD") + "X"
+        return modified_key
 
     def is_action(self):
         event = self.find_main_event()
@@ -69,10 +77,21 @@ class TMR(Mapping):
 
         output = event.concept
 
+        def _name_theme(instance):
+            name = instance.concept
+            if ">" in instance["CARDINALITY"]:
+                name += "s"
+            if "SPATIAL-ORIENTATION" in instance:
+                name = " ".join(instance["SPATIAL-ORIENTATION"]) + " " + name
+            if "SIDE-TB" in instance:
+                name = " ".join(instance["SIDE-TB"]) + " " + name
+            return name
+
         node = event
         while "THEME" in node:
 
-            output += " " + " AND ".join(list(map(lambda theme: self[theme].concept, node["THEME"])))
+            # output += " " + " AND ".join(list(map(lambda theme: self[theme].concept, node["THEME"])))
+            output += " " + " AND ".join(list(map(lambda theme: _name_theme(self[theme]), node["THEME"])))
             output = output.strip()
 
             # output += " " + self[node["THEME"]]["concept"]
@@ -85,6 +104,9 @@ class TMR(Mapping):
 
         if "INSTRUMENT" in event:
             output += " WITH " + " AND ".join(list(map(lambda instrument: self[instrument].concept, event["INSTRUMENT"])))
+
+        if "DESTINATION" in event:
+            output += " TO " + " AND ".join(list(map(lambda destination: self[destination].concept, event["DESTINATION"])))
 
         return output
 

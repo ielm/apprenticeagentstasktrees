@@ -50,3 +50,15 @@ class TaskModelTestCase(ApprenticeAgentsTestCase):
         demo = self.resource('resources/DemoMay2018_TMRs.json')
 
         self.assertEqual("POSSESSION-EVENT", TMR(demo[1]).find_main_event().concept)
+
+    def test_convert_ontological_types(self):
+        demo = self.resource('resources/DemoMay2018_TMRs.json')
+
+        tmr = TMR(demo[10])  # We have assembled a front leg.
+
+        self.assertEqual({"ARTIFACT-LEG-12", "ASPECT-12", "SET-12", "BUILD-12X"}, set(tmr.keys()))
+        self.assertEqual(["BUILD-12X"], tmr["ARTIFACT-LEG-12"]["THEME-OF"])
+        self.assertEqual(["BUILD-12X"], tmr["ASPECT-12"]["SCOPE"])
+        self.assertEqual(["BUILD-12X"], tmr["SET-12"]["AGENT-OF"])
+
+        self.assertEqual("BUILD", tmr["BUILD-12X"].concept)

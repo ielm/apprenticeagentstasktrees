@@ -3,10 +3,11 @@ import traceback
 from flask import Flask, request, abort, send_from_directory
 from flask_cors import CORS
 
-from models.instructions import Instructions
+from backend.models.instructions import Instructions
 from backend.ontology import Ontology
 from backend.taskmodel import TaskModel
 from backend.utils.YaleUtils import format_treenode_yale, input_to_tmrs
+from backend.treenode import TreeNode
 
 app = Flask(__name__)
 CORS(app)
@@ -56,7 +57,7 @@ def get_tree():
   if format == "pretty":
     return str(tm.root)
   elif format == "json":
-    return json.dumps(format_treenode_yale(tm.root))
+    return json.dumps(format_treenode_yale(tm.root), indent=4)
 
   return str(tm.root)
 
@@ -64,6 +65,7 @@ def get_tree():
 @app.route('/alpha/reset', methods=['DELETE'])
 def reset_tree():
   global tm
+  TreeNode.id = 0
   tm = TaskModel()
   return "Ok"
 
@@ -82,8 +84,28 @@ def learn():
   instructions = Instructions(tmrs)
   model = tm.learn(instructions)
 
-  return json.dumps(format_treenode_yale(model))
+  return json.dumps(format_treenode_yale(model), indent=4)
 
+
+@app.route("/query", methods=["POST"])
+def query():
+  if not request.get_json():
+    abort(400)
+
+  from backend.ontology import Ontology
+  Ontology.init_from_ontology(ont)
+
+  data = request.get_json()
+  tmrs = input_to_tmrs(data)
+
+  if len(tmrs) != 1:
+    abort(400)
+
+  from backend.models.tmr import TMR
+  tmr = TMR(tmrs[0])
+  model = tm.query(tmr)
+
+  return json.dumps(format_treenode_yale(model), indent=4)
 
   
 if __name__ == '__main__':

@@ -1,4 +1,5 @@
 import os
+import unittest
 
 from backend.taskmodel import TaskModel
 from models.instructions import Instructions
@@ -6,6 +7,106 @@ from tests.ApprenticeAgentsTestCase import ApprenticeAgentsTestCase
 
 
 class DemoMay2018TestCase(ApprenticeAgentsTestCase):
+
+    @unittest.skip("This requires both the ontosem and corenlp service to be running, otherwise it will fail.")
+    def test_rearranged(self):
+        from backend.config import networking
+        networking["ontosem-port"] = "5001"
+
+        input = [
+            ["u", "We will build a chair."],
+                ["u", "I need a screwdriver to assemble a chair."],
+                    ["a", "get-screwdriver"],
+                ["u", "Now we will assemble the seat."],
+                    ["u", "First, we will build the front leg of the chair."],
+                        ["a", "get-bracket-foot"],
+                        ["a", "get-bracket-front"],
+                        ["a", "get-dowel"],
+                        ["a", "hold-dowel"],
+                        ["u", "I am using the screwdriver to affix the brackets on the dowel with screws."],
+                        ["a", "release-dowel"],
+                    ["u", "We have assembled a front leg."],
+                    ["u", "Now, another front leg."],
+                        ["a", "get-bracket-foot"],
+                        ["a", "get-bracket-front"],
+                        ["a", "get-dowel"],
+                        ["a", "hold-dowel"],
+                        ["u", "I am putting another set of brackets on the dowel."],
+                        ["a", "release-dowel"],
+                    ["u", "I have assembled another front chair leg."],
+                    ["u", "Now, the back leg on the right side."],
+                        ["a", "get-bracket-foot"],
+                        ["a", "get-bracket-back-right"],
+                        ["a", "get-dowel"],
+                        ["a", "hold-dowel"],
+                        ["u", "I am putting the third set of brackets on a dowel."],
+                        ["a", "release-dowel"],
+                    ["u", "I have assembled the back leg on the right side of the chair."],
+                        ["a", "get-bracket-foot"],
+                        ["a", "get-bracket-back-left"],
+                        ["a", "get-dowel"],
+                        ["a", "hold-dowel"],
+                        ["u", "I am putting the fourth set of brackets on a dowel."],
+                        ["a", "release-dowel"],
+                    ["u", "I have assembled the back leg on the left side of the chair"],
+                    ["u", "Now we affix the legs to the seat."],
+                        ["a", "get-seat"],
+                        ["a", "hold-seat"],
+                        ["u", "I am affixing the four legs to the seat."],
+                    ["u", "Finished."],
+                ["u", "We have assembled the seat."],
+                ["u", "Now we will assemble the back."],
+                    ["u", "First, we assemble the top of the back."],
+                        ["a", "get-top-bracket"],
+                        ["a", "get-top-bracket"],
+                        ["a", "get-top-dowel"],
+                        ["a", "hold-top-dowel"],
+                        ["u", "I am affixing the top brackets on the top dowel."],
+                        ["a", "release-top-dowel"],
+                    ["u", "We have assembled the top of the back."],
+                    ["u", "Now, we affix the verticals."],
+                        ["u", "We will affix a vertical piece."],
+                            ["a", "get-dowel"],
+                            ["a", "hold-dowel"],
+                            ["u", "I am inserting this dowel into the back bracket on the right side to make one vertical piece."],
+                        ["u", "I have made one vertical piece."],
+                        ["u", "We will affix another vertical piece."],
+                            ["a", "get-dowel"],
+                            ["a", "hold-dowel"],
+                            ["u", "I am inserting the dowel into the back bracket on the left side to make another vertical piece."],
+                        ["u", "I have made another vertical piece."],
+                        ["u", "Now we must affix the back to the vertical pieces."],
+                            ["a", "get-back"],
+                            ["a", "hold-back"],
+                            ["u", "I am affixing the back to the vertical pieces."],
+                        ["u", "We have affixed the back."],
+                    ["u", "Done with the verticals."],
+                    ["u", "Now, we affix the top brackets to the back of the chair."],
+                        ["a", "hold-back"],
+                        ["u", "I am affixing the top brackets to the back of the chair."],
+                        ["u", "Release the back."],
+                        ["u", "Finished."],
+                    ["u", "We have affixed the top brackets to the back of the chair."],
+                ["u", "We have assembled the back of the chair."],
+            ["u", "We finished assembling the chair."]
+        ]
+
+        from backend.utils.YaleUtils import input_to_tmrs
+
+        tm = TaskModel()
+        model = tm.learn(Instructions(input_to_tmrs(input)))
+
+        # print(model)
+
+        from backend.models.tmr import TMR
+        tmr = TMR(input_to_tmrs([["u", "We will build the back first."]])[0])
+        model = tm.query(tmr)
+
+        # print(model)
+
+        with open("resources/DemoMay2018_RearrangedOutput.txt", "r") as file:
+            expected = file.read()
+            self.assertEqual(str(model), expected)
 
     def test_demo(self):
         file = os.path.abspath(__package__) + "/resources/DemoMay2018_TMRs.json"
@@ -98,16 +199,151 @@ class DemoMay2018TestCase(ApprenticeAgentsTestCase):
 
         tm = TaskModel()
         model = tm.learn(Instructions(input))
+
+        with open("resources/DemoMay2018_ExpectedOutput.txt", "r") as file:
+            expected = file.read()
+            self.assertEqual(str(model), expected)
+
+        from backend.models.tmr import TMR
+        model = tm.query(TMR(demo[69]))
         print(model)
-        # print(tm.fr)
-        #
-        # print(tm.fr.search(concept="HUMAN"))
-        # print(tm.fr.search(concept="ROBOT"))
-        # print(tm.fr.search(concept="CHAIR"))
 
-        # print("")
-        # print(tm.active_node)
+    def test_multiple_trees(self):
+        file = os.path.abspath(__package__) + "/resources/DemoMay2018_TMRs.json"
+        demo = self.resource(file)
 
-        # with open("resources/DemoMay2018_ExpectedOutput.txt", "r") as file:
-        #     expected = file.read()
-        #     self.assertEqual(str(model), expected)
+        input = [
+            demo[0],  # We will build a chair.
+
+            demo[3],  # First, we will build a front leg of the chair.
+            demo[4],  # Get a foot bracket.
+            demo[5],  # Get a front bracket.
+            demo[6],  # Get a dowel.
+            demo[7],  # Hold the dowel.
+            demo[8],  # I am using the screwdriver to affix the brackets on the dowel with screws.
+            demo[9],  # Release the dowel.
+            demo[10],  # We have assembled a front leg.
+
+            demo[68],  # We finished assembling the chair.
+        ]
+
+        tm = TaskModel()
+        model = tm.learn(Instructions(input))
+
+        input = [
+            demo[0],  # We will build a chair.
+
+            demo[3],  # First, we will build a front leg of the chair.
+            demo[6],  # Get a dowel.
+            demo[5],  # Get a front bracket.
+            demo[4],  # Get a foot bracket.
+            demo[7],  # Hold the dowel.
+            demo[8],  # I am using the screwdriver to affix the brackets on the dowel with screws.
+            demo[9],  # Release the dowel.
+            demo[10],  # We have assembled a front leg.
+
+            demo[68],  # We finished assembling the chair.
+        ]
+
+        model = tm.learn(Instructions(input))
+        print(model)
+
+        with open("resources/DemoMay2018_IntegratedLearning_ExpectedOutput.txt", "r") as file:
+            expected = file.read()
+            self.assertEqual(str(model), expected)
+
+    @unittest.skip("This requires both the ontosem and corenlp service to be running, otherwise it will fail.")
+    def test_integration_full_demo(self):
+
+        from backend.treenode import TreeNode
+        TreeNode.id = 0
+
+        input = [
+            ["u", "We will build a chair."],
+            ["u", "I need a screwdriver to assemble a chair."],  # ["u", "I need a screwdriver to assemble the chair."],
+            ["a", "get-screwdriver"],
+            ["u", "First, we will build the front leg of the chair."],  # ["u", "First, we will need to build the front leg of the chair."],
+            ["a", "get-bracket-foot"],
+            ["a", "get-bracket-front"],
+            ["a", "get-dowel"],
+            ["a", "hold-dowel"],
+            ["u", "I am using the screwdriver to affix the brackets on the dowel with screws."],
+            ["a", "release-dowel"],
+            ["u", "We have assembled a front leg."],
+            ["u", "Now, another front leg."],
+            ["a", "get-bracket-foot"],
+            ["a", "get-bracket-front"],
+            ["a", "get-dowel"],
+            ["a", "hold-dowel"],
+            ["u", "I am putting another set of brackets on the dowel."],
+            ["a", "release-dowel"],
+            ["u", "I have assembled another front chair leg."],
+            ["u", "Now, the back leg on the right side."],
+            ["a", "get-bracket-foot"],
+            ["a", "get-bracket-back-right"],
+            ["a", "get-dowel"],
+            ["a", "hold-dowel"],
+            ["u", "I am putting the third set of brackets on a dowel."],
+            ["a", "release-dowel"],
+            ["u", "I have assembled the back leg on the right side of the chair."],
+            ["a", "get-bracket-foot"],
+            ["a", "get-bracket-back-left"],
+            ["a", "get-dowel"],
+            ["a", "hold-dowel"],
+            ["u", "I am putting the fourth set of brackets on a dowel."],
+            ["a", "release-dowel"],
+            ["u", "I have assembled the back leg on the left side of the chair"],
+            ["u", "Now we will assemble the seat."],
+            ["a", "get-seat"],
+            ["a", "hold-seat"],
+            ["u", "I am affixing the four legs to the seat."],
+            ["u", "Finished."],  # ["u", "finished"],
+            ["u", "We have assembled the seat."],
+            ["u", "Now we will assemble the back."],  # ["u", "Now we need to assemble the back."],  # Not included?
+            ["u", "First, we assemble the top of the back."],
+            ["a", "get-top-bracket"],
+            ["a", "get-top-bracket"],
+            ["a", "get-top-dowel"],
+            ["a", "get-top-dowel"],
+            ["a", "hold-top-dowel"],
+            ["u", "I am affixing the top brackets on the top dowel."],
+            ["a", "release-top-dowel"],
+            ["u", "We have assembled the top of the back."],
+            ["u", "Next, we assemble the back of the chair."],
+            ["a","get-back"],
+            ["a", "hold-back"],
+            ["u", "I am affixing the top bracket to the back of the chair."],
+            ["u", "Finished."],
+            ["u", "We have affixed the top bracket to the back of the chair."],
+            ["u", "We have assembled the back of the chair."],
+            ["u", "We have assembled the back."],
+            ["u", "Now, we affix the verticals."],
+            ["a", "get-dowel"],
+            ["u", "I am inserting this dowel into the back bracket on the right side to make one vertical piece."],
+            ["u", "I have made one vertical piece."],
+            ["u", "We will affix another vertical piece."],  # ["u", "And another vertical piece."],
+            ["a", "get-dowel"],
+            ["u", "I am inserting the dowel into the back bracket on the left side to make another vertical piece."],
+            ["u", "Done with the verticals."],
+            ["u", "Now we must affix the back to the vertical pieces."],  # ["u", "Now were must affix the back to the vertical pieces."],
+            ["u", "I am affixing the back to the seat."],
+            ["u", "We are done."],
+            ["u", "We finished assembling the chair."]
+        ]
+
+        from backend.main import app
+        app = app.test_client()
+
+        from backend.config import networking
+        networking["ontosem-port"] = "5001"
+
+        from backend.treenode import TreeNode
+        TreeNode.id = 1
+
+        import json
+        rv = app.post("/learn", data=json.dumps(input), content_type='application/json')
+        tree = json.loads(rv.data)
+
+        with open("resources/YaleFormatCompleteOutput.json", "r") as file:
+            expected = file.read()
+            self.assertEqual(tree, json.loads(expected))

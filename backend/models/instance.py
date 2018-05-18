@@ -9,7 +9,7 @@ class Instance(Mapping):
         self._storage = dict()
 
         self.subtree = inst_dict["is-in-subtree"] if "is-in-subtree" in inst_dict else None
-        self.concept = inst_dict["concept"]
+        self.concept = self._modify_concept(inst_dict["concept"])
         self.name = name if name is not None else self.concept + "-X"
         self.token = inst_dict["token"] if "token" in inst_dict else None
         self.properties = {}
@@ -20,7 +20,15 @@ class Instance(Mapping):
                 pass
 
             if key == key.upper():
-                self[key] = inst_dict[key]
+                self[key] = self._modify_value(inst_dict[key])
+
+    def _modify_concept(self, concept):
+        modified_concept = concept if concept != "ASSEMBLE" else "BUILD"
+        return modified_concept
+
+    def _modify_value(self, value):
+        modified_value = value if not str(value).startswith("ASSEMBLE") else value.replace("ASSEMBLE", "BUILD") + "X"
+        return modified_value
 
     def __setitem__(self, key, value):
         key = re.split('-[0-9]+', key)[0]
@@ -35,6 +43,9 @@ class Instance(Mapping):
         if key in self._storage:
             return self._storage[key]
         return []
+
+    def __delitem__(self, key):
+        del self._storage[key]
 
     def __iter__(self):
         return iter(self._storage)

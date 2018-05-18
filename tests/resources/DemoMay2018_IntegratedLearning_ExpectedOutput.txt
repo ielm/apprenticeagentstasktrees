@@ -1,0 +1,17 @@
++root
+  +BUILD CHAIR
+    +BUILD ARTIFACT-LEG
+      -[1]ROBOT GET(FOOT_BRACKET)
+      -[1]ROBOT GET(bracket-front)
+      -[1]ROBOT GET(dowel)
+      -[4]ROBOT HOLD(dowel)
+      -[5]HUMAN FASTEN(brackets)
+      -[6]ROBOT RELEASE(dowel)
+  +BUILD CHAIR
+    +BUILD ARTIFACT-LEG
+      -[1]ROBOT GET(dowel)
+      -[1]ROBOT GET(bracket-front)
+      -[1]ROBOT GET(FOOT_BRACKET)
+      -[4]ROBOT HOLD(dowel)
+      -[5]HUMAN FASTEN(brackets)
+      -[6]ROBOT RELEASE(dowel)

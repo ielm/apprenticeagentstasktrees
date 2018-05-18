@@ -1,12 +1,13 @@
 from backend.heuristics.postfix_heuristics import PostfixHeuristics
 from backend.heuristics.prefix_heuristics import PrefixHeuristics
+from backend.heuristics.query_heuristics import QueryHeuristics
 from backend.heuristics.resolution_heuristics import ResolutionHeuristics
 from backend.models.tmr import TMR
 from backend.treenode import TreeNode
 from backend.models.fr import FR
 
 
-class TaskModel(PrefixHeuristics, PostfixHeuristics, ResolutionHeuristics, object):
+class TaskModel(QueryHeuristics, PrefixHeuristics, PostfixHeuristics, ResolutionHeuristics, object):
 
     def __init__(self):
         self.root = TreeNode()
@@ -58,6 +59,7 @@ class TaskModel(PrefixHeuristics, PostfixHeuristics, ResolutionHeuristics, objec
 
         heuristics = [
             self.handle_prefix_utterance_with_no_event,
+            self.handle_prefix_utterance_destination_is_known,
             self.handle_prefix_utterance_about_existing_event,
             self.handle_prefix_utterance_fallback_behavior,
         ]
@@ -128,3 +130,15 @@ class TaskModel(PrefixHeuristics, PostfixHeuristics, ResolutionHeuristics, objec
 
         for action in actions:
             self.active_node.addAction(action)
+
+    def query(self, tmr):
+        heuristics = [
+            self.query_move_order_up,
+        ]
+
+        for heuristic in heuristics:
+            result = heuristic(tmr)
+            if result is not None:
+                return result
+
+        return self.root
