@@ -5,22 +5,25 @@ import re
 
 class Instance(Mapping):
 
-    def __init__(self, inst_dict, name=None):
+    def __init__(self, name, concept, uuid=None, properties=None, subtree=None):
         self._storage = dict()
 
-        self.subtree = inst_dict["is-in-subtree"] if "is-in-subtree" in inst_dict else None
-        self.concept = self._modify_concept(inst_dict["concept"])
-        self.name = name if name is not None else self.concept + "-X"
-        self.token = inst_dict["token"] if "token" in inst_dict else None
-        self.properties = {}
-        self.uuid = uuid4()
+        self.name = name
+        self.concept = self._modify_concept(concept)
+        self.uuid = uuid if uuid is not None else uuid4()
+        self.subtree = subtree
 
-        for key in inst_dict:
-            if "_constraint_info" in key:
-                pass
+        if self.subtree is None:
+            from backend.ontology import Ontology
+            ancestors = Ontology.ancestors(concept, include_self=True)
+            for candidate in ["EVENT", "OBJECT", "PROPERTY"]:
+                if candidate in ancestors:
+                    self.subtree = candidate
+                    break
 
-            if key == key.upper():
-                self[key] = self._modify_value(inst_dict[key])
+        if properties is not None:
+            for key in properties:
+                self[key] = self._modify_value(properties[key])
 
     def _modify_concept(self, concept):
         modified_concept = concept if concept != "ASSEMBLE" else "BUILD"

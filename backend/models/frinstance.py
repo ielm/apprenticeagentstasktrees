@@ -24,20 +24,20 @@
 # call that must be made to advance time - this should be called after all data from one TMR has been populated
 # into the FRInstance, to maintain proper ambiguity tracking.
 
+from backend.models.instance import Instance
 
-class FRInstance(object):
 
-    def __init__(self, name, concept, index):
-        self.concept = concept
-        self.name = name
+class FRInstance(Instance):
+
+    def __init__(self, name, concept, index, uuid=None, properties=None, subtree=None):
+        super().__init__(name, concept, uuid=uuid, properties=properties, subtree=subtree)
+
         self.index = index
-
         self._time = 0
-        self._storage = dict()
         self._ambiguities = []
 
-        self._from = {}         # Used to track TMR instances that derived this instance
-        self._context = {}      # Used to track context-sensitive learning properties
+        self._from = {}  # Used to track TMR instances that derived this instance
+        self._context = {}  # Used to track context-sensitive learning properties
 
     def __setitem__(self, key, value):
         if not type(value) == FRInstance.FRFiller:
