@@ -11,7 +11,7 @@
               {
                 "attributes": ["robot"],
                 "children": [],
-                "combination": "Sequential",
+                "combination": "",
                 "id": 3,
                 "name": "GET(FOOT_BRACKET)",
                 "parent": 2
@@ -19,7 +19,7 @@
               {
                 "attributes": ["robot"],
                 "children": [],
-                "combination": "Sequential",
+                "combination": "",
                 "id": 4,
                 "name": "GET(bracket-front)",
                 "parent": 2
@@ -27,7 +27,7 @@
               {
                 "attributes": ["robot"],
                 "children": [],
-                "combination": "Sequential",
+                "combination": "",
                 "id": 5,
                 "name": "GET(dowel)",
                 "parent": 2
@@ -35,7 +35,7 @@
               {
                 "attributes": ["robot"],
                 "children": [],
-                "combination": "Sequential",
+                "combination": "",
                 "id": 6,
                 "name": "HOLD(dowel)",
                 "parent": 2
@@ -43,7 +43,7 @@
               {
                 "attributes": ["human"],
                 "children": [],
-                "combination": "Sequential",
+                "combination": "",
                 "id": 7,
                 "name": "FASTEN(brackets)",
                 "parent": 2

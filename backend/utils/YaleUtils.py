@@ -26,6 +26,9 @@ def format_treenode_yale(treenode):
             output["name"] = output["name"].replace("HUMAN ", "")
             output["attributes"].append("human")
 
+        if len(output["children"]) == 0:
+            output["combination"] = ""
+
         return output
 
     output = _format(treenode)

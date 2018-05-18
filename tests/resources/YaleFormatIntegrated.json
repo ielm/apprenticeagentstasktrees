@@ -57,7 +57,7 @@
                 "id": 6,
                 "parent": 2,
                 "name": "HOLD(dowel)",
-                "combination": "Sequential",
+                "combination": "",
                 "attributes": ["robot"],
                 "children": []
               },
@@ -65,7 +65,7 @@
                 "id": 7,
                 "parent": 2,
                 "name": "FASTEN(brackets)",
-                "combination": "Sequential",
+                "combination": "",
                 "attributes": ["human"],
                 "children": []
               }
@@ -124,7 +124,7 @@
                 "id": 14,
                 "parent": 10,
                 "name": "HOLD(dowel)",
-                "combination": "Sequential",
+                "combination": "",
                 "attributes": ["robot"],
                 "children": []
               },
@@ -132,7 +132,7 @@
                 "id": 15,
                 "parent": 10,
                 "name": "FASTEN(brackets)",
-                "combination": "Sequential",
+                "combination": "",
                 "attributes": ["human"],
                 "children": []
               }
