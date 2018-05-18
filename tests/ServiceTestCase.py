@@ -43,7 +43,7 @@ class ServiceTestCase(unittest.TestCase):
                                 "id": 2,
                                 "parent": 1,
                                 "name": "GET(screwdriver)",
-                                "combination": "Sequential",
+                                "combination": "",
                                 "children": [],
                                 "attributes": ["robot"]
                             }
