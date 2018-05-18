@@ -1,46 +1,28 @@
-from collections.abc import Mapping
-
+from backend.models.graph import Graph
 from backend.ontology import Ontology
 from backend.models.syntax import Syntax
 from backend.models.tmrinstance import TMRInstance
 from backend.utils.YaleUtils import tmr_action_name
 
 
-class TMR(Mapping):
+class TMR(Graph):
 
     def __init__(self, tmr_dict):
-        self.sentence = tmr_dict["sentence"]
+        super().__init__()
 
-        self._storage = dict()
+        self.sentence = tmr_dict["sentence"]
         self.syntax = Syntax(tmr_dict["syntax"][0])
 
         result = tmr_dict["tmr"][0]["results"][0]["TMR"]
         for key in result:
             if key == key.upper():
-                modified_key = self._modify_key(key)
-                self[modified_key] = TMRInstance(result[key], name=modified_key)
-
-    def __setitem__(self, key, value):
-        self._storage[key] = value
+                self[key] = TMRInstance(result[key], name=key)
 
     def __getitem__(self, key):
         if key == "HUMAN" or key == "ROBOT":
             return key
 
-        return self._storage[key]
-
-    def __delitem__(self, key):
-        del self._storage[key]
-
-    def __iter__(self):
-        return iter(self._storage)
-
-    def __len__(self):
-        return len(self._storage)
-
-    def _modify_key(self, key):
-        modified_key = key if not key.startswith("ASSEMBLE") else key.replace("ASSEMBLE", "BUILD") + "X"
-        return modified_key
+        return super().__getitem__(key)
 
     def is_action(self):
         event = self.find_main_event()

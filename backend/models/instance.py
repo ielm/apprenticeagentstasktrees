@@ -23,7 +23,7 @@ class Instance(Mapping):
 
         if properties is not None:
             for key in properties:
-                self[key] = self._modify_value(properties[key])
+                self[key] = properties[key]
 
     def _modify_concept(self, concept):
         modified_concept = concept if concept != "ASSEMBLE" else "BUILD"
@@ -36,6 +36,8 @@ class Instance(Mapping):
     def __setitem__(self, key, value):
         key = re.split('-[0-9]+', key)[0]
         value = [value] if not type(value) == list else value
+
+        value = list(map(lambda v: self._modify_value(v), value))
 
         if key in self._storage:
             self._storage[key].extend(value)

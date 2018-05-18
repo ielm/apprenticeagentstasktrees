@@ -1,12 +1,14 @@
+from backend.models.graph import Graph
 from backend.models.frinstance import FRInstance
 from backend.ontology import Ontology
 from backend.heuristics.fr_heuristics import FRHeuristics
 
 
-class FR(object):
+class FR(Graph):
 
     def __init__(self):
-        self._instances = dict()
+        super().__init__()
+
         self._indexes = dict()
 
         self.heuristics = [
@@ -15,27 +17,15 @@ class FR(object):
             FRHeuristics.resolve_sets_with_identical_members,
         ]
 
-    def __setitem__(self, key, value):
-        self._instances[key] = value
-
-    def __getitem__(self, key):
-        return self._instances[key]
-
-    def __iter__(self):
-        return iter(self._instances)
-
-    def __len__(self):
-        return len(self._instances)
-
     def register(self, concept):
         fr_index = self.__next_index(concept)
         fr_name = concept + "-FR" + str(fr_index)
         fr_instance = FRInstance(fr_name, concept, fr_index)
-        self._instances[fr_name] = fr_instance
+        self[fr_name] = fr_instance
         return fr_instance
 
     def search(self, concept=None, attributed_tmr_instance=None, context=None, has_fillers=None):
-        results = list(self._instances.values())
+        results = list(self.values())
 
         if concept is not None:
             results = list(filter(lambda instance: instance.concept == concept, results))
