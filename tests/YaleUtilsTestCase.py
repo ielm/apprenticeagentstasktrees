@@ -14,7 +14,7 @@ class DemoMay2018TestCase(ApprenticeAgentsTestCase):
 
         TreeNode.id = 0
 
-        file = os.path.abspath(__package__) + "/resources/DemoMay2018_TMRs.json"
+        file = os.path.abspath(__package__) + "/resources/DemoMay2018_Analyses.json"
         demo = self.resource(file)
 
         input = [
@@ -45,7 +45,7 @@ class DemoMay2018TestCase(ApprenticeAgentsTestCase):
 
         TreeNode.id = 0
 
-        file = os.path.abspath(__package__) + "/resources/DemoMay2018_TMRs.json"
+        file = os.path.abspath(__package__) + "/resources/DemoMay2018_Analyses.json"
         demo = self.resource(file)
 
         input = [

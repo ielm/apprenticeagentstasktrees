@@ -2,7 +2,7 @@ from collections.abc import Mapping
 
 from backend.ontology import Ontology
 from backend.models.syntax import Syntax
-from backend.models.instance import Instance
+from backend.models.tmrinstance import TMRInstance
 from backend.utils.YaleUtils import tmr_action_name
 
 
@@ -18,7 +18,7 @@ class TMR(Mapping):
         for key in result:
             if key == key.upper():
                 modified_key = self._modify_key(key)
-                self[modified_key] = Instance(result[key], name=modified_key)
+                self[modified_key] = TMRInstance(result[key], name=modified_key)
 
     def __setitem__(self, key, value):
         self._storage[key] = value

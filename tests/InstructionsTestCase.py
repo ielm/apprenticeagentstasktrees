@@ -5,7 +5,7 @@ from tests.ApprenticeAgentsTestCase import ApprenticeAgentsTestCase
 class InstructionsTestCase(ApprenticeAgentsTestCase):
 
     def setUp(self):
-        demo = self.resource('resources/DemoMay2018_TMRs.json')
+        demo = self.resource('resources/DemoMay2018_Analyses.json')
 
         self.tmr1 = demo[0]
         self.tmr2 = demo[1]

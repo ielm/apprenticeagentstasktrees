@@ -5,7 +5,7 @@ from tests.ApprenticeAgentsTestCase import ApprenticeAgentsTestCase
 class TaskModelTestCase(ApprenticeAgentsTestCase):
 
     def test_is_utterance(self):
-        demo = self.resource('resources/DemoMay2018_TMRs.json')
+        demo = self.resource('resources/DemoMay2018_Analyses.json')
 
         self.assertTrue(TMR(demo[0]).is_utterance())
         self.assertTrue(TMR(demo[1]).is_utterance())
@@ -30,13 +30,13 @@ class TaskModelTestCase(ApprenticeAgentsTestCase):
         self.assertFalse(TMR(demo[17]).is_utterance())
 
     def test_find_themes(self):
-        demo = self.resource('resources/DemoMay2018_TMRs.json')
+        demo = self.resource('resources/DemoMay2018_Analyses.json')
 
         self.assertEqual(TMR(demo[0]).find_themes(), ["CHAIR"])
         self.assertEqual(TMR(demo[2]).find_themes(), ["TAKE", "SCREWDRIVER"])
 
     def test_is_postfix(self):
-        demo = self.resource('resources/DemoMay2018_TMRs.json')
+        demo = self.resource('resources/DemoMay2018_Analyses.json')
 
         self.assertFalse(TMR(demo[0]).is_postfix())
         self.assertFalse(TMR(demo[1]).is_postfix())
@@ -47,12 +47,12 @@ class TaskModelTestCase(ApprenticeAgentsTestCase):
         self.assertTrue(TMR(demo[38]).is_postfix())
 
     def test_find_main_event(self):
-        demo = self.resource('resources/DemoMay2018_TMRs.json')
+        demo = self.resource('resources/DemoMay2018_Analyses.json')
 
         self.assertEqual("POSSESSION-EVENT", TMR(demo[1]).find_main_event().concept)
 
     def test_convert_ontological_types(self):
-        demo = self.resource('resources/DemoMay2018_TMRs.json')
+        demo = self.resource('resources/DemoMay2018_Analyses.json')
 
         tmr = TMR(demo[10])  # We have assembled a front leg.
 
