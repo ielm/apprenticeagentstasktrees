@@ -82,8 +82,7 @@ class FR(Graph):
 
         return results
 
-    # All instances in the TMR will be resolved if possible, and then either added or updated into the FR.
-    def learn_tmr(self, tmr):
+    def resolve_tmr(self, tmr):
         resolves = {}
 
         def _merge_resolves():
@@ -105,6 +104,12 @@ class FR(Graph):
             current_resolves = dict(resolves)
             _merge_resolves()
             keep_trying = current_resolves != resolves
+
+        return resolves
+
+    # All instances in the TMR will be resolved if possible, and then either added or updated into the FR.
+    def learn_tmr(self, tmr):
+        resolves = self.resolve_tmr(tmr)
 
         for id in resolves:
             if resolves[id] is None and id in tmr:

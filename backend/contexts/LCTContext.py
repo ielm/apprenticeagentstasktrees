@@ -8,13 +8,19 @@ class LCTContext(AgentContext):
     def __init__(self, agent):
         super().__init__(agent)
 
-        self.heuristics = [
+        self.pre_heuristics = [
+            self.identify_closing_of_known_task,
+        ]
+
+        self.post_heuristics = [
             self.identify_preconditions,
             self.handle_requested_actions,
             self.recognize_sub_events,
         ]
 
         agent.st_memory.heuristics.insert(0, LCTContext.resolve_undetermined_themes_of_learning)
+        agent.st_memory.heuristics.append(LCTContext.resolve_undetermined_themes_of_learning_in_postfix)
+        agent.st_memory.heuristics.append(LCTContext.resolve_learning_events)
 
     def prepare_static_knowledge(self):
         Ontology.add_filler("FASTEN", "IS-A", "VALUE", "ASSEMBLE")
@@ -23,10 +29,42 @@ class LCTContext(AgentContext):
     # ------ Meta-contextual Properties -------
 
     LEARNING = "*LCT.learning"          # Marks an event that is being learned; True / False (absent)
+    LEARNED = "*LCT.learned"            # Marks an event that has been learned; True / False (absent)
     CURRENT = "*LCT.current"            # Marks an event that is currently being explained; True / False (absent)
     WAITING_ON = "*LCT.waiting_on"      # Marks an event that is waiting on another event to be explained; FR EVENT ID
 
-    # ------ Heuristics -------
+    # ------ Pre-Heuristics -------
+
+    # Identifies when an utterance is specifying that an already mentioned task or sub-event is now complete.
+    # Example: We have assembled a front leg.
+    # If the postfix TMR can resolve the main event to the FR, and the resolved event is currently being learned,
+    # it is now complete (and all subtasks below it are also completed; any parent task it has is considered current).
+    # Finding a match necessarily removes the LEARN_ST_MEMORY and POST_PROCESS agent events as this TMR has been
+    # consumed.
+    def identify_closing_of_known_task(self, tmr, instructions):
+
+        if tmr.is_postfix():
+            resolved = self.agent.st_memory.resolve_tmr(tmr)
+
+            event = tmr.find_main_event()
+            hierarchy = self.learning_hierarchy()
+
+            target = -1
+            for index, le in enumerate(hierarchy):
+                if le in resolved[event.name]:
+                    if self.agent.st_memory[le].context()[self.LEARNING]:
+                        target = index
+
+            for i in range(0, target + 1):
+                self.finish_learning(hierarchy[i])
+
+            if target > -1:
+                instructions[AgentContext.LEARN_ST_MEMORY] = False
+                instructions[AgentContext.POST_PROCESS] = False
+
+        return instructions
+
+    # ------ Post-Heuristics -------
 
     # Identifies when an utterance is specifying a precondition (and not some specific action to be taken).
     # Example: I need a screwdriver to assemble a chair.
@@ -143,3 +181,129 @@ class LCTContext(AgentContext):
                     results = fr.search(concept=instance.concept)
                     resolves[instance.name] = set(map(lambda result: result.name, results))
                     return True
+
+    # FR resolution method for identifying that an undetermined ("a chair") object that is the THEME of a
+    # resolved EVENT that is currently being learned, is the same THEME as other similar types of THEMEs found
+    # in the resolved EVENT, if the TMR is postfix.
+    # Example: First, we will build a front leg of the chair.  We have assembled [a front leg].
+    # To match, the following must be true:
+    #   1) The TMR must be in postfix ("we have")
+    #   2) The instance must be an OBJECT
+    #   3) The instance must be undetermined ("a chair")
+    #   4) The instance must be a THEME-OF an EVENT in the TMR
+    #   5) That EVENT must be found (roughly resolved) in the FR by concept match, AND as LCT.learning / LCT.current
+    #   6) For each THEME of the matching FR EVENT, any that are the same concept as the instance are resolved matches
+    @staticmethod
+    def resolve_undetermined_themes_of_learning_in_postfix(fr, instance, resolves, tmr=None):
+        if instance.subtree != "OBJECT":
+            return
+
+        if tmr is None:
+            return
+
+        if tmr.is_prefix():
+            return
+
+        dependencies = tmr.syntax.find_dependencies(types=["ART"], governors=instance.token_index)
+        articles = list(map(lambda dependency: tmr.syntax.index[str(dependency[2])], dependencies))
+        tokens = list(map(lambda article: article["lemma"], articles))
+
+        if "A" not in tokens:
+            return
+
+        if "THEME-OF" not in instance:
+            return
+
+        theme_ofs = map(lambda theme_of: tmr[theme_of], instance["THEME-OF"])
+
+        matches = set()
+
+        for theme_of in theme_ofs:
+            results = fr.search(concept=theme_of.concept, context={LCTContext.LEARNING: True, LCTContext.CURRENT: True})
+            for result in results:
+                for theme in result["THEME"]:
+                    if fr[theme.value].concept == instance.concept:
+                        matches.add(theme.value)
+
+        if len(matches) > 0:
+            resolves[instance.name] = matches
+            return True
+
+    # FR resolution method for resolving EVENTs against currently learning FR events.
+    # Example: First, we will build a front leg of the chair.  We [have assembled] a front leg.
+    # To be a match, the following must be true:
+    #   1) The instance must be an EVENT
+    #   2) A candidate in the FR must be the same concept as the instance
+    #   3) A candidate in the FR must be LTC.learning
+    #   4) A candidate in the FR must have at least one *resolved* match for each case-role filler specified by
+    #      the instance.  (Currently, this includes only AGENT and THEME).  That is, if "AGENT" is defined in the
+    #      instance, that filler must a) be resolved, and b) be equal to one of the AGENT fillers in the candidate.
+    @staticmethod
+    def resolve_learning_events(fr, instance, resolves, tmr=None):
+        if instance.subtree != "EVENT":
+            return
+
+        if tmr is None:
+            return
+
+        matches = set()
+
+        for candidate in fr.search(concept=instance.concept, context={LCTContext.LEARNING: True}):
+            case_roles = ["AGENT", "THEME"]
+
+            passed = True
+            for case_role in case_roles:
+                if case_role in instance:
+                    for filler in instance[case_role]:
+                        if resolves[filler] is None:
+                            passed = False
+                            break
+
+                        if len(resolves[filler].intersection(set(map(lambda f: f.value, candidate[case_role])))) == 0:
+                            passed = False
+                            break
+
+            if passed:
+                matches.add(candidate.name)
+
+        if len(matches) > 0:
+            resolves[instance.name] = matches
+            return True
+
+    # ------ Context Helper Functions -------
+
+    # Helper function for returning the learning hierarchy; starting with LTC.current, and finding each "parent"
+    # via the LCT.waiting_on property; the names are returned in that order (element 0 is current).
+    def learning_hierarchy(self):
+        results = self.agent.st_memory.search(context={LCTContext.LEARNING: True, LCTContext.CURRENT: True})
+        if len(results) != 1:
+            return
+
+        hierarchy = [results[0].name]
+
+        results = self.agent.st_memory.search(context={LCTContext.LEARNING: True, LCTContext.CURRENT: False, LCTContext.WAITING_ON: hierarchy[-1]})
+        while len(results) == 1:
+            hierarchy.append(results[0].name)
+            results = self.agent.st_memory.search(context={LCTContext.LEARNING: True, LCTContext.CURRENT: False, LCTContext.WAITING_ON: hierarchy[-1]})
+
+        return hierarchy
+
+    # Helper function for marking a single instance that is currently LTC.learning as finished learning.  This means
+    # that LCT.learning, LCT.waiting_on, and LCT.current are all removed, while LCT.learned is added.  Further, if
+    # this instance has a parent (LCT.waiting_on = instance), that instance is modified to no longer be LCT.waiting_on
+    # and is marked as LCT.current if this instance was considered current.
+    def finish_learning(self, instance):
+        instance = self.agent.st_memory[instance]
+        roll_up_current = instance.context()[self.CURRENT]
+
+        for context in [self.LEARNING, self.CURRENT, self.WAITING_ON]:
+            if context in instance.context():
+                del instance.context()[context]
+
+        instance.context()[self.LEARNED] = True
+
+        for parent in self.agent.st_memory.search(context={self.WAITING_ON: instance.name}):
+            if roll_up_current:
+                parent.context()[self.CURRENT] = True
+            if self.WAITING_ON in parent.context():
+                del parent.context()[self.WAITING_ON]
