@@ -28,6 +28,10 @@ class LCTContext(AgentContext):
 
     # ------ Heuristics -------
 
+    # Identifies when an utterance is specifying a precondition (and not some specific action to be taken).
+    # Example: I need a screwdriver to assemble a chair.
+    # If the main event of the TMR has a PURPOSE, find any LCT.learning frames with matching important
+    # case-roles to the PURPOSE, and add the main event as a PRECONDITION to those results.
     def identify_preconditions(self, tmr):
 
         if tmr.is_prefix():
@@ -54,6 +58,10 @@ class LCTContext(AgentContext):
             if found:
                 return True
 
+    # Identifies when an utterance is requesting a simple action (the LCT.current does not have to move).
+    # Example: Get a screwdriver.
+    # If the main event of the TMR is a REQUEST-ACTION, and the ROBOT is the BENEFICIARY, then add the event
+    # to the HAS-EVENT-AS-PART slot of the LCT.learning / LCT.current event (but do not change LCT.current).
     def handle_requested_actions(self, tmr):
 
         if tmr.is_prefix():
@@ -67,6 +75,13 @@ class LCTContext(AgentContext):
 
                 return True
 
+    # Identifies when an utterance is exposing a new complex sub-event (this will result in LCT.current changing).
+    # Example: First, we will build a front leg of the chair.
+    # This is considered the default (fallback) heuristic for PREFIX TMRs.  That is, if all other PREFIX heuristics
+    # fail to match, this action is taken:
+    #   Find the LCT.learning / LCT.current fr event, and add this main event to the HAS-EVENT-AS-PART slot.  Then,
+    #   set the LCT.current to False, the LCT.waiting_on to this main event, assign LCT.current and LCT.learning to
+    #   this main event.
     def recognize_sub_events(self, tmr):
 
         if tmr.is_prefix():
@@ -86,6 +101,20 @@ class LCTContext(AgentContext):
 
     # ------ FR Resolution Heuristics -------
 
+    # FR resolution method used to connect an instance that is undetermined ("a chair" rather than "the chair") to an
+    # existing FR instance by looking for instances that are the "themes of learning" (in other words, what is currently
+    # being learned).
+    # Example: We will build a chair.  I need a screwdriver to assemble [a chair].
+    #   The 2nd instance of "a chair" would typically not be connected to the first, due to the lack of a determiner.
+    #   However, as the first usage of "a chair" kicked off a theme of learning (that is still active), we are more
+    #   flexible with resolution.
+    # To do this:
+    #   1) The instance to resolve must be an OBJECT
+    #   2) The instance to resolve must be undetermined ("a chair")
+    #   3) The instance must be the THEME of an EVENT that also has a PURPOSE, which must be another EVENT
+    #   4) If so, then any corresponding concept match in the FR is a valid resolution
+    #      Note, this last match is a little broad, but is ok in that this resolution heuristic operates in short-term
+    #      memory only.
     @staticmethod
     def resolve_undetermined_themes_of_learning(fr, instance, resolves, tmr=None):
         if instance.subtree != "OBJECT":
