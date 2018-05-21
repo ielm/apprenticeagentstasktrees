@@ -8,7 +8,7 @@ class Instance(Mapping):
     def __init__(self, name, concept, uuid=None, properties=None, subtree=None):
         self._storage = dict()
 
-        self.name = name
+        self.name = self._modify_name(name)
         self.concept = self._modify_concept(concept)
         self.uuid = uuid if uuid is not None else uuid4()
         self.subtree = subtree
@@ -24,6 +24,10 @@ class Instance(Mapping):
         if properties is not None:
             for key in properties:
                 self[key] = properties[key]
+
+    def _modify_name(self, name):
+        modified_name = name if not str(name).startswith("ASSEMBLE") else name.replace("ASSEMBLE", "BUILD") + "X"
+        return modified_name
 
     def _modify_concept(self, concept):
         modified_concept = concept if concept != "ASSEMBLE" else "BUILD"
