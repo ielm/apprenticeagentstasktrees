@@ -139,16 +139,78 @@ class FRInstanceTestCase(ApprenticeAgentsTestCase):
         instance = Instance("CONCEPT-1", "CONCEPT", properties={"OBJECT-RELATION": ["CONCEPT-123", "CONCEPT-456"], "TEMPORAL-RELATION": ["CONCEPT-123"]})
 
         resolves = {
-            instance.name: ["CONCEPT-FR1"],
-            "CONCEPT-123": ["CONCEPT-FR2"],
+            instance.name: {"CONCEPT-FR1"},
+            "CONCEPT-123": {"CONCEPT-FR2"},
         }
 
         iresolves = fr.resolve_instance(instance, resolves, tmr=None)
 
         self.assertEqual(iresolves, {
-            instance.name: ["CONCEPT-FR1"],
-            "CONCEPT-123": ["CONCEPT-FR2"],
+            instance.name: {"CONCEPT-FR1"},
+            "CONCEPT-123": {"CONCEPT-FR2"},
             "CONCEPT-456": None
+        })
+
+    # This tests that the resolution of a TMR will repeat until it can resolve no further.  Typically, this would be
+    # useful if the first pass of resolution found something that would help in a later pass.  In this test, we just
+    # force the "resolve_b" heuristic to skip its first invocation, but because "resolve_a" finds something, the
+    # resolution system should repeat, allowing "resolve_b" to work the second time.
+    def test_merged_iterative_resolves(self):
+        Ontology.ontology.subclass("ALL", "CONCEPT-A")
+        Ontology.ontology.subclass("ALL", "CONCEPT-B")
+
+        fr = FR()
+
+        def resolve_a(fr, instance, resolves, tmr=None):
+            if instance.name == "CONCEPT-A-1":
+                resolves["CONCEPT-A-1"] = {"CONCEPT-A-FR1"}
+
+        called = 0
+
+        def resolve_b(fr, instance, resolves, tmr=None):
+            nonlocal called
+            if called == 0:
+                called = 1
+            elif instance.name == "CONCEPT-B-1":
+                resolves["CONCEPT-B-1"] = {"CONCEPT-B-FR1"}
+
+        fr.heuristics = [
+            resolve_a,
+            resolve_b,
+        ]
+
+        fr.register("CONCEPT-A")
+        fr.register("CONCEPT-B")
+
+        tmr = TMR({
+            "sentence": "Test.",
+            "tmr": [{
+                "results": [{
+                    "TMR": {
+                        "CONCEPT-A-1": {
+                            "concept": "CONCEPT-A",
+                            "sent-word-ind": [1, [0]]
+                        },
+                        "CONCEPT-B-1": {
+                            "concept": "CONCEPT-B",
+                            "sent-word-ind": [1, [1]]
+                        },
+                    }
+                }]
+            }],
+            "syntax": [{
+                "0": {},
+                "1": {},
+                "basicDeps": []
+            }]
+        })
+
+        iresolves = fr.resolve_tmr(tmr)
+
+        self.assertEqual(1, called)
+        self.assertEqual(iresolves, {
+            "CONCEPT-A-1": {"CONCEPT-A-FR1"},
+            "CONCEPT-B-1": {"CONCEPT-B-FR1"},
         })
 
     def test_learn_tmr(self):
