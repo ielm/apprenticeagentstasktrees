@@ -49,6 +49,9 @@ class LCTContext(AgentContext):
             event = tmr.find_main_event()
             hierarchy = self.learning_hierarchy()
 
+            if resolved[event.name] is None:
+                return instructions
+
             target = -1
             for index, le in enumerate(hierarchy):
                 if le in resolved[event.name]:
@@ -191,7 +194,7 @@ class LCTContext(AgentContext):
     #   2) The instance must be an OBJECT
     #   3) The instance must be undetermined ("a chair")
     #   4) The instance must be a THEME-OF an EVENT in the TMR
-    #   5) That EVENT must be found (roughly resolved) in the FR by concept match, AND as LCT.learning / LCT.current
+    #   5) That EVENT must be found (roughly resolved) in the FR by concept match, AND as LCT.learning
     #   6) For each THEME of the matching FR EVENT, any that are the same concept as the instance are resolved matches
     @staticmethod
     def resolve_undetermined_themes_of_learning_in_postfix(fr, instance, resolves, tmr=None):
@@ -219,7 +222,7 @@ class LCTContext(AgentContext):
         matches = set()
 
         for theme_of in theme_ofs:
-            results = fr.search(concept=theme_of.concept, context={LCTContext.LEARNING: True, LCTContext.CURRENT: True})
+            results = fr.search(concept=theme_of.concept, context={LCTContext.LEARNING: True})
             for result in results:
                 for theme in result["THEME"]:
                     if fr[theme.value].concept == instance.concept:
