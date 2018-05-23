@@ -2,13 +2,20 @@ from backend.models.graph import Graph
 from backend.models.frinstance import FRInstance
 from backend.ontology import Ontology
 from backend.heuristics.fr_heuristics import FRHeuristics
+from backend.utils.AgentLogger import AgentLogger
+
+import copy
 
 
 class FR(Graph):
 
-    def __init__(self):
+    def __init__(self, name="Fact Repository", namespace="FR"):
         super().__init__()
 
+        self.name = name
+        self.namespace = namespace
+
+        self._logger = AgentLogger()
         self._indexes = dict()
 
         self.heuristics = [
@@ -17,9 +24,14 @@ class FR(Graph):
             FRHeuristics.resolve_sets_with_identical_members,
         ]
 
+    def logger(self, logger=None):
+        if not logger is None:
+            self._logger = logger
+        return self._logger
+
     def register(self, concept):
         fr_index = self.__next_index(concept)
-        fr_name = concept + "-FR" + str(fr_index)
+        fr_name = concept + "-" + self.namespace + str(fr_index)
         fr_instance = FRInstance(fr_name, concept, fr_index)
         self[fr_name] = fr_instance
         return fr_instance
@@ -59,6 +71,13 @@ class FR(Graph):
                 if value in resolves and resolves[value] is not None:
                     fr_instance.remember(property, resolves[value])
 
+    def _resolve_log_wrapper(self, heuristic, instance, results, tmr=None):
+        input_results = copy.deepcopy(results)
+        heuristic(self, instance, results, tmr=tmr)
+
+        if input_results != results:
+            self._logger.log("matched FR resolution '" + heuristic.__name__ + "' " + str(results))
+
     # Locates each mention of an Instance in the input Instance (including itself), and attempts to resolve those
     # instances to existing FR Instances.  It can use an existing set of resolves to assist, as well as an optional
     # input TMR (presumably containing the input Instance).  It can find no matches (None), or any number of matches
@@ -78,7 +97,7 @@ class FR(Graph):
 
         for heuristic in self.heuristics:
             if results[instance.name] is None:
-                heuristic(self, instance, results, tmr=tmr)
+                self._resolve_log_wrapper(heuristic, instance, results, tmr=tmr)
 
         return results
 
@@ -130,7 +149,7 @@ class FR(Graph):
         return 1
 
     def __str__(self):
-        lines = ["Fact Repository"]
-        for instance in self:
+        lines = [self.name]
+        for instance in sorted(self):
             lines.extend(list(map(lambda line: "  " + line, str(self[instance]).split("\n"))))
         return "\n".join(lines)

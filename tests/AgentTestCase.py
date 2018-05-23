@@ -27,8 +27,14 @@ class AgentTestCase(ApprenticeAgentsTestCase):
         ]
 
         agent = Agent()
+        agent.logger().enable()
 
         for i in input:
+            print("============================================")
             agent.input(i)
+            print("")
+            print(agent.st_memory)
+            print("============================================")
+            print("")
 
-        print(agent.st_memory)
+        # print(agent.st_memory)

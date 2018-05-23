@@ -50,7 +50,7 @@ class LCTContext(AgentContext):
             hierarchy = self.learning_hierarchy()
 
             if resolved[event.name] is None:
-                return instructions
+                return
 
             target = -1
             for index, le in enumerate(hierarchy):
@@ -64,8 +64,7 @@ class LCTContext(AgentContext):
             if target > -1:
                 instructions[AgentContext.LEARN_ST_MEMORY] = False
                 instructions[AgentContext.POST_PROCESS] = False
-
-        return instructions
+                return True
 
     # ------ Post-Heuristics -------
 
