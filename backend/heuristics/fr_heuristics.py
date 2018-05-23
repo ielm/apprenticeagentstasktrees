@@ -58,9 +58,9 @@ class FRHeuristics(object):
         # Convert any HUMAN and ROBOT mentions to their singleton FR representations
         def convert(filler):
             if filler == "HUMAN":
-                return "HUMAN-FR1"
+                return "HUMAN-" + fr.namespace + "1"
             if filler == "ROBOT":
-                return "ROBOT-FR1"
+                return "ROBOT-" + fr.namespace + "1"
             return filler
         instance_members = map(lambda filler: convert(filler), instance_members)
 
