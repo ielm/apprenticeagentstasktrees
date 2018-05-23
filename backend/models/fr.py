@@ -36,11 +36,14 @@ class FR(Graph):
         self[fr_name] = fr_instance
         return fr_instance
 
-    def search(self, concept=None, attributed_tmr_instance=None, context=None, has_fillers=None):
+    def search(self, concept=None, subtree=None, attributed_tmr_instance=None, context=None, has_fillers=None):
         results = list(self.values())
 
         if concept is not None:
             results = list(filter(lambda instance: instance.concept == concept, results))
+
+        if subtree is not None:
+            results = list(filter(lambda instance: instance.subtree == subtree, results))
 
         if attributed_tmr_instance is not None:
             results = list(filter(lambda instance: instance.is_attributed_to(attributed_tmr_instance), results))

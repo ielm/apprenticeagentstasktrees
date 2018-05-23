@@ -11,7 +11,7 @@ class AgentContext(object):
 
         self.agent = agent
         self.pre_heuristics = []
-        self.post_heuristics = []
+        self.post_heuristics = PostHeuristicsProcessor(None)
 
         self.prepare_static_knowledge()
 
@@ -37,9 +37,7 @@ class AgentContext(object):
         return instructions
 
     def postprocess(self, tmr):
-        for heuristic in self.post_heuristics:
-            if self._postprocess_log_wrapper(heuristic, tmr):
-                return
+        self.post_heuristics.process(tmr, self._logger)
 
     def _preprocess_log_wrapper(self, preprocess_heuristic, tmr, instructions):
         result = preprocess_heuristic(tmr, instructions)
@@ -48,9 +46,34 @@ class AgentContext(object):
 
         return result
 
-    def _postprocess_log_wrapper(self, postprocess_heuristic, tmr):
-        result = postprocess_heuristic(tmr)
-        if result:
-            self._logger.log("matched POST heuristic '" + postprocess_heuristic.__name__ + "'")
+
+class PostHeuristicsProcessor(object):
+
+    def __init__(self, heuristic, trigger=None, halt=None, subheuristics=list()):
+        self.heuristic = heuristic                  # The heuristic to run
+        self.trigger = trigger                      # The returned value from self.heuristic to match in order to run sub-heuristics
+                                                    # (If self.trigger == None, sub-heuristics are run regardless of returned value)
+        self.halt = halt                            # The halting condition for sub-heuristics; the first sub-heuristic to match
+                                                    # will stop all others from running; again, None means no halting can happen
+        self.subheuristics = list(subheuristics)    # The ordered list of subheuristics to run (must be PostHeuristicsProcessor type)
+
+    def add_subheuristic(self, post_heuristics_processor):
+        self.subheuristics.append(post_heuristics_processor)
+        return self
+
+    def process(self, tmr, logger):
+        result = self.heuristic(tmr) if self.heuristic is not None else None
+        if result is not None:
+            logger.log("POST heuristic '" + self.heuristic.__name__ + "' = " + str(result))
+            logger.indent()
+
+        if self.trigger is None or self.trigger == result:
+            for sub in self.subheuristics:
+                sub_result = sub.process(tmr, logger)
+                if sub_result is not None and sub_result == self.halt:
+                    break
+
+        if result is not None:
+            logger.unindent()
 
         return result

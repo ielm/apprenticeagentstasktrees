@@ -1,4 +1,4 @@
-from backend.contexts.context import AgentContext
+from backend.contexts.context import AgentContext, PostHeuristicsProcessor
 from backend.ontology import Ontology
 
 
@@ -12,11 +12,10 @@ class LCTContext(AgentContext):
             self.identify_closing_of_known_task,
         ]
 
-        self.post_heuristics = [
-            self.identify_preconditions,
-            self.handle_requested_actions,
-            self.recognize_sub_events,
-        ]
+        self.post_heuristics.halt = True
+        self.post_heuristics.add_subheuristic(PostHeuristicsProcessor(self.identify_preconditions))
+        self.post_heuristics.add_subheuristic(PostHeuristicsProcessor(self.handle_requested_actions))
+        self.post_heuristics.add_subheuristic(PostHeuristicsProcessor(self.recognize_sub_events).add_subheuristic(PostHeuristicsProcessor(self.recognize_parts_of_object)))
 
         agent.st_memory.heuristics.insert(0, LCTContext.resolve_undetermined_themes_of_learning)
         agent.st_memory.heuristics.append(LCTContext.resolve_undetermined_themes_of_learning_in_postfix)
@@ -25,6 +24,16 @@ class LCTContext(AgentContext):
     def prepare_static_knowledge(self):
         Ontology.add_filler("FASTEN", "IS-A", "VALUE", "ASSEMBLE")
         Ontology.add_filler("ASSEMBLE", "IS-A", "VALUE", "BUILD")
+        Ontology.ontology["BRACKET"] = {
+            "IS-A": {
+                "VALUE": ["ARTIFACT-PART"]
+            },
+        }
+        Ontology.ontology["DOWEL"] = {
+            "IS-A": {
+                "VALUE": ["ARTIFACT-PART"]
+            },
+        }
 
     # ------ Meta-contextual Properties -------
 
@@ -138,6 +147,56 @@ class LCTContext(AgentContext):
             fr_event.context()[self.CURRENT] = True
 
             return True
+
+    # Identifies when a TMR is about a currently learning BUILD event.  If so, anything the TMR is building is added
+    # as a part of anything that any parent learning event is also building.
+    # Example: First, we will build a front leg of [the chair].
+    #          I am using the screwdriver to affix [the brackets] on [the dowel] with screws.
+    # This is designed to run as a sub-heuristic to detecting sub-events.  To match, the following must happen:
+    # 1) The main event is a BUILD event
+    # 2) The main event is LCT.learning
+    # 3) The main event has one or more "parts" (that is, THEMEs and DESTINATIONs that are OBJECTs)
+    # 4) The candidate events are LCT.learning and are LCT.waiting_on the main event
+    # 5) The candidate event is a BUILD event
+    # 6) The candidate event has exactly one THEME
+    # If the above match, add all parts as HAS-OBJECT-AS-PART to the candidate THEME
+    def recognize_parts_of_object(self, tmr):
+
+        event = tmr.find_main_event()
+        fr_event = self.agent.st_memory.search(attributed_tmr_instance=event)[0]
+
+        parts = list(map(lambda theme: self.agent.st_memory.search(subtree="OBJECT", attributed_tmr_instance=tmr[theme]), event["THEME"]))
+        parts += list(map(lambda theme: self.agent.st_memory.search(subtree="OBJECT", attributed_tmr_instance=tmr[theme]), event["DESTINATION"]))
+        parts = [item for sublist in parts for item in sublist]
+
+        if len(parts) == 0:
+            return
+
+        if not fr_event.context()[self.LEARNING]:
+            return
+
+        if not "BUILD" in Ontology.ancestors(fr_event.concept, include_self=True):
+            return
+
+        results = self.agent.st_memory.search(context={self.LEARNING: True, self.WAITING_ON: fr_event.name})
+        if len(results) == 0:
+            return
+
+        success = False
+        for result in results:
+            if not "BUILD" in Ontology.ancestors(result.concept, include_self=True):
+                continue
+
+            if len(result["THEME"]) != 1:
+                continue
+
+            theme = self.agent.st_memory[result["THEME"][0].value]
+
+            for part in parts:
+                theme.remember("HAS-OBJECT-AS-PART", part.name)
+            success = True
+
+        return success
 
     # ------ FR Resolution Heuristics -------
 

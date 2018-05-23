@@ -1759,11 +1759,11 @@
                 "THEME-OF": "REQUEST-ACTION-1",
                 "sem-preference": 1,
                 "AGENT": "ROBOT",
-                "THEME": "ARTIFACT-1"
+                "THEME": "BRACKET-1"
               },
-              "ARTIFACT-1": {
+              "BRACKET-1": {
                 "from-sense": "FOOT_BRACKET-N1",
-                "concept": "ARTIFACT",
+                "concept": "BRACKET",
                 "sent-word-ind": [
                   1,
                   [
@@ -2005,11 +2005,11 @@
                 "THEME-OF": "REQUEST-ACTION-1",
                 "sem-preference": 1,
                 "AGENT": "ROBOT",
-                "THEME": "ARTIFACT-1"
+                "THEME": "BRACKET-1"
               },
-              "ARTIFACT-1": {
+              "BRACKET-1": {
                 "from-sense": "BRACKET-N800",
-                "concept": "ARTIFACT",
+                "concept": "BRACKET",
                 "sent-word-ind": [
                   1,
                   [
@@ -2281,11 +2281,11 @@
                 "THEME-OF": "REQUEST-ACTION-1",
                 "sem-preference": 1,
                 "AGENT": "ROBOT",
-                "THEME": "ARTIFACT-1"
+                "THEME": "DOWEL-1"
               },
-              "ARTIFACT-1": {
+              "DOWEL-1": {
                 "from-sense": "DOWEL-N800",
-                "concept": "ARTIFACT",
+                "concept": "DOWEL",
                 "sent-word-ind": [
                   1,
                   [
@@ -2523,11 +2523,11 @@
                 "THEME-OF": "REQUEST-ACTION-1",
                 "sem-preference": 1,
                 "AGENT": "ROBOT",
-                "THEME": "ARTIFACT-1"
+                "THEME": "DOWEL-1"
               },
-              "ARTIFACT-1": {
+              "DOWEL-1": {
                 "from-sense": "DOWEL-N800",
-                "concept": "ARTIFACT",
+                "concept": "DOWEL",
                 "sent-word-ind": [
                   1,
                   [
@@ -2787,8 +2787,8 @@
                 "TIME": [
                   "FIND-ANCHOR-TIME"
                 ],
-                "THEME": "ARTIFACT-1",
-                "DESTINATION": "ARTIFACT-2",
+                "THEME": "BRACKET-1",
+                "DESTINATION": "DOWEL-2",
                 "INSTRUMENT": "SCREW-1",
                 "INSTRUMENT-1": "SCREWDRIVER-1",
                 "is-in-subtree": "EVENT",
@@ -2810,9 +2810,9 @@
                 "sem-preference": 0,
                 "INSTRUMENT-OF": "FASTEN-1"
               },
-              "ARTIFACT-1": {
+              "BRACKET-1": {
                 "from-sense": "BRACKET-N800",
-                "concept": "ARTIFACT",
+                "concept": "BRACKET",
                 "sent-word-ind": [
                   1,
                   [
@@ -2831,9 +2831,9 @@
                 "THEME-OF": "FASTEN-1",
                 "sem-preference": 0
               },
-              "ARTIFACT-2": {
+              "DOWEL-2": {
                 "from-sense": "DOWEL-N800",
-                "concept": "ARTIFACT",
+                "concept": "DOWEL",
                 "sent-word-ind": [
                   1,
                   [
@@ -3644,7 +3644,7 @@
                 "SCOPE-OF": "ASPECT-1",
                 "sem-preference": 1,
                 "AGENT": "ROBOT",
-                "THEME": "ARTIFACT-1"
+                "THEME": "DOWEL-1"
               },
               "ASPECT-1": {
                 "from-sense": "RELEASE-V81",
@@ -3659,9 +3659,9 @@
                 "PHASE": "END",
                 "SCOPE": "RESTRAIN-1"
               },
-              "ARTIFACT-1": {
+              "DOWEL-1": {
                 "from-sense": "DOWEL-N800",
-                "concept": "ARTIFACT",
+                "concept": "DOWEL",
                 "sent-word-ind": [
                   1,
                   [
