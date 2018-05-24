@@ -27,11 +27,8 @@ class Agent(object):
         tmr = TMR(input)
         self.input_memory.append(tmr)
 
-        self._logger.log("Agent input: '" + tmr.sentence + "'")
-        self._logger.indent()
+        self._logger.log("Input: '" + tmr.sentence + "'")
 
         agenda = self.context.default_agenda()
         agenda.logger(self._logger)
         agenda.process(self, tmr)
-
-        self._logger.unindent()

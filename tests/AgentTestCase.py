@@ -1,4 +1,5 @@
 from backend.agent import Agent
+from backend.utils.FRUtils import format_pretty_htn
 from tests.ApprenticeAgentsTestCase import ApprenticeAgentsTestCase
 
 import os
@@ -33,7 +34,9 @@ class AgentTestCase(ApprenticeAgentsTestCase):
             print("============================================")
             agent.input(i)
             print("")
-            print(agent.wo_memory)
+            #print(agent.wo_memory)
+            print("HTN (simplified):")
+            print(format_pretty_htn(agent.wo_memory, agent.wo_memory["BUILD-WM1"], indent=1))
             print("============================================")
             print("")
 
