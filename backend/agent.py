@@ -15,7 +15,6 @@ class Agent(object):
         self.context = LCTContext(self)
 
         self._logger = AgentLogger()
-        self.context.logger(self._logger)
         self.wo_memory.logger(self._logger)
         self.lt_memory.logger(self._logger)
 
@@ -31,10 +30,8 @@ class Agent(object):
         self._logger.log("Agent input: '" + tmr.sentence + "'")
         self._logger.indent()
 
-        instructions = self.context.preprocess(tmr)
-        if instructions[AgentContext.LEARN_WO_MEMORY]:
-            self.wo_memory.learn_tmr(tmr)
-        if instructions[AgentContext.POST_PROCESS]:
-            self.context.postprocess(tmr)
+        agenda = self.context.default_agenda()
+        agenda.logger(self._logger)
+        agenda.process(self, tmr)
 
         self._logger.unindent()

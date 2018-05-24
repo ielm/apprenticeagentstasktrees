@@ -7,73 +7,71 @@ class AgentContext(object):
     POST_PROCESS = "POST_PROCESS"
 
     def __init__(self, agent):
-        self._logger = AgentLogger()
-
         self.agent = agent
-        self.pre_heuristics = []
-        self.post_heuristics = PostHeuristicsProcessor(None)
 
         self.prepare_static_knowledge()
-
-    def logger(self, logger=None):
-        if not logger is None:
-            self._logger = logger
-        return self._logger
 
     def prepare_static_knowledge(self):
         pass
 
-    def preprocess(self, tmr):
-        instructions = {
-            AgentContext.LEARN_WO_MEMORY: True,
-            AgentContext.POST_PROCESS: True,
-        }
-
-        for heuristic in self.pre_heuristics:
-            result = self._preprocess_log_wrapper(heuristic, tmr, instructions)
-            if result is not None:
-                break
-
-        return instructions
-
-    def postprocess(self, tmr):
-        self.post_heuristics.process(tmr, self._logger)
-
-    def _preprocess_log_wrapper(self, preprocess_heuristic, tmr, instructions):
-        result = preprocess_heuristic(tmr, instructions)
-        if result is not None:
-            self._logger.log("matched PRE heuristic '" + preprocess_heuristic.__name__ + "' with instructions " + str(instructions))
-
-        return result
+    def default_agenda(self):
+        raise Exception("Context.default_agenda must be implemented in subclasses.")
 
 
-class PostHeuristicsProcessor(object):
+class AgendaProcessor(object):
 
-    def __init__(self, heuristic, trigger=None, halt=None, subheuristics=list()):
-        self.heuristic = heuristic                  # The heuristic to run
-        self.trigger = trigger                      # The returned value from self.heuristic to match in order to run sub-heuristics
-                                                    # (If self.trigger == None, sub-heuristics are run regardless of returned value)
-        self.halt = halt                            # The halting condition for sub-heuristics; the first sub-heuristic to match
-                                                    # will stop all others from running; again, None means no halting can happen
-        self.subheuristics = list(subheuristics)    # The ordered list of subheuristics to run (must be PostHeuristicsProcessor type)
+    def __init__(self, parent=None):
+        self.parent = parent
+        self._logger = None
+        self.subprocesses = list()
 
-    def add_subheuristic(self, post_heuristics_processor):
-        self.subheuristics.append(post_heuristics_processor)
+    def log(self, message):
+        if not self._logger:
+            return
+
+        self._logger.log(message)
+
+    def logger(self, logger=None):
+        if not logger is None:
+            self._logger = logger
+
+            for p in self.subprocesses:
+                p.logger(logger=self._logger)
+
+        return self._logger
+
+    def _logic(self, agent, tmr):
+        raise Exception("AgentProcessor._logic must be implemented in subclasses.")
+
+    def add_subprocess(self, subprocess):
+        subprocess.parent = self
+        self.subprocesses.append(subprocess)
+
         return self
 
-    def process(self, tmr, logger):
-        result = self.heuristic(tmr) if self.heuristic is not None else None
-        if result is not None:
-            logger.log("POST heuristic '" + self.heuristic.__name__ + "' = " + str(result))
-            logger.indent()
+    def process(self, agent, tmr):
+        self._logic(agent, tmr)
 
-        if self.trigger is None or self.trigger == result:
-            for sub in self.subheuristics:
-                sub_result = sub.process(tmr, logger)
-                if sub_result is not None and sub_result == self.halt:
-                    break
+        if self._logger is not None:
+            self._logger.indent()
 
-        if result is not None:
-            logger.unindent()
+        while len(self.subprocesses) > 0:
+            p = self.subprocesses[0]
+            self.subprocesses = self.subprocesses[1:]
+            p.process(agent, tmr)
 
-        return result
+        if self._logger is not None:
+            self._logger.unindent()
+
+    def halt_siblings(self):
+        self.parent.subprocesses = []
+
+
+class RootAgendaProcessor(AgendaProcessor):
+    def _logic(self, agent, tmr):
+        pass
+
+
+class FRResolutionAgendaProcessor(AgendaProcessor):
+    def _logic(self, agent, tmr):
+        agent.wo_memory.learn_tmr(tmr)
