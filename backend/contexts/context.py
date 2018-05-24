@@ -3,7 +3,7 @@ from backend.utils.AgentLogger import AgentLogger
 
 class AgentContext(object):
 
-    LEARN_ST_MEMORY = "LEARN_ST_MEMORY"
+    LEARN_WO_MEMORY = "LEARN_WO_MEMORY"
     POST_PROCESS = "POST_PROCESS"
 
     def __init__(self, agent):
@@ -25,7 +25,7 @@ class AgentContext(object):
 
     def preprocess(self, tmr):
         instructions = {
-            AgentContext.LEARN_ST_MEMORY: True,
+            AgentContext.LEARN_WO_MEMORY: True,
             AgentContext.POST_PROCESS: True,
         }
 

@@ -17,9 +17,9 @@ class LCTContext(AgentContext):
         self.post_heuristics.add_subheuristic(PostHeuristicsProcessor(self.handle_requested_actions))
         self.post_heuristics.add_subheuristic(PostHeuristicsProcessor(self.recognize_sub_events).add_subheuristic(PostHeuristicsProcessor(self.recognize_parts_of_object)))
 
-        agent.st_memory.heuristics.insert(0, LCTContext.resolve_undetermined_themes_of_learning)
-        agent.st_memory.heuristics.append(LCTContext.resolve_undetermined_themes_of_learning_in_postfix)
-        agent.st_memory.heuristics.append(LCTContext.resolve_learning_events)
+        agent.wo_memory.heuristics.insert(0, LCTContext.resolve_undetermined_themes_of_learning)
+        agent.wo_memory.heuristics.append(LCTContext.resolve_undetermined_themes_of_learning_in_postfix)
+        agent.wo_memory.heuristics.append(LCTContext.resolve_learning_events)
 
     def prepare_static_knowledge(self):
         Ontology.add_filler("FASTEN", "IS-A", "VALUE", "ASSEMBLE")
@@ -53,7 +53,7 @@ class LCTContext(AgentContext):
     def identify_closing_of_known_task(self, tmr, instructions):
 
         if tmr.is_postfix():
-            resolved = self.agent.st_memory.resolve_tmr(tmr)
+            resolved = self.agent.wo_memory.resolve_tmr(tmr)
 
             event = tmr.find_main_event()
             hierarchy = self.learning_hierarchy()
@@ -64,14 +64,14 @@ class LCTContext(AgentContext):
             target = -1
             for index, le in enumerate(hierarchy):
                 if le in resolved[event.name]:
-                    if self.agent.st_memory[le].context()[self.LEARNING]:
+                    if self.agent.wo_memory[le].context()[self.LEARNING]:
                         target = index
 
             for i in range(0, target + 1):
                 self.finish_learning(hierarchy[i])
 
             if target > -1:
-                instructions[AgentContext.LEARN_ST_MEMORY] = False
+                instructions[AgentContext.LEARN_WO_MEMORY] = False
                 instructions[AgentContext.POST_PROCESS] = False
                 return True
 
@@ -85,11 +85,11 @@ class LCTContext(AgentContext):
 
         if tmr.is_prefix():
             event = tmr.find_main_event()
-            fr_event = self.agent.st_memory.search(attributed_tmr_instance=event)[0]
+            fr_event = self.agent.wo_memory.search(attributed_tmr_instance=event)[0]
 
             found = False
             for p in fr_event["PURPOSE"]:
-                purpose = self.agent.st_memory[p.value]
+                purpose = self.agent.wo_memory[p.value]
 
                 case_roles_to_match = ["AGENT", "THEME"]
                 filler_query = {}
@@ -97,7 +97,7 @@ class LCTContext(AgentContext):
                     if cr in purpose:
                         filler_query[cr] = purpose[cr][0].value
 
-                results = self.agent.st_memory.search(context={self.LEARNING: True}, has_fillers=filler_query)
+                results = self.agent.wo_memory.search(context={self.LEARNING: True}, has_fillers=filler_query)
                 for result in results:
                     result.remember("PRECONDITION", fr_event.name)
 
@@ -115,10 +115,10 @@ class LCTContext(AgentContext):
 
         if tmr.is_prefix():
             event = tmr.find_main_event()
-            fr_event = self.agent.st_memory.search(attributed_tmr_instance=event)[0]
+            fr_event = self.agent.wo_memory.search(attributed_tmr_instance=event)[0]
 
             if event.concept == "REQUEST-ACTION" and "ROBOT" in event["BENEFICIARY"]:
-                fr_currently_learning_events = self.agent.st_memory.search(context={self.LEARNING: True, self.CURRENT: True})
+                fr_currently_learning_events = self.agent.wo_memory.search(context={self.LEARNING: True, self.CURRENT: True})
                 for fr_current_event in fr_currently_learning_events:
                     fr_current_event.remember("HAS-EVENT-AS-PART", fr_event.name)
 
@@ -135,9 +135,9 @@ class LCTContext(AgentContext):
 
         if tmr.is_prefix():
             event = tmr.find_main_event()
-            fr_event = self.agent.st_memory.search(attributed_tmr_instance=event)[0]
+            fr_event = self.agent.wo_memory.search(attributed_tmr_instance=event)[0]
 
-            fr_currently_learning_events = self.agent.st_memory.search(context={self.LEARNING: True, self.CURRENT: True})
+            fr_currently_learning_events = self.agent.wo_memory.search(context={self.LEARNING: True, self.CURRENT: True})
             for fr_current_event in fr_currently_learning_events:
                 fr_current_event.context()[self.CURRENT] = False
                 fr_current_event.context()[self.WAITING_ON] = fr_event.name
@@ -163,10 +163,10 @@ class LCTContext(AgentContext):
     def recognize_parts_of_object(self, tmr):
 
         event = tmr.find_main_event()
-        fr_event = self.agent.st_memory.search(attributed_tmr_instance=event)[0]
+        fr_event = self.agent.wo_memory.search(attributed_tmr_instance=event)[0]
 
-        parts = list(map(lambda theme: self.agent.st_memory.search(subtree="OBJECT", attributed_tmr_instance=tmr[theme]), event["THEME"]))
-        parts += list(map(lambda theme: self.agent.st_memory.search(subtree="OBJECT", attributed_tmr_instance=tmr[theme]), event["DESTINATION"]))
+        parts = list(map(lambda theme: self.agent.wo_memory.search(subtree="OBJECT", attributed_tmr_instance=tmr[theme]), event["THEME"]))
+        parts += list(map(lambda theme: self.agent.wo_memory.search(subtree="OBJECT", attributed_tmr_instance=tmr[theme]), event["DESTINATION"]))
         parts = [item for sublist in parts for item in sublist]
 
         if len(parts) == 0:
@@ -178,7 +178,7 @@ class LCTContext(AgentContext):
         if not "BUILD" in Ontology.ancestors(fr_event.concept, include_self=True):
             return
 
-        results = self.agent.st_memory.search(context={self.LEARNING: True, self.WAITING_ON: fr_event.name})
+        results = self.agent.wo_memory.search(context={self.LEARNING: True, self.WAITING_ON: fr_event.name})
         if len(results) == 0:
             return
 
@@ -190,7 +190,7 @@ class LCTContext(AgentContext):
             if len(result["THEME"]) != 1:
                 continue
 
-            theme = self.agent.st_memory[result["THEME"][0].value]
+            theme = self.agent.wo_memory[result["THEME"][0].value]
 
             for part in parts:
                 theme.remember("HAS-OBJECT-AS-PART", part.name)
@@ -336,16 +336,16 @@ class LCTContext(AgentContext):
     # Helper function for returning the learning hierarchy; starting with LTC.current, and finding each "parent"
     # via the LCT.waiting_on property; the names are returned in that order (element 0 is current).
     def learning_hierarchy(self):
-        results = self.agent.st_memory.search(context={LCTContext.LEARNING: True, LCTContext.CURRENT: True})
+        results = self.agent.wo_memory.search(context={LCTContext.LEARNING: True, LCTContext.CURRENT: True})
         if len(results) != 1:
             return
 
         hierarchy = [results[0].name]
 
-        results = self.agent.st_memory.search(context={LCTContext.LEARNING: True, LCTContext.CURRENT: False, LCTContext.WAITING_ON: hierarchy[-1]})
+        results = self.agent.wo_memory.search(context={LCTContext.LEARNING: True, LCTContext.CURRENT: False, LCTContext.WAITING_ON: hierarchy[-1]})
         while len(results) == 1:
             hierarchy.append(results[0].name)
-            results = self.agent.st_memory.search(context={LCTContext.LEARNING: True, LCTContext.CURRENT: False, LCTContext.WAITING_ON: hierarchy[-1]})
+            results = self.agent.wo_memory.search(context={LCTContext.LEARNING: True, LCTContext.CURRENT: False, LCTContext.WAITING_ON: hierarchy[-1]})
 
         return hierarchy
 
@@ -354,7 +354,7 @@ class LCTContext(AgentContext):
     # this instance has a parent (LCT.waiting_on = instance), that instance is modified to no longer be LCT.waiting_on
     # and is marked as LCT.current if this instance was considered current.
     def finish_learning(self, instance):
-        instance = self.agent.st_memory[instance]
+        instance = self.agent.wo_memory[instance]
         roll_up_current = instance.context()[self.CURRENT]
 
         for context in [self.LEARNING, self.CURRENT, self.WAITING_ON]:
@@ -363,7 +363,7 @@ class LCTContext(AgentContext):
 
         instance.context()[self.LEARNED] = True
 
-        for parent in self.agent.st_memory.search(context={self.WAITING_ON: instance.name}):
+        for parent in self.agent.wo_memory.search(context={self.WAITING_ON: instance.name}):
             if roll_up_current:
                 parent.context()[self.CURRENT] = True
             if self.WAITING_ON in parent.context():

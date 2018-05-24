@@ -33,7 +33,7 @@ class AgentTestCase(ApprenticeAgentsTestCase):
             print("============================================")
             agent.input(i)
             print("")
-            print(agent.st_memory)
+            print(agent.wo_memory)
             print("============================================")
             print("")
 

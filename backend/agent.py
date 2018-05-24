@@ -8,7 +8,7 @@ from backend.utils.AgentLogger import AgentLogger
 class Agent(object):
 
     def __init__(self):
-        self.st_memory = FR(name="Short-term Memory", namespace="ST")
+        self.wo_memory = FR(name="Working Memory", namespace="WM")
         self.lt_memory = FR(name="Long-term Memory", namespace="LT")
 
         self.input_memory = []
@@ -16,7 +16,7 @@ class Agent(object):
 
         self._logger = AgentLogger()
         self.context.logger(self._logger)
-        self.st_memory.logger(self._logger)
+        self.wo_memory.logger(self._logger)
         self.lt_memory.logger(self._logger)
 
     def logger(self, logger=None):
@@ -32,8 +32,8 @@ class Agent(object):
         self._logger.indent()
 
         instructions = self.context.preprocess(tmr)
-        if instructions[AgentContext.LEARN_ST_MEMORY]:
-            self.st_memory.learn_tmr(tmr)
+        if instructions[AgentContext.LEARN_WO_MEMORY]:
+            self.wo_memory.learn_tmr(tmr)
         if instructions[AgentContext.POST_PROCESS]:
             self.context.postprocess(tmr)
 
