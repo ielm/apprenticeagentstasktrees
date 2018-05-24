@@ -29,5 +29,18 @@ class AgentLogger(object):
             out += AgentLogger.INDENT
 
         out += message
+        self._out(out)
 
-        print(out)
+    def _out(self, message):
+        print(message)
+
+
+class CachedAgentLogger(AgentLogger):
+
+    def __init__(self):
+        super().__init__()
+        self._cache = []
+
+    def _out(self, message):
+        self._cache.append(message)
+

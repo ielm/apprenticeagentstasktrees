@@ -1,4 +1,4 @@
-from backend.contexts.context import AgentContext, AgendaProcessor, FRResolutionAgendaProcessor, RootAgendaProcessor
+from backend.contexts.context import AgentContext, AgendaProcessor, FRResolutionAgendaProcessor, HeuristicException, RootAgendaProcessor
 from backend.ontology import Ontology
 
 
@@ -60,13 +60,15 @@ class LCTContext(AgentContext):
 
         def _logic(self, agent, tmr):
             if tmr.is_postfix():
+                agent.wo_memory.logger().disable()
                 resolved = agent.wo_memory.resolve_tmr(tmr)
+                agent.wo_memory.logger().enable()
 
                 event = tmr.find_main_event()
                 hierarchy = self.context.learning_hierarchy()
 
                 if resolved[event.name] is None:
-                    return
+                    raise HeuristicException()
 
                 target = -1
                 for index, le in enumerate(hierarchy):
@@ -79,8 +81,9 @@ class LCTContext(AgentContext):
 
                 if target > -1:
                     self.halt_siblings()
-                    self.log(self.__class__.__name__)
                     return
+
+            raise HeuristicException()
 
     # ------ Post-Heuristics -------
 
@@ -113,8 +116,9 @@ class LCTContext(AgentContext):
 
                 if found:
                     self.halt_siblings()
-                    self.log(self.__class__.__name__)
                     return
+
+            raise HeuristicException()
 
     # Identifies when an utterance is requesting a simple action (the LCT.current does not have to move).
     # Example: Get a screwdriver.
@@ -135,8 +139,9 @@ class LCTContext(AgentContext):
                             fr_current_event.remember("HAS-EVENT-AS-PART", theme.value)
 
                     self.halt_siblings()
-                    self.log(self.__class__.__name__)
                     return
+
+            raise HeuristicException()
 
     # Identifies when an utterance is exposing a new complex sub-event (this will result in LCT.current changing).
     # Example: First, we will build a front leg of the chair.
@@ -162,8 +167,9 @@ class LCTContext(AgentContext):
                 fr_event.context()[LCTContext.CURRENT] = True
 
                 self.halt_siblings()
-                self.log(self.__class__.__name__)
                 return
+
+            raise HeuristicException()
 
     # Identifies when a TMR is about a currently learning BUILD event.  If so, anything the TMR is building is added
     # as a part of anything that any parent learning event is also building.
@@ -191,17 +197,17 @@ class LCTContext(AgentContext):
             parts = [item for sublist in parts for item in sublist]
 
             if len(parts) == 0:
-                return
+                raise HeuristicException()
 
             if LCTContext.LEARNING not in fr_event.context() or not fr_event.context()[LCTContext.LEARNING]:
-                return
+                raise HeuristicException()
 
             if not "BUILD" in Ontology.ancestors(fr_event.concept, include_self=True):
-                return
+                raise HeuristicException()
 
             results = agent.wo_memory.search(context={LCTContext.LEARNING: True, LCTContext.WAITING_ON: fr_event.name})
             if len(results) == 0:
-                return
+                raise HeuristicException()
 
             success = False
             for result in results:
@@ -218,9 +224,9 @@ class LCTContext(AgentContext):
                 success = True
 
             if success:
-                self.log(self.__class__.__name__)
+                return
 
-            return success
+            raise HeuristicException()
 
     # ------ FR Resolution Heuristics -------
 

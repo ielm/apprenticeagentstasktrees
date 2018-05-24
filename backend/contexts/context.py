@@ -1,4 +1,4 @@
-from backend.utils.AgentLogger import AgentLogger
+from backend.utils.AgentLogger import CachedAgentLogger
 
 
 class AgentContext(object):
@@ -16,6 +16,10 @@ class AgentContext(object):
 
     def default_agenda(self):
         raise Exception("Context.default_agenda must be implemented in subclasses.")
+
+
+class HeuristicException(Exception):
+    pass
 
 
 class AgendaProcessor(object):
@@ -50,7 +54,11 @@ class AgendaProcessor(object):
         return self
 
     def process(self, agent, tmr):
-        self._logic(agent, tmr)
+        try:
+            self._logic(agent, tmr)
+            self.log("+ " + self.__class__.__name__)
+        except HeuristicException:
+            self.log("x " + self.__class__.__name__)
 
         if self._logger is not None:
             self._logger.indent()
@@ -74,4 +82,20 @@ class RootAgendaProcessor(AgendaProcessor):
 
 class FRResolutionAgendaProcessor(AgendaProcessor):
     def _logic(self, agent, tmr):
+        backup_logger = agent.wo_memory.logger()
+
+        self.cached_logger = CachedAgentLogger()
+        self.cached_logger.enable()
+        agent.wo_memory.logger(logger=self.cached_logger)
         agent.wo_memory.learn_tmr(tmr)
+
+        agent.wo_memory.logger(logger=backup_logger)
+
+    def log(self, message):
+        super().log(message)
+        if self.cached_logger:
+            self.logger().indent()
+            for message in self.cached_logger._cache:
+                super().log(message)
+            self.logger().unindent()
+            self.cached_logger = None

@@ -79,7 +79,8 @@ class FR(Graph):
         heuristic(self, instance, results, tmr=tmr)
 
         if input_results != results:
-            self._logger.log("matched FR resolution '" + heuristic.__name__ + "' " + str(results))
+            pruned = {k: v for k, v in results.items() if v is not None}
+            self._logger.log("FR." + heuristic.__name__ + " -> " + str(pruned))
 
     # Locates each mention of an Instance in the input Instance (including itself), and attempts to resolve those
     # instances to existing FR Instances.  It can use an existing set of resolves to assist, as well as an optional
