@@ -109,18 +109,20 @@ class LCTContext(AgentContext):
 
     # Identifies when an utterance is requesting a simple action (the LCT.current does not have to move).
     # Example: Get a screwdriver.
-    # If the main event of the TMR is a REQUEST-ACTION, and the ROBOT is the BENEFICIARY, then add the event
+    # If the main event of the TMR is a REQUEST-ACTION, and the ROBOT is the BENEFICIARY, then add the event's THEMEs
     # to the HAS-EVENT-AS-PART slot of the LCT.learning / LCT.current event (but do not change LCT.current).
     def handle_requested_actions(self, tmr):
 
         if tmr.is_prefix():
             event = tmr.find_main_event()
             fr_event = self.agent.wo_memory.search(attributed_tmr_instance=event)[0]
+            fr_themes = fr_event["THEME"]
 
             if event.concept == "REQUEST-ACTION" and "ROBOT" in event["BENEFICIARY"]:
                 fr_currently_learning_events = self.agent.wo_memory.search(context={self.LEARNING: True, self.CURRENT: True})
                 for fr_current_event in fr_currently_learning_events:
-                    fr_current_event.remember("HAS-EVENT-AS-PART", fr_event.name)
+                    for theme in fr_themes:
+                        fr_current_event.remember("HAS-EVENT-AS-PART", theme.value)
 
                 return True
 
@@ -172,7 +174,7 @@ class LCTContext(AgentContext):
         if len(parts) == 0:
             return
 
-        if not fr_event.context()[self.LEARNING]:
+        if self.LEARNING not in fr_event.context() or not fr_event.context()[self.LEARNING]:
             return
 
         if not "BUILD" in Ontology.ancestors(fr_event.concept, include_self=True):
