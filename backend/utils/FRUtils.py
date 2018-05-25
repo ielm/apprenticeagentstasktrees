@@ -23,6 +23,10 @@ def format_pretty_htn(fr, fr_instance, lines=None, indent=0):
     line = indent_buffer + format_pretty_name(fr, fr_instance)
     lines.append(line)
 
+    for precondition in fr_instance["PRECONDITION"]:
+        precondition = fr[precondition.value]
+        lines.append(indent_buffer + indent_buffer + "*PRECONDITION " + format_pretty_name(fr, precondition))
+
     for subevent in fr_instance["HAS-EVENT-AS-PART"]:
         subevent = fr[subevent.value]
         format_pretty_htn(fr, subevent, lines=lines, indent=indent + 1)

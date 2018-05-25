@@ -32,6 +32,7 @@ class LCTContext(AgentContext):
         agenda = RootAgendaProcessor()
 
         agenda.add_subprocess(LCTContext.IdentifyClosingOfKnownTaskAgendaProcessor(self))
+        agenda.add_subprocess(LCTContext.IdentifyPreconditionSatisfyingActions())
         agenda.add_subprocess(FRResolutionAgendaProcessor())
         agenda.add_subprocess(LCTContext.IdentifyPreconditionsAgendaProcessor())
         agenda.add_subprocess(LCTContext.HandleRequestedActionsAgendaProcessor())
@@ -85,6 +86,54 @@ class LCTContext(AgentContext):
                 if target > -1:
                     self.halt_siblings()
                     return
+
+            raise HeuristicException()
+
+    # Identifies when an action is simply satisfying a precondition; if so, it is not "learned", as the precondition
+    # is already known.
+    # Example: I need a screwdriver to assemble a chair.  [Get a screwdriver.]
+    # To be a match, the following must be true:
+    # 1) The TMR is current (not pre- or postfix).
+    # 2) There must be previous input in the context (this cannot be the first TMR).
+    # 3) The main event must be a REQUEST-ACTION with BENEFICIARY = ROBOT.
+    # 4) The immediately previous TMR (last input) must have been current (not pre- or postfix).
+    # 5) The previous TMR's main event must have a PURPOSE (this is currently the identifier of a precondition utterance).
+    # 6) The theme of this TMR's REQUEST-ACTION.THEME must match the THEME of the previous TMR's main event (concept match only).
+    # If the above hold, the input is skipped and all other heuristics are disabled.
+    class IdentifyPreconditionSatisfyingActions(AgendaProcessor):
+        def _logic(self, agent, tmr):
+            if tmr.is_prefix() or tmr.is_postfix():
+                raise HeuristicException()
+
+            if len(agent.input_memory) < 2:
+                raise HeuristicException()
+
+            event = tmr.find_main_event()
+            if event.concept != "REQUEST-ACTION" or "ROBOT" not in event["BENEFICIARY"]:
+                raise HeuristicException()
+
+            previous_tmr = agent.input_memory[-2]
+            if previous_tmr.is_prefix() or previous_tmr.is_postfix():
+                raise HeuristicException()
+
+            previous_event = previous_tmr.find_main_event()
+            if "PURPOSE" not in previous_event:
+                raise HeuristicException()
+
+            if len(event["THEME"]) > 1:
+                raise HeuristicException()
+
+            event = tmr[event["THEME"][0]]
+
+            themes = event["THEME"]
+            themes = list(map(lambda theme: tmr[theme].concept, themes))
+
+            previous_themes = previous_event["THEME"]
+            previous_themes = list(map(lambda theme: previous_tmr[theme].concept, previous_themes))
+
+            if len(set(themes).intersection(set(previous_themes))) > 0:
+                self.halt_siblings()
+                return
 
             raise HeuristicException()
 
