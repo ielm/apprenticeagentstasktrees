@@ -85,6 +85,11 @@ class FRInstance(Instance):
 
         return True
 
+    # Use this method to remove a FRFiller.  All fillers of the property with exactly the one value (no ambiguity)
+    # will be deleted.
+    def forget(self, property, value):
+        self._storage[property] = list(filter(lambda filler: not (filler.value == value and len(filler.ambiguities) == 0), self._storage[property]))
+
     # Use this method to add values to the instance.  Provide the property, and a set of ambiguous values
     # to record.  Note, if the values are not ambiguous (but rather, just multiple values), pass a set
     # and call this method once for each unique value.  Any list of size greater than one will be assumed to be

@@ -30,13 +30,16 @@ class AgentTestCase(ApprenticeAgentsTestCase):
         agent = Agent()
         agent.logger().enable()
 
+        print("")
+        print("============================================")
+        print("")
         for i in input:
-            print("============================================")
             agent.input(i)
             print("")
             #print(agent.wo_memory)
             print("HTN (simplified):")
             print(format_pretty_htn(agent.wo_memory, agent.wo_memory["BUILD-WM1"], indent=1))
+            print("")
             print("============================================")
             print("")
 

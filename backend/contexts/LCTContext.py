@@ -1,5 +1,6 @@
 from backend.contexts.context import AgentContext, AgendaProcessor, FRResolutionAgendaProcessor, HeuristicException, RootAgendaProcessor
 from backend.ontology import Ontology
+from backend.utils import FRUtils
 
 
 # An agent context for (L)earning (C)omplex (T)asks.
@@ -34,7 +35,9 @@ class LCTContext(AgentContext):
         agenda.add_subprocess(FRResolutionAgendaProcessor())
         agenda.add_subprocess(LCTContext.IdentifyPreconditionsAgendaProcessor())
         agenda.add_subprocess(LCTContext.HandleRequestedActionsAgendaProcessor())
+        agenda.add_subprocess(LCTContext.HandleCurrentActionAgendaProcessor())
         agenda.add_subprocess(LCTContext.RecognizeSubEventsAgendaProcessor().add_subprocess(LCTContext.RecognizePartsOfObjectAgendaProcessor()))
+        agenda.add_subprocess(LCTContext.IdentifyClosingOfUnknownTaskAgendaProcessor(self))
 
         return agenda
 
@@ -93,7 +96,7 @@ class LCTContext(AgentContext):
     # case-roles to the PURPOSE, and add the main event as a PRECONDITION to those results.
     class IdentifyPreconditionsAgendaProcessor(AgendaProcessor):
         def _logic(self, agent, tmr):
-            if tmr.is_prefix():
+            if not tmr.is_prefix() and not tmr.is_postfix():
                 event = tmr.find_main_event()
                 fr_event = agent.wo_memory.search(attributed_tmr_instance=event)[0]
 
@@ -126,20 +129,42 @@ class LCTContext(AgentContext):
     # to the HAS-EVENT-AS-PART slot of the LCT.learning / LCT.current event (but do not change LCT.current).
     class HandleRequestedActionsAgendaProcessor(AgendaProcessor):
         def _logic(self, agent, tmr):
-            if tmr.is_prefix():
+            if tmr.is_prefix() or tmr.is_postfix():
+                raise HeuristicException()
+
+            event = tmr.find_main_event()
+            fr_event = agent.wo_memory.search(attributed_tmr_instance=event)[0]
+            fr_themes = fr_event["THEME"]
+
+            if event.concept == "REQUEST-ACTION" and "ROBOT" in event["BENEFICIARY"]:
+                fr_currently_learning_events = agent.wo_memory.search(
+                    context={LCTContext.LEARNING: True, LCTContext.CURRENT: True})
+                for fr_current_event in fr_currently_learning_events:
+                    for theme in fr_themes:
+                        fr_current_event.remember("HAS-EVENT-AS-PART", theme.value)
+
+                self.halt_siblings()
+                return
+
+            raise HeuristicException()
+
+    # Identifies actions that are happening "now" (not pre- or postfix), and adds them as children of the current
+    # learning context.  This is similar to HandleRequestedActionsAgendaProcessor, without the mapping to the
+    # the THEME of the main event (the main event itself is assumed to be the learned event).
+    # Example: I am using the screwdriver to affix the brackets on the dowel with screws.
+    class HandleCurrentActionAgendaProcessor(AgendaProcessor):
+        def _logic(self, agent, tmr):
+            if not tmr.is_prefix() and not tmr.is_postfix():
                 event = tmr.find_main_event()
                 fr_event = agent.wo_memory.search(attributed_tmr_instance=event)[0]
-                fr_themes = fr_event["THEME"]
 
-                if event.concept == "REQUEST-ACTION" and "ROBOT" in event["BENEFICIARY"]:
-                    fr_currently_learning_events = agent.wo_memory.search(
-                        context={LCTContext.LEARNING: True, LCTContext.CURRENT: True})
-                    for fr_current_event in fr_currently_learning_events:
-                        for theme in fr_themes:
-                            fr_current_event.remember("HAS-EVENT-AS-PART", theme.value)
+                fr_currently_learning_events = agent.wo_memory.search(
+                    context={LCTContext.LEARNING: True, LCTContext.CURRENT: True})
+                for fr_current_event in fr_currently_learning_events:
+                    fr_current_event.remember("HAS-EVENT-AS-PART", fr_event.name)
 
-                    self.halt_siblings()
-                    return
+                self.halt_siblings()
+                return
 
             raise HeuristicException()
 
@@ -170,6 +195,60 @@ class LCTContext(AgentContext):
                 return
 
             raise HeuristicException()
+
+    # Identifies when an utterance is specifying that some previous tasks were a part of an undisclosed task that is
+    # now complete.
+    # Example: We have assembled a front leg.
+    #          (Assuming that "First, we will build a front leg of the chair." was not uttered).
+    # To match, the following must be true:
+    # 1) The TMR is postfix.
+    # 2) There is an existing event being learned (at least an LCT.current)
+    # 3) There is no event being learned that is the same concept as the main event, and shares the same THEME
+    #    (concept match only).
+    # If the criteria match, the main event will be added as a child of the LCT.current; any children of the LCT.current
+    # that are not complex events (do not have HAS-EVENT-AS-PART) will be moved to be children of the main event.
+    class IdentifyClosingOfUnknownTaskAgendaProcessor(AgendaProcessor):
+        def __init__(self, context):
+            super().__init__()
+            self.context = context
+
+        def _logic(self, agent, tmr):
+            if not tmr.is_postfix():
+                raise HeuristicException()
+
+            event = tmr.find_main_event()
+            fr_event = agent.wo_memory.search(attributed_tmr_instance=event)[0]
+
+            hierarchy = self.context.learning_hierarchy()
+
+            if len(hierarchy) == 0:
+                raise HeuristicException()
+
+            for learning in hierarchy:
+                learning = agent.wo_memory[learning]
+                if learning.concept != fr_event.concept:
+                    continue
+                if not FRUtils.comparator(agent.wo_memory, fr_event, learning, "THEME", compare_concepts=True):
+                    continue
+                raise HeuristicException()
+
+            current = agent.wo_memory[hierarchy[0]]
+
+            children = list(map(lambda child: agent.wo_memory[child.value], current["HAS-EVENT-AS-PART"]))
+            children = list(filter(lambda child: "HAS-EVENT-AS-PART" not in child, children))
+
+            current.context()[LCTContext.CURRENT] = False
+            current.context()[LCTContext.WAITING_ON] = fr_event.name
+            current.remember("HAS-EVENT-AS-PART", fr_event.name)
+
+            fr_event.context()[LCTContext.LEARNING] = True
+            fr_event.context()[LCTContext.CURRENT] = True
+
+            for child in children:
+                current.forget("HAS-EVENT-AS-PART", child.name)
+                fr_event.remember("HAS-EVENT-AS-PART", child.name)
+
+            self.context.finish_learning(fr_event.name)
 
     # Identifies when a TMR is about a currently learning BUILD event.  If so, anything the TMR is building is added
     # as a part of anything that any parent learning event is also building.

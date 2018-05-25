@@ -108,7 +108,12 @@ class TMR(Graph):
         return event
 
     def is_prefix(self):
-        return not self.is_postfix()
+        for instance in self.values():
+            if instance.is_event():
+                if "TIME" in instance and instance["TIME"][0] == ">":
+                    return True
+
+        return False
 
     def is_postfix(self):
         for instance in self.values():
