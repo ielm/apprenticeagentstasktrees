@@ -253,3 +253,70 @@ class FRInstanceTestCase(ApprenticeAgentsTestCase):
 
         self.assertEqual(concept["AGENT"], [FRInstance.FRFiller(0, "THING-FR1")])
         self.assertEqual(thing["AGENT-OF"], [FRInstance.FRFiller(0, "CONCEPT-FR1")])
+
+    def test_import_fr(self):
+        Ontology.ontology.subclass("ALL", "CONCEPT")
+
+        to_import = FR()
+        to_import.register("CONCEPT")
+
+        destination = FR()
+        destination.import_fr(to_import)
+
+        self.assertTrue("CONCEPT-FR1" in destination)
+
+        destination.import_fr(to_import)
+
+        self.assertTrue("CONCEPT-FR1" in destination)
+        self.assertTrue("CONCEPT-FR2" in destination)
+
+    def test_import_fr_with_relations(self):
+        Ontology.ontology.subclass("ALL", "CONCEPT")
+
+        to_import = FR()
+        to_import.register("CONCEPT")
+        to_import.register("CONCEPT").remember("RELATION", "CONCEPT-FR1")
+
+        destination = FR(namespace="DEST")
+        destination.import_fr(to_import)
+
+        self.assertTrue("CONCEPT-DEST1" in destination)
+        self.assertTrue("CONCEPT-DEST2" in destination)
+
+        self.assertTrue(destination["CONCEPT-DEST2"]["RELATION"][0].value == "CONCEPT-DEST1")
+
+    def test_import_fr_with_import_heuristics(self):
+        Ontology.ontology.subclass("ALL", "CONCEPT1")
+        Ontology.ontology.subclass("ALL", "CONCEPT2")
+
+        to_import = FR()
+        to_import.register("CONCEPT1")
+        to_import.register("CONCEPT2")
+
+        def heuristic(fr, status):
+            status["CONCEPT2-FR1"] = False
+
+        destination = FR()
+        destination.import_fr(to_import, import_heuristics=[heuristic])
+
+        self.assertTrue("CONCEPT1-FR1" in destination)
+        self.assertTrue("CONCEPT2-FR1" not in destination)
+
+    def test_import_fr_with_resolution_heuristics(self):
+        Ontology.ontology.subclass("ALL", "CONCEPT")
+
+        to_import = FR()
+        to_import.register("CONCEPT")
+        to_import.register("CONCEPT")
+
+        def heuristic(fr, instance, resolves, tmr=None):
+            if instance.name == "CONCEPT-FR1":
+                resolves["CONCEPT-FR1"] = {"CONCEPT-DEST1"}
+
+        destination = FR(namespace="DEST")
+        to_import.register("CONCEPT")
+        destination.import_fr(to_import, resolve_heuristics=[heuristic])
+
+        self.assertEqual(2, len(destination))
+        self.assertTrue("CONCEPT-DEST1" in destination)
+        self.assertTrue("CONCEPT-DEST2" in destination)
