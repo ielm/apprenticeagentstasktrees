@@ -1,4 +1,5 @@
 from backend.contexts.context import AgentContext, AgendaProcessor, FRResolutionAgendaProcessor, HeuristicException, RootAgendaProcessor
+from backend.heuristics.fr_heuristics import FRHeuristics
 from backend.ontology import Ontology
 from backend.utils import FRUtils
 
@@ -31,8 +32,8 @@ class LCTContext(AgentContext):
 
         agenda = RootAgendaProcessor()
 
-        agenda.add_subprocess(LCTContext.IdentifyClosingOfKnownTaskAgendaProcessor(self))
-        agenda.add_subprocess(LCTContext.IdentifyPreconditionSatisfyingActions())
+        agenda.add_subprocess(LCTContext.IdentifyClosingOfKnownTaskAgendaProcessor(self).add_subprocess(LCTContext.IdentifyCompletedTaskAgendaProcessor()))
+        agenda.add_subprocess(LCTContext.IdentifyPreconditionSatisfyingActionsAgendaProcessor())
         agenda.add_subprocess(FRResolutionAgendaProcessor())
         agenda.add_subprocess(LCTContext.IdentifyPreconditionsAgendaProcessor())
         agenda.add_subprocess(LCTContext.HandleRequestedActionsAgendaProcessor())
@@ -64,9 +65,10 @@ class LCTContext(AgentContext):
 
         def _logic(self, agent, tmr):
             if tmr.is_postfix():
-                agent.wo_memory.logger().disable()
+
+                agent.wo_memory.logger().pause()
                 resolved = agent.wo_memory.resolve_tmr(tmr)
-                agent.wo_memory.logger().enable()
+                agent.wo_memory.logger().unpause()
 
                 event = tmr.find_main_event()
                 hierarchy = self.context.learning_hierarchy()
@@ -89,6 +91,28 @@ class LCTContext(AgentContext):
 
             raise HeuristicException()
 
+    # Identifies when an utterance signals that the currently learning task (overall) is complete.
+    # Example: We finished assembling the chair.
+    # This holds true if:
+    # 1) The TMR is postfix
+    # 2) There is at least one LCT.learned event in working memory
+    # 3) There are no LCT.learning events in working memory
+    # If this heuristic matches, it will import working memory into long term memory, using the FR import heuristics
+    # defined in this context, and then will clear working memory.
+    class IdentifyCompletedTaskAgendaProcessor(AgendaProcessor):
+        def _logic(self, agent, tmr):
+            if not tmr.is_postfix():
+                raise HeuristicException()
+
+            if len(agent.wo_memory.search(context={LCTContext.LEARNED: True})) == 0:
+                raise HeuristicException()
+
+            if len(agent.wo_memory.search(context={LCTContext.LEARNING: True})) > 0:
+                raise HeuristicException()
+
+            agent.lt_memory.import_fr(agent.wo_memory, import_heuristics=[LCTContext.do_not_import_request_actions], resolve_heuristics=[FRHeuristics.resolve_human_and_robot_as_singletons, FRHeuristics.resolve_sets_with_identical_members])
+            agent.wo_memory.clear()
+
     # Identifies when an action is simply satisfying a precondition; if so, it is not "learned", as the precondition
     # is already known.
     # Example: I need a screwdriver to assemble a chair.  [Get a screwdriver.]
@@ -100,7 +124,7 @@ class LCTContext(AgentContext):
     # 5) The previous TMR's main event must have a PURPOSE (this is currently the identifier of a precondition utterance).
     # 6) The theme of this TMR's REQUEST-ACTION.THEME must match the THEME of the previous TMR's main event (concept match only).
     # If the above hold, the input is skipped and all other heuristics are disabled.
-    class IdentifyPreconditionSatisfyingActions(AgendaProcessor):
+    class IdentifyPreconditionSatisfyingActionsAgendaProcessor(AgendaProcessor):
         def _logic(self, agent, tmr):
             if tmr.is_prefix() or tmr.is_postfix():
                 raise HeuristicException()
@@ -488,6 +512,15 @@ class LCTContext(AgentContext):
         if len(matches) > 0:
             resolves[instance.name] = matches
             return True
+
+    # ------ FR Import Heuristics -------
+
+    # An import heuristic that filters out request action frames; these are not needed to be moved to long term memory.
+    @staticmethod
+    def do_not_import_request_actions(fr, status):
+        for instance in fr:
+            if fr[instance].concept == "REQUEST-ACTION":
+                status[instance] = False
 
     # ------ Context Helper Functions -------
 

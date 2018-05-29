@@ -1,3 +1,4 @@
+from backend.models.frinstance import FRInstance
 
 
 class FRHeuristics(object):
@@ -54,6 +55,7 @@ class FRHeuristics(object):
             return
 
         instance_members = instance["MEMBER-TYPE"]
+        instance_members = list(map(lambda filler: filler.value if type(filler) == FRInstance.FRFiller else filler, instance_members))
 
         # Convert any HUMAN and ROBOT mentions to their singleton FR representations
         def convert(filler):
@@ -62,10 +64,18 @@ class FRHeuristics(object):
             if filler == "ROBOT":
                 return "ROBOT-" + fr.namespace + "1"
             return filler
-        instance_members = map(lambda filler: convert(filler), instance_members)
+        instance_members = list(map(lambda filler: convert(filler), instance_members))
+
+        resolved_instance_members = set()
+        for instance_member in instance_members:
+            if instance_member in resolves:
+                if resolves[instance_member] is not None:
+                    resolved_instance_members = resolved_instance_members.union(resolves[instance_member])
 
         fr_instances = fr.search(concept="SET")
         for fr_instance in fr_instances:
-            fr_instance_members = map(lambda filler: filler.value, fr_instance["MEMBER-TYPE"])
+            fr_instance_members = list(map(lambda filler: filler.value, fr_instance["MEMBER-TYPE"]))
             if set(fr_instance_members) == set(instance_members):
+                resolves[instance.name] = {fr_instance.name}
+            if set(fr_instance_members) == set(resolved_instance_members):
                 resolves[instance.name] = {fr_instance.name}

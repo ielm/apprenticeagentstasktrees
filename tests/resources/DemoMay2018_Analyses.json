@@ -4240,5 +4240,416 @@
         "syn-map_generator": "CSynmap"
       }
     ]
+  },
+  {
+    "sentence": "We finished assembling the chair.",
+    "tmr": [
+      {
+        "sentence": "We finished assembling the chair.",
+        "sent-num": 1,
+        "results": [
+          {
+            "words": {
+              "0": "WE-N1",
+              "1": "FINISH-V2",
+              "2": "ASSEMBLE-V1",
+              "4": "CHAIR-N1",
+              "5": ".-PUNCT1"
+            },
+            "concept_counts": {
+              "SET": {
+                "count": 1,
+                "word-info": [
+                  [
+                    0,
+                    "top"
+                  ]
+                ]
+              },
+              "ASPECT": {
+                "count": 1,
+                "word-info": [
+                  [
+                    1,
+                    "top"
+                  ]
+                ]
+              },
+              "ASSEMBLE": {
+                "count": 1,
+                "word-info": [
+                  [
+                    2,
+                    "top"
+                  ]
+                ]
+              },
+              "CHAIR": {
+                "count": 1,
+                "word-info": [
+                  [
+                    4,
+                    "top"
+                  ]
+                ]
+              }
+            },
+            "TMR": {
+              "SET-1": {
+                "from-sense": "WE-N1",
+                "concept": "SET",
+                "sent-word-ind": [
+                  1,
+                  [
+                    0
+                  ]
+                ],
+                "token": "We",
+                "MEMBER-TYPE": "HUMAN",
+                "CARDINALITY": [
+                  ">",
+                  1
+                ],
+                "is-in-subtree": "PROPERTY",
+                "preference": 0,
+                "AGENT-OF": "ASSEMBLE-1",
+                "sem-preference": 0
+              },
+              "ASPECT-1": {
+                "from-sense": "FINISH-V2",
+                "concept": "ASPECT",
+                "sent-word-ind": [
+                  1,
+                  [
+                    1
+                  ]
+                ],
+                "token": "finished",
+                "PHASE": "END",
+                "SCOPE": "ASSEMBLE-1"
+              },
+              "ASSEMBLE-1": {
+                "from-sense": "ASSEMBLE-V1",
+                "concept": "ASSEMBLE",
+                "sent-word-ind": [
+                  1,
+                  [
+                    1,
+                    2
+                  ]
+                ],
+                "token": "assembling",
+                "AGENT": "SET-1",
+                "TIME": [
+                  "<",
+                  "FIND-ANCHOR-TIME"
+                ],
+                "preference": 7,
+                "SCOPE-OF": "ASPECT-1",
+                "THEME": "CHAIR-1",
+                "is-in-subtree": "EVENT",
+                "sem-preference": 3
+              },
+              "CHAIR-1": {
+                "from-sense": "CHAIR-N1",
+                "concept": "CHAIR",
+                "sent-word-ind": [
+                  1,
+                  [
+                    4
+                  ]
+                ],
+                "token": "chair",
+                "is-in-subtree": "OBJECT",
+                "preference": 2,
+                "THEME-OF": "ASSEMBLE-1",
+                "sem-preference": 0
+              },
+              "total-preference": 9,
+              "total-confidence": 12
+            }
+          }
+        ],
+        "timestamp": "2018-May-29 10:29:29",
+        "candidatesBeforePrunning": 1,
+        "OriginalSentence": "We finished assembling the chair."
+      }
+    ],
+    "syntax": [
+      {
+        "0": {
+          "coref": [],
+          "lemma": "WE",
+          "ner": "O",
+          "offset": [
+            0,
+            2
+          ],
+          "pos": [
+            "PRO"
+          ],
+          "token": "We"
+        },
+        "1": {
+          "coref": [],
+          "lemma": "FINISH",
+          "ner": "O",
+          "offset": [
+            3,
+            11
+          ],
+          "pos": [
+            "V",
+            "PAST"
+          ],
+          "token": "finished"
+        },
+        "2": {
+          "coref": [],
+          "lemma": "ASSEMBLE",
+          "ner": "O",
+          "offset": [
+            12,
+            22
+          ],
+          "pos": [
+            "V",
+            "PROGRESSIVE"
+          ],
+          "token": "assembling"
+        },
+        "3": {
+          "coref": [],
+          "lemma": "THE",
+          "ner": "O",
+          "offset": [
+            23,
+            26
+          ],
+          "pos": [
+            "ART"
+          ],
+          "token": "the"
+        },
+        "4": {
+          "coref": [],
+          "lemma": "CHAIR",
+          "ner": "O",
+          "offset": [
+            27,
+            32
+          ],
+          "pos": [
+            "N",
+            "SINGULAR"
+          ],
+          "token": "chair"
+        },
+        "5": {
+          "coref": [],
+          "lemma": ".",
+          "ner": "O",
+          "offset": [
+            32,
+            33
+          ],
+          "pos": [
+            "."
+          ],
+          "token": "."
+        },
+        "basicDeps": [
+          [
+            "ROOT",
+            -1,
+            1
+          ],
+          [
+            "SUBJECT",
+            1,
+            0
+          ],
+          [
+            "XCOMP",
+            1,
+            2
+          ],
+          [
+            "DIRECTOBJECT",
+            2,
+            4
+          ],
+          [
+            "ART",
+            4,
+            3
+          ]
+        ],
+        "originalSentence": "We finished assembling the chair.",
+        "parse": "(ROOT (S (NP (PRO WE-0)) (VP (V FINISH-1) (S (VP (V ASSEMBLE-2) (NP (ART THE-3) (N CHAIR-4))))) (. .-5)))",
+        "sentence": "We finished assembling the chair.",
+        "syn-map": [
+          [
+            [
+              "WE-N1",
+              {
+                "$VAR0": [
+                  0
+                ],
+                "preference": 0
+              }
+            ]
+          ],
+          [
+            [
+              "FINISH-V2",
+              {
+                "$VAR2": [
+                  2
+                ],
+                "$VAR1": [
+                  0,
+                  0,
+                  0
+                ],
+                "$VAR3": null,
+                "$VAR0": [
+                  1
+                ],
+                "preference": 4
+              }
+            ],
+            [
+              "DO-V801",
+              {
+                "$VAR0": [
+                  1
+                ],
+                "preference": 3
+              }
+            ],
+            [
+              "FINISH-V1",
+              {
+                "$VAR2": null,
+                "$VAR1": [
+                  0,
+                  0,
+                  0
+                ],
+                "$VAR3": null,
+                "$VAR0": [
+                  1
+                ],
+                "preference": 1
+              }
+            ]
+          ],
+          [
+            [
+              "ASSEMBLE-V1",
+              {
+                "$VAR2": [
+                  4,
+                  3,
+                  4
+                ],
+                "$VAR1": null,
+                "$VAR3": null,
+                "$VAR4": null,
+                "$VAR5": null,
+                "$VAR0": [
+                  2
+                ],
+                "preference": 3
+              }
+            ],
+            [
+              "ASSEMBLE-V808",
+              {
+                "$VAR1": null,
+                "$VAR2": null,
+                "$VAR3": null,
+                "$VAR4": null,
+                "$VAR0": [
+                  2
+                ],
+                "preference": -3
+              }
+            ],
+            [
+              "ASSEMBLE-V809",
+              {
+                "$VAR1": null,
+                "$VAR2": null,
+                "$VAR3": null,
+                "$VAR4": null,
+                "$VAR5": null,
+                "$VAR6": null,
+                "$VAR0": [
+                  2
+                ],
+                "preference": -5
+              }
+            ]
+          ],
+          [
+            [
+              "THE-ART1",
+              {
+                "$VAR2": null,
+                "$VAR1": [
+                  4,
+                  4,
+                  4
+                ],
+                "$VAR0": [
+                  3
+                ],
+                "preference": 3
+              }
+            ],
+            [
+              "THE-ART2",
+              {
+                "$VAR1": [
+                  4,
+                  4,
+                  4
+                ],
+                "$VAR0": [
+                  3
+                ],
+                "preference": 3
+              }
+            ]
+          ],
+          [
+            [
+              "CHAIR-N1",
+              {
+                "$VAR0": [
+                  4
+                ],
+                "preference": 2
+              }
+            ]
+          ],
+          [
+            [
+              ".-PUNCT1",
+              {
+                "$VAR0": [
+                  5
+                ],
+                "preference": 0
+              }
+            ]
+          ]
+        ],
+        "syn-map_generator": "CSynmap"
+      }
+    ]
   }
 ]
+

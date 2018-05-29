@@ -30,3 +30,6 @@ class Graph(Mapping):
 
     def search(self):
         raise Exception("NYI")
+
+    def clear(self):
+        self._storage = dict()

@@ -29,6 +29,10 @@ class FR(Graph):
             self._logger = logger
         return self._logger
 
+    def clear(self):
+        super().clear()
+        self._indexes = dict()
+
     def register(self, concept):
         fr_index = self.__next_index(concept)
         fr_name = concept + "-" + self.namespace + str(fr_index)
@@ -71,6 +75,8 @@ class FR(Graph):
             # TODO: handle attributes
             # if relation:
             for value in instance[property]:
+                if type(value) == FRInstance.FRFiller:
+                    value = value.value
                 if value in resolves and resolves[value] is not None:
                     fr_instance.remember(property, resolves[value])
 
@@ -81,6 +87,44 @@ class FR(Graph):
         if input_results != results:
             pruned = {k: v for k, v in results.items() if v is not None}
             self._logger.log("FR." + heuristic.__name__ + " -> " + str(pruned))
+
+    # Take an input FR, a series of import heuristics, and an overriding series of resolution heuristics, and populates
+    # this FR with all of the elements of the input FR.
+    # 1) Import heuristics are of the form heuristic(other_fr, {id: Boolean}); they modify the second parameter to
+    #    either include or exclude each instance in the input from being imported (if xyz-1 == False, it will not
+    #    be imported).
+    # 2) Resolve heuristics are the normal FR resolution heuristics; if none are provided, then no resolution occurs.
+    #    That is, the normal heuristics in this FR are ignored during this operation - either none are used, or an
+    #    overriding list must be provided.
+    def import_fr(self, other_fr, import_heuristics=None, resolve_heuristics=None):
+        if import_heuristics is None:
+            import_heuristics = []
+        if resolve_heuristics is None:
+            resolve_heuristics = []
+
+        status = {k: True for k in other_fr.keys()}
+        for heuristic in import_heuristics:
+            heuristic(other_fr, status)
+
+        backup_heuristics = self.heuristics
+        self.heuristics = resolve_heuristics
+
+        filtered_graph = {k: other_fr[k] for k in filter(lambda k: status[k], other_fr.keys())}
+        resolves = self.resolve_tmr(filtered_graph)
+        self.heuristics = backup_heuristics
+
+        for k in filtered_graph:
+            if resolves[k] is None:
+                resolves[k] = self.register(other_fr[k].concept).name
+
+        for k in filtered_graph:
+            resolved = resolves[k]
+            if type(resolved) == set:
+                if len(resolved) > 1:
+                    raise Exception()
+                else:
+                    resolved = list(resolved)[0]
+            self.populate(resolved, other_fr[k], resolves=resolves)
 
     # Locates each mention of an Instance in the input Instance (including itself), and attempts to resolve those
     # instances to existing FR Instances.  It can use an existing set of resolves to assist, as well as an optional
@@ -93,6 +137,8 @@ class FR(Graph):
         for property in instance:
             if property in Ontology.ontology and 'RELATION' in Ontology.ancestors(property):
                 for value in instance[property]:
+                    if type(value) == FRInstance.FRFiller:
+                        value = value.value
                     results[value] = None
 
         for id in results:

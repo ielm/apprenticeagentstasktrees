@@ -6,6 +6,7 @@ class AgentLogger(object):
 
     def __init__(self):
         self._log = False
+        self._paused_status = None
         self._indent = 0
 
     def enable(self):
@@ -13,6 +14,14 @@ class AgentLogger(object):
 
     def disable(self):
         self._log = False
+
+    def pause(self):
+        self._paused_status = self._log
+        self.disable()
+
+    def unpause(self):
+        self._log = self._paused_status
+        self._paused_status = None
 
     def indent(self):
         self._indent += 1
