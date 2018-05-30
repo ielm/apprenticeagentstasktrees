@@ -72,9 +72,15 @@ class AgendaProcessor(object):
             self._logger.unindent()
 
     def halt_siblings(self):
+        if self.parent is None:
+            return
+
         self.parent.subprocesses = []
 
     def reassign_siblings(self, siblings):
+        if self.parent is None:
+            return
+
         self.parent.subprocesses = siblings
         for p in self.parent.subprocesses:
             p.logger(logger=self.parent.logger())

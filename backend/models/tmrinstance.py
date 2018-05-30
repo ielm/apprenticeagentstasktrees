@@ -3,18 +3,21 @@ from backend.models.instance import Instance
 
 class TMRInstance(Instance):
 
-    def __init__(self, inst_dict, name=None, uuid=None):
-        name = name if name is not None else self.concept + "-X"
-        concept = inst_dict["concept"]
-        subtree = inst_dict["is-in-subtree"] if "is-in-subtree" in inst_dict else None
+    def __init__(self, properties=None, name=None, concept=None, uuid=None, subtree=None, index=None):
+        self.concept = concept
+        self.name = name if name is not None else self.concept + "-X"
+        self.subtree = subtree
 
-        properties = {}
-        for key in inst_dict:
+        if properties is None:
+            properties = {}
+
+        _properties = {}
+        for key in properties:
             if "_constraint_info" in key:
                 pass
             if key == key.upper():
-                properties[key] = inst_dict[key]
+                _properties[key] = properties[key]
 
-        super().__init__(name, concept, uuid=uuid, properties=properties, subtree=subtree)
+        super().__init__(name, concept, uuid=uuid, properties=_properties, subtree=subtree)
 
-        self.token_index = inst_dict["sent-word-ind"][1]
+        self.token_index = index

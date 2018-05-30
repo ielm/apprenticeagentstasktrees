@@ -7,6 +7,27 @@ from backend.utils.YaleUtils import tmr_action_name
 
 class TMR(Graph):
 
+    @staticmethod
+    def new(sentence=None, syntax=None, tmr=None):
+        if sentence is None:
+            sentence = ""
+        if syntax is None:
+            syntax = [{
+                "basicDeps": {}
+            }]
+        if tmr is None:
+            tmr = [{
+                "results": [{
+                    "TMR": {}
+                }]
+            }]
+
+        return TMR({
+            "sentence": sentence,
+            "syntax": syntax,
+            "tmr": tmr
+        })
+
     def __init__(self, tmr_dict):
         super().__init__()
 
@@ -16,7 +37,10 @@ class TMR(Graph):
         result = tmr_dict["tmr"][0]["results"][0]["TMR"]
         for key in result:
             if key == key.upper():
-                self[key] = TMRInstance(result[key], name=key)
+                inst_dict = result[key]
+                subtree = inst_dict["is-in-subtree"] if "is-in-subtree" in inst_dict else None
+
+                self[key] = TMRInstance(properties=inst_dict, name=key, concept=inst_dict["concept"], subtree=subtree, index=inst_dict["sent-word-ind"][1])
 
     def __getitem__(self, key):
         if key == "HUMAN" or key == "ROBOT":

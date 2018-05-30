@@ -529,7 +529,7 @@ class LCTContext(AgentContext):
     def learning_hierarchy(self):
         results = self.agent.wo_memory.search(context={LCTContext.LEARNING: True, LCTContext.CURRENT: True})
         if len(results) != 1:
-            return
+            return []
 
         hierarchy = [results[0].name]
 
