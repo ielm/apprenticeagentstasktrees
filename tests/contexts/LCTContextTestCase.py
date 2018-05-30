@@ -1,7 +1,5 @@
 from backend.agent import Agent
 from backend.contexts.LCTContext import LCTContext
-from backend.models.tmr import TMR
-from backend.models.tmrinstance import TMRInstance
 from backend.ontology import Ontology
 from tests.ApprenticeAgentsTestCase import ApprenticeAgentsTestCase
 
@@ -74,21 +72,3 @@ class LCTContextTestCase(ApprenticeAgentsTestCase):
         self.assertTrue(LCTContext.LEARNING not in event2.context())
         self.assertTrue(LCTContext.CURRENT not in event2.context())
         self.assertTrue(LCTContext.WAITING_ON not in event2.context())
-
-    def test_IdentifyClosingOfKnownTaskAgendaProcessor(self):
-        agent = Agent()
-        context = LCTContext(agent)
-
-        event = agent.wo_memory.register("EVENT")
-        event.context()[LCTContext.LEARNING] = True
-        event.context()[LCTContext.CURRENT] = True
-
-        tmr = TMR.new()
-        tmr["EVENT-1"] = TMRInstance(name="EVENT-1", concept="EVENT")
-        tmr["EVENT-1"]["TIME"] = ["<", "FIND-ANCHOR-TIME"]
-
-        LCTContext.IdentifyClosingOfKnownTaskAgendaProcessor(context).process(agent, tmr)
-
-        self.assertTrue(LCTContext.LEARNING not in event.context())
-        self.assertTrue(LCTContext.CURRENT not in event.context())
-        self.assertEqual(event.context()[LCTContext.LEARNED], True)

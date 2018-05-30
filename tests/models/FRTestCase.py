@@ -1,3 +1,4 @@
+from backend.heuristics.fr_heuristics import FRResolutionHeuristic, FRImportHeuristic
 from backend.models.fr import FR
 from backend.models.instance import Instance
 from backend.models.frinstance import FRInstance
@@ -161,22 +162,24 @@ class FRInstanceTestCase(ApprenticeAgentsTestCase):
 
         fr = FR()
 
-        def resolve_a(fr, instance, resolves, tmr=None):
-            if instance.name == "CONCEPT-A-1":
-                resolves["CONCEPT-A-1"] = {"CONCEPT-A-FR1"}
+        class TestHeuristicA(FRResolutionHeuristic):
+            def resolve(self, instance, resolves, tmr=None):
+                if instance.name == "CONCEPT-A-1":
+                    resolves["CONCEPT-A-1"] = {"CONCEPT-A-FR1"}
 
         called = 0
 
-        def resolve_b(fr, instance, resolves, tmr=None):
-            nonlocal called
-            if called == 0:
-                called = 1
-            elif instance.name == "CONCEPT-B-1":
-                resolves["CONCEPT-B-1"] = {"CONCEPT-B-FR1"}
+        class TestHeuristicB(FRResolutionHeuristic):
+            def resolve(self, instance, resolves, tmr=None):
+                nonlocal called
+                if called == 0:
+                    called = 1
+                elif instance.name == "CONCEPT-B-1":
+                    resolves["CONCEPT-B-1"] = {"CONCEPT-B-FR1"}
 
         fr.heuristics = [
-            resolve_a,
-            resolve_b,
+            TestHeuristicA,
+            TestHeuristicB,
         ]
 
         fr.register("CONCEPT-A")
@@ -293,11 +296,12 @@ class FRInstanceTestCase(ApprenticeAgentsTestCase):
         to_import.register("CONCEPT1")
         to_import.register("CONCEPT2")
 
-        def heuristic(fr, status):
-            status["CONCEPT2-FR1"] = False
+        class TestHeuristic(FRImportHeuristic):
+            def filter(self, import_fr, status):
+                status["CONCEPT2-FR1"] = False
 
         destination = FR()
-        destination.import_fr(to_import, import_heuristics=[heuristic])
+        destination.import_fr(to_import, import_heuristics=[TestHeuristic])
 
         self.assertTrue("CONCEPT1-FR1" in destination)
         self.assertTrue("CONCEPT2-FR1" not in destination)
@@ -309,13 +313,14 @@ class FRInstanceTestCase(ApprenticeAgentsTestCase):
         to_import.register("CONCEPT")
         to_import.register("CONCEPT")
 
-        def heuristic(fr, instance, resolves, tmr=None):
-            if instance.name == "CONCEPT-FR1":
-                resolves["CONCEPT-FR1"] = {"CONCEPT-DEST1"}
+        class TestHeuristic(FRResolutionHeuristic):
+            def resolve(self, instance, resolves, tmr=None):
+                if instance.name == "CONCEPT-FR1":
+                    resolves["CONCEPT-FR1"] = {"CONCEPT-DEST1"}
 
         destination = FR(namespace="DEST")
         to_import.register("CONCEPT")
-        destination.import_fr(to_import, resolve_heuristics=[heuristic])
+        destination.import_fr(to_import, resolve_heuristics=[TestHeuristic])
 
         self.assertEqual(2, len(destination))
         self.assertTrue("CONCEPT-DEST1" in destination)

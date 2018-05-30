@@ -1,3 +1,4 @@
+from backend.heuristics.fr_heuristics import FRResolutionHeuristic
 from backend.utils.AgentLogger import CachedAgentLogger
 
 
@@ -110,3 +111,9 @@ class FRResolutionAgendaProcessor(AgendaProcessor):
                 super().log(message)
             self.logger().unindent()
             self.cached_logger = None
+
+
+class ContextBasedFRResolutionHeuristic(FRResolutionHeuristic):
+
+    def __init__(self, fr):
+        super().__init__(fr)

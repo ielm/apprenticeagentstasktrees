@@ -1,7 +1,7 @@
 from backend.models.graph import Graph
 from backend.models.frinstance import FRInstance
 from backend.ontology import Ontology
-from backend.heuristics.fr_heuristics import FRHeuristics
+from backend.heuristics.fr_heuristics import *
 from backend.utils.AgentLogger import AgentLogger
 
 import copy
@@ -19,9 +19,9 @@ class FR(Graph):
         self._indexes = dict()
 
         self.heuristics = [
-            FRHeuristics.resolve_human_and_robot_as_singletons,
-            FRHeuristics.resolve_determined_objects,
-            FRHeuristics.resolve_sets_with_identical_members,
+            FRResolveHumanAndRobotAsSingletonsHeuristic,
+            FRResolveDeterminedObjectsHeuristic,
+            FRResolveSetsWithIdenticalMembersHeuristic
         ]
 
     def logger(self, logger=None):
@@ -82,7 +82,7 @@ class FR(Graph):
 
     def _resolve_log_wrapper(self, heuristic, instance, results, tmr=None):
         input_results = copy.deepcopy(results)
-        heuristic(self, instance, results, tmr=tmr)
+        heuristic(self).resolve(instance, results, tmr=tmr)
 
         if input_results != results:
             pruned = {k: v for k, v in results.items() if v is not None}
@@ -104,7 +104,7 @@ class FR(Graph):
 
         status = {k: True for k in other_fr.keys()}
         for heuristic in import_heuristics:
-            heuristic(other_fr, status)
+            heuristic(self).filter(other_fr, status)
 
         backup_heuristics = self.heuristics
         self.heuristics = resolve_heuristics
