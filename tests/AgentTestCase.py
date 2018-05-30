@@ -44,7 +44,7 @@ class AgentTestCase(ApprenticeAgentsTestCase):
             print("============================================")
             print("")
 
-        # print(agent.st_memory)
+        print(agent.wo_memory)
 
     def test_ltm(self):
         file = os.path.abspath(__package__) + "/resources/DemoMay2018_Analyses.json"

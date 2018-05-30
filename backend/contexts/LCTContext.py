@@ -156,7 +156,7 @@ class LCTContext(AgentContext):
             previous_themes = list(map(lambda theme: previous_tmr[theme].concept, previous_themes))
 
             if len(set(themes).intersection(set(previous_themes))) > 0:
-                self.halt_siblings()
+                self.reassign_siblings([FRResolutionAgendaProcessor()])
                 return
 
             raise HeuristicException()

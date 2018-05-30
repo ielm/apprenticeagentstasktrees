@@ -74,6 +74,11 @@ class AgendaProcessor(object):
     def halt_siblings(self):
         self.parent.subprocesses = []
 
+    def reassign_siblings(self, siblings):
+        self.parent.subprocesses = siblings
+        for p in self.parent.subprocesses:
+            p.logger(logger=self.parent.logger())
+
 
 class RootAgendaProcessor(AgendaProcessor):
     def _logic(self, agent, tmr):
