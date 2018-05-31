@@ -50,6 +50,7 @@ class LCTContext(AgentContext):
     LEARNED = "*LCT.learned"            # Marks an event that has been learned; True / False (absent)
     CURRENT = "*LCT.current"            # Marks an event that is currently being explained; True / False (absent)
     WAITING_ON = "*LCT.waiting_on"      # Marks an event that is waiting on another event to be explained; FR EVENT ID
+    FROM_CONTEXT = "*LCT.from_context"  # Marks an instance as having been moved to LT memory from a particular LCT context (as an ID)
 
     # ------ Context Helper Functions -------
 

@@ -2,6 +2,8 @@ from backend.contexts.context import AgendaProcessor, HeuristicException, FRReso
 from backend.heuristics.fr_heuristics import FRResolveHumanAndRobotAsSingletonsHeuristic, FRResolveSetsWithIdenticalMembersHeuristic
 from backend.heuristics.lctcontex.lct_fr_import_heuristics import FRImportDoNotImportRequestActions
 
+from uuid import uuid4
+
 # ------ Pre-Heuristics -------
 
 
@@ -70,7 +72,10 @@ class IdentifyCompletedTaskAgendaProcessor(AgendaProcessor):
         if len(agent.wo_memory.search(context={self.context.LEARNING: True})) > 0:
             raise HeuristicException()
 
-        agent.lt_memory.import_fr(agent.wo_memory, import_heuristics=[FRImportDoNotImportRequestActions], resolve_heuristics=[FRResolveHumanAndRobotAsSingletonsHeuristic, FRResolveSetsWithIdenticalMembersHeuristic])
+        agent.lt_memory.import_fr(agent.wo_memory,
+                                  import_heuristics=[FRImportDoNotImportRequestActions],
+                                  resolve_heuristics=[FRResolveHumanAndRobotAsSingletonsHeuristic, FRResolveSetsWithIdenticalMembersHeuristic],
+                                  update_context={self.context.FROM_CONTEXT: [uuid4()]})
         agent.wo_memory.clear()
 
 

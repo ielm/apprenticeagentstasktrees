@@ -80,7 +80,10 @@ class FRInstance(Instance):
         for c in context:
             if c not in self._context:
                 return False
-            if self._context[c] != context[c]:
+            if type(self._context[c]) == list:
+                if self._context[c] != context[c] and context[c] not in self._context[c]:
+                    return False
+            elif self._context[c] != context[c]:
                 return False
 
         return True

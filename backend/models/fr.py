@@ -96,11 +96,13 @@ class FR(Graph):
     # 2) Resolve heuristics are the normal FR resolution heuristics; if none are provided, then no resolution occurs.
     #    That is, the normal heuristics in this FR are ignored during this operation - either none are used, or an
     #    overriding list must be provided.
-    def import_fr(self, other_fr, import_heuristics=None, resolve_heuristics=None):
+    def import_fr(self, other_fr, import_heuristics=None, resolve_heuristics=None, update_context=None):
         if import_heuristics is None:
             import_heuristics = []
         if resolve_heuristics is None:
             resolve_heuristics = []
+        if update_context is None:
+            update_context = {}
 
         status = {k: True for k in other_fr.keys()}
         for heuristic in import_heuristics:
@@ -125,6 +127,26 @@ class FR(Graph):
                 else:
                     resolved = list(resolved)[0]
             self.populate(resolved, other_fr[k], resolves=resolves)
+
+            # Merge contexts (needlessly complicated due to list types needing to be merged)
+            context = copy.deepcopy(other_fr[k].context())
+            for k in update_context:
+                if k not in context:
+                    context[k] = update_context[k]
+                    continue
+
+                if type(context[k]) == list and type(update_context[k]) != list:
+                    update_context[k] = [update_context[k]]
+                if type(context[k]) != list and type(update_context[k]) == list:
+                    context[k] = [context[k]]
+                if type(context[k]) == list:
+                    context[k].extend(update_context[k])
+                else:
+                    context[k] = update_context[k]
+            for k in context:
+                self[resolved].context()[k] = context[k]
+
+        return resolves
 
     # Locates each mention of an Instance in the input Instance (including itself), and attempts to resolve those
     # instances to existing FR Instances.  It can use an existing set of resolves to assist, as well as an optional

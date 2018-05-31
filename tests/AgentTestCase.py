@@ -99,3 +99,18 @@ class AgentTestCase(ApprenticeAgentsTestCase):
 
         print("Long Term Memory BUILD-LT3")
         print(format_pretty_htn(agent.lt_memory, agent.lt_memory["BUILD-LT3"], indent=1))
+
+        print("")
+        print("Action Queue")
+        print(agent.action_queue)
+
+        from backend.contexts.ACTContext import ACTContext
+        agent.context = ACTContext(agent)
+
+        print("")
+        agent.logger().enable()
+        agent.input(demo[0])
+
+        print("")
+        print("Action Queue")
+        print(agent.action_queue)

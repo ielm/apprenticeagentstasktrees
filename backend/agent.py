@@ -12,6 +12,7 @@ class Agent(object):
         self.lt_memory = FR(name="Long-term Memory", namespace="LT")
 
         self.input_memory = []
+        self.action_queue = []
         self.context = LCTContext(self)
 
         self._logger = AgentLogger()
