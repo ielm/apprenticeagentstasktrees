@@ -5,19 +5,114 @@ import unittest
 
 class FillerTestCase(unittest.TestCase):
 
+    def test_filler_equals_operator(self):
+        # Use "==" as shorthand for compare(..., isa=False, intersection=True)
+        g = Graph("TEST")
+        f1 = Frame("OBJECT-1")
+        f2 = Frame("OBJECT-2", isa="OBJECT-1")
+        f3 = Frame("OBJECT-3")
+
+        g["OBJECT-1"] = f1
+        g["OBJECT-2"] = f2
+        g["OBJECT-3"] = f3
+
+        f = Filler("OBJECT-2")
+        f3["REL"] = f
+
+        self.assertTrue(f == g["OBJECT-2"])
+        self.assertFalse(f == g["OBJECT-1"])
+        self.assertTrue(f == ["OBJECT-1", "OBJECT-2"])
+
+    def test_filler_isa_operator(self):
+        # Use "^" as shorthand for compare(..., isa=True, intersection=True)
+        g = Graph("TEST")
+        f1 = Frame("OBJECT-1")
+        f2 = Frame("OBJECT-2", isa="OBJECT-1")
+        f3 = Frame("OBJECT-3")
+
+        g["OBJECT-1"] = f1
+        g["OBJECT-2"] = f2
+        g["OBJECT-3"] = f3
+
+        f = Filler("OBJECT-2")
+        f3["REL"] = f
+
+        self.assertTrue(f ^ "OBJECT-1")
+        self.assertTrue(f ^ "OBJECT-2")
+        self.assertFalse(f ^ "OBJECT-3")
+        self.assertTrue(f ^ ["OBJECT-1", f3])
+
     def test_filler_compares_to_filler(self):
         f1 = Filler("value1")
         f2 = Filler("value1")
         f3 = Filler("value2")
 
-        self.assertEqual(f1, f2)
-        self.assertNotEqual(f1, f3)
+        self.assertTrue(f1.compare(f2))
+        self.assertFalse(f1.compare(f3))
 
     def test_filler_compares_to_value(self):
         f = Filler("value1")
 
-        self.assertEqual(f, "value1")
-        self.assertNotEqual(f, "value2")
+        self.assertTrue(f.compare("value1"))
+        self.assertFalse(f.compare("value2"))
+
+    def test_filler_compares_to_frame(self):
+        f = Filler("TEST.OBJECT.1")
+
+        self.assertTrue(f.compare(Frame("TEST.OBJECT.1")))
+        self.assertFalse(f.compare(Frame("TEST.OBJECT.2")))
+
+    def test_filler_compares_to_resolvable_frame(self):
+        g = Graph("TEST")
+
+        f = Filler("TEST.OBJECT-1")
+        f._graph = g
+
+        g["OBJECT-1"] = Frame("OBJECT-1")
+
+        self.assertTrue(f.compare(g["OBJECT-1"]))
+
+    def test_filler_compares_by_resolving(self):
+        g = Graph("TEST")
+
+        g["OBJECT-1"] = Frame("OBJECT-1")
+        g["OBJECT-2"] = Frame("OBJECT-2")
+
+        f = Filler("OBJECT-1")
+        f._frame = g["OBJECT-2"]
+
+        self.assertTrue(f.compare(g["OBJECT-1"]))
+
+    def test_filler_compares_with_isa(self):
+        g = Graph("TEST")
+        f1 = Frame("OBJECT-1")
+        f2 = Frame("OBJECT-2", isa="OBJECT-1")
+        f3 = Frame("OBJECT-3")
+
+        g["OBJECT-1"] = f1
+        g["OBJECT-2"] = f2
+        g["OBJECT-3"] = f3
+
+        f = Filler("OBJECT-2")
+        f3["REL"] = f
+
+        self.assertTrue(f.compare(g["OBJECT-1"], isa=True))
+        self.assertFalse(f.compare(g["OBJECT-1"], isa=False))
+
+    def test_filler_compare_ignores_isa(self):
+        f = Filler("OBJECT-2")
+
+        self.assertFalse(f.compare("XYZ", isa=True))
+        self.assertFalse(f.compare("XYZ", isa=False))
+
+    def test_filler_compares_set_inclusion(self):
+        f = Filler("A")
+
+        self.assertTrue(f.compare(["A", "B", "C"], intersection=True))
+        self.assertTrue(f.compare(["A"], intersection=True))
+        self.assertTrue(f.compare("A", intersection=True))
+        self.assertFalse(f.compare(["B", "C"], intersection=True))
+        self.assertFalse(f.compare(["A", "B", "C"], intersection=False))
 
 
 class FillersTestCase(unittest.TestCase):
@@ -314,6 +409,21 @@ class FrameTestCase(unittest.TestCase):
         self.assertTrue(fc.isa("B"))
         self.assertTrue(fc.isa("C"))
         self.assertFalse(fc.isa("OTHER"))
+
+    def test_frame_isa_with_frame_input(self):
+        fa = Frame("A")
+        fb = Frame("B", isa="A")
+        fc = Frame("C", isa="B")
+
+        g = Graph("TEST")
+        g["A"] = fa
+        g["B"] = fb
+        g["C"] = fc
+
+        self.assertTrue(fc.isa(fa))
+        self.assertTrue(fc.isa(fb))
+        self.assertTrue(fc.isa(fc))
+        self.assertFalse(fc.isa(Frame("OTHER")))
 
     '''
     intersection compare ([v1, v2] ~= [v2, v3])

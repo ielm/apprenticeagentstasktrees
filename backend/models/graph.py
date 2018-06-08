@@ -1,4 +1,5 @@
 from collections.abc import Mapping
+from functools import reduce
 
 
 class Network(object):
@@ -126,6 +127,9 @@ class Frame(object):
         return name
 
     def isa(self, parent):
+        if type(parent) == Frame:
+            parent = parent.name()
+
         if parent in self.ancestors():
             return True
         if parent == self.name():
@@ -255,17 +259,65 @@ class Filler(object):
                         except KeyError: pass
         return self._value
 
-    def compare(self, other, isa=True):
+    def compare(self, other, isa=True, intersection=True):
+        # 1) Refactor "other" into a list of Fillers (either using the input Filler information, or defaulting to self)
         if type(other) != Filler:
-            raise Exception("Filler.compare requires Filler as parameter[1].")
+            other = Filler(other)
+            other._frame = self._frame
+        if type(other._value) != list:
+            other._value = [other._value]
+        others = list(map(lambda value: Filler(value), other._value))
+        for o in others: o._frame = other._frame
 
-        # TODO: if either self.value or other.value are not a Frame (or Frame pointer): compare directly
-        # TODO: else, resolve as Frames, compare directly, then recursive IS-A from each, looking for the other
+        # 2) For each value, do a comprehensive comparison, mapping the results
+        def _compare(to):
+            sr = self.resolve()
+            tr = to.resolve()
+
+            sv = sr
+            tv = tr
+
+            if type(sr) == Frame:
+                sv = sr.name()
+
+            if type(tr) == Frame:
+                tv = tr.name()
+
+            if sv == tv:
+                return True
+
+            if type(sr) == Frame and type(tr) == Frame and isa:
+                if sr.isa(tr):
+                    return True
+                if tr.isa(sr):
+                    return True
+
+            return False
+
+        # 3) Convert the results into a single comparator (if intersection is requested, then any single True is
+        #    sufficient, otherwise all must be true).
+        results = list(map(lambda value: _compare(value), others))
+        if intersection:
+            results = reduce(lambda x, y: x or y, results)
+        else:
+            results = reduce(lambda x, y: x and y, results)
+
+        return results
 
     def __eq__(self, other):
-        if type(other) == Filler:
-            return self._value == other._value
-        return self._value == other
+        return self.compare(other, isa=False, intersection=True)
+
+    # The XOR operator is overridden here to provide a convenient single character comparator ("^") for the most
+    # common comparison case: isa=True and intersection=True.  This allows for all of the following statements
+    # to return True (with generally accepted setup for frames in a graph, and graphs in a network):
+    # OBJECT-1 ^ OBJECT-1
+    # OBJECT-1 ^ OBJECT
+    # OBJECT-1 ^ [OBJECT, EVENT]
+    # OBJECT-1 ^ [OBJECT-1, OBJECT-2]
+    # The XOR operator does not make traditional sense on a Filler, hence the selection of this operator to
+    # override for different behavior.
+    def __xor__(self, other):
+        return self.compare(other, isa=True, intersection=True)
 
     def __str__(self):
         return str(self._value)
