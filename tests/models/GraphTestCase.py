@@ -234,3 +234,29 @@ class GraphTestCase(unittest.TestCase):
 
         g.clear()
         self.assertEqual(0, len(g))
+
+
+class NetworkComprehensiveExampleTestCase(unittest.TestCase):
+
+    def test_comprehsive_example(self):
+        n = Network()
+
+        ontology = n.register("ONT")
+        tmr = n.register("TMR")
+
+        ontology["ALL"] = Frame("ALL")
+        ontology["OBJECT"] = Frame("OBJECT", isa="ALL")
+        ontology["EVENT"] = Frame("EVENT", isa="ALL")
+        ontology["PHYSICAL-OBJECT"] = Frame("PHYSICAL-OBJECT", isa="OBJECT")
+
+        tmr["EVENT.1"] = Frame("EVENT.1", isa="ONT.EVENT")
+        tmr["HUMAN.1"] = Frame("HUMAN.1", isa="ONT.PHYSICAL-OBJECT")
+        tmr["THING.1"] = Frame("THING.1", isa="ONT.PHYSICAL-OBJECT")
+        tmr["THING.2"] = Frame("THING.2", isa="ONT.PHYSICAL-OBJECT")
+
+        tmr["EVENT.1"]["AGENT"] = "HUMAN.1"
+        tmr["EVENT.1"]["THEME"] = "THING.1"
+        tmr["EVENT.1"]["THEME"] += "THING.2"
+
+        self.assertTrue(tmr["EVENT.1"]["THEME"] ^ "ONT.OBJECT")
+        self.assertTrue(tmr["EVENT.1"]["AGENT"] == "HUMAN.1")
