@@ -73,6 +73,74 @@ class NetworkTestCase(unittest.TestCase):
         with self.assertRaises(TypeError):
             n.register(123)
 
+    def test_network_lookup_explicit(self):
+        n = Network()
+
+        g1 = n.register("TEST1")
+        g2 = n.register("TEST2")
+
+        f1 = Frame("OBJECT.1")
+        f2 = Frame("OBJECT.1")
+
+        g1["OBJECT.1"] = f1
+        g2["OBJECT.1"] = f2
+
+        result = n.lookup("TEST2.OBJECT.1")
+        self.assertEqual(result, f2)
+
+    def test_network_lookup_with_graph(self):
+        n = Network()
+
+        g1 = n.register("TEST1")
+        g2 = n.register("TEST2")
+
+        f1 = Frame("OBJECT.1")
+        f2 = Frame("OBJECT.1")
+
+        g1["OBJECT.1"] = f1
+        g2["OBJECT.1"] = f2
+
+        result = n.lookup("OBJECT.1", graph="TEST2")
+        self.assertEqual(result, f2)
+
+    def test_network_lookup_with_redundant_graph(self):
+        n = Network()
+
+        g1 = n.register("TEST1")
+        g2 = n.register("TEST2")
+
+        f1 = Frame("OBJECT.1")
+        f2 = Frame("OBJECT.1")
+
+        g1["OBJECT.1"] = f1
+        g2["OBJECT.1"] = f2
+
+        result = n.lookup("TEST2.OBJECT.1", graph="TEST2")
+        self.assertEqual(result, f2)
+
+    def test_network_lookup_with_misleading_graph(self):
+        n = Network()
+
+        g1 = n.register("TEST1")
+        g2 = n.register("TEST2")
+
+        f1 = Frame("OBJECT.1")
+        f2 = Frame("OBJECT.1")
+
+        g1["OBJECT.1"] = f1
+        g2["OBJECT.1"] = f2
+
+        result = n.lookup("TEST2.OBJECT.1", graph="TEST1")
+        self.assertEqual(result, f2)
+
+    def test_network_lookup_with_unknown_graph_information(self):
+        n = Network()
+
+        with self.assertRaises(Exception):
+            n.lookup("OBJECT-1")
+
+        with self.assertRaises(Exception):
+            n.lookup("OBJECT.1")
 
 class GraphTestCase(unittest.TestCase):
 
@@ -82,35 +150,41 @@ class GraphTestCase(unittest.TestCase):
         with self.assertRaises(TypeError):
             g["FRAME.1"] = 123
 
+    def test_graph_add_frame_with_incorrect_name(self):
+        g = Graph("NMSP")
+
+        with self.assertRaises(Network.NamespaceError):
+            g["XYZ"] = Frame("FRAME.1")
+
     def test_graph_namespace_prepended(self):
         g = Graph("NMSP")
 
-        g["FRAME.1"] = Frame()
+        g["FRAME.1"] = Frame("FRAME.1")
         self.assertEqual(list(g.keys()), ["NMSP.FRAME.1"])
 
     def test_graph_lookup_by_full_name(self):
         g = Graph("NMSP")
-        g["FRAME.1"] = Frame()
+        g["FRAME.1"] = Frame("FRAME.1")
 
         f = g["NMSP.FRAME.1"]
         self.assertIsNotNone(f)
 
     def test_graph_lookup_by_partial_name(self):
         g = Graph("NMSP")
-        g["FRAME.1"] = Frame()
+        g["FRAME.1"] = Frame("FRAME.1")
 
         f = g["FRAME.1"]
         self.assertIsNotNone(f)
 
     def test_graph_contains_by_full_name(self):
         g = Graph("NMSP")
-        g["FRAME.1"] = Frame()
+        g["FRAME.1"] = Frame("FRAME.1")
 
         self.assertIn("NMSP.FRAME.1", g)
 
     def test_graph_contains_by_partial_name(self):
         g = Graph("NMSP")
-        g["FRAME.1"] = Frame()
+        g["FRAME.1"] = Frame("FRAME.1")
 
         self.assertIn("FRAME.1", g)
 
@@ -121,14 +195,14 @@ class GraphTestCase(unittest.TestCase):
 
     def test_graph_delete_by_full_name(self):
         g = Graph("NMSP")
-        g["FRAME.1"] = Frame()
+        g["FRAME.1"] = Frame("FRAME.1")
 
         del g["NMSP.FRAME.1"]
         self.assertNotIn("NMSP.FRAME.1", g)
 
     def test_graph_delete_by_partial_name(self):
         g = Graph("NMSP")
-        g["FRAME.1"] = Frame()
+        g["FRAME.1"] = Frame("FRAME.1")
 
         del g["FRAME.1"]
         self.assertNotIn("NMSP.FRAME.1", g)
@@ -138,13 +212,13 @@ class GraphTestCase(unittest.TestCase):
 
         self.assertEqual(0, len(g))
 
-        g["FRAME.1"] = Frame()
+        g["FRAME.1"] = Frame("FRAME.1")
         self.assertEqual(1, len(g))
 
     def test_graph_iter(self):
         g = Graph("NMSP")
-        g["FRAME.1"] = Frame()
-        g["FRAME.2"] = Frame()
+        g["FRAME.1"] = Frame("FRAME.1")
+        g["FRAME.2"] = Frame("FRAME.2")
 
         result = ""
         for frame in g:
@@ -153,8 +227,8 @@ class GraphTestCase(unittest.TestCase):
 
     def test_clear(self):
         g = Graph("NMSP")
-        g["FRAME.1"] = Frame()
-        g["FRAME.2"] = Frame()
+        g["FRAME.1"] = Frame("FRAME.1")
+        g["FRAME.2"] = Frame("FRAME.2")
 
         self.assertEqual(2, len(g))
 

@@ -1,4 +1,4 @@
-from backend.models.graph import Filler, Fillers, Frame, Graph
+from backend.models.graph import Filler, Fillers, Frame, Graph, Network
 
 import unittest
 
@@ -109,11 +109,57 @@ class FillersTestCase(unittest.TestCase):
 
         self.assertEqual([3, 4], list(map(lambda filler: filler._value + 2, Fillers([f1, f2]))))
 
+    def test_filler_resolve(self):
+        fa = Frame("A")
+        fb = Frame("B")
+
+        fa["REL"] = "B"
+
+        g = Graph("TEST")
+        g["A"] = fa
+        g["B"] = fb
+
+        self.assertEqual(fa["REL"][0].resolve(), fb)
+
+    def test_filler_resolve_absolute_name(self):
+        fa = Frame("A")
+        fb = Frame("B")
+
+        fa["REL"] = "TEST.B"
+
+        g = Graph("TEST")
+        g["A"] = fa
+        g["B"] = fb
+
+        self.assertEqual(fa["REL"][0].resolve(), fb)
+
+    def test_filler_resolve_cross_network(self):
+        fa = Frame("A")
+        fb = Frame("B")
+
+        fa["REL"] = "TEST2.B"
+
+        n = Network()
+        g1 = n.register("TEST1")
+        g1["A"] = fa
+
+        g2 = n.register("TEST2")
+        g2["B"] = fb
+
+        self.assertEqual(fa["REL"][0].resolve(), fb)
+
+    def test_filler_resolve_on_non_frame(self):
+        g = Graph("TEST")
+        g["A"] = Frame("A")
+        g["A"]["ATTR"] = 1
+
+        self.assertEqual(g["A"]["ATTR"][0].resolve(), 1)
+
 
 class FrameTestCase(unittest.TestCase):
 
     def test_frame_assign_and_retrieve_value(self):
-        f = Frame()
+        f = Frame("TEST")
         f["SLOT"] = "VALUE"
 
         self.assertEqual(Fillers, type(f["SLOT"]))
@@ -121,13 +167,13 @@ class FrameTestCase(unittest.TestCase):
         self.assertEqual("VALUE", f["SLOT"]._storage[0]._value)
 
     def test_frame_assign_fillers(self):
-        f = Frame()
+        f = Frame("TEST")
         f["SLOT"] = Fillers("VALUE")
 
         self.assertEqual("VALUE", f["SLOT"])
 
     def test_frame_overwrite_fillers(self):
-        f = Frame()
+        f = Frame("TEST")
 
         f["SLOT"] = Fillers("VALUE1")
         self.assertEqual("VALUE1", f["SLOT"])
@@ -136,19 +182,19 @@ class FrameTestCase(unittest.TestCase):
         self.assertEqual("VALUE2", f["SLOT"])
 
     def test_frame_retrieve_empty_value(self):
-        f = Frame()
+        f = Frame("TEST")
 
         self.assertEqual(f["SLOT"], Fillers())
 
     def test_frame_slot_defined(self):
-        f = Frame()
+        f = Frame("TEST")
         f["SLOT"] = "VALUE"
 
         self.assertTrue("SLOT" in f)
         self.assertFalse("OTHER" in f)
 
     def test_add_fillers_to_existing_slot(self):
-        f = Frame()
+        f = Frame("TEST")
 
         f["SLOT"] = "value1"
         self.assertEqual("value1", f["SLOT"])
@@ -157,7 +203,7 @@ class FrameTestCase(unittest.TestCase):
         self.assertEqual(["value1", "value2"], f["SLOT"])
 
     def test_slot_contains(self):
-        f = Frame()
+        f = Frame("TEST")
         f["SLOT"] = ["value1", "value2"]
 
         self.assertTrue("value1" in f["SLOT"])
@@ -165,7 +211,7 @@ class FrameTestCase(unittest.TestCase):
         self.assertFalse("value3" in f["SLOT"])
 
     def test_delete_slot(self):
-        f = Frame()
+        f = Frame("TEST")
         f["SLOT"] = "value"
 
         del f["SLOT"]
@@ -173,14 +219,14 @@ class FrameTestCase(unittest.TestCase):
         self.assertFalse("SLOT" in f)
 
     def test_length(self):
-        f = Frame()
+        f = Frame("TEST")
         self.assertEqual(0, len(f))
 
         f["SLOT"] = "value"
         self.assertEqual(1, len(f))
 
     def test_iterable_slots(self):
-        f = Frame()
+        f = Frame("TEST")
         f["SLOT1"] = "value"
         f["SLOT2"] = "value"
 
@@ -188,6 +234,86 @@ class FrameTestCase(unittest.TestCase):
         for slot in f:
             result += slot
         self.assertEqual(result, "SLOT1SLOT2")
+
+    def test_frame_name(self):
+        g = Graph("TEST")
+        g["A"] = Frame("A")
+
+        self.assertEqual(g["A"].name(), "TEST.A")
+
+    def test_frame_name_unknown_graph(self):
+        f = Frame("A")
+
+        self.assertEqual(f.name(), "A")
+
+    def test_frame_ancestors(self):
+        fa = Frame("A")
+        fb = Frame("B", isa="A")
+        fc = Frame("C", isa="B")
+
+        g = Graph("TEST")
+        g["A"] = fa
+        g["B"] = fb
+        g["C"] = fc
+
+        self.assertEqual(fc.ancestors(), ["TEST.B", "TEST.A"])
+
+    def test_frame_multiple_ancestors(self):
+        fa1 = Frame("A1")
+        fa2 = Frame("A2")
+        fb = Frame("B", isa="A1")
+        fc = Frame("C", isa=["B", "A2"])
+
+        g = Graph("TEST")
+        g["A1"] = fa1
+        g["A2"] = fa2
+        g["B"] = fb
+        g["C"] = fc
+
+        self.assertEqual(fc.ancestors(), ["TEST.B", "TEST.A1", "TEST.A2"])
+
+    def test_frame_cross_network_ancestors(self):
+        n = Network()
+
+        o = n.register("ONT")
+        o["ALL"] = Frame("ALL")
+        o["OBJECT"] = Frame("OBJECT", isa="ALL")
+
+        g = n.register("TEST")
+        g["OBJECT-1"] = Frame("OBJECT-1", isa="ONT.OBJECT")
+        g["OBJECT-2"] = Frame("OBJECT-2", isa="OBJECT-1")
+
+        self.assertEqual(g["OBJECT-2"].ancestors(), ["TEST.OBJECT-1", "ONT.OBJECT", "ONT.ALL"])
+
+    def test_frame_isa(self):
+        fa = Frame("A")
+        fb = Frame("B", isa="A")
+        fc = Frame("C", isa="B")
+
+        g = Graph("TEST")
+        g["A"] = fa
+        g["B"] = fb
+        g["C"] = fc
+
+        self.assertTrue(fc.isa("TEST.A"))
+        self.assertTrue(fc.isa("TEST.B"))
+        self.assertTrue(fc.isa("TEST.C"))
+        self.assertFalse(fc.isa("TEST.OTHER"))
+
+    def test_frame_isa_shorthand(self):
+        fa = Frame("A")
+        fb = Frame("B", isa="A")
+        fc = Frame("C", isa="B")
+
+        g = Graph("TEST")
+        g["A"] = fa
+        g["B"] = fb
+        g["C"] = fc
+
+        self.assertTrue(fc.isa("A"))
+        self.assertTrue(fc.isa("B"))
+        self.assertTrue(fc.isa("C"))
+        self.assertFalse(fc.isa("OTHER"))
 
     '''
     intersection compare ([v1, v2] ~= [v2, v3])
