@@ -114,96 +114,6 @@ class FillerTestCase(unittest.TestCase):
         self.assertFalse(f.compare(["B", "C"], intersection=True))
         self.assertFalse(f.compare(["A", "B", "C"], intersection=False))
 
-
-class FillersTestCase(unittest.TestCase):
-
-    def test_fillers_initialize_empty(self):
-        fs = Fillers()
-
-        self.assertEqual(list(), fs._storage)
-
-    def test_fillers_initialize_single_filler(self):
-        f1 = Filler("value1")
-        fs = Fillers(f1)
-
-        self.assertEqual([f1], fs._storage)
-
-    def test_fillers_initialize_single_value(self):
-        fs = Fillers("value1")
-
-        self.assertEqual([Filler("value1")], fs._storage)
-        self.assertEqual(["value1"], fs._storage)
-
-    def test_fillers_initialize_multiple_fillers(self):
-        f1 = Filler("value1")
-        f2 = Filler("value2")
-        fs = Fillers([f1, f2])
-
-        self.assertEqual([f1, f2], fs._storage)
-
-    def test_fillers_initialize_multiple_values(self):
-        fs = Fillers(["value1", "value2"])
-
-        self.assertEqual([Filler("value1"), Filler("value2")], fs._storage)
-        self.assertEqual(["value1", "value2"], fs._storage)
-
-    def test_fillers_compares_to_fillers(self):
-        f1 = Filler("value1")
-        f2 = Filler("value2")
-
-        self.assertEqual(Fillers([f1, f2]), Fillers([f1, f2]))
-
-    def test_fillers_compares_to_lists(self):
-        f1 = Filler("value1")
-        f2 = Filler("value2")
-
-        self.assertEqual(Fillers([f1, f2]), [f1, f2])
-        self.assertEqual(Fillers([f1, f2]), [f1._value, f2._value])
-
-    def test_fillers_compares_to_single_filler(self):
-        f1 = Filler("value1")
-        f2 = Filler("value2")
-
-        self.assertEqual(Fillers([f1]), f1)
-        self.assertNotEqual(Fillers([f2]), f1)
-
-    def test_fillers_compares_to_single_value(self):
-        f1 = Filler("value1")
-        f2 = Filler("value2")
-
-        self.assertEqual(Fillers([f1]), "value1")
-        self.assertNotEqual(Fillers([f2]), "value1")
-
-    def test_fillers_length(self):
-        f1 = Filler("value1")
-        f2 = Filler("value2")
-
-        self.assertEqual(0, len(Fillers()))
-        self.assertEqual(2, len(Fillers([f1, f2])))
-
-    def test_fillers_contains_filler(self):
-        f1 = Filler("value1")
-        f2 = Filler("value2")
-
-        self.assertTrue(f1 in Fillers([f1]))
-        self.assertTrue(Filler(f1._value) in Fillers([f1]))
-        self.assertTrue(f1 in Fillers([f1, f2]))
-        self.assertFalse(f2 in Fillers([f1]))
-
-    def test_fillers_contains_value(self):
-        f1 = Filler("value1")
-        f2 = Filler("value2")
-
-        self.assertTrue("value1" in Fillers([f1]))
-        self.assertTrue("value1" in Fillers([f1, f2]))
-        self.assertFalse("value2" in Fillers([f1]))
-
-    def test_fillers_iterable(self):
-        f1 = Filler(1)
-        f2 = Filler(2)
-
-        self.assertEqual([3, 4], list(map(lambda filler: filler._value + 2, Fillers([f1, f2]))))
-
     def test_filler_resolve(self):
         fa = Frame("A")
         fb = Frame("B")
@@ -249,6 +159,149 @@ class FillersTestCase(unittest.TestCase):
         g["A"]["ATTR"] = 1
 
         self.assertEqual(g["A"]["ATTR"][0].resolve(), 1)
+
+
+class FillersTestCase(unittest.TestCase):
+
+    def test_fillers_initialize_empty(self):
+        fs = Fillers()
+
+        self.assertEqual(list(), fs._storage)
+
+    def test_fillers_initialize_single_filler(self):
+        f1 = Filler("value1")
+        fs = Fillers(f1)
+
+        self.assertEqual([f1], fs._storage)
+
+    def test_fillers_initialize_single_value(self):
+        fs = Fillers("value1")
+
+        self.assertEqual([Filler("value1")], fs._storage)
+        self.assertEqual(["value1"], fs._storage)
+
+    def test_fillers_initialize_multiple_fillers(self):
+        f1 = Filler("value1")
+        f2 = Filler("value2")
+        fs = Fillers([f1, f2])
+
+        self.assertEqual([f1, f2], fs._storage)
+
+    def test_fillers_initialize_multiple_values(self):
+        fs = Fillers(["value1", "value2"])
+
+        self.assertEqual([Filler("value1"), Filler("value2")], fs._storage)
+        self.assertEqual(["value1", "value2"], fs._storage)
+
+    def test_fillers_equals_operator(self):
+        # Use "==" as shorthand for compare(..., isa=False, intersection=True)
+
+        f1 = Filler("value1")
+        f2 = Filler("value2")
+
+        self.assertTrue(Fillers([f1, f2]) == Fillers([f1, f2]))
+        self.assertTrue(Fillers([f1, f2]) == Fillers([f1]))
+        self.assertFalse(Fillers([f1, f2]) == Fillers(["xyz"]))
+
+    def test_fillers_isa_operator(self):
+        # Use "^" as shorthand for compare(..., isa=True, intersection=True)
+
+        g = Graph("TEST")
+        f1 = Frame("OBJECT-1")
+        f2 = Frame("OBJECT-2", isa="OBJECT-1")
+        f3 = Frame("OBJECT-3")
+
+        g["OBJECT-1"] = f1
+        g["OBJECT-2"] = f2
+        g["OBJECT-3"] = f3
+
+        f = Filler("OBJECT-2")
+        f3["REL"] = f
+
+        self.assertTrue(f3["REL"] ^ g["OBJECT-1"])
+        self.assertFalse(f3["REL"] ^ g["OBJECT-3"])
+        self.assertTrue(f3["REL"] ^ ["OBJECT-1", g["OBJECT-3"]])
+
+    def test_fillers_compares_to_fillers(self):
+        f1 = Filler("value1")
+        f2 = Filler("value2")
+
+        self.assertTrue(Fillers([f1, f2]).compare(Fillers([f1, f2])))
+
+    def test_fillers_compares_to_lists(self):
+        f1 = Filler("value1")
+        f2 = Filler("value2")
+
+        self.assertTrue(Fillers([f1, f2]).compare([f1, f2]))
+        self.assertTrue(Fillers([f1, f2]).compare([f1._value, f2._value]))
+
+    def test_fillers_compares_to_single_filler(self):
+        f1 = Filler("value1")
+        f2 = Filler("value2")
+
+        self.assertTrue(Fillers([f1]).compare(f1))
+        self.assertFalse(Fillers([f2]).compare(f1))
+
+    def test_fillers_compares_to_single_value(self):
+        f1 = Filler("value1")
+        f2 = Filler("value2")
+
+        self.assertTrue(Fillers([f1]).compare("value1"))
+        self.assertFalse(Fillers([f2]).compare("value1"))
+
+    def test_fillers_compares_intersection(self):
+        f1 = Filler("value1")
+        f2 = Filler("value2")
+
+        self.assertTrue(Fillers([f1]).compare(["value1", "value2"], intersection=True))
+        self.assertFalse(Fillers([f1]).compare(["value1", "value2"], intersection=False))
+        self.assertFalse(Fillers([f1]).compare(["value2"], intersection=True))
+
+    def test_fillers_compares_isa(self):
+        g = Graph("TEST")
+        f1 = Frame("OBJECT-1")
+        f2 = Frame("OBJECT-2", isa="OBJECT-1")
+        f3 = Frame("OBJECT-3")
+
+        g["OBJECT-1"] = f1
+        g["OBJECT-2"] = f2
+        g["OBJECT-3"] = f3
+
+        f = Filler("OBJECT-2")
+        f3["REL"] = f
+
+        self.assertTrue(f3["REL"].compare(g["OBJECT-1"], isa=True))
+        self.assertFalse(f3["REL"].compare(g["OBJECT-1"], isa=False))
+
+    def test_fillers_length(self):
+        f1 = Filler("value1")
+        f2 = Filler("value2")
+
+        self.assertEqual(0, len(Fillers()))
+        self.assertEqual(2, len(Fillers([f1, f2])))
+
+    def test_fillers_contains_filler(self):
+        f1 = Filler("value1")
+        f2 = Filler("value2")
+
+        self.assertTrue(f1 in Fillers([f1]))
+        self.assertTrue(Filler(f1._value) in Fillers([f1]))
+        self.assertTrue(f1 in Fillers([f1, f2]))
+        self.assertFalse(f2 in Fillers([f1]))
+
+    def test_fillers_contains_value(self):
+        f1 = Filler("value1")
+        f2 = Filler("value2")
+
+        self.assertTrue("value1" in Fillers([f1]))
+        self.assertTrue("value1" in Fillers([f1, f2]))
+        self.assertFalse("value2" in Fillers([f1]))
+
+    def test_fillers_iterable(self):
+        f1 = Filler(1)
+        f2 = Filler(2)
+
+        self.assertEqual([3, 4], list(map(lambda filler: filler._value + 2, Fillers([f1, f2]))))
 
 
 class FrameTestCase(unittest.TestCase):

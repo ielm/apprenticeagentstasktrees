@@ -202,6 +202,30 @@ class Fillers(object):
 
             self._storage.extend(values)
 
+    def compare(self, other, isa=True, intersection=True):
+        # 1) Refactor "other" into a list of Fillers (either using the input Filler information, or defaulting to self)
+        if type(other) == Fillers:
+            other = other._storage
+        if type(other) != list:
+            other = [other]
+        other = list(map(lambda o: o if type(o) == Filler else Filler(o), other))
+        for o in other:
+            if o._frame is None:
+                o._frame = self._frame
+
+        # 2) Compare each filler in self to the input fillers
+        results = list(map(lambda f: f.compare(other, isa=isa, intersection=intersection), self._storage))
+
+        if len(results) == 0 and len(self._storage) == 0 and len(other) == 0:
+            return True
+
+        if intersection:
+            results = reduce(lambda x, y: x or y, results)
+        else:
+            results = reduce(lambda x, y: x and y, results)
+
+        return results
+
     def __iadd__(self, other):
         if type(other) != Filler:
             other = Filler(other)
@@ -222,13 +246,14 @@ class Fillers(object):
     def __getitem__(self, item):
         return self._storage[item]
 
-    def __eq__(self, other):
-        if type(other) == Fillers:
-            return self._storage == other._storage
-        if type(other) == list:
-            return self._storage == other
+    # The XOR operator is overridden here to provide a convenient single character comparator ("^") for the most
+    # common comparison case: isa=True and intersection=True.  This is passed through to the Filler.compare method,
+    # see that for details on the expected behavior.
+    def __xor__(self, other):
+        return self.compare(other, isa=True, intersection=True)
 
-        return len(self._storage) == 1 and other in self._storage
+    def __eq__(self, other):
+        return self.compare(other, isa=False, intersection=True)
 
     def __str__(self):
         return str(self._storage)
@@ -264,10 +289,13 @@ class Filler(object):
         if type(other) != Filler:
             other = Filler(other)
             other._frame = self._frame
-        if type(other._value) != list:
-            other._value = [other._value]
-        others = list(map(lambda value: Filler(value), other._value))
-        for o in others: o._frame = other._frame
+        value = other._value
+        if type(value) != list:
+            value = [value]
+        others = list(map(lambda v: v if type(v) == Filler else Filler(v), value))
+        for o in others:
+            if o._frame is None:
+                o._frame = other._frame
 
         # 2) For each value, do a comprehensive comparison, mapping the results
         def _compare(to):
