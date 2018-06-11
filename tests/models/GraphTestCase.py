@@ -142,6 +142,7 @@ class NetworkTestCase(unittest.TestCase):
         with self.assertRaises(Exception):
             n.lookup("OBJECT.1")
 
+
 class GraphTestCase(unittest.TestCase):
 
     def test_graph_add_non_frame(self):
@@ -235,6 +236,20 @@ class GraphTestCase(unittest.TestCase):
         g.clear()
         self.assertEqual(0, len(g))
 
+    def test_graph_register_convenience(self):
+        g = Graph("NMSP")
+        f = g.register("FRAME.1")
+
+        self.assertEqual(type(f), Frame)
+        self.assertTrue("FRAME.1" in g)
+        self.assertEqual(f, g["FRAME.1"])
+
+        with self.assertRaises(TypeError):
+            g.register(123)
+
+        f = g.register("FRAME.2", isa="FRAME.1")
+        self.assertTrue(f.isa("NMSP.FRAME.1"))
+
 
 class NetworkComprehensiveExampleTestCase(unittest.TestCase):
 
@@ -244,19 +259,19 @@ class NetworkComprehensiveExampleTestCase(unittest.TestCase):
         ontology = n.register("ONT")
         tmr = n.register("TMR")
 
-        ontology["ALL"] = Frame("ALL")
-        ontology["OBJECT"] = Frame("OBJECT", isa="ALL")
-        ontology["EVENT"] = Frame("EVENT", isa="ALL")
-        ontology["PHYSICAL-OBJECT"] = Frame("PHYSICAL-OBJECT", isa="OBJECT")
+        all = ontology.register("ALL")
+        object = ontology.register("OBJECT", isa="ALL")
+        event = ontology.register("EVENTAL", isa="ALL")
+        pobject = ontology.register("PHYSICAL-OBJECT", isa="OBJECT")
 
-        tmr["EVENT.1"] = Frame("EVENT.1", isa="ONT.EVENT")
-        tmr["HUMAN.1"] = Frame("HUMAN.1", isa="ONT.PHYSICAL-OBJECT")
-        tmr["THING.1"] = Frame("THING.1", isa="ONT.PHYSICAL-OBJECT")
-        tmr["THING.2"] = Frame("THING.2", isa="ONT.PHYSICAL-OBJECT")
+        event1 = tmr.register("EVENT.1", isa="ONT.EVENT")
+        human1 = tmr.register("HUMAN.1", isa="ONT.PHYSICAL-OBJECT")
+        thing1 = tmr.register("THING.1", isa="ONT.PHYSICAL-OBJECT")
+        thing2 = tmr.register("THING.2", isa="ONT.PHYSICAL-OBJECT")
 
-        tmr["EVENT.1"]["AGENT"] = "HUMAN.1"
-        tmr["EVENT.1"]["THEME"] = "THING.1"
-        tmr["EVENT.1"]["THEME"] += "THING.2"
+        event1["AGENT"] = "HUMAN.1"
+        event1["THEME"] = "THING.1"
+        event1["THEME"] += "THING.2"
 
-        self.assertTrue(tmr["EVENT.1"]["THEME"] ^ "ONT.OBJECT")
-        self.assertTrue(tmr["EVENT.1"]["AGENT"] == "HUMAN.1")
+        self.assertTrue(event1["THEME"] ^ "ONT.OBJECT")
+        self.assertTrue(event1["AGENT"] == "HUMAN.1")

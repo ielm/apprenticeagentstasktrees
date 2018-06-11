@@ -101,6 +101,15 @@ class Graph(Mapping):
 
         return modified_key
 
+    def register(self, id, isa=None):
+        if type(id) != str:
+            raise TypeError()
+
+        frame = Frame(id, isa=isa)
+        self[id] = frame
+
+        return frame
+
     def search(self):
         raise Exception("NYI")
 
