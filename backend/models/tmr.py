@@ -1,14 +1,16 @@
-from backend.models.graph import Graph
+from backend.models.graph import Frame, Graph
 from backend.ontology import Ontology
 from backend.models.syntax import Syntax
-from backend.models.tmrinstance import TMRInstance
+# from backend.models.tmrinstance import TMRInstance
 from backend.utils.YaleUtils import tmr_action_name
+
+from uuid import uuid4
 
 
 class TMR(Graph):
 
     @staticmethod
-    def new(sentence=None, syntax=None, tmr=None):
+    def new(ontology, sentence=None, syntax=None, tmr=None, namespace=None):
         if sentence is None:
             sentence = ""
         if syntax is None:
@@ -26,11 +28,17 @@ class TMR(Graph):
             "sentence": sentence,
             "syntax": syntax,
             "tmr": tmr
-        })
+        }, ontology, namespace=namespace)
 
-    def __init__(self, tmr_dict):
-        super().__init__()
+    def __init__(self, tmr_dict, ontology, namespace=None):
+        if ontology is None:
+            raise Exception("TMRs must have an anchoring ontology provided.")
+        if namespace is None:
+            namespace = "TMR." + str(uuid4())
 
+        super().__init__(namespace)
+
+        self.ontology = ontology
         self.sentence = tmr_dict["sentence"]
         self.syntax = Syntax(tmr_dict["syntax"][0])
 
@@ -38,9 +46,20 @@ class TMR(Graph):
         for key in result:
             if key == key.upper():
                 inst_dict = result[key]
-                subtree = inst_dict["is-in-subtree"] if "is-in-subtree" in inst_dict else None
+                # subtree = inst_dict["is-in-subtree"] if "is-in-subtree" in inst_dict else None
 
-                self[key] = TMRInstance(properties=inst_dict, name=key, concept=inst_dict["concept"], subtree=subtree, index=inst_dict["sent-word-ind"][1])
+                # self[key] = TMRInstance(properties=inst_dict, name=key, concept=inst_dict["concept"], subtree=subtree, index=inst_dict["sent-word-ind"][1])
+                concept = inst_dict["concept"]
+                if concept is not None and ontology is not None:
+                    if not concept.startswith(ontology):
+                        concept = ontology + "." + concept
+
+                self[key] = TMRInstance(key, properties=inst_dict, isa=concept, index=inst_dict["sent-word-ind"][1])
+
+    def __setitem__(self, key, value):
+        if not isinstance(value, TMRInstance):
+            raise TypeError("TMR elements must be TMRInstance objects.")
+        super().__setitem__(key, value)
 
     def __getitem__(self, key):
         if key == "HUMAN" or key == "ROBOT":
@@ -48,6 +67,10 @@ class TMR(Graph):
 
         return super().__getitem__(key)
 
+    def _frame_type(self):
+        return TMRInstance
+
+    # TODO: TEST
     def is_action(self):
         event = self.find_main_event()
         if event is None:
@@ -69,10 +92,12 @@ class TMR(Graph):
 
         return False
 
+    # TODO: TEST
     # TODO: rename - we are really testing if this is an HTN composition
     def is_utterance(self):
         return not self.is_action()
 
+    # TODO: TEST
     def get_name(self):
         event = self.find_main_event()
         if event is None:
@@ -117,9 +142,6 @@ class TMR(Graph):
         return output
 
     def find_main_event(self):
-        if self is None:
-            return None
-
         event = None
         for instance in self.values():
             if instance.is_event():
@@ -127,33 +149,45 @@ class TMR(Graph):
                 break
 
         while event is not None and "PURPOSE-OF" in event:
-            event = self[event["PURPOSE-OF"][0]]
+            event = event["PURPOSE-OF"][0].resolve()
 
         return event
 
     def is_prefix(self):
         for instance in self.values():
             if instance.is_event():
-                if "TIME" in instance and instance["TIME"][0] == ">":
+                if instance["TIME"] == ">" and instance["TIME"] == "FIND-ANCHOR-TIME":
                     return True
+                # if instance["TIME"].compare([">", "FIND-ANCHOR-TIME"], intersection=False):
+                #     return True
+                # if "TIME" in instance and instance["TIME"][0] == ">":
+                #     return True
 
         return False
 
     def is_postfix(self):
         for instance in self.values():
             if instance.is_event():
-                if "TIME" in instance and instance["TIME"][0] == "<":
+                if instance["TIME"] == "<" and instance["TIME"] == "FIND-ANCHOR-TIME":
                     return True
+                # if "TIME" in instance and instance["TIME"][0] == "<":
+                #     return True
 
         # For closing generic events, such as "Finished."
         for instance in self.values():
-            if instance.concept == "ASPECT":
-                if "END" in instance["PHASE"]:
-                    if "EVENT" in instance["SCOPE"]:
-                        return True
+            if instance.isa(self.ontology + ".ASPECT"):
+                if instance["PHASE"] == "END" and instance["SCOPE"] ^ self.ontology + ".EVENT":
+                    return True
+
+        # for instance in self.values():
+            # if instance.concept == "ASPECT":
+            #     if "END" in instance["PHASE"]:
+            #         if "EVENT" in instance["SCOPE"]:
+            #             return True
 
         return False
 
+    # TODO: TEST
     def has_same_main_event(self, tmr):
         if tmr is None:
             return False
@@ -186,6 +220,7 @@ class TMR(Graph):
 
         return True
 
+    # TODO: TEST
     def find_themes(self):
         event = self.find_main_event()
         if event is None:
@@ -204,6 +239,7 @@ class TMR(Graph):
 
         return list(map(lambda theme: theme.concept, __find_themes(event)))
 
+    # TODO: TEST
     def about_part_of(self, tmr):
         if self is None or tmr is None:
             return False
@@ -234,6 +270,7 @@ class TMR(Graph):
     # Every EVENT subtype in this TMR must also be present in the input TMR = if they are not the same (even a
     # subset), then we must consider these two events distinctly different enough that even a correlation in
     # HAS-OBJECT-AS-PART is not sufficient.
+    # TODO: TEST
     def about_same_events(self, tmr):
         if self is None or tmr is None:
             return False
@@ -250,9 +287,11 @@ class TMR(Graph):
 
         return len(event1_types.intersection(event2_types)) == len(event1_types)
 
+    # TODO: TEST
     def find_by_concept(self, concept):
         return list(filter(lambda instance: instance.concept == concept, self.values()))
 
+    # TODO: TEST
     def find_objects(self):
         objects = []
 
@@ -264,6 +303,7 @@ class TMR(Graph):
 
     # Is TMR(1) about any of the THEMEs of any of the Actions(2).
     # "About" in this case will check THEME, INSTRUMENT and DESTINATION.
+    # TODO: TEST
     def is_about(self, actions):
         about = []
         event = self.find_main_event()
@@ -281,5 +321,40 @@ class TMR(Graph):
 
         return len(set(about).intersection(set(themes))) > 0
 
+    # TODO: TEST
     def get_concepts(self, instance_keys):
         return set(map(lambda instance: self[instance].concept, instance_keys))
+
+
+class TMRInstance(Frame):
+
+    def __init__(self, name, properties=None, isa=None, index=None):
+        super().__init__(name, isa=isa)
+
+        # self.concept = concept
+        # self.name = name if name is not None else self.concept + "-X"
+        # self.subtree = subtree
+
+        if properties is None:
+            properties = {}
+
+        _properties = {}
+        for key in properties:
+            if "_constraint_info" in key:
+                pass
+            if key == key.upper():
+                _properties[key] = properties[key]
+
+        for key in _properties:
+            self[key] = _properties[key]
+
+        # super().__init__(name, concept, uuid=uuid, properties=_properties, subtree=subtree)
+        # super().__init__(name, isa=concept)
+
+        self.token_index = index
+
+    def is_event(self):
+        return self.isa(self._graph.ontology + ".EVENT")
+
+    def is_object(self):
+        return self.isa(self._graph.ontology + ".OBJECT")

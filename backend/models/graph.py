@@ -30,7 +30,7 @@ class Network(object):
         return self[graph][name]
 
     def __setitem__(self, key, value):
-        if type(value) != Graph:
+        if not isinstance(value, Graph):
             raise TypeError()
 
         if key != value._namespace:
@@ -69,7 +69,7 @@ class Graph(Mapping):
         self._network = None
 
     def __setitem__(self, key, value):
-        if type(value) != Frame:
+        if not isinstance(value, Frame):
             raise TypeError("Graph elements must be Frame objects.")
         if key != value._name:
             raise Network.NamespaceError(key, value._name)
@@ -101,11 +101,14 @@ class Graph(Mapping):
 
         return modified_key
 
+    def _frame_type(self):
+        return Frame
+
     def register(self, id, isa=None):
         if type(id) != str:
             raise TypeError()
 
-        frame = Frame(id, isa=isa)
+        frame = self._frame_type()(id, isa=isa)
         self[id] = frame
 
         return frame
@@ -136,7 +139,8 @@ class Frame(object):
         return name
 
     def isa(self, parent):
-        if type(parent) == Frame:
+        # if type(parent) == Frame:
+        if isinstance(parent, Frame):
             parent = parent.name()
 
         if parent in self.ancestors():
@@ -159,8 +163,11 @@ class Frame(object):
             if parent is None:
                 continue
 
-            result.append(parent.name())
-            result.extend(parent.ancestors())
+            if isinstance(parent, Frame):
+                result.append(parent.name())
+                result.extend(parent.ancestors())
+            elif isinstance(parent, str):
+                result.append(parent)
         return result
 
     def __setitem__(self, key, value):
@@ -227,6 +234,8 @@ class Fillers(object):
 
         if len(results) == 0 and len(self._storage) == 0 and len(other) == 0:
             return True
+        if len(results) == 0 and len(self._storage) == 0:
+            return False
 
         if intersection:
             results = reduce(lambda x, y: x or y, results)
@@ -291,6 +300,7 @@ class Filler(object):
                         try:
                             return self._frame._graph._network.lookup(self._value, graph=self._frame._graph._namespace)
                         except KeyError: pass
+                        except Exception: pass
         return self._value
 
     def compare(self, other, isa=True, intersection=True):
@@ -314,18 +324,27 @@ class Filler(object):
             sv = sr
             tv = tr
 
-            if type(sr) == Frame:
+            # if type(sr) == Frame:
+            if isinstance(sr, Frame):
                 sv = sr.name()
 
-            if type(tr) == Frame:
+            # if type(tr) == Frame:
+            if isinstance(tr, Frame):
                 tv = tr.name()
 
             if sv == tv:
                 return True
 
-            if type(sr) == Frame and type(tr) == Frame and isa:
+            # if type(sr) == Frame and type(tr) == Frame and isa:
+            # if isinstance(sr, Frame) and isinstance(tr, Frame) and isa:
+            #     if sr.isa(tr):
+            #         return True
+            #     if tr.isa(sr):
+            #         return True
+            if isinstance(sr, Frame) and isa:
                 if sr.isa(tr):
                     return True
+            if isinstance(tr, Frame) and isa:
                 if tr.isa(sr):
                     return True
 

@@ -1,7 +1,7 @@
 from backend.models.instance import Instance
 
 
-class TMRInstance(Instance):
+class TMRInstanceX(Instance):
 
     def __init__(self, properties=None, name=None, concept=None, uuid=None, subtree=None, index=None):
         self.concept = concept
