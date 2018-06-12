@@ -7,14 +7,16 @@ class Network(object):
     def __init__(self):
         self._storage = dict()
 
-    def register(self, namespace):
-        if type(namespace) != str:
+    def register(self, graph):
+        if isinstance(graph, Graph):
+            self[graph._namespace] = graph
+        elif isinstance(graph, str):
+            graph = Graph(graph)
+            self[graph._namespace] = graph
+        else:
             raise TypeError()
 
-        graph = Graph(namespace)
-        self[namespace] = graph
-
-        return graph
+        return self[graph._namespace]
 
     def lookup(self, name, graph=None):
         try:

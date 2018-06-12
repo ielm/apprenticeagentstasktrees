@@ -8,6 +8,16 @@ import unittest
 
 class TMRTestCase(unittest.TestCase):
 
+    def setUp(self):
+        super().setUp()
+
+        self.n = Network()
+
+        self.ontology = self.n.register("ONT")
+        self.ontology.register("ALL")
+        self.ontology.register("OBJECT", isa="ALL")
+        self.ontology.register("EVENT", isa="ALL")
+
     def test_tmr_as_graph(self):
         tmr = TMR.new("ONT")
 
@@ -22,12 +32,7 @@ class TMRTestCase(unittest.TestCase):
         self.assertEqual(theme1, event1["THEME"][0].resolve())
 
     def test_tmr_loaded(self):
-        n = Network()
-        ontology = n.register("ONT")
-
-        ontology.register("ALL")
-        ontology.register("OBJECT", isa="ALL")
-        ontology.register("CHAIR", isa="OBJECT")
+        self.ontology.register("CHAIR", isa="OBJECT")
 
         file = os.path.abspath(__package__) + "/../resources/DemoMay2018_Analyses.json"
 
@@ -35,8 +40,7 @@ class TMRTestCase(unittest.TestCase):
         with open(file) as f:
             r = json.load(f)
 
-        tmr = TMR(r[0], "ONT")
-        n[tmr._namespace] = tmr
+        tmr = self.n.register(TMR(r[0], "ONT"))
 
         self.assertEqual(tmr["BUILD-1"]["THEME"][0].resolve(), tmr["CHAIR-1"])
         self.assertTrue(tmr["BUILD-1"]["THEME"] ^ "ONT.CHAIR")
@@ -44,15 +48,7 @@ class TMRTestCase(unittest.TestCase):
         self.assertTrue(tmr["BUILD-1"]["THEME"] ^ "ONT.OBJECT")
 
     def test_tmr_is_event_or_object(self):
-        n = Network()
-        ontology = n.register("ONT")
-
-        ontology.register("ALL")
-        ontology.register("OBJECT", isa="ALL")
-        ontology.register("EVENT", isa="ALL")
-
-        tmr = TMR.new("ONT")
-        n[tmr._namespace] = tmr
+        tmr = self.n.register(TMR.new("ONT"))
 
         tmr.register("OBJECT-1", isa="ONT.OBJECT")
         tmr.register("EVENT-1", isa="ONT.EVENT")
@@ -70,15 +66,7 @@ class TMRTestCase(unittest.TestCase):
         self.assertFalse(tmr["EVENT-1"].is_object())
 
     def test_tmr_find_main_event(self):
-        n = Network()
-        ontology = n.register("ONT")
-
-        ontology.register("ALL")
-        ontology.register("OBJECT", isa="ALL")
-        ontology.register("EVENT", isa="ALL")
-
-        tmr = TMR.new("ONT")
-        n[tmr._namespace] = tmr
+        tmr = self.n.register(TMR.new("ONT"))
 
         object1 = tmr.register("OBJECT-1", isa="ONT.OBJECT")
         event1 = tmr.register("EVENT-1", isa="ONT.EVENT")
@@ -86,15 +74,7 @@ class TMRTestCase(unittest.TestCase):
         self.assertEqual(event1, tmr.find_main_event())
 
     def test_tmr_find_main_event_with_purpose_of(self):
-        n = Network()
-        ontology = n.register("ONT")
-
-        ontology.register("ALL")
-        ontology.register("OBJECT", isa="ALL")
-        ontology.register("EVENT", isa="ALL")
-
-        tmr = TMR.new("ONT")
-        n[tmr._namespace] = tmr
+        tmr = self.n.register(TMR.new("ONT"))
 
         object1 = tmr.register("OBJECT-1", isa="ONT.OBJECT")
         event1 = tmr.register("EVENT-1", isa="ONT.EVENT")
@@ -107,15 +87,7 @@ class TMRTestCase(unittest.TestCase):
         self.assertEqual(event3, tmr.find_main_event())
 
     def test_tmr_is_prefix(self):
-        n = Network()
-        ontology = n.register("ONT")
-
-        ontology.register("ALL")
-        ontology.register("OBJECT", isa="ALL")
-        ontology.register("EVENT", isa="ALL")
-
-        tmr = TMR.new("ONT")
-        n[tmr._namespace] = tmr
+        tmr = self.n.register(TMR.new("ONT"))
 
         event1 = tmr.register("EVENT-1", isa="ONT.EVENT")
 
@@ -126,15 +98,7 @@ class TMRTestCase(unittest.TestCase):
         self.assertTrue(tmr.is_prefix())
 
     def test_tmr_is_postfix(self):
-        n = Network()
-        ontology = n.register("ONT")
-
-        ontology.register("ALL")
-        ontology.register("OBJECT", isa="ALL")
-        ontology.register("EVENT", isa="ALL")
-
-        tmr = TMR.new("ONT")
-        n[tmr._namespace] = tmr
+        tmr = self.n.register(TMR.new("ONT"))
 
         event1 = tmr.register("EVENT-1", isa="ONT.EVENT")
 
@@ -145,16 +109,9 @@ class TMRTestCase(unittest.TestCase):
         self.assertTrue(tmr.is_postfix())
 
     def test_tmr_is_postfix_generic_event(self):
-        n = Network()
-        ontology = n.register("ONT")
+        self.ontology.register("ASPECT", isa="ALL")
 
-        ontology.register("ALL")
-        ontology.register("OBJECT", isa="ALL")
-        ontology.register("EVENT", isa="ALL")
-        ontology.register("ASPECT", isa="ALL")
-
-        tmr = TMR.new("ONT")
-        n[tmr._namespace] = tmr
+        tmr = self.n.register(TMR.new("ONT"))
 
         aspect1 = tmr.register("ASPECT-1", isa="ONT.ASPECT")
         event1 = tmr.register("EVENT-1", isa="ONT.EVENT")

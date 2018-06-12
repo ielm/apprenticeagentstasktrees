@@ -73,6 +73,14 @@ class NetworkTestCase(unittest.TestCase):
         with self.assertRaises(TypeError):
             n.register(123)
 
+    def test_network_register_existing_graph(self):
+        n = Network()
+        g = Graph("ABC")
+        n.register(g)
+
+        self.assertTrue("ABC" in n)
+        self.assertEqual(g, n["ABC"])
+
     def test_network_lookup_explicit(self):
         n = Network()
 
