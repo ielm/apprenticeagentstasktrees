@@ -1,4 +1,4 @@
-from backend.models.graph import Filler, Fillers, Frame, Graph
+from backend.models.graph import Filler, Frame, Graph, Slot
 
 import itertools
 import pickle
@@ -40,7 +40,7 @@ class Ontology(Graph):
                 if not isinstance(fillers, list):
                     fillers = [fillers]
                 fillers = list(map(lambda f: OntologyFiller(f, facet), fillers))
-                frame[slot] = Fillers(fillers, frame=frame)
+                frame[slot] = Slot(fillers, frame=frame)
 
         return frame
 

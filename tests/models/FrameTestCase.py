@@ -1,4 +1,4 @@
-from backend.models.graph import Filler, Fillers, Frame, Graph, Network
+from backend.models.graph import Filler, Frame, Graph, Network, Slot
 
 import unittest
 
@@ -161,49 +161,49 @@ class FillerTestCase(unittest.TestCase):
         self.assertEqual(g["A"]["ATTR"][0].resolve(), 1)
 
 
-class FillersTestCase(unittest.TestCase):
+class SlotTestCase(unittest.TestCase):
 
-    def test_fillers_initialize_empty(self):
-        fs = Fillers()
+    def test_slot_initialize_empty(self):
+        fs = Slot()
 
         self.assertEqual(list(), fs._storage)
 
-    def test_fillers_initialize_single_filler(self):
+    def test_slot_initialize_single_filler(self):
         f1 = Filler("value1")
-        fs = Fillers(f1)
+        fs = Slot(f1)
 
         self.assertEqual([f1], fs._storage)
 
-    def test_fillers_initialize_single_value(self):
-        fs = Fillers("value1")
+    def test_v_initialize_single_value(self):
+        fs = Slot("value1")
 
         self.assertEqual([Filler("value1")], fs._storage)
         self.assertEqual(["value1"], fs._storage)
 
-    def test_fillers_initialize_multiple_fillers(self):
+    def test_slot_initialize_multiple_fillers(self):
         f1 = Filler("value1")
         f2 = Filler("value2")
-        fs = Fillers([f1, f2])
+        fs = Slot([f1, f2])
 
         self.assertEqual([f1, f2], fs._storage)
 
-    def test_fillers_initialize_multiple_values(self):
-        fs = Fillers(["value1", "value2"])
+    def test_slot_initialize_multiple_values(self):
+        fs = Slot(["value1", "value2"])
 
         self.assertEqual([Filler("value1"), Filler("value2")], fs._storage)
         self.assertEqual(["value1", "value2"], fs._storage)
 
-    def test_fillers_equals_operator(self):
+    def test_slot_equals_operator(self):
         # Use "==" as shorthand for compare(..., isa=False, intersection=True)
 
         f1 = Filler("value1")
         f2 = Filler("value2")
 
-        self.assertTrue(Fillers([f1, f2]) == Fillers([f1, f2]))
-        self.assertTrue(Fillers([f1, f2]) == Fillers([f1]))
-        self.assertFalse(Fillers([f1, f2]) == Fillers(["xyz"]))
+        self.assertTrue(Slot([f1, f2]) == Slot([f1, f2]))
+        self.assertTrue(Slot([f1, f2]) == Slot([f1]))
+        self.assertFalse(Slot([f1, f2]) == Slot(["xyz"]))
 
-    def test_fillers_isa_operator(self):
+    def test_slot_isa_operator(self):
         # Use "^" as shorthand for compare(..., isa=True, intersection=True)
 
         g = Graph("TEST")
@@ -222,42 +222,42 @@ class FillersTestCase(unittest.TestCase):
         self.assertFalse(f3["REL"] ^ g["OBJECT-3"])
         self.assertTrue(f3["REL"] ^ ["OBJECT-1", g["OBJECT-3"]])
 
-    def test_fillers_compares_to_fillers(self):
+    def test_slot_compares_to_fillers(self):
         f1 = Filler("value1")
         f2 = Filler("value2")
 
-        self.assertTrue(Fillers([f1, f2]).compare(Fillers([f1, f2])))
+        self.assertTrue(Slot([f1, f2]).compare(Slot([f1, f2])))
 
-    def test_fillers_compares_to_lists(self):
+    def test_slot_compares_to_lists(self):
         f1 = Filler("value1")
         f2 = Filler("value2")
 
-        self.assertTrue(Fillers([f1, f2]).compare([f1, f2]))
-        self.assertTrue(Fillers([f1, f2]).compare([f1._value, f2._value]))
+        self.assertTrue(Slot([f1, f2]).compare([f1, f2]))
+        self.assertTrue(Slot([f1, f2]).compare([f1._value, f2._value]))
 
-    def test_fillers_compares_to_single_filler(self):
+    def test_slot_compares_to_single_filler(self):
         f1 = Filler("value1")
         f2 = Filler("value2")
 
-        self.assertTrue(Fillers([f1]).compare(f1))
-        self.assertFalse(Fillers([f2]).compare(f1))
+        self.assertTrue(Slot([f1]).compare(f1))
+        self.assertFalse(Slot([f2]).compare(f1))
 
-    def test_fillers_compares_to_single_value(self):
+    def test_slot_compares_to_single_value(self):
         f1 = Filler("value1")
         f2 = Filler("value2")
 
-        self.assertTrue(Fillers([f1]).compare("value1"))
-        self.assertFalse(Fillers([f2]).compare("value1"))
+        self.assertTrue(Slot([f1]).compare("value1"))
+        self.assertFalse(Slot([f2]).compare("value1"))
 
-    def test_fillers_compares_intersection(self):
+    def test_slot_compares_intersection(self):
         f1 = Filler("value1")
         f2 = Filler("value2")
 
-        self.assertTrue(Fillers([f1]).compare(["value1", "value2"], intersection=True))
-        self.assertFalse(Fillers([f1]).compare(["value1", "value2"], intersection=False))
-        self.assertFalse(Fillers([f1]).compare(["value2"], intersection=True))
+        self.assertTrue(Slot([f1]).compare(["value1", "value2"], intersection=True))
+        self.assertFalse(Slot([f1]).compare(["value1", "value2"], intersection=False))
+        self.assertFalse(Slot([f1]).compare(["value2"], intersection=True))
 
-    def test_fillers_compares_isa(self):
+    def test_slot_compares_isa(self):
         g = Graph("TEST")
         f1 = Frame("OBJECT-1")
         f2 = Frame("OBJECT-2", isa="OBJECT-1")
@@ -273,35 +273,35 @@ class FillersTestCase(unittest.TestCase):
         self.assertTrue(f3["REL"].compare(g["OBJECT-1"], isa=True))
         self.assertFalse(f3["REL"].compare(g["OBJECT-1"], isa=False))
 
-    def test_fillers_length(self):
+    def test_slot_length(self):
         f1 = Filler("value1")
         f2 = Filler("value2")
 
-        self.assertEqual(0, len(Fillers()))
-        self.assertEqual(2, len(Fillers([f1, f2])))
+        self.assertEqual(0, len(Slot()))
+        self.assertEqual(2, len(Slot([f1, f2])))
 
-    def test_fillers_contains_filler(self):
+    def test_slot_contains_filler(self):
         f1 = Filler("value1")
         f2 = Filler("value2")
 
-        self.assertTrue(f1 in Fillers([f1]))
-        self.assertTrue(Filler(f1._value) in Fillers([f1]))
-        self.assertTrue(f1 in Fillers([f1, f2]))
-        self.assertFalse(f2 in Fillers([f1]))
+        self.assertTrue(f1 in Slot([f1]))
+        self.assertTrue(Filler(f1._value) in Slot([f1]))
+        self.assertTrue(f1 in Slot([f1, f2]))
+        self.assertFalse(f2 in Slot([f1]))
 
-    def test_fillers_contains_value(self):
+    def test_slot_contains_value(self):
         f1 = Filler("value1")
         f2 = Filler("value2")
 
-        self.assertTrue("value1" in Fillers([f1]))
-        self.assertTrue("value1" in Fillers([f1, f2]))
-        self.assertFalse("value2" in Fillers([f1]))
+        self.assertTrue("value1" in Slot([f1]))
+        self.assertTrue("value1" in Slot([f1, f2]))
+        self.assertFalse("value2" in Slot([f1]))
 
-    def test_fillers_iterable(self):
+    def test_slot_iterable(self):
         f1 = Filler(1)
         f2 = Filler(2)
 
-        self.assertEqual([3, 4], list(map(lambda filler: filler._value + 2, Fillers([f1, f2]))))
+        self.assertEqual([3, 4], list(map(lambda filler: filler._value + 2, Slot([f1, f2]))))
 
 
 class FrameTestCase(unittest.TestCase):
@@ -310,29 +310,29 @@ class FrameTestCase(unittest.TestCase):
         f = Frame("TEST")
         f["SLOT"] = "VALUE"
 
-        self.assertEqual(Fillers, type(f["SLOT"]))
+        self.assertEqual(Slot, type(f["SLOT"]))
         self.assertEqual(Filler, type(f["SLOT"]._storage[0]))
         self.assertEqual("VALUE", f["SLOT"]._storage[0]._value)
 
     def test_frame_assign_fillers(self):
         f = Frame("TEST")
-        f["SLOT"] = Fillers("VALUE")
+        f["SLOT"] = Slot("VALUE")
 
         self.assertEqual("VALUE", f["SLOT"])
 
     def test_frame_overwrite_fillers(self):
         f = Frame("TEST")
 
-        f["SLOT"] = Fillers("VALUE1")
+        f["SLOT"] = Slot("VALUE1")
         self.assertEqual("VALUE1", f["SLOT"])
 
-        f["SLOT"] = Fillers("VALUE2")
+        f["SLOT"] = Slot("VALUE2")
         self.assertEqual("VALUE2", f["SLOT"])
 
     def test_frame_retrieve_empty_value(self):
         f = Frame("TEST")
 
-        self.assertEqual(f["SLOT"], Fillers())
+        self.assertEqual(f["SLOT"], Slot())
 
     def test_frame_slot_defined(self):
         f = Frame("TEST")

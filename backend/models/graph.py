@@ -173,19 +173,19 @@ class Frame(object):
         return result
 
     def __setitem__(self, key, value):
-        if type(value) == Fillers:
+        if type(value) == Slot:
             self._storage[key] = value
             value._frame = self
             return
         if type(value) != list:
             value = [value]
 
-        self._storage[key] = Fillers(values=value, frame=self)
+        self._storage[key] = Slot(values=value, frame=self)
 
     def __getitem__(self, item):
         if item in self._storage:
             return self._storage[item]
-        return Fillers(frame=self)
+        return Slot(frame=self)
 
     def __delitem__(self, key):
         del self._storage[key]
@@ -211,7 +211,7 @@ class Frame(object):
         return str(self)
 
 
-class Fillers(object):
+class Slot(object):
 
     def __init__(self, values=None, frame=None):
         self._storage = list()
@@ -227,7 +227,7 @@ class Fillers(object):
 
     def compare(self, other, isa=True, intersection=True):
         # 1) Refactor "other" into a list of Fillers (either using the input Filler information, or defaulting to self)
-        if type(other) == Fillers:
+        if type(other) == Slot:
             other = other._storage
         if type(other) != list:
             other = [other]
