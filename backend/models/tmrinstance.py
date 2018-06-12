@@ -1,6 +1,7 @@
 from backend.models.instance import Instance
 
 
+@DeprecationWarning
 class TMRInstanceX(Instance):
 
     def __init__(self, properties=None, name=None, concept=None, uuid=None, subtree=None, index=None):

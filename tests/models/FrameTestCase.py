@@ -478,8 +478,17 @@ class FrameTestCase(unittest.TestCase):
         self.assertTrue(fc.isa(fc))
         self.assertFalse(fc.isa(Frame("OTHER")))
 
-    '''
-    intersection compare ([v1, v2] ~= [v2, v3])
-    concept compare (v1.concept == v2.concept) or (v1.concept == v2, where v2 is a concept)
-    concept inherit compare (v1.concept ^= v2.concept) ...
-    '''
+    def test_frame_isa_operator(self):
+        fa = Frame("A")
+        fb = Frame("B", isa="A")
+        fc = Frame("C", isa="B")
+
+        g = Graph("TEST")
+        g["A"] = fa
+        g["B"] = fb
+        g["C"] = fc
+
+        self.assertTrue(fc ^ fa)
+        self.assertTrue(fc ^ fb)
+        self.assertTrue(fc ^ fc)
+        self.assertFalse(fc ^ "OTHER")

@@ -199,6 +199,11 @@ class Frame(object):
     def __iter__(self):
         return iter(self._storage)
 
+    # The XOR operator is overridden here to provide a convenient single character comparator ("^") for the most
+    # common comparison case: "isa".  Effectively, "HUMAN" ^ "OBJECT" == True.
+    def __xor__(self, other):
+        return self.isa(other)
+
     def __str__(self):
         return str(self._storage)
 
@@ -215,7 +220,7 @@ class Fillers(object):
         if values is not None and type(values) != list:
             values = [values]
         if values is not None:
-            values = list(map(lambda value: value if type(value) == Filler else Filler(value), values))
+            values = list(map(lambda value: value if isinstance(value, Filler) else Filler(value), values))
             for value in values: value._frame = self._frame
 
             self._storage.extend(values)
@@ -226,7 +231,7 @@ class Fillers(object):
             other = other._storage
         if type(other) != list:
             other = [other]
-        other = list(map(lambda o: o if type(o) == Filler else Filler(o), other))
+        other = list(map(lambda o: o if isinstance(o, Filler) else Filler(o), other))
         for o in other:
             if o._frame is None:
                 o._frame = self._frame
@@ -247,7 +252,7 @@ class Fillers(object):
         return results
 
     def __iadd__(self, other):
-        if type(other) != Filler:
+        if not isinstance(other, Filler):
             other = Filler(other)
         other._frame = self._frame
 
