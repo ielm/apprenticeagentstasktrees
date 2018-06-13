@@ -1,4 +1,4 @@
-from backend.models.frinstance import FRInstance
+from backend.models.frinstance import FRInstanceX as FRInstance
 
 
 class FRResolutionHeuristic(object):
@@ -24,7 +24,7 @@ class FRImportHeuristic(object):
 class FRResolveHumanAndRobotAsSingletonsHeuristic(FRResolutionHeuristic):
 
     def resolve(self, instance, resolves, tmr=None):
-        if instance.concept == "HUMAN" or instance.concept == "ROBOT":
+        if instance["IS-A"] == "HUMAN" or instance["IS-A"] == "ROBOT":
             fr_instances = self.fr.search(concept=instance.concept)
             if len(fr_instances) > 0:
                 resolves[instance.name] = {fr_instances[0].name}
@@ -45,7 +45,7 @@ class FRResolveHumanAndRobotAsSingletonsHeuristic(FRResolutionHeuristic):
 class FRResolveDeterminedObjectsHeuristic(FRResolutionHeuristic):
 
     def resolve(self, instance, resolves, tmr=None):
-        if instance.subtree != "OBJECT":
+        if instance ^ "OBJECT":
             return
 
         if tmr is None:
@@ -72,7 +72,7 @@ class FRResolveDeterminedObjectsHeuristic(FRResolutionHeuristic):
 class FRResolveSetsWithIdenticalMembersHeuristic(FRResolutionHeuristic):
 
     def resolve(self, instance, resolves, tmr=None):
-        if instance.concept != "SET":
+        if instance ^ "SET":
             return
 
         instance_members = instance["MEMBER-TYPE"]

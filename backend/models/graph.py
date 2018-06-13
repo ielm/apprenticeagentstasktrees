@@ -1,5 +1,6 @@
 from collections.abc import Mapping
 from functools import reduce
+from uuid import uuid4
 
 
 class Network(object):
@@ -131,6 +132,8 @@ class Frame(object):
         self._network = None
         self._graph = None
 
+        self._uuid = uuid4()
+
         if isa is not None:
             self["IS-A"] = isa
 
@@ -171,6 +174,14 @@ class Frame(object):
             elif isinstance(parent, str):
                 result.append(parent)
         return result
+
+    def concept(self, full_path=True):
+        concepts = list(map(lambda filler: filler.resolve(), self["IS-A"]))
+        if full_path:
+            concepts = list(map(lambda concept: concept.name() if isinstance(concept, Frame) else concept, concepts))
+        else:
+            concepts = list(map(lambda concept: concept._name if isinstance(concept, Frame) else concept, concepts))
+        return "&".join(concepts)
 
     def __setitem__(self, key, value):
         if type(value) == Slot:
@@ -289,10 +300,15 @@ class Slot(object):
 
 class Filler(object):
 
-    def __init__(self, value):
+    def __init__(self, value, metadata=None):
         self._value = value
         self._metadata = None
         self._frame = None
+
+        self._uuid = uuid4()
+
+        if metadata is not None:
+            self._metadata = metadata
 
     def resolve(self):
         if type(self._value) == Frame:

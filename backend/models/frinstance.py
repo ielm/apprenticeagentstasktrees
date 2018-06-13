@@ -27,7 +27,8 @@
 from backend.models.instance import Instance
 
 
-class FRInstance(Instance):
+@DeprecationWarning
+class FRInstanceX(Instance):
 
     def __init__(self, name, concept, index, uuid=None, properties=None, subtree=None):
         super().__init__(name, concept, uuid=uuid, properties=properties, subtree=subtree)

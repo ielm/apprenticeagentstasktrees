@@ -492,3 +492,28 @@ class FrameTestCase(unittest.TestCase):
         self.assertTrue(fc ^ fb)
         self.assertTrue(fc ^ fc)
         self.assertFalse(fc ^ "OTHER")
+
+    def test_frame_concept(self):
+        g = Graph("TEST")
+        fa = g.register("A")
+        fb = g.register("B", isa="A")
+
+        self.assertEquals(fb.concept(), "TEST.A")
+        self.assertEquals(fb.concept(full_path=False), "A")
+
+    def test_frame_concept_explicit_path(self):
+        g = Graph("TEST")
+        fa = g.register("A")
+        fb = g.register("B", isa="TEST.A")
+
+        self.assertEquals(fb.concept(), "TEST.A")
+        self.assertEquals(fb.concept(full_path=False), "A")
+
+    def test_frame_concept_multiple_inheritance(self):
+        g = Graph("TEST")
+        fa1 = g.register("A1")
+        fa2 = g.register("A2")
+        fb = g.register("B", isa=["A1", "A2"])
+
+        self.assertEquals(fb.concept(), "TEST.A1&TEST.A2")
+        self.assertEquals(fb.concept(full_path=False), "A1&A2")

@@ -3,6 +3,7 @@ from backend.ontology import Ontology
 from tests.ApprenticeAgentsTestCase import ApprenticeAgentsTestCase
 
 
+@DeprecationWarning
 class FRInstanceTestCase(ApprenticeAgentsTestCase):
 
     @classmethod

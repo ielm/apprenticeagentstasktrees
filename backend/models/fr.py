@@ -1,6 +1,4 @@
-from backend.models.graph import Graph
-from backend.models.frinstance import FRInstance
-from backend.ontology import Ontology
+from backend.models.graph import Filler, Frame, Graph
 from backend.heuristics.fr_heuristics import *
 from backend.utils.AgentLogger import AgentLogger
 
@@ -9,11 +7,10 @@ import copy
 
 class FR(Graph):
 
-    def __init__(self, name="Fact Repository", namespace="FR"):
-        super().__init__()
+    def __init__(self, namespace, ontology):
+        super().__init__(namespace)
 
-        self.name = name
-        self.namespace = namespace
+        self.ontology = ontology
 
         self._logger = AgentLogger()
         self._indexes = dict()
@@ -24,6 +21,11 @@ class FR(Graph):
             FRResolveSetsWithIdenticalMembersHeuristic
         ]
 
+    def __setitem__(self, key, value):
+        if not isinstance(value, FRInstance):
+            raise TypeError("FR elements must be FRInstance objects.")
+        super().__setitem__(key, value)
+
     def logger(self, logger=None):
         if not logger is None:
             self._logger = logger
@@ -33,12 +35,13 @@ class FR(Graph):
         super().clear()
         self._indexes = dict()
 
-    def register(self, concept):
-        fr_index = self.__next_index(concept)
-        fr_name = concept + "-" + self.namespace + str(fr_index)
-        fr_instance = FRInstance(fr_name, concept, fr_index)
-        self[fr_name] = fr_instance
-        return fr_instance
+    def register(self, id, isa=None, generate_index=True):
+        if generate_index:
+            id = id + "." + str(self.__next_index(id))
+        return super().register(id, isa=isa)
+
+    def _frame_type(self):
+        return FRInstance
 
     def search(self, concept=None, subtree=None, attributed_tmr_instance=None, context=None, has_fillers=None):
         results = list(self.values())
@@ -61,24 +64,33 @@ class FR(Graph):
 
         return results
 
-    # Fills an existing FR Instance with properties found in an Instance object; the properties must be resolved
+    # Fills an existing FR Instance with properties found in a Frame object; the properties must be resolved
     # to existing FR Instances to be added.
     # fr_id: The id/name of an existing FR Instance (e.g., OBJECT-FR1).
     # instance: A Instance object whose properties will be merged into the FR Instance.
     # resolves: A map of TMR instance IDs (found in the Instance) to either None, {}, or a set of fr_ids.
     #           These are the FR Instance(s) that the ID is resolved to.  Multiple implies ambiguity.
-    def populate(self, fr_id, instance, resolves):
+    def populate(self, fr_id, frame, resolves):
         fr_instance = self[fr_id]
-        fr_instance.attribute_to(instance)
+        fr_instance.attribute_to(frame)
 
-        for property in instance:
-            # TODO: handle attributes
-            # if relation:
-            for value in instance[property]:
-                if type(value) == FRInstance.FRFiller:
-                    value = value.value
+        for slot in frame:
+            for filler in frame[slot]:
+                value = filler.resolve()
+                if isinstance(value, Frame):
+                    value = value.name()
                 if value in resolves and resolves[value] is not None:
-                    fr_instance.remember(property, resolves[value])
+                    value = resolves[value]
+                    if isinstance(value, str):
+                        fr_instance[slot] += value
+                    elif isinstance(value, set):
+                        ambiguous_fillers = []
+                        for v in value:
+                            filler = Filler(v)
+                            fr_instance[slot] += filler
+                            ambiguous_fillers.append(filler)
+                        ids = set(map(lambda filler: filler._uuid, ambiguous_fillers))
+                        for filler in ambiguous_fillers: filler._metadata = {"ambiguities": ids}
 
     def _resolve_log_wrapper(self, heuristic, instance, results, tmr=None):
         input_results = copy.deepcopy(results)
@@ -117,7 +129,7 @@ class FR(Graph):
 
         for k in filtered_graph:
             if resolves[k] is None:
-                resolves[k] = self.register(other_fr[k].concept).name
+                resolves[k] = self.register(other_fr[k].concept()).name()
 
         for k in filtered_graph:
             resolved = resolves[k]
@@ -148,28 +160,32 @@ class FR(Graph):
 
         return resolves
 
-    # Locates each mention of an Instance in the input Instance (including itself), and attempts to resolve those
+    # Locates each mention of an Instance in the input Frame (including itself), and attempts to resolve those
     # instances to existing FR Instances.  It can use an existing set of resolves to assist, as well as an optional
     # input TMR (presumably containing the input Instance).  It can find no matches (None), or any number of matches
     # where more than one implies ambiguity.
-    def resolve_instance(self, instance, resolves, tmr=None):
+    def resolve_instance(self, frame, resolves, tmr=None):
         # TODO: currently this resolves everything to None unless found in the input resolves object
         results = dict()
-        results[instance.name] = None
-        for property in instance:
-            if property in Ontology.ontology and 'RELATION' in Ontology.ancestors(property):
-                for value in instance[property]:
-                    if type(value) == FRInstance.FRFiller:
-                        value = value.value
-                    results[value] = None
+        results[frame.name()] = None
+        for slot in frame:
+            if slot == "IS-A":
+                continue
+
+            try:
+                pframe = self._network.lookup(slot, graph=self.ontology)
+                if pframe is not None and pframe.isa(self.ontology + ".RELATION"):
+                    for filler in frame[slot]:
+                        results[filler._value] = None
+            except Exception: pass
 
         for id in results:
             if id in resolves:
                 results[id] = resolves[id]
 
         for heuristic in self.heuristics:
-            if results[instance.name] is None:
-                self._resolve_log_wrapper(heuristic, instance, results, tmr=tmr)
+            if results[frame.name()] is None:
+                self._resolve_log_wrapper(heuristic, frame, results, tmr=tmr)
 
         return results
 
@@ -204,8 +220,8 @@ class FR(Graph):
 
         for id in resolves:
             if resolves[id] is None and id in tmr:
-                concept = tmr[id] if type(tmr[id]) == str else tmr[id].concept
-                resolves[id] = {self.register(concept).name}
+                concept = tmr[id] if type(tmr[id]) == str else tmr[id].concept(full_path=False)
+                resolves[id] = {self.register(concept, generate_index=True).name()}
 
         for instance in tmr:
             for resolved in resolves[instance]:
@@ -221,7 +237,21 @@ class FR(Graph):
         return 1
 
     def __str__(self):
-        lines = [self.name]
+        lines = [self._namespace]
         for instance in sorted(self):
             lines.extend(list(map(lambda line: "  " + line, str(self[instance]).split("\n"))))
         return "\n".join(lines)
+
+
+class FRInstance(Frame):
+
+    def __init__(self, name, isa=None):
+        super().__init__(name, isa=isa)
+        self._from = dict()
+        self._context = dict()
+
+    def context(self):
+        return self._context
+
+    def attribute_to(self, tmrinstance):
+        self._from[tmrinstance._uuid] = tmrinstance
