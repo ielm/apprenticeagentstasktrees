@@ -35,7 +35,7 @@ class TMR(Graph):
         if ontology is None:
             raise Exception("TMRs must have an anchoring ontology provided.")
         if namespace is None:
-            namespace = "TMR." + str(uuid4())
+            namespace = "TMR#" + str(uuid4())
 
         super().__init__(namespace)
 

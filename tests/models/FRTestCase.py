@@ -33,7 +33,7 @@ class FRTestCase(unittest.TestCase):
     def test_populate_simple(self):
         fr_id = self.fr.register("CONCEPT").name()
 
-        input = Frame("CONCEPT-1", "CONCEPT")
+        input = Frame("CONCEPT-1", isa="CONCEPT")
         input["PROPERTY"] = "VALUE-123"
 
         resolves = {
@@ -44,7 +44,7 @@ class FRTestCase(unittest.TestCase):
 
         fr_instance = self.fr[fr_id]
 
-        self.assertEquals(fr_instance["PROPERTY"], "CONCEPT-FR2")
+        self.assertEqual(fr_instance["PROPERTY"], "CONCEPT-FR2")
 
     def test_populate_ambiguity(self):
         fr_id = self.fr.register("CONCEPT").name()
@@ -65,7 +65,7 @@ class FRTestCase(unittest.TestCase):
 
         self.assertEquals(2, len(fr_instance["PROPERTY"]))
         for filler in fr_instance["PROPERTY"]:
-            self.assertEquals(filler._metadata, {"ambiguities": {fr_instance["PROPERTY"][0]._uuid, fr_instance["PROPERTY"][1]._uuid}})
+            self.assertEqual(filler._metadata, {"ambiguities": {fr_instance["PROPERTY"][0]._uuid, fr_instance["PROPERTY"][1]._uuid}})
 
     def test_populate_unresolved(self):
         fr_id = self.fr.register("CONCEPT").name()
@@ -253,7 +253,7 @@ class FRTestCase(unittest.TestCase):
     def test_import_fr_with_relations(self):
         to_import = FR("FR", self.ontology._namespace)
         c1 = to_import.register("CONCEPT", isa="CONCEPT")
-        c2 = to_import.register("CONCEPT", isa="CONCEPT")    #.remember("RELATION", "CONCEPT-FR1")
+        c2 = to_import.register("CONCEPT", isa="CONCEPT")
         c2["RELATION"] = c1
 
         destination = FR("DEST", self.ontology._namespace)

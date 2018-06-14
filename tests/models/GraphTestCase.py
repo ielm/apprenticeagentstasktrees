@@ -1,4 +1,4 @@
-from backend.models.graph import Frame, Graph, Network
+from backend.models.graph import Frame, Graph, Identifier, Network
 
 import unittest
 
@@ -80,6 +80,21 @@ class NetworkTestCase(unittest.TestCase):
 
         self.assertTrue("ABC" in n)
         self.assertEqual(g, n["ABC"])
+
+    def test_network_lookup_with_identifier(self):
+        n = Network()
+
+        g1 = n.register("TEST1")
+        g2 = n.register("TEST2")
+
+        f1 = Frame("OBJECT.1")
+        f2 = Frame("OBJECT.1")
+
+        g1["OBJECT.1"] = f1
+        g2["OBJECT.1"] = f2
+
+        result = n.lookup(Identifier("TEST2", "OBJECT", instance=1))
+        self.assertEqual(result, f2)
 
     def test_network_lookup_explicit(self):
         n = Network()
@@ -170,6 +185,13 @@ class GraphTestCase(unittest.TestCase):
 
         g["FRAME.1"] = Frame("FRAME.1")
         self.assertEqual(list(g.keys()), ["NMSP.FRAME.1"])
+
+    def test_graph_lookup_by_identifier(self):
+        g = Graph("NMSP")
+        g["FRAME.1"] = Frame("FRAME.1")
+
+        f = g[Identifier("NMSP", "FRAME", instance=1)]
+        self.assertIsNotNone(f)
 
     def test_graph_lookup_by_full_name(self):
         g = Graph("NMSP")

@@ -1,6 +1,85 @@
 from collections.abc import Mapping
 from functools import reduce
+from typing import Any, Union
 from uuid import uuid4
+
+import re
+
+
+class Identifier(object):
+
+    @classmethod
+    def parse(cls, path: str):
+        graph = None
+        name = None
+        instance = None
+
+        parts = re.split(r'\.([0-9]+)$', path, maxsplit=1)
+        if len(parts) > 1:
+            instance = int(parts[1])
+            path = parts[0]
+
+        parts = re.split(r'^(.+?)\.', path, maxsplit=1)
+        if len(parts) > 2:
+            graph = parts[1]
+            path = parts[2]
+
+        name = path
+
+        return Identifier(graph, name, instance=instance)
+
+    def __init__(self, graph: str, name: str, instance: int=None):
+        self.graph = graph
+        self.name = name
+        self.instance = instance
+
+    def resolve(self, graph: Union['Graph', str], network: Union['Network']=None) -> 'Frame':
+        if graph is not None and isinstance(graph, Graph):
+            if self in graph:
+                return graph[self]
+
+        if network is not None:
+            return network.lookup(self, graph=graph)
+
+        raise UnknownFrameError()
+
+    def render(self, graph: bool=True, name: bool=True, instance: bool=True) -> str:
+        values = []
+        if graph: values.append(self.graph)
+        if name: values.append(self.name)
+        if instance: values.append(self.instance)
+
+        return ".".join(map(lambda x: str(x), filter(lambda x: x is not None, values)))
+
+    def __eq__(self, other):
+        if isinstance(other, str):
+            other = Identifier.parse(other)
+
+        if isinstance(other, Identifier):
+            if self.graph == other.graph or self.graph is None or other.graph is None:
+                if self.name == other.name and self.instance == other.instance:
+                    return True
+        if isinstance(other, Frame):
+            return self == other._identifier
+
+        return False
+
+    def __str__(self):
+        return self.render()
+
+    def __repr__(self):
+        return "@" + str(self)
+
+
+class Literal(object):
+
+    def __init__(self, value):
+        self.value = value
+
+    def __eq__(self, other):
+        if isinstance(other, Literal):
+            other = other.value
+        return self.value == other
 
 
 class Network(object):
@@ -19,18 +98,22 @@ class Network(object):
 
         return self[graph._namespace]
 
-    def lookup(self, name, graph=None):
+    def lookup(self, identifier: Union[Identifier, str], graph: Union['Graph', str]=None):
+        if graph is not None and isinstance(graph, Graph):
+            graph = graph._namespace
+
         try:
-            return self[graph][name]
+            return self[graph][identifier]
         except KeyError:
             pass
 
-        parts = name.split(".", maxsplit=1)
-        if len(parts) < 2:
-            raise Exception("Unknown graph for '" + name + "'.")
-        graph = parts[0]
+        if isinstance(identifier, str):
+            identifier = Identifier.parse(identifier)
 
-        return self[graph][name]
+        if identifier.graph is None or identifier.graph not in self:
+            raise Exception("Unknown graph for " + repr(identifier) + ".")
+
+        return self[identifier.graph][identifier]
 
     def __setitem__(self, key, value):
         if not isinstance(value, Graph):
@@ -71,18 +154,25 @@ class Graph(Mapping):
         self._storage = dict()
         self._network = None
 
-    def __setitem__(self, key, value):
+    def __setitem__(self, key: Union[Identifier, str], value):
         if not isinstance(value, Frame):
             raise TypeError("Graph elements must be Frame objects.")
-        if key != value._name:
-            raise Network.NamespaceError(key, value._name)
+        if key != value._identifier:
+            raise Network.NamespaceError(key, value._identifier)
+
+        if isinstance(key, Identifier):
+            key = key.render()
 
         key = self._modify_key(key)
         self._storage[key] = value
         value._network = self._network
         value._graph = self
+        value._identifier.graph = self._namespace
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: Union[Identifier, str]):
+        if isinstance(key, Identifier):
+            key = key.render()
+
         key = self._modify_key(key)
         return self._storage[key]
 
@@ -96,7 +186,7 @@ class Graph(Mapping):
     def __len__(self):
         return len(self._storage)
 
-    def _modify_key(self, key):
+    def _modify_key(self, key: Union[Identifier, str]) -> str:
         modified_key = key if not key.startswith("ASSEMBLE") else key.replace("ASSEMBLE", "BUILD") + "X"
 
         if not modified_key.startswith(self._namespace):
@@ -125,8 +215,12 @@ class Graph(Mapping):
 
 class Frame(object):
 
-    def __init__(self, name, isa=None):
-        self._name = name
+    def __init__(self, identifier: Union[Identifier, str], isa=None):
+        if isinstance(identifier, Identifier):
+            self._identifier = identifier
+        else:
+            self._identifier = Identifier.parse(identifier)
+
         self._storage = dict()
 
         self._network = None
@@ -137,30 +231,37 @@ class Frame(object):
         if isa is not None:
             self["IS-A"] = isa
 
-    def name(self):
-        name = self._name
-        if self._graph is not None:
-            name = self._graph._namespace + "." + name
-        return name
+    def name(self) -> str:
+        return str(self._identifier)
 
-    def isa(self, parent):
-        # if type(parent) == Frame:
+    def isa(self, parent: Union['Frame', Identifier, str]) -> bool:
         if isinstance(parent, Frame):
             parent = parent.name()
+        if isinstance(parent, Identifier):
+            parent = parent.render()
 
-        if parent in self.ancestors():
-            return True
+        try:
+            if parent in self.ancestors():
+                return True
+        except UnknownFrameError: pass
+
         if parent == self.name():
             return True
+
         if self._graph is not None:
-            if self._graph._namespace + "." + parent in self.ancestors():
-                return True
+
+            try:
+                if self._graph._namespace + "." + parent in self.ancestors():
+                    return True
+            except UnknownFrameError: pass
+
             if self._graph._namespace + "." + parent == self.name():
                 return True
 
         return False
 
-    def ancestors(self):
+    # TODO: return list of Identifiers
+    def ancestors(self) -> [str]:
         result = []
         for parent in self["IS-A"]:
             parent = parent.resolve()
@@ -175,12 +276,12 @@ class Frame(object):
                 result.append(parent)
         return result
 
-    def concept(self, full_path=True):
-        concepts = list(map(lambda filler: filler.resolve(), self["IS-A"]))
-        if full_path:
-            concepts = list(map(lambda concept: concept.name() if isinstance(concept, Frame) else concept, concepts))
-        else:
-            concepts = list(map(lambda concept: concept._name if isinstance(concept, Frame) else concept, concepts))
+    def concept(self, full_path: bool=True) -> str:
+        identifiers = list(map(lambda filler: filler._value, filter(lambda filler: isinstance(filler._value, Identifier), self["IS-A"])))
+        identifiers = list(map(lambda identifier: identifier if identifier.graph is not None else Identifier(self._graph._namespace, identifier.name, instance=identifier.instance), identifiers))
+
+        concepts = list(map(lambda identifier: identifier.render(graph=full_path, instance=False), identifiers))
+
         return "&".join(concepts)
 
     def __setitem__(self, key, value):
@@ -237,17 +338,13 @@ class Slot(object):
             self._storage.extend(values)
 
     def compare(self, other, isa=True, intersection=True):
-        # 1) Refactor "other" into a list of Fillers (either using the input Filler information, or defaulting to self)
-        if type(other) == Slot:
+        if isinstance(other, Slot):
             other = other._storage
-        if type(other) != list:
-            other = [other]
-        other = list(map(lambda o: o if isinstance(o, Filler) else Filler(o), other))
-        for o in other:
-            if o._frame is None:
-                o._frame = self._frame
 
-        # 2) Compare each filler in self to the input fillers
+        if not isinstance(other, list):
+            other = [other]
+
+        # Compare each filler in self to the input fillers
         results = list(map(lambda f: f.compare(other, isa=isa, intersection=intersection), self._storage))
 
         if len(results) == 0 and len(self._storage) == 0 and len(other) == 0:
@@ -300,8 +397,16 @@ class Slot(object):
 
 class Filler(object):
 
-    def __init__(self, value, metadata=None):
-        self._value = value
+    def __init__(self, value: Union[Identifier, Literal, Any], metadata=None):
+        if isinstance(value, Identifier) or isinstance(value, Literal):
+            self._value = value
+        elif isinstance(value, str):
+            self._value = Identifier.parse(value)
+        elif isinstance(value, Frame):
+            self._value = value._identifier
+        else:
+            self._value = Literal(value)
+
         self._metadata = None
         self._frame = None
 
@@ -311,9 +416,20 @@ class Filler(object):
             self._metadata = metadata
 
     def resolve(self):
-        if type(self._value) == Frame:
+        if isinstance(self._value, Frame):
             return self._value
-        if type(self._value) == str:
+        if isinstance(self._value, Identifier):
+            graph = None
+            network = None
+
+            if self._frame is not None:
+                graph = self._frame._graph
+                if graph is not None:
+                    network = graph._network
+
+            return self._value.resolve(graph, network=network)
+        # TODO: Can this even be the case now?
+        if isinstance(self._value, str):
             if self._frame is not None:
                 if self._frame._graph is not None:
                     try:
@@ -327,61 +443,60 @@ class Filler(object):
         return self._value
 
     def compare(self, other, isa=True, intersection=True):
-        # 1) Refactor "other" into a list of Fillers (either using the input Filler information, or defaulting to self)
-        if type(other) != Filler:
-            other = Filler(other)
-            other._frame = self._frame
-        value = other._value
-        if type(value) != list:
-            value = [value]
-        others = list(map(lambda v: v if type(v) == Filler else Filler(v), value))
-        for o in others:
-            if o._frame is None:
-                o._frame = other._frame
+        if not isinstance(other, list):
+            other = [other]
 
-        # 2) For each value, do a comprehensive comparison, mapping the results
+        other = list(map(lambda f: f._value if isinstance(f, Filler) else f, other))
+
         def _compare(to):
-            sr = self.resolve()
-            tr = to.resolve()
 
-            sv = sr
-            tv = tr
+            local = self._value
 
-            # if type(sr) == Frame:
-            if isinstance(sr, Frame):
-                sv = sr.name()
-
-            # if type(tr) == Frame:
-            if isinstance(tr, Frame):
-                tv = tr.name()
-
-            if sv == tv:
+            if local == to:
                 return True
 
-            # if type(sr) == Frame and type(tr) == Frame and isa:
-            # if isinstance(sr, Frame) and isinstance(tr, Frame) and isa:
-            #     if sr.isa(tr):
-            #         return True
-            #     if tr.isa(sr):
-            #         return True
-            if isinstance(sr, Frame) and isa:
-                if sr.isa(tr):
+            if isinstance(to, str):
+                if local == Identifier.parse(to):
                     return True
-            if isinstance(tr, Frame) and isa:
-                if tr.isa(sr):
-                    return True
+
+            if isinstance(local, Identifier) and isa:
+                try:
+                    if self.resolve().isa(to):
+                        return True
+                except UnknownFrameError: pass
+
+            if isinstance(to, Identifier) and isa:
+                try:
+                    if to.resolve(self._graph(), self._network()).isa(local):
+                        return True
+                except UnknownFrameError: pass
+
+            if isinstance(to, Frame) and isa:
+                try:
+                    if to.isa(local):
+                        return True
+                except UnknownFrameError: pass
 
             return False
 
-        # 3) Convert the results into a single comparator (if intersection is requested, then any single True is
-        #    sufficient, otherwise all must be true).
-        results = list(map(lambda value: _compare(value), others))
+        # Convert the results into a single comparator (if intersection is requested, then any single True is
+        # sufficient, otherwise all must be true).
+        results = list(map(lambda value: _compare(value), other))
         if intersection:
             results = reduce(lambda x, y: x or y, results)
         else:
             results = reduce(lambda x, y: x and y, results)
 
         return results
+
+    def _graph(self):
+        if self._frame is not None:
+            return self._frame._graph
+
+    def _network(self):
+        graph = self._graph()
+        if graph is not None:
+            return graph._network
 
     def __eq__(self, other):
         return self.compare(other, isa=False, intersection=True)
@@ -403,3 +518,9 @@ class Filler(object):
 
     def __repr__(self):
         return str(self)
+
+
+class UnknownFrameError(Exception): pass
+
+
+class FrameParseError(Exception): pass

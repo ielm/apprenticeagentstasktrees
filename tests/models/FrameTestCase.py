@@ -1,9 +1,67 @@
-from backend.models.graph import Filler, Frame, Graph, Network, Slot
+from backend.models.graph import Filler, Frame, Graph, Identifier, Literal, Network, Slot
+from backend.models.graph import FrameParseError, UnknownFrameError
 
 import unittest
 
 
+class IdentifierTestCase(unittest.TestCase):
+
+    def test_identifier_str(self):
+        self.assertEqual("ONT.CONCEPT", str(Identifier("ONT", "CONCEPT")))
+        self.assertEqual("TMR.CONCEPT.1", str(Identifier("TMR", "CONCEPT", instance=1)))
+
+    def test_identifier_repr(self):
+        self.assertEqual("@ONT.CONCEPT", repr(Identifier("ONT", "CONCEPT")))
+        self.assertEqual("@TMR.CONCEPT.1", repr(Identifier("TMR", "CONCEPT", instance=1)))
+
+    def test_identifier_equals(self):
+        identifier = Identifier("TMR", "CONCEPT", instance=1)
+
+        self.assertEqual(identifier, Identifier("TMR", "CONCEPT", instance=1))
+        self.assertEqual(identifier, Frame(Identifier("TMR", "CONCEPT", instance=1)))
+        self.assertEqual(identifier, "TMR.CONCEPT.1")
+        self.assertEqual(identifier, "TMR.CONCEPT.1")
+        self.assertEqual(identifier, "CONCEPT.1")
+        self.assertEqual(Identifier("ONT", "CONCEPT"), "ONT.CONCEPT")
+
+    def test_identifier_resolve(self):
+        n = Network()
+
+        g1 = n.register("G1")
+        g2 = n.register("G2")
+
+        frame = g1.register("CONCEPT")
+
+        self.assertEqual(frame, Identifier("G1", "CONCEPT").resolve(g1))
+        self.assertEqual(frame, Identifier("G1", "CONCEPT").resolve(g2, network=n))
+
+        with self.assertRaises(UnknownFrameError):
+            self.assertEqual(frame, Identifier("G1", "CONCEPT").resolve(g2))
+
+    def test_identifier_parse(self):
+        self.assertEqual(Identifier.parse("ONT.CONCEPT.1"), Identifier("ONT", "CONCEPT", instance=1))
+        self.assertEqual(Identifier.parse("ONT.CONCEPT.1234"), Identifier("ONT", "CONCEPT", instance=1234))
+        self.assertEqual(Identifier.parse("ONT.CONCEPT"), Identifier("ONT", "CONCEPT"))
+        self.assertEqual(Identifier.parse("ONT.CONCEPT.XYZ"), Identifier("ONT", "CONCEPT.XYZ"))
+        self.assertEqual(Identifier.parse("CONCEPT"), Identifier(None, "CONCEPT"))
+
+
+class LiteralTestCase(unittest.TestCase):
+
+    def test_literal_equals(self):
+        self.assertEqual(Literal(123), 123)
+        self.assertEqual(Literal(123), Literal(123))
+        self.assertNotEqual(Literal(123), 124)
+
+
 class FillerTestCase(unittest.TestCase):
+
+    def test_filler_handles_input_types(self):
+        self.assertTrue(type(Filler(123)._value) == Literal)
+        self.assertTrue(type(Filler(Literal("xyz"))._value) == Literal)
+        self.assertTrue(type(Filler("ONT.CONCEPT.1")._value) == Identifier)
+        self.assertTrue(type(Filler(Identifier("ONT", "CONCEPT", instance=1))._value) == Identifier)
+        self.assertTrue(type(Filler(Literal("ONT.CONCEPT.1"))._value) == Literal)
 
     def test_filler_equals_operator(self):
         # Use "==" as shorthand for compare(..., isa=False, intersection=True)
@@ -43,15 +101,15 @@ class FillerTestCase(unittest.TestCase):
         self.assertTrue(f ^ ["OBJECT-1", f3])
 
     def test_filler_compares_to_filler(self):
-        f1 = Filler("value1")
-        f2 = Filler("value1")
-        f3 = Filler("value2")
+        f1 = Filler(Literal("value1"))
+        f2 = Filler(Literal("value1"))
+        f3 = Filler(Literal("value2"))
 
         self.assertTrue(f1.compare(f2))
         self.assertFalse(f1.compare(f3))
 
     def test_filler_compares_to_value(self):
-        f = Filler("value1")
+        f = Filler(Literal("value1"))
 
         self.assertTrue(f.compare("value1"))
         self.assertFalse(f.compare("value2"))
@@ -113,6 +171,18 @@ class FillerTestCase(unittest.TestCase):
         self.assertTrue(f.compare("A", intersection=True))
         self.assertFalse(f.compare(["B", "C"], intersection=True))
         self.assertFalse(f.compare(["A", "B", "C"], intersection=False))
+
+    def test_filler_resolves_identifier(self):
+        fa = Frame("A")
+        fb = Frame("B")
+
+        fa["REL"] = Identifier(None, "B")
+
+        g = Graph("TEST")
+        g["A"] = fa
+        g["B"] = fb
+
+        self.assertEqual(fa["REL"][0].resolve(), fb)
 
     def test_filler_resolve(self):
         fa = Frame("A")
@@ -229,15 +299,15 @@ class SlotTestCase(unittest.TestCase):
         self.assertTrue(Slot([f1, f2]).compare(Slot([f1, f2])))
 
     def test_slot_compares_to_lists(self):
-        f1 = Filler("value1")
-        f2 = Filler("value2")
+        f1 = Filler(Literal("value1"))
+        f2 = Filler(Literal("value2"))
 
         self.assertTrue(Slot([f1, f2]).compare([f1, f2]))
         self.assertTrue(Slot([f1, f2]).compare([f1._value, f2._value]))
 
     def test_slot_compares_to_single_filler(self):
-        f1 = Filler("value1")
-        f2 = Filler("value2")
+        f1 = Filler(Literal("value1"))
+        f2 = Filler(Literal("value2"))
 
         self.assertTrue(Slot([f1]).compare(f1))
         self.assertFalse(Slot([f2]).compare(f1))
@@ -301,10 +371,14 @@ class SlotTestCase(unittest.TestCase):
         f1 = Filler(1)
         f2 = Filler(2)
 
-        self.assertEqual([3, 4], list(map(lambda filler: filler._value + 2, Slot([f1, f2]))))
+        self.assertEqual([3, 4], list(map(lambda filler: filler.resolve().value + 2, Slot([f1, f2]))))
 
 
 class FrameTestCase(unittest.TestCase):
+
+    def test_frame_handles_input_types(self):
+        self.assertEqual(Frame("ONT.TEST").name(), "ONT.TEST")
+        self.assertEqual(Frame(Identifier("ONT", "TEST")).name(), "ONT.TEST")
 
     def test_frame_assign_and_retrieve_value(self):
         f = Frame("TEST")
@@ -316,7 +390,7 @@ class FrameTestCase(unittest.TestCase):
 
     def test_frame_assign_fillers(self):
         f = Frame("TEST")
-        f["SLOT"] = Slot("VALUE")
+        f["SLOT"] = Slot(Literal("VALUE"))
 
         self.assertEqual("VALUE", f["SLOT"])
 
@@ -498,16 +572,16 @@ class FrameTestCase(unittest.TestCase):
         fa = g.register("A")
         fb = g.register("B", isa="A")
 
-        self.assertEquals(fb.concept(), "TEST.A")
-        self.assertEquals(fb.concept(full_path=False), "A")
+        self.assertEqual(fb.concept(), "TEST.A")
+        self.assertEqual(fb.concept(full_path=False), "A")
 
     def test_frame_concept_explicit_path(self):
         g = Graph("TEST")
         fa = g.register("A")
         fb = g.register("B", isa="TEST.A")
 
-        self.assertEquals(fb.concept(), "TEST.A")
-        self.assertEquals(fb.concept(full_path=False), "A")
+        self.assertEqual(fb.concept(), "TEST.A")
+        self.assertEqual(fb.concept(full_path=False), "A")
 
     def test_frame_concept_multiple_inheritance(self):
         g = Graph("TEST")

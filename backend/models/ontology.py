@@ -1,4 +1,4 @@
-from backend.models.graph import Filler, Frame, Graph, Slot
+from backend.models.graph import Filler, Frame, Graph, Identifier, Slot
 
 import itertools
 import pickle
@@ -26,20 +26,26 @@ class Ontology(Graph):
             return super().__getitem__(item)
         except KeyError: pass
 
+        if isinstance(item, Identifier):
+            item = item.name
+
         if item not in self._wrapped:
             raise KeyError()
 
         original = self._wrapped[item]
 
-        frame = Frame(item)
+        frame = Frame(Identifier(self._namespace, item))
         frame._graph = self
 
         for slot in original:
             for facet in original[slot]:
                 fillers = original[slot][facet]
+                if fillers is None:
+                    continue
+
                 if not isinstance(fillers, list):
                     fillers = [fillers]
-                fillers = list(map(lambda f: OntologyFiller(f, facet), fillers))
+                fillers = list(map(lambda f: OntologyFiller(Identifier(self._namespace, f), facet), fillers))
                 frame[slot] = Slot(fillers, frame=frame)
 
         return frame
@@ -67,6 +73,29 @@ class Ontology(Graph):
             iters += iter(self._wrapped)
 
         return itertools.chain(iters)
+
+    def _is_relation(self, slot):
+        if slot not in self._wrapped:
+            return False
+
+        frame = self._wrapped[slot]
+
+        parents = None
+        if "IS-A" in frame and frame["IS-A"] is not None:
+            if "VALUE" in frame["IS-A"] and frame["IS-A"]["VALUE"] is not None:
+                parents = frame["IS-A"]["VALUE"]
+                if not isinstance(parents, list):
+                    parents = [parents]
+
+        if parents is None:
+            return False
+
+        for parent in parents:
+            if parent == "RELATION":
+                return True
+            if self._is_relation(parent):
+                return True
+        return False
 
 
 class OntologyFiller(Filler):

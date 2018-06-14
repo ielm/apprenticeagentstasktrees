@@ -129,6 +129,7 @@ class TMRTestCase(unittest.TestCase):
 
         self.assertTrue(tmr.is_postfix())
 
+    @unittest.skip("TMR.is_action is deprecated and flagged for removal.")
     def test_tmr_is_action_from_request(self):
         self.ontology.register("REQUEST-ACTION", isa="EVENT")
 
@@ -147,6 +148,7 @@ class TMRTestCase(unittest.TestCase):
 
         self.assertTrue(tmr.is_action())
 
+    @unittest.skip("TMR.is_action is deprecated and flagged for removal.")
     def test_tmr_is_action_from_present_physical_event(self):
         self.ontology.register("PHYSICAL-EVENT", isa="EVENT")
 
@@ -164,39 +166,41 @@ class TMRTestCase(unittest.TestCase):
 
         self.assertTrue(tmr.is_action())
 
+    @unittest.skip("TMR.find_themes is deprecated and flagged for removal.")
     def test_tmr_find_recursive_themes_of_main_event(self):
         self.ontology.register("OTHER", isa="ALL")
 
         tmr = self.n.register(TMR.new("ONT"))
 
-        self.assertEquals([], tmr.find_themes())
+        self.assertEqual([], tmr.find_themes())
 
         event = tmr.register("EVENT.1", isa="ONT.EVENT")
         t1 = tmr.register("T.1", isa="ONT.OBJECT")
         t2 = tmr.register("T.2", isa="ONT.EVENT")
         t3 = tmr.register("T.3", isa="ONT.OTHER")
 
-        self.assertEquals([], tmr.find_themes())
+        self.assertEqual([], tmr.find_themes())
 
         event["THEME"] = [t1, t2]
         t1["THEME"] = t3
 
-        self.assertEquals({"ONT.OBJECT", "ONT.EVENT", "ONT.OTHER"}, tmr.find_themes())
+        self.assertEqual({"ONT.OBJECT", "ONT.EVENT", "ONT.OTHER"}, tmr.find_themes())
 
     def test_tmr_find_by_concept(self):
         self.ontology.register("PHYSICAL-OBJECT", isa="OBJECT")
 
         tmr = self.n.register(TMR.new("ONT"))
 
-        self.assertEquals([], tmr.find_by_concept("ONT.OBJECT"))
+        self.assertEqual([], tmr.find_by_concept("ONT.OBJECT"))
 
         event = tmr.register("EVENT.1", isa="ONT.EVENT")
         o1 = tmr.register("O.1", isa="ONT.OBJECT")
         o2 = tmr.register("O.2", isa="ONT.OBJECT")
         o3 = tmr.register("O.3", isa="ONT.PHYSICAL-OBJECT")
 
-        self.assertEquals([o1, o2, o3], tmr.find_by_concept("ONT.OBJECT"))
+        self.assertEqual([o1, o2, o3], tmr.find_by_concept("ONT.OBJECT"))
 
+    @unittest.skip("TMR.has_same_main_event is deprecated and flagged for removal.")
     def test_tmr_has_same_main_event_compares_concepts(self):
         self.ontology.register("PHYSICAL-EVENT", isa="EVENT")
 
@@ -218,6 +222,7 @@ class TMRTestCase(unittest.TestCase):
 
         self.assertFalse(tmr1.has_same_main_event(tmr2))
 
+    @unittest.skip("TMR.has_same_main_event is deprecated and flagged for removal.")
     def test_tmr_has_same_main_event_compares_agents(self):
         tmr1 = self.n.register(TMR.new("ONT"))
         tmr2 = self.n.register(TMR.new("ONT"))
@@ -240,6 +245,7 @@ class TMRTestCase(unittest.TestCase):
         event2["AGENT"] = agent3
         self.assertTrue(tmr1.has_same_main_event(tmr2))
 
+    @unittest.skip("TMR.has_same_main_event is deprecated and flagged for removal.")
     def test_tmr_has_same_main_event_compares_themes(self):
         tmr1 = self.n.register(TMR.new("ONT"))
         tmr2 = self.n.register(TMR.new("ONT"))
@@ -262,6 +268,7 @@ class TMRTestCase(unittest.TestCase):
         event2["THEME"] = theme3
         self.assertTrue(tmr1.has_same_main_event(tmr2))
 
+    @unittest.skip("TMR.has_same_main_event is deprecated and flagged for removal.")
     def test_tmr_has_same_main_event_compares_instruments(self):
         tmr1 = self.n.register(TMR.new("ONT"))
         tmr2 = self.n.register(TMR.new("ONT"))

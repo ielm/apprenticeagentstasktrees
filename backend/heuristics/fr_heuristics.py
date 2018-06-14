@@ -1,4 +1,5 @@
 from backend.models.frinstance import FRInstanceX as FRInstance
+from backend.models.graph import UnknownFrameError
 
 
 class FRResolutionHeuristic(object):

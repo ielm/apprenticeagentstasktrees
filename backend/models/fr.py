@@ -1,4 +1,4 @@
-from backend.models.graph import Filler, Frame, Graph
+from backend.models.graph import Filler, Frame, Graph, Identifier
 from backend.heuristics.fr_heuristics import *
 from backend.utils.AgentLogger import AgentLogger
 
@@ -76,21 +76,31 @@ class FR(Graph):
 
         for slot in frame:
             for filler in frame[slot]:
-                value = filler.resolve()
-                if isinstance(value, Frame):
-                    value = value.name()
-                if value in resolves and resolves[value] is not None:
-                    value = resolves[value]
-                    if isinstance(value, str):
-                        fr_instance[slot] += value
-                    elif isinstance(value, set):
-                        ambiguous_fillers = []
-                        for v in value:
-                            filler = Filler(v)
-                            fr_instance[slot] += filler
-                            ambiguous_fillers.append(filler)
-                        ids = set(map(lambda filler: filler._uuid, ambiguous_fillers))
-                        for filler in ambiguous_fillers: filler._metadata = {"ambiguities": ids}
+                identifier = filler._value
+
+                if isinstance(identifier, Frame):
+                    identifier = identifier._identifier
+                if isinstance(identifier, str):
+                    identifier = Identifier.parse(identifier)
+
+                value = None
+                for key in resolves:
+                    if Identifier.parse(key) == identifier:
+                        value = resolves[key]
+
+                if value is None:
+                    continue
+
+                if isinstance(value, str):
+                    fr_instance[slot] += value
+                elif isinstance(value, set):
+                    ambiguous_fillers = []
+                    for v in value:
+                        filler = Filler(v)
+                        fr_instance[slot] += filler
+                        ambiguous_fillers.append(filler)
+                    ids = set(map(lambda filler: filler._uuid, ambiguous_fillers))
+                    for f in ambiguous_fillers: f._metadata = {"ambiguities": ids}
 
     def _resolve_log_wrapper(self, heuristic, instance, results, tmr=None):
         input_results = copy.deepcopy(results)
@@ -129,7 +139,7 @@ class FR(Graph):
 
         for k in filtered_graph:
             if resolves[k] is None:
-                resolves[k] = self.register(other_fr[k].concept()).name()
+                resolves[k] = self.register(other_fr[k].concept(full_path=False)).name()
 
         for k in filtered_graph:
             resolved = resolves[k]
@@ -176,7 +186,7 @@ class FR(Graph):
                 pframe = self._network.lookup(slot, graph=self.ontology)
                 if pframe is not None and pframe.isa(self.ontology + ".RELATION"):
                     for filler in frame[slot]:
-                        results[filler._value] = None
+                        results[filler._value.render()] = None
             except Exception: pass
 
         for id in results:
