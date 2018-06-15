@@ -8,5 +8,5 @@ class FRImportDoNotImportRequestActions(FRImportHeuristic):
 
     def filter(self, import_fr, status):
         for instance in import_fr:
-            if import_fr[instance].concept == "REQUEST-ACTION":
+            if import_fr[instance].concept() == "REQUEST-ACTION":
                 status[instance] = False

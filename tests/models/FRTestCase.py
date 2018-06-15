@@ -15,7 +15,7 @@ class FRTestCase(unittest.TestCase):
     def setUp(self):
         self.n = Network()
         self.ontology = self.n.register("ONT")
-        self.fr = self.n.register(FR("FR", "ONT"))
+        self.fr = self.n.register(FR("FR", self.ontology))
 
     def test_register(self):
         instance1 = self.fr.register("CONCEPT-1")
@@ -63,7 +63,7 @@ class FRTestCase(unittest.TestCase):
         self.assertTrue(fr_instance["PROPERTY"] == "FR.CONCEPT.2")
         self.assertTrue(fr_instance["PROPERTY"] == "FR.CONCEPT.3")
 
-        self.assertEquals(2, len(fr_instance["PROPERTY"]))
+        self.assertEqual(2, len(fr_instance["PROPERTY"]))
         for filler in fr_instance["PROPERTY"]:
             self.assertEqual(filler._metadata, {"ambiguities": {fr_instance["PROPERTY"][0]._uuid, fr_instance["PROPERTY"][1]._uuid}})
 
@@ -81,6 +81,13 @@ class FRTestCase(unittest.TestCase):
         self.assertEqual(0, len(fr_instance["PROPERTY"]))
 
     def test_resolve_instance_simple(self):
+        self.ontology.register("ALL")
+        self.ontology.register("OBJECT", isa="ALL")
+        self.ontology.register("HUMAN", isa="ALL")
+        self.ontology.register("ROBOT", isa="ALL")
+        self.ontology.register("CONCEPT", isa="ALL")
+        self.ontology.register("SET", isa="ALL")
+
         frame = Frame("CONCEPT-1", isa="CONCEPT")
 
         resolves = {}
@@ -97,6 +104,11 @@ class FRTestCase(unittest.TestCase):
         self.ontology.register("RELATION", isa="PROPERTY")
         self.ontology.register("OBJECT-RELATION", isa="RELATION")
         self.ontology.register("TEMPORAL-RELATION", isa="RELATION")
+        self.ontology.register("OBJECT", isa="ALL")
+        self.ontology.register("HUMAN", isa="ALL")
+        self.ontology.register("ROBOT", isa="ALL")
+        self.ontology.register("CONCEPT", isa="ALL")
+        self.ontology.register("SET", isa="ALL")
 
         frame = Frame("CONCEPT-1", isa="CONCEPT")
         frame["OBJECT-RELATION"] = ["CONCEPT-123", "CONCEPT-456"]
@@ -145,7 +157,7 @@ class FRTestCase(unittest.TestCase):
         class TestHeuristicA(FRResolutionHeuristic):
             def resolve(self, instance, resolves, tmr=None):
                 if instance.name() == "TMR.CONCEPT-A.1":
-                    resolves[instance.name()] = {"FR.CONCEPT-A.1"}
+                    resolves["CONCEPT-A.1"] = {"FR.CONCEPT-A.1"}
 
         called = 0
 
@@ -155,7 +167,7 @@ class FRTestCase(unittest.TestCase):
                 if called == 0:
                     called = 1
                 elif instance.name() == "TMR.CONCEPT-B.1":
-                    resolves[instance.name()] = {"FR.CONCEPT-B.1"}
+                    resolves["CONCEPT-B.1"] = {"FR.CONCEPT-B.1"}
 
         self.fr.heuristics = [
             TestHeuristicA,
@@ -192,14 +204,18 @@ class FRTestCase(unittest.TestCase):
 
         self.assertEqual(1, called)
         self.assertEqual(iresolves, {
-            "TMR.CONCEPT-A.1": {"FR.CONCEPT-A.1"},
-            "TMR.CONCEPT-B.1": {"FR.CONCEPT-B.1"},
+            "CONCEPT-A.1": {"FR.CONCEPT-A.1"},
+            "CONCEPT-B.1": {"FR.CONCEPT-B.1"},
         })
 
     def test_learn_tmr(self):
         self.ontology.register("ALL")
         self.ontology.register("CONCEPT", isa="ALL")
         self.ontology.register("THING", isa="ALL")
+        self.ontology.register("OBJECT", isa="ALL")
+        self.ontology.register("HUMAN", isa="ALL")
+        self.ontology.register("ROBOT", isa="ALL")
+        self.ontology.register("SET", isa="ALL")
 
         tmr = self.n.register(TMR({
             "sentence": "Test.",
@@ -291,7 +307,7 @@ class FRTestCase(unittest.TestCase):
         class TestHeuristic(FRResolutionHeuristic):
             def resolve(self, instance, resolves, tmr=None):
                 if instance.name() == "FR.CONCEPT.1":
-                    resolves["FR.CONCEPT.1"] = {"DEST.CONCEPT.1"}
+                    resolves["CONCEPT.1"] = {"DEST.CONCEPT.1"}
 
         destination = FR("DEST", self.ontology._namespace)
         destination.register("CONCEPT", isa="CONCEPT")

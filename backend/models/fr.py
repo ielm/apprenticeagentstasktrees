@@ -43,14 +43,17 @@ class FR(Graph):
     def _frame_type(self):
         return FRInstance
 
-    def search(self, concept=None, subtree=None, attributed_tmr_instance=None, context=None, has_fillers=None):
+    def search(self, concept=None, subtree=None, descendant=None, attributed_tmr_instance=None, context=None, has_fillers=None):
         results = list(self.values())
 
         if concept is not None:
-            results = list(filter(lambda instance: instance.concept == concept, results))
+            results = list(filter(lambda instance: instance.concept() == self.ontology[concept].name(), results))
 
         if subtree is not None:
-            results = list(filter(lambda instance: instance.subtree == subtree, results))
+            results = list(filter(lambda instance: instance ^ subtree, results))
+
+        if descendant is not None:
+            results = list(filter(lambda instance: self.ontology[descendant] ^ self.ontology[instance.concept()], results))
 
         if attributed_tmr_instance is not None:
             results = list(filter(lambda instance: instance.is_attributed_to(attributed_tmr_instance), results))
@@ -59,7 +62,7 @@ class FR(Graph):
             results = list(filter(lambda instance: instance.does_match_context(context), results))
 
         if has_fillers is not None:
-            sets = dict((s.name, s) for s in self.search(concept="SET"))
+            sets = dict((s.name(), s) for s in self.search(concept="SET"))
             results = list(filter(lambda instance: instance.has_fillers(has_fillers, expand_sets=sets), results))
 
         return results
@@ -134,6 +137,8 @@ class FR(Graph):
         self.heuristics = resolve_heuristics
 
         filtered_graph = {k: other_fr[k] for k in filter(lambda k: status[k], other_fr.keys())}
+        filtered_graph = {Identifier.parse(k).render(graph=False): filtered_graph[k] for k in filtered_graph}
+
         resolves = self.resolve_tmr(filtered_graph)
         self.heuristics = backup_heuristics
 
@@ -177,16 +182,16 @@ class FR(Graph):
     def resolve_instance(self, frame, resolves, tmr=None):
         # TODO: currently this resolves everything to None unless found in the input resolves object
         results = dict()
-        results[frame.name()] = None
+        results[frame._identifier.render(graph=False)] = None
         for slot in frame:
             if slot == "IS-A":
                 continue
 
             try:
                 pframe = self._network.lookup(slot, graph=self.ontology)
-                if pframe is not None and pframe.isa(self.ontology + ".RELATION"):
+                if pframe is not None and pframe.isa(self.ontology["RELATION"]):
                     for filler in frame[slot]:
-                        results[filler._value.render()] = None
+                        results[filler._value.render(graph=False)] = None
             except Exception: pass
 
         for id in results:
@@ -194,7 +199,7 @@ class FR(Graph):
                 results[id] = resolves[id]
 
         for heuristic in self.heuristics:
-            if results[frame.name()] is None:
+            if results[frame._identifier.render(graph=False)] is None:
                 self._resolve_log_wrapper(heuristic, frame, results, tmr=tmr)
 
         return results
@@ -231,10 +236,10 @@ class FR(Graph):
         for id in resolves:
             if resolves[id] is None and id in tmr:
                 concept = tmr[id] if type(tmr[id]) == str else tmr[id].concept(full_path=False)
-                resolves[id] = {self.register(concept, generate_index=True).name()}
+                resolves[id] = {self.register(concept, isa=self.ontology[concept], generate_index=True).name()}
 
         for instance in tmr:
-            for resolved in resolves[instance]:
+            for resolved in resolves[tmr[instance]._identifier.render(graph=False)]:
                 self.populate(resolved, tmr[instance], resolves)
 
     def __next_index(self, concept):
@@ -265,3 +270,44 @@ class FRInstance(Frame):
 
     def attribute_to(self, tmrinstance):
         self._from[tmrinstance._uuid] = tmrinstance
+
+    def is_attributed_to(self, tmrinstance):
+        return tmrinstance._uuid in self._from
+
+    def does_match_context(self, context: dict) -> bool:
+        if type(context) is not dict:
+            raise Exception("Context must be a dictionary.")
+
+        for c in context:
+            if c not in self._context:
+                return False
+            if type(self._context[c]) == list:
+                if self._context[c] != context[c] and context[c] not in self._context[c]:
+                    return False
+            elif self._context[c] != context[c]:
+                return False
+
+        return True
+
+    # TODO: this should be part of default searching capability
+    def has_fillers(self, query, expand_sets=None):
+        if expand_sets is None:
+            expand_sets = dict()
+
+        for key in query:
+            if key not in self:
+                return False
+
+            value = query[key]
+            slot = self[key]
+
+            filler_values = list(map(lambda filler: filler.resolve(), slot))
+            sets_to_expand = list(filter(lambda set: expand_sets[set] in filler_values, expand_sets.keys()))
+            expanded_values = list(map(lambda set: expand_sets[set]["MEMBER-TYPE"], sets_to_expand))
+            for slot in expanded_values:
+                filler_values.extend(slot._storage)
+
+            if value not in filler_values:
+                return False
+
+        return True

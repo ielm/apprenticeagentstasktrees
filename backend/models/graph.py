@@ -187,7 +187,7 @@ class Graph(Mapping):
         return len(self._storage)
 
     def _modify_key(self, key: Union[Identifier, str]) -> str:
-        modified_key = key if not key.startswith("ASSEMBLE") else key.replace("ASSEMBLE", "BUILD") + "X"
+        modified_key = key
 
         if not modified_key.startswith(self._namespace):
             modified_key = self._namespace + "." + modified_key
@@ -317,7 +317,7 @@ class Frame(object):
         return self.isa(other)
 
     def __str__(self):
-        return str(self._storage)
+        return str(self._identifier) + " = " +str(self._storage)
 
     def __repr__(self):
         return str(self)
@@ -365,6 +365,14 @@ class Slot(object):
         other._frame = self._frame
 
         self._storage.append(other)
+        return self
+
+    def __isub__(self, other):
+        if not isinstance(other, Filler):
+            other = Filler(other)
+
+        self._storage = list(filter(lambda filler: filler != other, self._storage))
+
         return self
 
     def __contains__(self, item):

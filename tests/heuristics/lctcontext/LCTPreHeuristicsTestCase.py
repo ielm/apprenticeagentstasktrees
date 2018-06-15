@@ -1,9 +1,8 @@
 from backend.agent import Agent
 from backend.contexts.LCTContext import LCTContext
 from backend.heuristics.lctcontex.lct_pre_heuristics import *
+from backend.models.graph import Graph, Network
 from backend.models.tmr import TMR
-from backend.models.tmrinstance import TMRInstance
-from backend.ontology import Ontology
 from tests.ApprenticeAgentsTestCase import ApprenticeAgentsTestCase
 
 
@@ -14,22 +13,33 @@ class LCTPreHeuristicsTestCase(ApprenticeAgentsTestCase):
         pass  # Do not load the usual ontology
 
     def setUp(self):
-        Ontology.ontology = ApprenticeAgentsTestCase.TestOntology(include_t1=True)
-        Ontology.ontology["FASTEN"] = {}
-        Ontology.ontology["ASSEMBLE"] = {}
-        Ontology.ontology["BUILD"] = {}
+        self.n = Network()
+
+        self.ontology = self.n.register(Graph("ONT"))
+
+        self.ontology.register("ALL")
+        self.ontology.register("SET", isa="ONT.ALL")
+        self.ontology.register("OBJECT", isa="ONT.ALL")
+        self.ontology.register("EVENT", isa="ONT.ALL")
+
+        self.ontology.register("HUMAN", isa="ONT.OBJECT")
+        self.ontology.register("ROBOT", isa="ONT.OBJECT")
+
+        self.ontology.register("ASSEMBLE", isa="ONT.EVENT")
+        self.ontology.register("BUILD", isa="ONT.EVENT")
+        self.ontology.register("FASTEN", isa="ONT.EVENT")
 
     def test_IdentifyClosingOfKnownTaskAgendaProcessor(self):
-        agent = Agent()
+        agent = Agent(self.n, ontology=self.ontology)
         context = LCTContext(agent)
 
-        event = agent.wo_memory.register("EVENT")
+        event = agent.wo_memory.register("EVENT", isa="ONT.EVENT")
         event.context()[LCTContext.LEARNING] = True
         event.context()[LCTContext.CURRENT] = True
 
-        tmr = TMR.new()
-        tmr["EVENT-1"] = TMRInstance(name="EVENT-1", concept="EVENT")
-        tmr["EVENT-1"]["TIME"] = ["<", "FIND-ANCHOR-TIME"]
+        tmr = self.n.register(TMR.new("ONT"))
+        event1 = tmr.register("EVENT.1", isa="ONT.EVENT")
+        event1["TIME"] = ["<", "FIND-ANCHOR-TIME"]
 
         IdentifyClosingOfKnownTaskAgendaProcessor(context).process(agent, tmr)
 

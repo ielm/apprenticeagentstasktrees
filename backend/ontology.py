@@ -1,6 +1,7 @@
 import pickle
 
 
+@DeprecationWarning
 class Ontology(object):
     ontology = {}
 

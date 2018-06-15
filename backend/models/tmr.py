@@ -1,5 +1,6 @@
 from backend.models.graph import Frame, Graph
-from backend.ontology import Ontology
+# from backend.ontology import Ontology
+from backend.models.ontology import Ontology
 from backend.models.syntax import Syntax
 # from backend.models.tmrinstance import TMRInstance
 from backend.utils.YaleUtils import tmr_action_name
@@ -38,6 +39,9 @@ class TMR(Graph):
             namespace = "TMR#" + str(uuid4())
 
         super().__init__(namespace)
+
+        if isinstance(ontology, Ontology):
+            ontology = ontology._namespace
 
         self.ontology = ontology
         self.sentence = tmr_dict["sentence"]
@@ -185,8 +189,10 @@ class TMR(Graph):
         # For closing generic events, such as "Finished."
         for instance in self.values():
             if instance.isa(self.ontology + ".ASPECT"):
-                if instance["PHASE"] == "END" and instance["SCOPE"] ^ self.ontology + ".EVENT":
-                    return True
+                if instance["PHASE"] == "END":
+                    scopes = list(map(lambda filler: filler.resolve().concept(), instance["SCOPE"]))  # TODO: this needs search functionality ("is a filler in the slot exactly concept X?")
+                    if self.ontology + ".EVENT" in scopes:
+                        return True
 
         # for instance in self.values():
             # if instance.concept == "ASPECT":

@@ -1,4 +1,3 @@
-# from backend.heuristics.fr_heuristics import FRResolutionHeuristic
 from backend.contexts.context import ContextBasedFRResolutionHeuristic
 
 
@@ -21,7 +20,7 @@ from backend.contexts.context import ContextBasedFRResolutionHeuristic
 class FRResolveUndeterminedThemesOfLearning(ContextBasedFRResolutionHeuristic):
 
     def resolve(self, instance, resolves, tmr=None):
-        if instance.subtree != "OBJECT":
+        if not instance ^ self.fr.ontology["OBJECT"]:
             return
 
         if tmr is None:
@@ -37,15 +36,15 @@ class FRResolveUndeterminedThemesOfLearning(ContextBasedFRResolutionHeuristic):
         if "THEME-OF" not in instance:
             return
 
-        theme_ofs = map(lambda theme_of: tmr[theme_of], instance["THEME-OF"])
+        theme_ofs = map(lambda theme_of: theme_of.resolve(), instance["THEME-OF"])
 
         for theme_of in theme_ofs:
             if "PURPOSE-OF" in theme_of:
-                purpose_ofs = map(lambda purpose_of: tmr[purpose_of], theme_of["PURPOSE-OF"])
-                purpose_ofs = filter(lambda purpose_of: purpose_of.subtree == "EVENT", purpose_ofs)
+                purpose_ofs = map(lambda purpose_of: purpose_of.resolve(), theme_of["PURPOSE-OF"])
+                purpose_ofs = filter(lambda purpose_of: purpose_of ^ self.fr.ontology["EVENT"], purpose_ofs)
                 if len(list(purpose_ofs)) > 0:
-                    results = self.fr.search(concept=instance.concept)
-                    resolves[instance.name] = set(map(lambda result: result.name, results))
+                    results = self.fr.search(concept=instance.concept())
+                    resolves[instance._identifier.render(graph=False)] = set(map(lambda result: result.name(), results))
                     return True
 
 
@@ -63,7 +62,7 @@ class FRResolveUndeterminedThemesOfLearning(ContextBasedFRResolutionHeuristic):
 class FRResolveUnderterminedThemesOfLearningInPostfix(ContextBasedFRResolutionHeuristic):
 
     def resolve(self, instance, resolves, tmr=None):
-        if instance.subtree != "OBJECT":
+        if not instance ^ self.fr.ontology["OBJECT"]:
             return
 
         if tmr is None:
@@ -82,21 +81,21 @@ class FRResolveUnderterminedThemesOfLearningInPostfix(ContextBasedFRResolutionHe
         if "THEME-OF" not in instance:
             return
 
-        theme_ofs = map(lambda theme_of: tmr[theme_of], instance["THEME-OF"])
+        theme_ofs = map(lambda theme_of: theme_of.resolve(), instance["THEME-OF"])
 
         matches = set()
 
         from backend.contexts.LCTContext import LCTContext
 
         for theme_of in theme_ofs:
-            results = self.fr.search(concept=theme_of.concept, context={LCTContext.LEARNING: True})
+            results = self.fr.search(descendant=theme_of.concept(), context={LCTContext.LEARNING: True})
             for result in results:
                 for theme in result["THEME"]:
-                    if self.fr[theme.value].concept == instance.concept:
-                        matches.add(theme.value)
+                    if theme ^ self.fr.ontology[instance.concept()]:
+                        matches.add(theme._value.render())
 
         if len(matches) > 0:
-            resolves[instance.name] = matches
+            resolves[instance._identifier.render(graph=False)] = matches
             return True
 
 
@@ -112,7 +111,7 @@ class FRResolveUnderterminedThemesOfLearningInPostfix(ContextBasedFRResolutionHe
 class FRResolveLearningEvents(ContextBasedFRResolutionHeuristic):
 
     def resolve(self, instance, resolves, tmr=None):
-        if instance.subtree != "EVENT":
+        if not instance ^ self.fr.ontology["EVENT"]:
             return
 
         if tmr is None:
@@ -122,24 +121,24 @@ class FRResolveLearningEvents(ContextBasedFRResolutionHeuristic):
 
         from backend.contexts.LCTContext import LCTContext
 
-        for candidate in self.fr.search(concept=instance.concept, context={LCTContext.LEARNING: True}):
+        for candidate in self.fr.search(descendant=instance.concept(), context={LCTContext.LEARNING: True}):
             case_roles = ["AGENT", "THEME"]
 
             passed = True
             for case_role in case_roles:
                 if case_role in instance:
                     for filler in instance[case_role]:
-                        if resolves[filler] is None:
+                        if resolves[filler._value.render()] is None:
                             passed = False
                             break
 
-                        if len(resolves[filler].intersection(set(map(lambda f: f.value, candidate[case_role])))) == 0:
+                        if len(resolves[filler._value.render()].intersection(set(map(lambda f: f._value.render(), candidate[case_role])))) == 0:
                             passed = False
                             break
 
             if passed:
-                matches.add(candidate.name)
+                matches.add(candidate.name())
 
         if len(matches) > 0:
-            resolves[instance.name] = matches
+            resolves[instance._identifier.render(graph=False)] = matches
             return True

@@ -27,3 +27,15 @@ class OntologyTestCase(unittest.TestCase):
 
         del o["HUMAN"]
         self.assertNotIn("HUMAN", o)
+
+    def test_wrapped_caches_for_editing(self):
+        o = Ontology.init_default()
+
+        self.assertTrue("OBJECT" in o)
+
+        self.assertEqual(0, len(o["OBJECT"]["XYZ"]))
+        self.assertEqual(0, len(o["OBJECT"]["XYZ"]))
+
+        o["OBJECT"]["XYZ"] += "a"
+
+        self.assertEqual(1, len(o["OBJECT"]["XYZ"]))

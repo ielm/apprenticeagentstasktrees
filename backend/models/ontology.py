@@ -48,6 +48,8 @@ class Ontology(Graph):
                 fillers = list(map(lambda f: OntologyFiller(Identifier(self._namespace, f), facet), fillers))
                 frame[slot] = Slot(fillers, frame=frame)
 
+        self[item] = frame
+
         return frame
 
     def __delitem__(self, key):

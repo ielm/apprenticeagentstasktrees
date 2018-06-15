@@ -373,6 +373,41 @@ class SlotTestCase(unittest.TestCase):
 
         self.assertEqual([3, 4], list(map(lambda filler: filler.resolve().value + 2, Slot([f1, f2]))))
 
+    def test_slot_add_fillers(self):
+        slot = Slot()
+
+        self.assertEqual(0, len(slot))
+
+        slot += 123
+
+        self.assertEqual(123, slot)
+
+        slot += 456
+
+        self.assertEqual(123, slot)
+        self.assertEqual(456, slot)
+
+    def test_slot_remove_fillers(self):
+        slot = Slot()
+        slot += 123
+        slot += 123
+        slot += 456
+
+        self.assertEqual(123, slot)
+        self.assertEqual(456, slot)
+
+        slot -= 456
+
+        self.assertEqual(123, slot)
+        self.assertNotEqual(456, slot)
+
+        slot -= 123
+
+        self.assertNotEqual(123, slot)
+        self.assertNotEqual(456, slot)
+        self.assertEqual(0, len(slot))
+
+
 
 class FrameTestCase(unittest.TestCase):
 
