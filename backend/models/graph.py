@@ -1,6 +1,6 @@
 from collections.abc import Mapping
 from functools import reduce
-from typing import Any, List, Type, Union
+from typing import Any, List, Type, TypeVar, Union
 from uuid import uuid4
 
 import re
@@ -84,10 +84,12 @@ class Literal(object):
 
 class Network(object):
 
+    G = TypeVar('G', bound='Graph')
+
     def __init__(self):
         self._storage = dict()
 
-    def register(self, graph: Union['Graph', str]) -> 'Graph':
+    def register(self, graph: Union[G, str]) -> G:
         if isinstance(graph, Graph):
             self[graph._namespace] = graph
         elif isinstance(graph, str):
