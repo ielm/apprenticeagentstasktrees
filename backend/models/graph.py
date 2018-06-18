@@ -1,6 +1,6 @@
 from collections.abc import Mapping
 from functools import reduce
-from typing import Any, Union
+from typing import Any, List, Type, Union
 from uuid import uuid4
 
 import re
@@ -9,7 +9,7 @@ import re
 class Identifier(object):
 
     @classmethod
-    def parse(cls, path: str):
+    def parse(cls, path: str) -> 'Identifier':
         graph = None
         name = None
         instance = None
@@ -87,7 +87,7 @@ class Network(object):
     def __init__(self):
         self._storage = dict()
 
-    def register(self, graph):
+    def register(self, graph: Union['Graph', str]) -> 'Graph':
         if isinstance(graph, Graph):
             self[graph._namespace] = graph
         elif isinstance(graph, str):
@@ -98,7 +98,7 @@ class Network(object):
 
         return self[graph._namespace]
 
-    def lookup(self, identifier: Union[Identifier, str], graph: Union['Graph', str]=None):
+    def lookup(self, identifier: Union[Identifier, str], graph: Union['Graph', str]=None) -> 'Frame':
         if graph is not None and isinstance(graph, Graph):
             graph = graph._namespace
 
@@ -146,15 +146,18 @@ class Network(object):
         def __str__(self):
             return "Supplied namespace '" + self.supplied + "' does not match actual namespace '" + self.actual + "'."
 
+        def __repr__(self):
+            return str(self)
+
 
 class Graph(Mapping):
 
-    def __init__(self, namespace):
+    def __init__(self, namespace: str):
         self._namespace = namespace
         self._storage = dict()
         self._network = None
 
-    def __setitem__(self, key: Union[Identifier, str], value):
+    def __setitem__(self, key: Union[Identifier, str], value: 'Frame'):
         if not isinstance(value, Frame):
             raise TypeError("Graph elements must be Frame objects.")
         if key != value._identifier:
@@ -194,10 +197,10 @@ class Graph(Mapping):
 
         return modified_key
 
-    def _frame_type(self):
+    def _frame_type(self) -> Type['Frame']:
         return Frame
 
-    def register(self, id, isa=None):
+    def register(self, id: str, isa: Union['Slot', 'Filler', List['Filler'], Identifier, List['Identifier'], str, List[str]]=None) -> 'Frame':
         if type(id) != str:
             raise TypeError()
 
@@ -215,7 +218,7 @@ class Graph(Mapping):
 
 class Frame(object):
 
-    def __init__(self, identifier: Union[Identifier, str], isa=None):
+    def __init__(self, identifier: Union[Identifier, str], isa: Union['Slot', 'Filler', List['Filler'], Identifier, List['Identifier'], str, List[str]]=None):
         if isinstance(identifier, Identifier):
             self._identifier = identifier
         else:
@@ -325,7 +328,7 @@ class Frame(object):
 
 class Slot(object):
 
-    def __init__(self, values=None, frame=None):
+    def __init__(self, values=None, frame: Frame=None):
         self._storage = list()
         self._frame = frame
 
@@ -337,7 +340,7 @@ class Slot(object):
 
             self._storage.extend(values)
 
-    def compare(self, other, isa=True, intersection=True):
+    def compare(self, other, isa: bool=True, intersection: bool=True) -> bool:
         if isinstance(other, Slot):
             other = other._storage
 
@@ -413,7 +416,7 @@ class Slot(object):
 
 class Filler(object):
 
-    def __init__(self, value: Union[Identifier, Literal, Any], metadata=None):
+    def __init__(self, value: Union[Identifier, Literal, Any], metadata: dict=None):
         if isinstance(value, Identifier) or isinstance(value, Literal):
             self._value = value
         elif isinstance(value, str):
@@ -431,7 +434,7 @@ class Filler(object):
         if metadata is not None:
             self._metadata = metadata
 
-    def resolve(self):
+    def resolve(self) -> Union[Frame, Any]:
         if isinstance(self._value, Frame):
             return self._value
         if isinstance(self._value, Identifier):
@@ -458,7 +461,7 @@ class Filler(object):
                         except Exception: pass
         return self._value
 
-    def compare(self, other, isa=True, intersection=True):
+    def compare(self, other, isa: bool=True, intersection: bool=True) -> bool:
         if not isinstance(other, list):
             other = [other]
 
@@ -505,11 +508,11 @@ class Filler(object):
 
         return results
 
-    def _graph(self):
+    def _graph(self) -> Graph:
         if self._frame is not None:
             return self._frame._graph
 
-    def _network(self):
+    def _network(self) -> Network:
         graph = self._graph()
         if graph is not None:
             return graph._network
