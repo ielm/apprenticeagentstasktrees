@@ -87,7 +87,7 @@ class AgentTestCase(unittest.TestCase): # TODO: Clean up AATestCase and move bac
             agent.input(i)
 
         print("Long Term Memory BUILD-LT1")
-        print(format_pretty_htn(agent.lt_memory, agent.lt_memory["BUILD-LT1"], indent=1))
+        print(format_pretty_htn(agent.lt_memory, agent.lt_memory["BUILD.1"], indent=1))
         print("========")
 
         input = [
@@ -111,7 +111,7 @@ class AgentTestCase(unittest.TestCase): # TODO: Clean up AATestCase and move bac
             agent.input(i)
 
         print("Long Term Memory BUILD-LT3")
-        print(format_pretty_htn(agent.lt_memory, agent.lt_memory["BUILD-LT3"], indent=1))
+        print(format_pretty_htn(agent.lt_memory, agent.lt_memory["BUILD.3"], indent=1))
 
         print("")
         print("Action Queue")

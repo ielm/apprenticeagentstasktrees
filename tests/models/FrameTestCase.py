@@ -407,6 +407,27 @@ class SlotTestCase(unittest.TestCase):
         self.assertNotEqual(456, slot)
         self.assertEqual(0, len(slot))
 
+    def test_slot_add_slot(self):
+        slot1 = Slot()
+        slot1 += 123
+
+        slot2 = Slot()
+        slot2 += 234
+        slot2 += 345
+
+        slot = slot1 + slot2
+        self.assertEqual(slot, 123)
+        self.assertEqual(slot, 234)
+        self.assertEqual(slot, 345)
+
+        self.assertEqual(slot1, 123)
+        self.assertNotEqual(slot1, 234)
+        self.assertNotEqual(slot1, 345)
+
+        self.assertNotEqual(slot2, 123)
+        self.assertEqual(slot2, 234)
+        self.assertEqual(slot2, 345)
+
 
 
 class FrameTestCase(unittest.TestCase):

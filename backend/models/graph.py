@@ -359,6 +359,14 @@ class Slot(object):
 
         return results
 
+    def __add__(self, other):
+        if not isinstance(other, Slot):
+            return self + other
+
+        result = Slot(values=self._storage, frame=self._frame)
+        result._storage.extend(other._storage)
+        return result
+
     def __iadd__(self, other):
         if not isinstance(other, Filler):
             other = Filler(other)

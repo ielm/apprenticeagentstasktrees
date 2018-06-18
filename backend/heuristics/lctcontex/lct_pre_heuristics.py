@@ -20,9 +20,6 @@ class IdentifyClosingOfKnownTaskAgendaProcessor(AgendaProcessor):
         self.context = context
 
     def _logic(self, agent, tmr):
-        if tmr.sentence == "We have assembled a front leg.":
-            print("debug")
-
         if tmr.is_postfix():
 
             agent.wo_memory.logger().pause()
@@ -100,9 +97,6 @@ class IdentifyPreconditionSatisfyingActionsAgendaProcessor(AgendaProcessor):
         self.context = context
 
     def _logic(self, agent, tmr):
-        if tmr.sentence == "Get a screwdriver.":
-            print("debug")
-
         if tmr.is_prefix() or tmr.is_postfix():
             raise HeuristicException()
 

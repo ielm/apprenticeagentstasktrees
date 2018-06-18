@@ -144,7 +144,7 @@ class FR(Graph):
 
         for k in filtered_graph:
             if resolves[k] is None:
-                resolves[k] = self.register(other_fr[k].concept(full_path=False)).name()
+                resolves[k] = self.register(other_fr[k].concept(full_path=False), isa=other_fr[k].concept()).name()
 
         for k in filtered_graph:
             resolved = resolves[k]

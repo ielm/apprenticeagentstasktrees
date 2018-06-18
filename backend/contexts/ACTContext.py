@@ -1,6 +1,6 @@
 from backend.contexts.context import AgentContext, RootAgendaProcessor
 from backend.heuristics.actcontext.act_agenda_heuristics import *
-from backend.ontology import Ontology
+from backend.models.ontology import OntologyFiller
 
 
 # An agent context for (A)cting on (C)omplex (T)asks.
@@ -10,18 +10,11 @@ class ACTContext(AgentContext):
         super().__init__(agent)
 
     def prepare_static_knowledge(self):
-        Ontology.add_filler("FASTEN", "IS-A", "VALUE", "ASSEMBLE")
-        Ontology.add_filler("ASSEMBLE", "IS-A", "VALUE", "BUILD")
-        Ontology.ontology["BRACKET"] = {
-            "IS-A": {
-                "VALUE": ["ARTIFACT-PART"]
-            },
-        }
-        Ontology.ontology["DOWEL"] = {
-            "IS-A": {
-                "VALUE": ["ARTIFACT-PART"]
-            },
-        }
+        self.agent.ontology["FASTEN"]["IS-A"] += OntologyFiller("ASSEMBLE", "VALUE")
+        self.agent.ontology["ASSEMBLE"]["IS-A"] += OntologyFiller("BUILD", "VALUE")
+
+        self.agent.ontology.register("BRACKET", isa="ARTIFACT-PART")
+        self.agent.ontology.register("DOWEL", isa="ARTIFACT-PART")
 
     def default_agenda(self):
 
