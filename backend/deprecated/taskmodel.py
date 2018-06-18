@@ -7,6 +7,7 @@ from backend.treenode import TreeNode
 from backend.models.fr import FR
 
 
+@DeprecationWarning
 class TaskModel(QueryHeuristics, PrefixHeuristics, PostfixHeuristics, ResolutionHeuristics, object):
 
     def __init__(self):

@@ -1,9 +1,104 @@
 import json
 import requests
 
+from typing import List
+from uuid import UUID
+
 from backend.config import ontosem_service
+from backend.models.fr import FRInstance
+from backend.models.ontology import Ontology
 
 
+def format_learned_event_yale(event: FRInstance, ontology: Ontology) -> dict:
+
+    curr_id = 0
+    id_map = {}
+
+    actions = {
+        "TAKE": "GET",
+        "HOLD": "HOLD",
+        "RESTRAIN": "RELEASE",
+        "FASTEN": "FASTEN"
+    }
+
+    def _map_id(id: UUID) -> int:
+        nonlocal curr_id
+        nonlocal id_map
+
+        if str(id) not in id_map:
+            curr_id += 1
+            id_map[str(id)] = curr_id
+
+        return id_map[str(id)]
+
+    def _filter(frame: FRInstance) -> bool:
+        if frame ^ ontology["RESTRAIN"] and frame["AGENT"] ^ ontology["ROBOT"]:
+            return False
+        return True
+
+    def _pretty_lemma(lemmas: List[str], action) -> str:
+        if action == "GET" and set(lemmas) == {"BRACKET FRONT", "BRACKET"}:
+            return "bracket-front"
+        if action == "FASTEN" and set(lemmas) == {"BRACKET FRONT", "BRACKET"}:
+            return "brackets"
+        if action == "GET" and set(lemmas) == {"DOWEL"}:
+            return "dowel"
+        if action == "HOLD" and set(lemmas) == {"DOWEL"}:
+            return "dowel"
+        if action == "GET" and set(lemmas) == {"FOOT_BRACKET"}:
+            return "bracket-foot"
+
+        return " and ".join(lemmas)
+
+    def _name(event: FRInstance) -> str:
+        if len(event["HAS-EVENT-AS-PART"]) == 0:
+            agent = " and ".join(map(lambda agent: agent.resolve().concept(full_path=False), event["AGENT"]))
+            action = actions[event.concept(full_path=False)]
+            theme = " and ".join(map(lambda theme: _pretty_lemma(theme.resolve().lemmas(), action), event["THEME"])).lower()
+            return agent + " " + action + "(" + theme + ")"
+        return event.concept(full_path=False) + " " + " and ".join(map(lambda theme: theme.resolve().concept(full_path=False), event["THEME"]))
+
+    def _format(event: FRInstance, parent: FRInstance=None) -> dict:
+        output = dict()
+
+        output["id"] = _map_id(event._uuid)
+        output["parent"] = None if parent is None else _map_id(parent._uuid)
+        output["name"] = _name(event)
+        output["combination"] = "Sequential"
+        output["attributes"] = []
+        output["children"] = list(map(lambda child: _format(child, parent=event),
+                                      filter(lambda child: _filter(child),
+                                             map(lambda child: child.resolve(), event["HAS-EVENT-AS-PART"]))))
+
+        if output["name"].startswith("ROBOT "):
+            output["name"] = output["name"].replace("ROBOT ", "")
+            output["attributes"].append("robot")
+
+        if output["name"].startswith("HUMAN "):
+            output["name"] = output["name"].replace("HUMAN ", "")
+            output["attributes"].append("human")
+
+        if len(output["children"]) == 0:
+            output["combination"] = ""
+
+        return output
+
+    output = _format(event)
+    output["parent"] = 0
+
+    return {
+        "nodes": {
+            "id": 0,
+            "parent": None,
+            "name": "Start",
+            "combination": "Sequential",
+            "attributes": [],
+            "children": [output]
+        }
+    }
+
+
+@DeprecationWarning
 def format_treenode_yale(treenode):
 
     # 1) Turn the treenode into the correct structure (per node) for the expected Yale formatted output.
@@ -80,6 +175,7 @@ def format_treenode_yale(treenode):
         return output
 
 
+@DeprecationWarning
 def make_grouped_node(group, parent_name, parent_id):
     if len(group) == 1:
         return group[0]
@@ -105,11 +201,13 @@ def make_grouped_node(group, parent_name, parent_id):
 
 
 # Return only children of the treenode that should be part of the results to the Yale Robot
+@DeprecationWarning
 def filter_treenode_children(treenode):
     return list(filter(lambda child: filter_treenode(child), treenode.children))
 
 
 # True if the treenode should be returned as part of the results to the Yale Robot
+@DeprecationWarning
 def filter_treenode(treenode):
 
     # Don't return any "RELEASE" actions (RESTRAIN.AGENT = ROBOT)
@@ -120,6 +218,7 @@ def filter_treenode(treenode):
     return True
 
 
+@DeprecationWarning
 def tmr_action_name(tmr):
     specified_action_types = {
         "Get the back bracket on the right side.": "ROBOT GET(bracket-back-right)",

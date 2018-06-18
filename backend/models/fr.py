@@ -311,3 +311,11 @@ class FRInstance(Frame):
                 return False
 
         return True
+
+    def lemmas(self):
+        lemmas = []
+        for tmr_instance in self._from.keys():
+            tmr_instance = self._from[tmr_instance]
+            lemma = " ".join(map(lambda ti: tmr_instance._graph.syntax.index[str(ti)]["lemma"], tmr_instance.token_index))
+            lemmas.append(lemma)
+        return lemmas
