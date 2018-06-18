@@ -2,19 +2,24 @@ from backend.models.graph import Filler, Frame, Graph, Identifier, Slot
 
 import itertools
 import pickle
+from pkgutil import get_data
 
 
 class Ontology(Graph):
 
     @classmethod
     def init_default(cls, namespace="ONT"):
-        path = "../../backend/resources/ontology_May_2017.p"
-        return cls.init_from_file(path, namespace)
+        binary = get_data("backend.resources", "ontology_May_2017.p")
+        return cls.init_from_binary(binary, namespace=namespace)
 
     @classmethod
     def init_from_file(cls, path, namespace):
         with open(path, mode="rb") as f:
             return Ontology(namespace, wrapped=pickle.load(f))
+
+    @classmethod
+    def init_from_binary(cls, binary, namespace):
+        return Ontology(namespace, wrapped=pickle.loads(binary))
 
     def __init__(self, namespace, wrapped=None):
         super().__init__(namespace)

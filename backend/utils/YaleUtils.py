@@ -308,4 +308,4 @@ def action_to_tmr(action):
 
 def analyze(utterance):
     response = requests.post(url=ontosem_service() + "/analyze", data={"text":utterance})
-    return json.loads(response.text)[0]
+    return json.loads(response.text)
