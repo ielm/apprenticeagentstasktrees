@@ -1,11 +1,13 @@
 import os
 import unittest
 
-from backend.taskmodel import TaskModel
-from models.instructions import Instructions
+# from backend.taskmodel import TaskModel
+# from models.instructions import Instructions
 from tests.ApprenticeAgentsTestCase import ApprenticeAgentsTestCase
 
 
+@DeprecationWarning
+@unittest.skip
 class DemoMay2018TestCase(ApprenticeAgentsTestCase):
 
     @unittest.skip("This requires both the ontosem and corenlp service to be running, otherwise it will fail.")
@@ -108,6 +110,7 @@ class DemoMay2018TestCase(ApprenticeAgentsTestCase):
             expected = file.read()
             self.assertEqual(str(model), expected)
 
+    @unittest.skip
     def test_demo(self):
         file = os.path.abspath(__package__) + "/resources/DemoMay2018_TMRs.json"
         demo = self.resource(file)
@@ -208,6 +211,7 @@ class DemoMay2018TestCase(ApprenticeAgentsTestCase):
         model = tm.query(TMR(demo[69]))
         print(model)
 
+    @unittest.skip
     def test_multiple_trees(self):
         file = os.path.abspath(__package__) + "/resources/DemoMay2018_TMRs.json"
         demo = self.resource(file)

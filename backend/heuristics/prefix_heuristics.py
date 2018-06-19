@@ -90,8 +90,11 @@ class PrefixHeuristics(object):
 
         candidate = self.active_node
 
-        # while candidate.parent is not None and not about_part_of(tmr, candidate.tmr):
-        while candidate.parent is not None and not tmr.about_part_of(candidate.tmr):
+        # We include tmr.about_same_events(candidate.tmr) here to solve the problem with demo sentence
+        # "I need a screwdriver..." and later "We build a front leg...".  Simply testing the
+        # HAS-OBJECT-AS-PART is no good, because SCREWDRIVER HAS-OBJECT-AS-PART ARTIFACT-PART, and ARTIFACT-LEG
+        # IS-A ARTIFACT-PART, so this would see the front leg as part of the screwdriver.
+        while candidate.parent is not None and not (tmr.about_same_events(candidate.tmr) and tmr.about_part_of(candidate.tmr)):
             candidate = candidate.parent
 
         if candidate.parent is None:

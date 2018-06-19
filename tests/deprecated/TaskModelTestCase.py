@@ -1,10 +1,15 @@
-from taskmodel import TaskModel
-from models.instructions import Instructions
+# from taskmodel import TaskModel
+# from models.instructions import Instructions
 from tests.ApprenticeAgentsTestCase import ApprenticeAgentsTestCase
 
+from unittest import skip
 
+
+@DeprecationWarning
+@skip
 class TaskModelTestCase(ApprenticeAgentsTestCase):
 
+    @skip
     def test_model_root(self):
         input = [
             self.resource('resources/tmrs/IPlanToBuildAChair.json')
@@ -15,6 +20,7 @@ class TaskModelTestCase(ApprenticeAgentsTestCase):
         self.assertNode(model, children=1)
         self.assertNode(model.find(["BUILD CHAIR"]), name="BUILD CHAIR", children=0, terminal=False, type="sequential")
 
+    @skip
     def test_model_one_action(self):
         input = [
             self.resource('resources/tmrs/IPlanToBuildAChair.json'),
@@ -27,6 +33,7 @@ class TaskModelTestCase(ApprenticeAgentsTestCase):
         self.assertNode(model.find(["BUILD CHAIR"]), name="BUILD CHAIR", children=1, terminal=True, type="sequential")
         self.assertNode(model.find(["BUILD CHAIR", "ROBOT GET(screwdriver)"]), name="ROBOT GET(screwdriver)", children=0, type="leaf")
 
+    @skip
     def test_model_two_actions(self):
         input = [
             self.resource('resources/tmrs/IPlanToBuildAChair.json'),
@@ -41,6 +48,7 @@ class TaskModelTestCase(ApprenticeAgentsTestCase):
         self.assertNode(model.find(["BUILD CHAIR", "ROBOT GET(screwdriver)"]), name="ROBOT GET(screwdriver)", children=0, type="leaf")
         self.assertNode(model.find(["BUILD CHAIR", "ROBOT GET(screws)"]), name="ROBOT GET(screws)", children=0, type="leaf")
 
+    @skip
     def test_model_one_child(self):
         input = [
             self.resource('resources/tmrs/IPlanToBuildAChair.json'),
@@ -53,6 +61,7 @@ class TaskModelTestCase(ApprenticeAgentsTestCase):
         self.assertNode(model.find(["BUILD CHAIR"]), name="BUILD CHAIR", children=1, terminal=False, type="sequential")
         self.assertNode(model.find(["BUILD CHAIR", "EVENT WITH SCREWDRIVER"]), name="EVENT WITH SCREWDRIVER", children=0, terminal=False, type="sequential")
 
+    @skip
     def test_model_two_children(self):
         input = [
             self.resource('resources/tmrs/IPlanToBuildAChair.json'),
@@ -71,6 +80,7 @@ class TaskModelTestCase(ApprenticeAgentsTestCase):
         self.assertNode(model.find(["BUILD CHAIR", "EVENT WITH BOX"]), name="EVENT WITH BOX", children=1, terminal=True, type="sequential")
         self.assertNode(model.find(["BUILD CHAIR", "EVENT WITH BOX", "ROBOT GET(screws)"]), name="ROBOT GET(screws)", children=0, type="leaf")
 
+    @skip
     def test_model_inject_prefix_before_actions(self):
         input = [
             self.resource('resources/tmrs/IPlanToBuildAChair.json'),
@@ -85,6 +95,7 @@ class TaskModelTestCase(ApprenticeAgentsTestCase):
         self.assertNode(model.find(["BUILD CHAIR", "EVENT WITH SCREWDRIVER"]), name="EVENT WITH SCREWDRIVER", children=1, terminal=True, type="sequential")
         self.assertNode(model.find(["BUILD CHAIR", "EVENT WITH SCREWDRIVER", "ROBOT GET(screwdriver)"]), name="ROBOT GET(screwdriver)", children=0, terminal=False, type="leaf")
 
+    @skip
     def test_model_closed_prefix(self):
         input = [
             self.resource('resources/tmrs/IPlanToBuildAChair.json'),
@@ -102,6 +113,7 @@ class TaskModelTestCase(ApprenticeAgentsTestCase):
         self.assertNode(model.find(["BUILD CHAIR", "BUILD ARTIFACT-LEG", "ROBOT GET(screwdriver)"]), name="ROBOT GET(screwdriver)", children=0, terminal=False, type="leaf")
         self.assertEqual(tm.active_node, model.find(["BUILD CHAIR"]))
 
+    @skip
     def test_model_presumed_event(self):
         input = [
             self.resource('resources/tmrs/IPlanToBuildAChair.json'),
@@ -121,6 +133,7 @@ class TaskModelTestCase(ApprenticeAgentsTestCase):
         self.assertNode(model.find(["BUILD CHAIR", "BUILD SEAT"]), name="BUILD SEAT", children=1, terminal=True, type="sequential")
         self.assertNode(model.find(["BUILD CHAIR", "BUILD SEAT", "ROBOT GET(screws)"]), name="ROBOT GET(screws)", children=0, terminal=False, type="leaf")
 
+    @skip
     def test_model_inject_postfix_between_events(self):
         input = [
             self.resource('resources/tmrs/IPlanToBuildAChair.json'),
@@ -137,6 +150,7 @@ class TaskModelTestCase(ApprenticeAgentsTestCase):
         self.assertNode(model.find(["BUILD CHAIR", "BUILD SEAT", "BUILD ARTIFACT-LEG"]), name="BUILD ARTIFACT-LEG", children=1, terminal=True, type="sequential")
         self.assertNode(model.find(["BUILD CHAIR", "BUILD SEAT", "BUILD ARTIFACT-LEG", "ROBOT GET(screwdriver)"]), name="ROBOT GET(screwdriver)", children=0, terminal=False, type="leaf")
 
+    @skip
     def test_model_inject_postfix_before_actions(self):
         input = [
             self.resource('resources/tmrs/IPlanToBuildAChair.json'),
@@ -153,6 +167,7 @@ class TaskModelTestCase(ApprenticeAgentsTestCase):
         self.assertNode(model.find(["BUILD CHAIR", "BUILD ARTIFACT-LEG", "ROBOT GET(screwdriver)"]), name="ROBOT GET(screwdriver)", children=0, terminal=False, type="leaf")
         self.assertNode(model.find(["BUILD CHAIR", "BUILD ARTIFACT-LEG", "ROBOT GET(screws)"]), name="ROBOT GET(screws)", children=0, terminal=False, type="leaf")
 
+    @skip
     def test_model_postfix_causes_disputes(self):
         input = [
             self.resource('resources/tmrs/IPlanToBuildAChair.json'),
@@ -178,6 +193,7 @@ class TaskModelTestCase(ApprenticeAgentsTestCase):
         self.assertTrue(model.find(["BUILD CHAIR", "ATTACH CHAIR-BACK AND SEAT"]).childrenStatus[0])
         self.assertTrue(model.find(["BUILD CHAIR", "ATTACH CHAIR-BACK AND SEAT"]).childrenStatus[1])
 
+    @skip
     def test_model_settle_disputes(self):
         input = [
             self.resource('resources/tmrs/IPlanToBuildAChair.json'),
@@ -206,6 +222,7 @@ class TaskModelTestCase(ApprenticeAgentsTestCase):
         self.assertFalse(model.find(["BUILD CHAIR", "ATTACH CHAIR-BACK AND SEAT"]).childrenStatus[0])
         self.assertFalse(model.find(["BUILD CHAIR", "BUILD SEAT", "EVENT WITH SCREWDRIVER"]).childrenStatus[0])
 
+    @skip
     def test_model_find_parallels(self):
         input = [
             self.resource('resources/tmrs/IPlanToBuildAChair.json'),
@@ -226,6 +243,7 @@ class TaskModelTestCase(ApprenticeAgentsTestCase):
         self.assertNode(model.find_all(["BUILD CHAIR", "BUILD ARTIFACT-LEG"])[0], name="BUILD ARTIFACT-LEG", children=2, terminal=True, type="sequential", relationships=[[0, 0], [0, 0]])
         self.assertNode(model.find_all(["BUILD CHAIR", "BUILD ARTIFACT-LEG"])[1], name="BUILD ARTIFACT-LEG", children=2, terminal=True, type="sequential", relationships=[[0, 0], [0, 0]])
 
+    @skip
     def test_model_multiple_inputs(self):
         input = [
             self.resource('resources/tmrs/IPlanToBuildAChair.json'),
@@ -248,6 +266,7 @@ class TaskModelTestCase(ApprenticeAgentsTestCase):
         self.assertNode(model.find(["BUILD CHAIR"]), name="BUILD CHAIR", children=1, terminal=True, type="sequential")
         self.assertNode(model.find(["BUILD CHAIR", "ROBOT GET(screwdriver)"]), name="ROBOT GET(screwdriver)", children=0, type="leaf")
 
+    @skip
     def test_model_query(self):
         import os
         file = os.path.abspath(__package__) + "/resources/DemoMay2018_TMRs.json"
