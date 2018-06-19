@@ -1,4 +1,4 @@
-from backend.models.frinstance import FRInstance
+from backend.models.graph import Filler
 
 
 def comparator(fr, instance1, instance2, slot, compare_concepts=False, match_full=False):
@@ -24,23 +24,23 @@ def format_pretty_htn(fr, fr_instance, lines=None, indent=0):
     lines.append(line)
 
     for precondition in fr_instance["PRECONDITION"]:
-        precondition = fr[precondition.value]
+        precondition = precondition.resolve()
         lines.append(indent_buffer + indent_buffer + "*PRECONDITION " + format_pretty_name(fr, precondition))
 
     for subevent in fr_instance["HAS-EVENT-AS-PART"]:
-        subevent = fr[subevent.value]
+        subevent = subevent.resolve() # fr[subevent.value]
         format_pretty_htn(fr, subevent, lines=lines, indent=indent + 1)
 
     return "\n".join(lines)
 
 
 def format_pretty_name(fr, fr_instance):
-    name = fr_instance.concept
+    name = fr_instance.concept()
 
-    if fr_instance.subtree == "EVENT":
+    if fr_instance ^ fr.ontology["EVENT"]:
 
-        agents = " and ".join(map(lambda agent: agent.concept, expand_sets(fr, fr_instance["AGENT"])))
-        themes = " and ".join(map(lambda theme: theme.concept, expand_sets(fr, fr_instance["THEME"])))
+        agents = " and ".join(map(lambda agent: agent.concept(), expand_sets(fr, fr_instance["AGENT"])))
+        themes = " and ".join(map(lambda theme: theme.concept(), expand_sets(fr, fr_instance["THEME"])))
 
         name += " " + themes + " (" + agents + ")"
 
@@ -52,14 +52,14 @@ def format_pretty_name(fr, fr_instance):
 def expand_sets(fr, fr_instances):
     results = []
     for fr_instance in fr_instances:
-        if type(fr_instance) == str:
+        if isinstance(fr_instance, str):
             fr_instance = fr[fr_instance]
-        if type(fr_instance) == FRInstance.FRFiller:
-            fr_instance = fr[fr_instance.value]
+        if isinstance(fr_instance, Filler):
+            fr_instance = fr_instance.resolve()
 
-        if fr_instance.concept != "SET":
+        if not fr_instance ^ fr.ontology["SET"]:
             results.append(fr_instance)
         else:
-            results.extend(map(lambda member: fr[member.value], fr_instance["MEMBER-TYPE"]))
+            results.extend(map(lambda member: member.resolve(), fr_instance["MEMBER-TYPE"]))
 
     return results

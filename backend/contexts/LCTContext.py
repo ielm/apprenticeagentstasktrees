@@ -4,6 +4,8 @@ from backend.heuristics.lctcontex.lct_fr_resolution_heuristics import *
 from backend.heuristics.lctcontex.lct_post_heuristics import *
 from backend.heuristics.lctcontex.lct_pre_heuristics import *
 
+from backend.models.ontology import OntologyFiller
+
 
 # An agent context for (L)earning (C)omplex (T)asks.
 class LCTContext(AgentContext):
@@ -16,18 +18,11 @@ class LCTContext(AgentContext):
         agent.wo_memory.heuristics.append(FRResolveLearningEvents)
 
     def prepare_static_knowledge(self):
-        Ontology.add_filler("FASTEN", "IS-A", "VALUE", "ASSEMBLE")
-        Ontology.add_filler("ASSEMBLE", "IS-A", "VALUE", "BUILD")
-        Ontology.ontology["BRACKET"] = {
-            "IS-A": {
-                "VALUE": ["ARTIFACT-PART"]
-            },
-        }
-        Ontology.ontology["DOWEL"] = {
-            "IS-A": {
-                "VALUE": ["ARTIFACT-PART"]
-            },
-        }
+        self.agent.ontology["FASTEN"]["IS-A"] += OntologyFiller("ASSEMBLE", "VALUE")
+        self.agent.ontology["ASSEMBLE"]["IS-A"] += OntologyFiller("BUILD", "VALUE")
+
+        self.agent.ontology.register("BRACKET", isa="ARTIFACT-PART")
+        self.agent.ontology.register("DOWEL", isa="ARTIFACT-PART")
 
     def default_agenda(self):
 
@@ -51,6 +46,7 @@ class LCTContext(AgentContext):
     CURRENT = "*LCT.current"            # Marks an event that is currently being explained; True / False (absent)
     WAITING_ON = "*LCT.waiting_on"      # Marks an event that is waiting on another event to be explained; FR EVENT ID
     FROM_CONTEXT = "*LCT.from_context"  # Marks an instance as having been moved to LT memory from a particular LCT context (as an ID)
+                                        # TODO: perhaps this should be a standard part of all contexts? as soon as something is made in a context, a context id is added?
 
     # ------ Context Helper Functions -------
 
@@ -61,11 +57,11 @@ class LCTContext(AgentContext):
         if len(results) != 1:
             return []
 
-        hierarchy = [results[0].name]
+        hierarchy = [results[0].name()]
 
         results = self.agent.wo_memory.search(context={LCTContext.LEARNING: True, LCTContext.CURRENT: False, LCTContext.WAITING_ON: hierarchy[-1]})
         while len(results) == 1:
-            hierarchy.append(results[0].name)
+            hierarchy.append(results[0].name())
             results = self.agent.wo_memory.search(context={LCTContext.LEARNING: True, LCTContext.CURRENT: False, LCTContext.WAITING_ON: hierarchy[-1]})
 
         return hierarchy
@@ -84,7 +80,7 @@ class LCTContext(AgentContext):
 
         instance.context()[self.LEARNED] = True
 
-        for parent in self.agent.wo_memory.search(context={self.WAITING_ON: instance.name}):
+        for parent in self.agent.wo_memory.search(context={self.WAITING_ON: instance.name()}):
             if roll_up_current:
                 parent.context()[self.CURRENT] = True
             if self.WAITING_ON in parent.context():

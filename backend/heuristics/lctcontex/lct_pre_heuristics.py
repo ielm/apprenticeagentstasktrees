@@ -29,12 +29,12 @@ class IdentifyClosingOfKnownTaskAgendaProcessor(AgendaProcessor):
             event = tmr.find_main_event()
             hierarchy = self.context.learning_hierarchy()
 
-            if resolved[event.name] is None:
+            if resolved[event._identifier.render(graph=False)] is None:
                 raise HeuristicException()
 
             target = -1
             for index, le in enumerate(hierarchy):
-                if le in resolved[event.name]:
+                if le in resolved[event._identifier.render(graph=False)]:
                     if agent.wo_memory[le].context()[self.context.LEARNING]:
                         target = index
 
@@ -104,7 +104,7 @@ class IdentifyPreconditionSatisfyingActionsAgendaProcessor(AgendaProcessor):
             raise HeuristicException()
 
         event = tmr.find_main_event()
-        if event.concept != "REQUEST-ACTION" or "ROBOT" not in event["BENEFICIARY"]:
+        if not event ^ agent.ontology["REQUEST-ACTION"] or "ROBOT" not in event["BENEFICIARY"]:
             raise HeuristicException()
 
         previous_tmr = agent.input_memory[-2]
@@ -118,13 +118,13 @@ class IdentifyPreconditionSatisfyingActionsAgendaProcessor(AgendaProcessor):
         if len(event["THEME"]) > 1:
             raise HeuristicException()
 
-        event = tmr[event["THEME"][0]]
+        event = event["THEME"][0].resolve()
 
         themes = event["THEME"]
-        themes = list(map(lambda theme: tmr[theme].concept, themes))
+        themes = list(map(lambda theme: theme.resolve().concept(), themes))
 
         previous_themes = previous_event["THEME"]
-        previous_themes = list(map(lambda theme: previous_tmr[theme].concept, previous_themes))
+        previous_themes = list(map(lambda theme: theme.resolve().concept(), previous_themes))
 
         if len(set(themes).intersection(set(previous_themes))) > 0:
             self.reassign_siblings([FRResolutionAgendaProcessor()])

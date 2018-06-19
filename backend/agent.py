@@ -1,15 +1,22 @@
-from backend.contexts.context import AgentContext
 from backend.contexts.LCTContext import LCTContext
 from backend.models.fr import FR
+from backend.models.graph import Network
+from backend.models.ontology import Ontology
 from backend.models.tmr import TMR
 from backend.utils.AgentLogger import AgentLogger
 
 
 class Agent(object):
 
-    def __init__(self):
-        self.wo_memory = FR(name="Working Memory", namespace="WM")
-        self.lt_memory = FR(name="Long-term Memory", namespace="LT")
+    def __init__(self, network: Network, ontology: Ontology=None):
+        self.network = network
+        self.ontology = ontology
+
+        if self.ontology is None:
+            raise Exception("NYI, Default Ontology Required")
+
+        self.wo_memory = self.network.register(FR("WM", self.ontology))
+        self.lt_memory = self.network.register(FR("LT", self.ontology))
 
         self.input_memory = []
         self.action_queue = []
@@ -25,7 +32,7 @@ class Agent(object):
         return self._logger
 
     def input(self, input):
-        tmr = TMR(input)
+        tmr = self.network.register(TMR(input, ontology=self.ontology))
         self.input_memory.append(tmr)
 
         self._logger.log("Input: '" + tmr.sentence + "'")

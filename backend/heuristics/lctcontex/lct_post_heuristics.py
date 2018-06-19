@@ -1,5 +1,4 @@
 from backend.contexts.context import AgendaProcessor, HeuristicException
-from backend.ontology import Ontology
 from backend.utils import FRUtils
 
 
@@ -22,17 +21,17 @@ class IdentifyPreconditionsAgendaProcessor(AgendaProcessor):
 
             found = False
             for p in fr_event["PURPOSE"]:
-                purpose = agent.wo_memory[p.value]
+                purpose = p.resolve()
 
                 case_roles_to_match = ["AGENT", "THEME"]
                 filler_query = {}
                 for cr in case_roles_to_match:
                     if cr in purpose:
-                        filler_query[cr] = purpose[cr][0].value
+                        filler_query[cr] = purpose[cr][0].resolve()
 
                 results = agent.wo_memory.search(context={self.context.LEARNING: True}, has_fillers=filler_query)
                 for result in results:
-                    result.remember("PRECONDITION", fr_event.name)
+                    result["PRECONDITION"] += fr_event
 
                 if len(results) > 0:
                     found = True
@@ -61,12 +60,12 @@ class HandleRequestedActionsAgendaProcessor(AgendaProcessor):
         fr_event = agent.wo_memory.search(attributed_tmr_instance=event)[0]
         fr_themes = fr_event["THEME"]
 
-        if event.concept == "REQUEST-ACTION" and "ROBOT" in event["BENEFICIARY"]:
+        if event ^ agent.ontology["REQUEST-ACTION"] and "ROBOT" in event["BENEFICIARY"]:
             fr_currently_learning_events = agent.wo_memory.search(
                 context={self.context.LEARNING: True, self.context.CURRENT: True})
             for fr_current_event in fr_currently_learning_events:
                 for theme in fr_themes:
-                    fr_current_event.remember("HAS-EVENT-AS-PART", theme.value)
+                    fr_current_event["HAS-EVENT-AS-PART"] += theme
 
             self.halt_siblings()
             return
@@ -92,7 +91,7 @@ class HandleCurrentActionAgendaProcessor(AgendaProcessor):
             fr_currently_learning_events = agent.wo_memory.search(
                 context={self.context.LEARNING: True, self.context.CURRENT: True})
             for fr_current_event in fr_currently_learning_events:
-                fr_current_event.remember("HAS-EVENT-AS-PART", fr_event.name)
+                fr_current_event["HAS-EVENT-AS-PART"] += fr_event
 
             self.halt_siblings()
             return
@@ -122,8 +121,8 @@ class RecognizeSubEventsAgendaProcessor(AgendaProcessor):
                 context={self.context.LEARNING: True, self.context.CURRENT: True})
             for fr_current_event in fr_currently_learning_events:
                 fr_current_event.context()[self.context.CURRENT] = False
-                fr_current_event.context()[self.context.WAITING_ON] = fr_event.name
-                fr_current_event.remember("HAS-EVENT-AS-PART", fr_event.name)
+                fr_current_event.context()[self.context.WAITING_ON] = fr_event.name()
+                fr_current_event["HAS-EVENT-AS-PART"] += fr_event
 
             fr_event.context()[self.context.LEARNING] = True
             fr_event.context()[self.context.CURRENT] = True
@@ -173,21 +172,21 @@ class IdentifyClosingOfUnknownTaskAgendaProcessor(AgendaProcessor):
 
         current = agent.wo_memory[hierarchy[0]]
 
-        children = list(map(lambda child: agent.wo_memory[child.value], current["HAS-EVENT-AS-PART"]))
+        children = list(map(lambda child: child.resolve(), current["HAS-EVENT-AS-PART"]))
         children = list(filter(lambda child: "HAS-EVENT-AS-PART" not in child, children))
 
         current.context()[self.context.CURRENT] = False
-        current.context()[self.context.WAITING_ON] = fr_event.name
-        current.remember("HAS-EVENT-AS-PART", fr_event.name)
+        current.context()[self.context.WAITING_ON] = fr_event.name()
+        current["HAS-EVENT-AS-PART"] += fr_event
 
         fr_event.context()[self.context.LEARNING] = True
         fr_event.context()[self.context.CURRENT] = True
 
         for child in children:
-            current.forget("HAS-EVENT-AS-PART", child.name)
-            fr_event.remember("HAS-EVENT-AS-PART", child.name)
+            current["HAS-EVENT-AS-PART"] -= child
+            fr_event["HAS-EVENT-AS-PART"] += child
 
-        self.context.finish_learning(fr_event.name)
+        self.context.finish_learning(fr_event.name())
 
 
 # Identifies when a TMR is about a currently learning BUILD event.  If so, anything the TMR is building is added
@@ -213,10 +212,10 @@ class RecognizePartsOfObjectAgendaProcessor(AgendaProcessor):
         fr_event = agent.wo_memory.search(attributed_tmr_instance=event)[0]
 
         parts = list(
-            map(lambda theme: agent.wo_memory.search(subtree="OBJECT", attributed_tmr_instance=tmr[theme]),
+            map(lambda theme: agent.wo_memory.search(subtree=agent.ontology["OBJECT"], attributed_tmr_instance=theme.resolve()),
                 event["THEME"]))
         parts += list(
-            map(lambda theme: agent.wo_memory.search(subtree="OBJECT", attributed_tmr_instance=tmr[theme]),
+            map(lambda theme: agent.wo_memory.search(subtree=agent.ontology["OBJECT"], attributed_tmr_instance=theme.resolve()),
                 event["DESTINATION"]))
         parts = [item for sublist in parts for item in sublist]
 
@@ -226,25 +225,25 @@ class RecognizePartsOfObjectAgendaProcessor(AgendaProcessor):
         if self.context.LEARNING not in fr_event.context() or not fr_event.context()[self.context.LEARNING]:
             raise HeuristicException()
 
-        if not "BUILD" in Ontology.ancestors(fr_event.concept, include_self=True):
+        if not fr_event ^ agent.ontology["BUILD"]:
             raise HeuristicException()
 
-        results = agent.wo_memory.search(context={self.context.LEARNING: True, self.context.WAITING_ON: fr_event.name})
+        results = agent.wo_memory.search(context={self.context.LEARNING: True, self.context.WAITING_ON: fr_event.name()})
         if len(results) == 0:
             raise HeuristicException()
 
         success = False
         for result in results:
-            if not "BUILD" in Ontology.ancestors(result.concept, include_self=True):
+            if not result ^ agent.ontology["BUILD"]:
                 continue
 
             if len(result["THEME"]) != 1:
                 continue
 
-            theme = agent.wo_memory[result["THEME"][0].value]
+            theme = result["THEME"][0].resolve()
 
             for part in parts:
-                theme.remember("HAS-OBJECT-AS-PART", part.name)
+                theme["HAS-OBJECT-AS-PART"] += part
             success = True
 
         if success:

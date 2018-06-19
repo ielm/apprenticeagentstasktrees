@@ -1,11 +1,24 @@
 from backend.agent import Agent
+from backend.models.graph import Network
+from backend.models.ontology import Ontology
 from backend.utils.FRUtils import format_pretty_htn
-from tests.ApprenticeAgentsTestCase import ApprenticeAgentsTestCase
 
+import json
 import os
+import unittest
 
 
-class AgentTestCase(ApprenticeAgentsTestCase):
+class AgentTestCase(unittest.TestCase): # TODO: Clean up AATestCase and move back to that
+
+    def setUp(self):
+        self.n = Network()
+        self.ontology = self.n.register(Ontology.init_from_file("../backend/resources/ontology_May_2017.p", namespace="ONT"))
+
+    def resource(self, fp):
+        r = None
+        with open(fp) as f:
+            r = json.load(f)
+        return r
 
     def test_input(self):
         file = os.path.abspath(__package__) + "/resources/DemoMay2018_Analyses.json"
@@ -28,7 +41,7 @@ class AgentTestCase(ApprenticeAgentsTestCase):
             # demo[11],  # We finished assembling the chair.
         ]
 
-        agent = Agent()
+        agent = Agent(self.n, ontology=self.ontology)
         agent.logger().enable()
 
         print("")
@@ -39,7 +52,7 @@ class AgentTestCase(ApprenticeAgentsTestCase):
             print("")
             #print(agent.wo_memory)
             print("HTN (simplified):")
-            print(format_pretty_htn(agent.wo_memory, agent.wo_memory["BUILD-WM1"], indent=1))
+            print(format_pretty_htn(agent.wo_memory, agent.wo_memory["WM.BUILD.1"], indent=1))
             print("")
             print("============================================")
             print("")
@@ -50,7 +63,7 @@ class AgentTestCase(ApprenticeAgentsTestCase):
         file = os.path.abspath(__package__) + "/resources/DemoMay2018_Analyses.json"
         demo = self.resource(file)
 
-        agent = Agent()
+        agent = Agent(self.n, ontology=self.ontology)
         agent.logger().disable()
 
         input = [
@@ -74,7 +87,7 @@ class AgentTestCase(ApprenticeAgentsTestCase):
             agent.input(i)
 
         print("Long Term Memory BUILD-LT1")
-        print(format_pretty_htn(agent.lt_memory, agent.lt_memory["BUILD-LT1"], indent=1))
+        print(format_pretty_htn(agent.lt_memory, agent.lt_memory["BUILD.1"], indent=1))
         print("========")
 
         input = [
@@ -98,7 +111,7 @@ class AgentTestCase(ApprenticeAgentsTestCase):
             agent.input(i)
 
         print("Long Term Memory BUILD-LT3")
-        print(format_pretty_htn(agent.lt_memory, agent.lt_memory["BUILD-LT3"], indent=1))
+        print(format_pretty_htn(agent.lt_memory, agent.lt_memory["BUILD.3"], indent=1))
 
         print("")
         print("Action Queue")
