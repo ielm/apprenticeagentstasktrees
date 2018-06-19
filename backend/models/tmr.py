@@ -1,4 +1,4 @@
-from backend.models.graph import Frame, Graph
+from backend.models.graph import Frame, Graph, Literal
 from backend.models.ontology import Ontology
 from backend.models.syntax import Syntax
 
@@ -37,6 +37,7 @@ class TMR(Graph):
 
         super().__init__(namespace)
 
+        _ontology = ontology
         if isinstance(ontology, Ontology):
             ontology = ontology._namespace
 
@@ -54,7 +55,7 @@ class TMR(Graph):
                     if not concept.startswith(ontology):
                         concept = ontology + "." + concept
 
-                self[key] = TMRInstance(key, properties=inst_dict, isa=concept, index=inst_dict["sent-word-ind"][1])
+                self[key] = TMRInstance(key, properties=inst_dict, isa=concept, index=inst_dict["sent-word-ind"][1], ontology=_ontology)
 
     def __setitem__(self, key, value):
         if not isinstance(value, TMRInstance):
@@ -114,7 +115,7 @@ class TMR(Graph):
 
 class TMRInstance(Frame):
 
-    def __init__(self, name, properties=None, isa=None, index=None):
+    def __init__(self, name, properties=None, isa=None, index=None, ontology=None):
         super().__init__(name, isa=isa)
 
         if properties is None:
@@ -128,7 +129,13 @@ class TMRInstance(Frame):
                 _properties[key] = properties[key]
 
         for key in _properties:
-            self[key] = _properties[key]
+            if ontology is not None \
+                    and isinstance(ontology, Ontology) \
+                    and key in ontology \
+                    and (ontology[key] ^ ontology["ATTRIBUTE"] or ontology[key] ^ ontology["EXTRA-ONTOLOGICAL"]):
+                self[key] = Literal(_properties[key])
+            else:
+                self[key] = _properties[key]
 
         self.token_index = index
 

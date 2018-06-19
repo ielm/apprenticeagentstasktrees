@@ -1,6 +1,7 @@
 import json
 
-from backend.service import app
+from backend.models.tmr import TMR
+from backend.service import app, n, ontology
 
 import unittest
 
@@ -9,6 +10,16 @@ class ServiceTestCase(unittest.TestCase):
 
     def setUp(self):
         self.app = app.test_client()
+
+    def test_list_network(self):
+        n.register(TMR.new(ontology, namespace="TMR1"))
+        n.register(TMR.new(ontology, namespace="TMR2"))
+
+        response = self.app.get("/network")
+
+        expected = n._storage.keys()
+
+        self.assertEqual(set(json.loads(response.data)), expected)
 
     @unittest.skip("This requires both the ontosem and corenlp service to be running, otherwise it will fail.")
     def test_input(self):

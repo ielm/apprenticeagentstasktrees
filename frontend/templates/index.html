@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Agent View</title>
+
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis.min.css">
+
+    <style>
+        .frame-link {
+            cursor: pointer;
+        }
+        .relations-table {
+            font-size: small;
+        }
+        .attributes-table {
+            font-size: small;
+        }
+        .property-icon {
+            padding-left: 8px;
+            padding-right: 8px;
+        }
+    </style>
+
+    <script src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mustache.js/2.3.0/mustache.min.js"></script>
+
+    <script>
+
+        var _graph;
+        var _network;  // VIS network object, not a LEIA network of graphs
+
+        function fetch_graph(id) {
+            $.ajax({
+                url: "/graph?id=" + encodeURIComponent(id),
+                method: "GET"
+            }).done(function(data) {
+                render_graph(JSON.parse(data));
+            }).fail(function(error) {
+                console.log(error);
+            });
+        }
+
+        function render_graph(graph) {
+            _graph = graph;
+
+            var framesByID = {};
+            for (var frame in graph) {
+                framesByID[graph[frame]["name"]] = graph[frame];
+            }
+
+            var frames = graph
+                .map(function(frame) {
+                    return {
+                        id: frame["name"],
+                        label: frame["name"],
+                    }
+                });
+
+            var relations = graph
+                .map(function(frame) {
+                    return Array.from(frame["relations"])
+                        .filter(r => ["AGENT-OF", "THEME-OF", "INSTRUMENT-OF", "SCOPE-OF"].indexOf(r.slot) == -1)
+                        .map(function(relation) {
+                            return {
+                                from: frame["name"],
+                                to: relation["value"],
+                                label: relation["slot"],
+                                arrows: "to",
+                            }
+                        })
+                })
+                .reduce(function (f1, f2) {return f1.concat(f2)});
+
+            var nodes = new vis.DataSet(frames);
+            var edges = new vis.DataSet(relations);
+
+            var data = {
+                nodes: nodes,
+                edges: edges
+            };
+            var options = {
+                "physics": {
+                    "barnesHut": {
+                        "springLength": 300
+                    }
+                },
+                "layout": {
+                    "randomSeed": 3
+                }
+            };
+
+            var network = new vis.Network($(document).find("#graph")[0], data, options);
+
+            network.on("selectNode", function(params) {
+                load_frame(framesByID[params["nodes"][0]]);
+            });
+
+            network.on("dragStart", function(params) {
+                if (params["nodes"][0] == undefined) {
+                    return;
+                }
+                load_frame(framesByID[params["nodes"][0]]);
+            });
+
+            _network = network;
+
+        }
+
+        function load_frame(frame) {
+
+            var content = {
+                frame: frame,
+            };
+
+            var template = document.getElementById('frame-template').innerHTML;
+            Mustache.parse(template, ["{|", "|}"]);
+            var rendered = Mustache.render(template, content);
+            $(document).find("#frame")[0].innerHTML = rendered;
+
+        }
+
+    </script>
+
+    <script id="frame-template" type="x-tmpl-mustache">
+        <p><strong>{|frame.name|}</strong></p>
+        <table class='relations-table'>
+            {|#frame.relations|}
+            <tr>
+                <td>{|slot|}</td>
+                <td class="property-icon"><img src="/assets/svg/arrow-thick-right.svg" alt="arrow-thick-right" style="height: 12px"></td>
+                <td><a class='frame-link' data-frame='{|value|}'>{|value|}</a></td>
+            </tr>
+            {|/frame.relations|}
+        </table>
+        <p></p>
+        <table class='attributes-table'>
+            {|#frame.attributes|}
+            <tr>
+                <td>{|slot|}
+                <td class="property-icon"><img src="/assets/svg/list.svg" alt="list" style="height: 12px"></td>
+                <td>{|value|}</td>
+            </tr>
+            {|/frame.attributes|}
+        </table>
+    </script>
+
+    <script>
+
+        $(document).ready(function() {
+
+            $("#selectGraph").on("change", function() {
+                var graph = $("#selectGraph").val();
+                fetch_graph(graph);
+            });
+
+            $("body").on("click", ".frame-link", function(e) {
+                var id = $(e.target).data("frame");
+                for (var i in _graph) {
+                    var frame = _graph[i];
+                    if (frame.name == id) {
+                        load_frame(frame);
+                        _network.selectNodes([id]);
+                        break;
+                    }
+                }
+            });
+
+        });
+
+    </script>
+
+</head>
+<body>
+    <div class="container">
+        <div class="row" style="margin-top: 25px;">
+            <div class="col-sm-8">
+                <div class="card">
+                    <div class="card-header">
+                        <form>
+                            <div class="form-group row">
+                                <label for="selectGraph" class="col-sm-2 col-form-label">Graph</label>
+                                <div class="col-sm-10">
+                                    <select class="form-control" id="selectGraph">
+                                        <option>--</option>
+                                        {% for n in network %}
+                                        <option value="{{n}}">{{n}}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="card-body">
+                        <div id="graph" style="height: 500px;"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-sm-4">
+                <div class="card">
+                    <div class="card-header">
+                        Details
+                    </div>
+                    <div class="card-body">
+                        <div id="frame"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
