@@ -59,6 +59,10 @@ class AgentTestCase(unittest.TestCase): # TODO: Clean up AATestCase and move bac
 
         print(agent.wo_memory)
 
+        with open(os.path.abspath(__package__) + "/resources/AgentTestCase_TestInputExpectedOutput.txt", 'r') as expected:
+            expected = expected.read()
+            self.assertEqual(expected, format_pretty_htn(agent.wo_memory, agent.wo_memory["WM.BUILD.1"], indent=1))
+
     def test_ltm(self):
         file = os.path.abspath(__package__) + "/resources/DemoMay2018_Analyses.json"
         demo = self.resource(file)
@@ -127,3 +131,5 @@ class AgentTestCase(unittest.TestCase): # TODO: Clean up AATestCase and move bac
         print("")
         print("Action Queue")
         print(agent.action_queue)
+
+        self.assertEqual(agent.action_queue, ["ROBOT.GET(ONT.SCREWDRIVER)"])
