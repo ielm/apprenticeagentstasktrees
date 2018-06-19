@@ -5,6 +5,7 @@ from unittest import skip
 
 
 @DeprecationWarning
+@skip
 class TaskModelTestCase(ApprenticeAgentsTestCase):
 
     @skip

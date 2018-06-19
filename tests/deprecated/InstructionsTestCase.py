@@ -1,10 +1,11 @@
-from models.instructions import Instructions
+# from models.instructions import Instructions
 from tests.ApprenticeAgentsTestCase import ApprenticeAgentsTestCase
 
 from unittest import skip
 
 
 @DeprecationWarning
+@skip
 class InstructionsTestCase(ApprenticeAgentsTestCase):
 
     def setUp(self):

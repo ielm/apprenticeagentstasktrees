@@ -1,12 +1,13 @@
 import os
 import unittest
 
-from backend.taskmodel import TaskModel
-from models.instructions import Instructions
+# from backend.taskmodel import TaskModel
+# from models.instructions import Instructions
 from tests.ApprenticeAgentsTestCase import ApprenticeAgentsTestCase
 
 
 @DeprecationWarning
+@unittest.skip
 class DemoMay2018TestCase(ApprenticeAgentsTestCase):
 
     @unittest.skip("This requires both the ontosem and corenlp service to be running, otherwise it will fail.")

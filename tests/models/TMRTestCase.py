@@ -1,8 +1,8 @@
 from backend.models.graph import Graph, Network
 from backend.models.tmr import TMR
 
+from pkgutil import get_data
 import json
-import os
 import unittest
 
 
@@ -17,6 +17,14 @@ class TMRTestCase(unittest.TestCase):
         self.ontology.register("ALL")
         self.ontology.register("OBJECT", isa="ALL")
         self.ontology.register("EVENT", isa="ALL")
+
+    def load_resource(self, module: str, file: str, parse_json: bool=False):
+        binary = get_data(module, file)
+
+        if not parse_json:
+            return str(binary)
+
+        return json.loads(binary)
 
     def test_tmr_as_graph(self):
         tmr = TMR.new("ONT")
@@ -34,12 +42,7 @@ class TMRTestCase(unittest.TestCase):
     def test_tmr_loaded(self):
         self.ontology.register("CHAIR", isa="OBJECT")
 
-        file = os.path.abspath(__package__) + "/../resources/DemoMay2018_Analyses.json"
-
-        r = None
-        with open(file) as f:
-            r = json.load(f)
-
+        r = self.load_resource("tests.resources", "DemoMay2018_Analyses.json", parse_json=True)
         tmr = self.n.register(TMR(r[0], "ONT"))
 
         self.assertEqual(tmr["BUILD-1"]["THEME"][0].resolve(), tmr["CHAIR-1"])

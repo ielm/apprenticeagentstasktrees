@@ -10,11 +10,9 @@ from tests.ApprenticeAgentsTestCase import ApprenticeAgentsTestCase
 from unittest import skip
 
 
-class DemoMay2018TestCase(ApprenticeAgentsTestCase):
+class YaleUtilsTestCase(ApprenticeAgentsTestCase):
 
     def test_simple_format(self):
-
-        # TreeNode.id = 0
 
         file = os.path.abspath(__package__) + "/resources/DemoMay2018_Analyses.json"
         demo = self.resource(file)
@@ -35,7 +33,7 @@ class DemoMay2018TestCase(ApprenticeAgentsTestCase):
         ]
 
         n = Network()
-        ontology = n.register(Ontology.init_from_file("../backend/resources/ontology_May_2017.p", "ONT"))
+        ontology = n.register(Ontology.init_default())
 
         agent = Agent(n, ontology=ontology)
         for i in input:
@@ -43,9 +41,7 @@ class DemoMay2018TestCase(ApprenticeAgentsTestCase):
 
         output = format_learned_event_yale(agent.wo_memory["WM.BUILD.1"], ontology)
 
-        with open("resources/YaleFormatSimple.json", "r") as file:
-            expected = file.read()
-            self.assertEqual(output, json.loads(expected))
+        self.assertEqual(output, self.load_resource("tests.resources", "YaleFormatSimple.json", parse_json=True))
 
     @skip
     def test_multiple_integrated(self):
@@ -69,7 +65,7 @@ class DemoMay2018TestCase(ApprenticeAgentsTestCase):
         ]
 
         n = Network()
-        ontology = n.register(Ontology.init_from_file("../backend/resources/ontology_May_2017.p", "ONT"))
+        ontology = n.register(Ontology.init_default())
 
         agent = Agent(n, ontology=ontology)
         for i in input:

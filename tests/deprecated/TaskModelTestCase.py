@@ -1,11 +1,12 @@
-from taskmodel import TaskModel
-from models.instructions import Instructions
+# from taskmodel import TaskModel
+# from models.instructions import Instructions
 from tests.ApprenticeAgentsTestCase import ApprenticeAgentsTestCase
 
 from unittest import skip
 
 
 @DeprecationWarning
+@skip
 class TaskModelTestCase(ApprenticeAgentsTestCase):
 
     @skip

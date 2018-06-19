@@ -12,7 +12,7 @@ class AgentTestCase(unittest.TestCase): # TODO: Clean up AATestCase and move bac
 
     def setUp(self):
         self.n = Network()
-        self.ontology = self.n.register(Ontology.init_from_file("../backend/resources/ontology_May_2017.p", namespace="ONT"))
+        self.ontology = self.n.register(Ontology.init_default())
 
     def resource(self, fp):
         r = None
