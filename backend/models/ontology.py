@@ -51,7 +51,7 @@ class Ontology(Graph):
                 if not isinstance(fillers, list):
                     fillers = [fillers]
                 fillers = list(map(lambda f: OntologyFiller(Identifier(self._namespace, f), facet), fillers))
-                frame[slot] = Slot(fillers, frame=frame)
+                frame[slot] = Slot(slot, values=fillers, frame=frame)
 
         self[item] = frame
 

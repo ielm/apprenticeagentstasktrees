@@ -39,7 +39,7 @@ class LCTPreHeuristicsTestCase(ApprenticeAgentsTestCase):
 
         tmr = self.n.register(TMR.new("ONT"))
         event1 = tmr.register("EVENT.1", isa="ONT.EVENT")
-        event1["TIME"] = ["<", "FIND-ANCHOR-TIME"]
+        event1["TIME"] = [["<", "FIND-ANCHOR-TIME"]]
 
         IdentifyClosingOfKnownTaskAgendaProcessor(context).process(agent, tmr)
 

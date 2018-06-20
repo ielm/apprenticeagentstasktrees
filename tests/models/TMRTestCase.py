@@ -102,7 +102,7 @@ class TMRTestCase(unittest.TestCase):
 
         self.assertFalse(tmr.is_prefix())
 
-        event1["TIME"] = [">", "FIND-ANCHOR-TIME"]
+        event1["TIME"] = [[">", "FIND-ANCHOR-TIME"]]
 
         self.assertTrue(tmr.is_prefix())
 
@@ -113,7 +113,7 @@ class TMRTestCase(unittest.TestCase):
 
         self.assertFalse(tmr.is_postfix())
 
-        event1["TIME"] = ["<", "FIND-ANCHOR-TIME"]
+        event1["TIME"] = [["<", "FIND-ANCHOR-TIME"]]
 
         self.assertTrue(tmr.is_postfix())
 

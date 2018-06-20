@@ -86,7 +86,7 @@ class TMR(Graph):
     def is_prefix(self):
         for instance in self.values():
             if instance.is_event():
-                if instance["TIME"] == ">" and instance["TIME"] == "FIND-ANCHOR-TIME":
+                if instance["TIME"] == [[">", "FIND-ANCHOR-TIME"]]:
                     return True
 
         return False
@@ -94,7 +94,7 @@ class TMR(Graph):
     def is_postfix(self):
         for instance in self.values():
             if instance.is_event():
-                if instance["TIME"] == "<" and instance["TIME"] == "FIND-ANCHOR-TIME":
+                if instance["TIME"] == [["<", "FIND-ANCHOR-TIME"]]:
                     return True
 
         # For closing generic events, such as "Finished."

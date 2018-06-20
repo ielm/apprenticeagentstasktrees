@@ -297,12 +297,12 @@ class Frame(object):
         if type(value) != list:
             value = [value]
 
-        self._storage[key] = Slot(values=value, frame=self)
+        self._storage[key] = Slot(key, values=value, frame=self)
 
     def __getitem__(self, item):
         if item in self._storage:
             return self._storage[item]
-        return Slot(frame=self)
+        return Slot(item, frame=self)
 
     def __delitem__(self, key):
         del self._storage[key]
@@ -330,7 +330,8 @@ class Frame(object):
 
 class Slot(object):
 
-    def __init__(self, values=None, frame: Frame=None):
+    def __init__(self, name: str, values=None, frame: Frame=None):
+        self._name = name
         self._storage = list()
         self._frame = frame
 
@@ -368,7 +369,7 @@ class Slot(object):
         if not isinstance(other, Slot):
             return self + other
 
-        result = Slot(values=self._storage, frame=self._frame)
+        result = Slot(self._name, values=self._storage, frame=self._frame)
         result._storage.extend(other._storage)
         return result
 
