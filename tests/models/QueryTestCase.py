@@ -1,6 +1,6 @@
-from backend.models.graph import Filler, Identifier, Network, Slot
+from backend.models.graph import Filler, Frame, Identifier, Network, Slot
 from backend.models.ontology import Ontology
-from backend.models.query import AndQuery, FillerQuery, IdentifierQuery, LiteralQuery, NotQuery, OrQuery, Query, SlotQuery
+from backend.models.query import AndQuery, FillerQuery, FrameQuery, IdentifierQuery, LiteralQuery, NotQuery, OrQuery, Query, SlotQuery
 
 
 import unittest
@@ -76,6 +76,67 @@ class NotQueryTestCase(unittest.TestCase):
     def test_not_query(self):
         self.assertTrue(NotQuery(self.n, TestQuery(False)).compare("any value"))
         self.assertFalse(NotQuery(self.n, TestQuery(True)).compare("any value"))
+
+
+class FrameQueryTestCase(unittest.TestCase):
+
+    def setUp(self):
+        self.n = Network()
+
+    def test_frame_query_identifier(self):
+        query1 = FrameQuery(self.n, identifier=IdentifierQuery(self.n, identifier="ONT.EVENT"))
+        query2 = FrameQuery(self.n, identifier=AndQuery(self.n, queries=[IdentifierQuery(self.n, identifier="ONT.EVENT")]))
+        query3 = FrameQuery(self.n, identifier=OrQuery(self.n, queries=[IdentifierQuery(self.n, identifier="ONT.EVENT")]))
+        query4 = FrameQuery(self.n, identifier=NotQuery(self.n, query=IdentifierQuery(self.n, identifier="ONT.EVENT")))
+
+        self.assertTrue(query1.compare(Frame("ONT.EVENT")))
+        self.assertTrue(query2.compare(Frame("ONT.EVENT")))
+        self.assertTrue(query3.compare(Frame("ONT.EVENT")))
+        self.assertFalse(query4.compare(Frame("ONT.EVENT")))
+
+    def test_frame_query_slot(self):
+        query1 = FrameQuery(self.n, slot=SlotQuery(self.n, name="SLOT"))
+        query2 = FrameQuery(self.n, slot=AndQuery(self.n, queries=[SlotQuery(self.n, name="SLOT")]))
+        query3 = FrameQuery(self.n, slot=OrQuery(self.n, queries=[SlotQuery(self.n, name="SLOT")]))
+        query4 = FrameQuery(self.n, slot=NotQuery(self.n, query=SlotQuery(self.n, name="SLOT")))
+
+        frame = Frame("ONT.EVENT")
+        frame["SLOT"] = 1
+
+        self.assertTrue(query1.compare(frame))
+        self.assertTrue(query2.compare(frame))
+        self.assertTrue(query3.compare(frame))
+        self.assertFalse(query4.compare(frame))
+
+    def test_frame_query_identifier_bad_type(self):
+        query = FrameQuery(self.n, identifier=AndQuery(self.n, queries=[LiteralQuery(self.n, 123)]))
+
+        self.assertFalse(query.compare(Frame("ANYTHING")))
+
+    def test_frame_query_slot_bad_type(self):
+        query = FrameQuery(self.n, slot=AndQuery(self.n, queries=[LiteralQuery(self.n, 123)]))
+
+        self.assertFalse(query.compare(Frame("ANYTHING")))
+
+    def test_frame_query_identifier_and_slot_are_anded(self):
+        query = FrameQuery(self.n, identifier=IdentifierQuery(self.n, identifier="ONT.EVENT"), slot=SlotQuery(self.n, name="SLOT"))
+
+        frame1 = Frame("ONT.EVENT")
+        frame1["SLOT"] = 1
+
+        frame2 = Frame("ONT.OBJECT")
+        frame2["SLOT"] = 1
+
+        frame3 = Frame("ONT.EVENT")
+
+        self.assertTrue(query.compare(frame1))
+        self.assertFalse(query.compare(frame2))
+        self.assertFalse(query.compare(frame3))
+
+    def test_frame_query_no_input_returns_false(self):
+        query = FrameQuery(self.n)
+
+        self.assertFalse(query.compare(Frame("ANYTHING")))
 
 
 class SlotQueryTestCase(unittest.TestCase):

@@ -1,4 +1,4 @@
-from backend.models.graph import Filler, Identifier, Network, Slot
+from backend.models.graph import Filler, Frame, Identifier, Network, Slot
 from functools import reduce
 from typing import List, Union
 
@@ -46,6 +46,30 @@ class NotQuery(Query):
 
     def compare(self, other) -> bool:
         return not self.query.compare(other)
+
+
+class FrameQuery(Query):
+
+    def __init__(self, network: Network, identifier: [AndQuery, OrQuery, NotQuery, 'IdentifierQuery']=None, slot: [AndQuery, OrQuery, NotQuery, 'SlotQuery']=None):
+        super().__init__(network)
+        self.identifier = identifier
+        self.slot = slot
+
+    def compare(self, other: Frame) -> bool:
+        if self.identifier is None and self.slot is None:
+            return False
+
+        if self.identifier is not None:
+            if not self.identifier.compare(other._identifier):
+                return False
+
+        if self.slot is not None:
+            if len(other) == 0:
+                return False
+            if not reduce(lambda x, y: x or y, map(lambda slot: self.slot.compare(slot), other._storage.values())):
+                return False
+
+        return True
 
 
 class SlotQuery(Query):
