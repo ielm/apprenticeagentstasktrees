@@ -1,4 +1,5 @@
 from backend.models.graph import Frame, Graph, Identifier, Network
+from backend.models.query import FrameQuery, SlotQuery
 
 import unittest
 
@@ -279,6 +280,20 @@ class GraphTestCase(unittest.TestCase):
 
         f = g.register("FRAME.2", isa="FRAME.1")
         self.assertTrue(f.isa("NMSP.FRAME.1"))
+
+    def test_graph_search(self):
+        n = Network()
+
+        g = n.register(Graph("NMSP"))
+        f1 = g.register("FRAME.1")
+        f2 = g.register("FRAME.2")
+
+        f1["SLOT"] = 123
+
+        query = FrameQuery(n, slot=SlotQuery(n, name="SLOT"))
+        results = g.search(query)
+
+        self.assertEqual(results, [f1])
 
 
 class NetworkComprehensiveExampleTestCase(unittest.TestCase):

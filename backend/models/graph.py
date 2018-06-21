@@ -5,6 +5,12 @@ from uuid import uuid4
 
 import re
 
+# Use the below block of code to avoid cyclic imports,
+# while still allowing top-level imports for type hints.
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from backend.models.query import FrameQuery
+
 
 class Identifier(object):
 
@@ -211,8 +217,8 @@ class Graph(Mapping):
 
         return frame
 
-    def search(self):
-        raise Exception("NYI")
+    def search(self, query: 'FrameQuery') -> List['Frame']:
+        return list(filter(lambda frame: query.compare(frame), self._storage.values()))
 
     def clear(self):
         self._storage = dict()
