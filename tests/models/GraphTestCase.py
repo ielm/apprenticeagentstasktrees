@@ -1,5 +1,5 @@
 from backend.models.graph import Frame, Graph, Identifier, Network
-from backend.models.query import FrameQuery, SlotQuery
+from backend.models.query import FrameQuery, NameQuery, SlotQuery
 
 import unittest
 
@@ -290,7 +290,7 @@ class GraphTestCase(unittest.TestCase):
 
         f1["SLOT"] = 123
 
-        query = FrameQuery(n, slot=SlotQuery(n, name="SLOT"))
+        query = FrameQuery(n, SlotQuery(n, NameQuery(n, "SLOT")))
         results = g.search(query)
 
         self.assertEqual(results, [f1])

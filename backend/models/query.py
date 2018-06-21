@@ -1,6 +1,6 @@
 from backend.models.graph import Filler, Frame, Identifier, Network, Slot
 from functools import reduce
-from typing import List, Union
+from typing import Any, List, Union
 
 
 class Query(object):
@@ -38,6 +38,43 @@ class OrQuery(Query):
         return reduce(lambda x, y: x or y, map(lambda query: query.compare(other), self.queries))
 
 
+class ExactQuery(Query):
+
+    def __init__(self, network: Network, queries: List[Query]):
+        super().__init__(network)
+        self.queries = queries
+
+    def compare(self, other: List[Any]) -> bool:
+        if isinstance(other, str):
+            return False
+
+        try:
+            iter(other)
+        except TypeError:
+            return False
+
+        if isinstance(other, Frame):
+            other = other._storage.values()
+
+        return self._equals(other, self.queries)
+
+    def _contains(self, other: List[Any], q: List[Query]):
+        for query in q:
+            found = False
+            for value in other:
+                if query.compare(value):
+                    found = True
+                    break
+            if not found:
+                return False
+        return True
+
+    def _equals(self, other: List[Any], q: List[Query]):
+        if len(other) != len(q):
+            return False
+        return self._contains(other, q)
+
+
 class NotQuery(Query):
 
     def __init__(self, network: Network, query: Query):
@@ -50,62 +87,28 @@ class NotQuery(Query):
 
 class FrameQuery(Query):
 
-    def __init__(self, network: Network, identifier: [AndQuery, OrQuery, NotQuery, 'IdentifierQuery']=None, slot: [AndQuery, OrQuery, NotQuery, 'SlotQuery']=None):
+    def __init__(self, network: Network, subquery: Union[AndQuery, OrQuery, NotQuery, ExactQuery, 'IdentifierQuery', 'SlotQuery']):
         super().__init__(network)
-        self.identifier = identifier
-        self.slot = slot
+        self.subquery = subquery
 
     def compare(self, other: Frame) -> bool:
-        if self.identifier is None and self.slot is None:
-            return False
-
-        if self.identifier is not None:
-            if not self.identifier.compare(other._identifier):
-                return False
-
-        if self.slot is not None:
-            if len(other) == 0:
-                return False
-            if not reduce(lambda x, y: x or y, map(lambda slot: self.slot.compare(slot), other._storage.values())):
-                return False
-
-        return True
+        return self.subquery.compare(other)
 
 
 class SlotQuery(Query):
 
-    def __init__(self, network: Network, name: str=None, queries: List[Union['FillerQuery', 'LiteralQuery', 'IdentifierQuery']]=None, intersects=True, contains=False, equals=False):
+    def __init__(self, network: Network, subquery: Union[AndQuery, OrQuery, ExactQuery, NotQuery, 'NameQuery', 'FillerQuery']):
         super().__init__(network)
-        self.name = name
-        self.queries = queries
-        self.intersects = intersects
-        self.contains = contains
-        self.equals = equals
+        self.subquery = subquery
 
-    def compare(self, other: Slot) -> bool:
-        if self.name is None and self.queries is None:
+    def compare(self, other: Union[Frame, Slot]) -> bool:
+        if isinstance(other, Frame):
+            for slot in other._storage.values():
+                if self.subquery.compare(slot):
+                    return True
             return False
 
-        if self.name is not None:
-            if other._name != self.name:
-                return False
-
-        if self.queries is not None and len(self.queries) > 0:
-            q = list(map(lambda query: query if isinstance(query, FillerQuery) else FillerQuery(self.network, query), self.queries))
-
-            if not self.intersects and not self.contains and not self.equals:
-                return False
-            if self.equals:
-                if not self._equals(other, q):
-                    return False
-            if self.contains:
-                if not self._contains(other, q):
-                    return False
-            if self.intersects:
-                if not self._intersects(other, q):
-                    return False
-
-        return True
+        return self.subquery.compare(other)
 
     def _intersects(self, slot: Slot, q: List['FillerQuery']):
         for filler in slot:
@@ -130,13 +133,30 @@ class SlotQuery(Query):
             return False
         return self._contains(slot, q)
 
+
+class NameQuery(Query):
+
+    def __init__(self, network: Network, name: str):
+        super().__init__(network)
+        self.name = name
+
+    def compare(self, other: Slot) -> bool:
+        return other._name == self.name
+
+
 class FillerQuery(Query):
 
     def __init__(self, network: Network, query: Union['LiteralQuery', 'IdentifierQuery']):
         super().__init__(network)
         self.query = query
 
-    def compare(self, other: Filler) -> bool:
+    def compare(self, other: Union[Slot, Filler]) -> bool:
+        if isinstance(other, Slot):
+            for filler in other:
+                if self.query.compare(filler):
+                    return True
+            return False
+
         return self.query.compare(other._value)
 
 

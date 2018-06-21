@@ -1,6 +1,8 @@
 from backend.models.graph import Filler, Frame, Identifier, Network, Slot
 from backend.models.ontology import Ontology
-from backend.models.query import AndQuery, FillerQuery, FrameQuery, IdentifierQuery, LiteralQuery, NotQuery, OrQuery, Query, SlotQuery
+from backend.models.query import AndQuery, ExactQuery, FillerQuery, FrameQuery, IdentifierQuery, LiteralQuery, NameQuery, NotQuery, OrQuery, Query, SlotQuery
+from types import LambdaType
+from typing import Union
 
 
 import unittest
@@ -8,12 +10,14 @@ import unittest
 
 class TestQuery(Query):
 
-    def __init__(self, result: bool):
+    def __init__(self, result: Union[bool, LambdaType]):
         super().__init__(None)
         self.result = result
 
     def compare(self, other):
-        return self.result
+        if isinstance(self.result, bool):
+            return self.result
+        return self.result(other)
 
 
 class AndQueryTestCase(unittest.TestCase):
@@ -68,6 +72,53 @@ class OrQueryTestCase(unittest.TestCase):
         self.assertFalse(query.compare("any value"))
 
 
+class ExactQueryTestCase(unittest.TestCase):
+
+    def setUp(self):
+        self.n = Network()
+
+    def test_exactly_query_all_match(self):
+        query = ExactQuery(self.n, [TestQuery(True), TestQuery(True)])
+
+        self.assertTrue(query.compare([1, 2]))
+
+    def test_exactly_query_not_exactly(self):
+        query = ExactQuery(self.n, [TestQuery(lambda x: x == 1), TestQuery(lambda x: x == 2)])
+
+        self.assertFalse(query.compare([1, 1]))
+        self.assertFalse(query.compare([2, 2]))
+
+    def test_exactly_query_some_match(self):
+        query = ExactQuery(self.n, [TestQuery(lambda x: x == 1), TestQuery(lambda x: x == 2)])
+
+        self.assertFalse(query.compare([1]))
+
+    def test_exactly_query_not_enough_match(self):
+        query = ExactQuery(self.n, [TestQuery(lambda x: x == 1), TestQuery(lambda x: x == 2)])
+
+        self.assertFalse(query.compare([1, 2, 3]))
+
+    def test_exactly_query_no_match(self):
+        query = ExactQuery(self.n, [TestQuery(lambda x: x == 1), TestQuery(lambda x: x == 2)])
+
+        self.assertFalse(query.compare([0, 3]))
+
+    def test_exactly_query_duplicates_fail(self):
+        query = ExactQuery(self.n, [TestQuery(lambda x: x == 1), TestQuery(lambda x: x == 2)])
+
+        self.assertFalse(query.compare([1, 1, 2]))
+
+    def test_exactly_query_no_match_if_input_is_empty(self):
+        query = ExactQuery(self.n, [TestQuery(lambda x: x == 1), TestQuery(lambda x: x == 2)])
+
+        self.assertFalse(query.compare([]))
+
+    def test_exactly_query_no_match_if_input_is_not_list(self):
+        query = ExactQuery(self.n, [TestQuery(lambda x: x == 1), TestQuery(lambda x: x == 2)])
+
+        self.assertFalse(query.compare(1))
+
+
 class NotQueryTestCase(unittest.TestCase):
 
     def setUp(self):
@@ -84,59 +135,92 @@ class FrameQueryTestCase(unittest.TestCase):
         self.n = Network()
 
     def test_frame_query_identifier(self):
-        query1 = FrameQuery(self.n, identifier=IdentifierQuery(self.n, identifier="ONT.EVENT"))
-        query2 = FrameQuery(self.n, identifier=AndQuery(self.n, queries=[IdentifierQuery(self.n, identifier="ONT.EVENT")]))
-        query3 = FrameQuery(self.n, identifier=OrQuery(self.n, queries=[IdentifierQuery(self.n, identifier="ONT.EVENT")]))
-        query4 = FrameQuery(self.n, identifier=NotQuery(self.n, query=IdentifierQuery(self.n, identifier="ONT.EVENT")))
+        query = FrameQuery(self.n, IdentifierQuery(self.n, identifier="ONT.EVENT"))
 
-        self.assertTrue(query1.compare(Frame("ONT.EVENT")))
-        self.assertTrue(query2.compare(Frame("ONT.EVENT")))
-        self.assertTrue(query3.compare(Frame("ONT.EVENT")))
-        self.assertFalse(query4.compare(Frame("ONT.EVENT")))
+        self.assertTrue(query.compare(Frame("ONT.EVENT")))
+        self.assertFalse(query.compare(Frame("ONT.OBJECT")))
 
     def test_frame_query_slot(self):
-        query1 = FrameQuery(self.n, slot=SlotQuery(self.n, name="SLOT"))
-        query2 = FrameQuery(self.n, slot=AndQuery(self.n, queries=[SlotQuery(self.n, name="SLOT")]))
-        query3 = FrameQuery(self.n, slot=OrQuery(self.n, queries=[SlotQuery(self.n, name="SLOT")]))
-        query4 = FrameQuery(self.n, slot=NotQuery(self.n, query=SlotQuery(self.n, name="SLOT")))
+        query = FrameQuery(self.n, SlotQuery(self.n, NameQuery(self.n, "SLOT")))
 
-        frame = Frame("ONT.EVENT")
-        frame["SLOT"] = 1
+        frame1 = Frame("FRAME1")
+        frame2 = Frame("FRAME2")
+        frame3 = Frame("FRAME3")
 
-        self.assertTrue(query1.compare(frame))
-        self.assertTrue(query2.compare(frame))
-        self.assertTrue(query3.compare(frame))
-        self.assertFalse(query4.compare(frame))
-
-    def test_frame_query_identifier_bad_type(self):
-        query = FrameQuery(self.n, identifier=AndQuery(self.n, queries=[LiteralQuery(self.n, 123)]))
-
-        self.assertFalse(query.compare(Frame("ANYTHING")))
-
-    def test_frame_query_slot_bad_type(self):
-        query = FrameQuery(self.n, slot=AndQuery(self.n, queries=[LiteralQuery(self.n, 123)]))
-
-        self.assertFalse(query.compare(Frame("ANYTHING")))
-
-    def test_frame_query_identifier_and_slot_are_anded(self):
-        query = FrameQuery(self.n, identifier=IdentifierQuery(self.n, identifier="ONT.EVENT"), slot=SlotQuery(self.n, name="SLOT"))
-
-        frame1 = Frame("ONT.EVENT")
-        frame1["SLOT"] = 1
-
-        frame2 = Frame("ONT.OBJECT")
-        frame2["SLOT"] = 1
-
-        frame3 = Frame("ONT.EVENT")
+        frame1["SLOT"] = 123
+        frame2["OTHER"] = 123
 
         self.assertTrue(query.compare(frame1))
         self.assertFalse(query.compare(frame2))
         self.assertFalse(query.compare(frame3))
 
-    def test_frame_query_no_input_returns_false(self):
-        query = FrameQuery(self.n)
+    def test_frame_and(self):
+        query = FrameQuery(self.n, AndQuery(self.n, [IdentifierQuery(self.n, identifier="FRAME1"), SlotQuery(self.n, NameQuery(self.n, "SLOT"))]))
 
-        self.assertFalse(query.compare(Frame("ANYTHING")))
+        frame1 = Frame("FRAME1")
+        frame2 = Frame("FRAME2")
+
+        frame1["SLOT"] = 123
+        frame2["SLOT"] = 123
+
+        self.assertTrue(query.compare(frame1))
+        self.assertFalse(query.compare(frame2))
+
+    def test_frame_or(self):
+        query = FrameQuery(self.n, OrQuery(self.n, [IdentifierQuery(self.n, identifier="FRAME1"), SlotQuery(self.n, NameQuery(self.n, "SLOT"))]))
+
+        frame1 = Frame("FRAME1")
+        frame2 = Frame("FRAME2")
+
+        frame1["OTHER"] = 123
+        frame2["SLOT"] = 123
+
+        self.assertTrue(query.compare(frame1))
+        self.assertTrue(query.compare(frame2))
+
+    def test_frame_not(self):
+        query = FrameQuery(self.n, NotQuery(self.n, IdentifierQuery(self.n, identifier="FRAME1")))
+
+        frame1 = Frame("FRAME1")
+        frame2 = Frame("FRAME2")
+
+        frame1["SLOT"] = 123
+        frame2["OTHER"] = 123
+
+        self.assertFalse(query.compare(frame1))
+        self.assertTrue(query.compare(frame2))
+
+    def test_frame_exact_slots(self):
+        query = FrameQuery(self.n, ExactQuery(self.n, [SlotQuery(self.n, NameQuery(self.n, "SLOT"))]))
+
+        frame1 = Frame("FRAME1")
+        frame2 = Frame("FRAME2")
+
+        frame1["SLOT"] = 123
+
+        frame2["SLOT"] = 123
+        frame2["OTHER"] = 123
+
+        self.assertTrue(query.compare(frame1))
+        self.assertFalse(query.compare(frame2))
+
+    def test_frame_exact_as_inner_query(self):
+        query = FrameQuery(self.n, AndQuery(self.n,[IdentifierQuery(self.n, identifier="FRAME1"), ExactQuery(self.n, [SlotQuery(self.n, NameQuery(self.n, "SLOT"))])]))
+
+        frame1 = Frame("FRAME1")
+        frame2 = Frame("FRAME2")
+        frame3 = Frame("FRAME3")
+
+        frame1["SLOT"] = 123
+
+        frame2["SLOT"] = 123
+        frame2["OTHER"] = 123
+
+        frame3["SLOT"] = 123
+
+        self.assertTrue(query.compare(frame1))
+        self.assertFalse(query.compare(frame2))
+        self.assertFalse(query.compare(frame3))
 
 
 class SlotQueryTestCase(unittest.TestCase):
@@ -145,105 +229,85 @@ class SlotQueryTestCase(unittest.TestCase):
         self.n = Network()
 
     def test_slot_query_name(self):
-        query = SlotQuery(self.n, name="AGENT")
+        query = SlotQuery(self.n, NameQuery(self.n, "AGENT"))
 
         self.assertTrue(query.compare(Slot("AGENT")))
         self.assertFalse(query.compare(Slot("THEME")))
 
-    def test_slot_query_intersects(self):
-        filler1q = FillerQuery(self.n, LiteralQuery(self.n, 123))
-        filler2q = FillerQuery(self.n, LiteralQuery(self.n, 456))
-        filler3q = FillerQuery(self.n, LiteralQuery(self.n, 789))
-
-        query = SlotQuery(self.n, queries=[filler1q, filler2q, filler3q], intersects=True, contains=False, equals=False)
+    def test_slot_query_filler(self):
+        query = SlotQuery(self.n, FillerQuery(self.n, LiteralQuery(self.n, 123)))
 
         self.assertTrue(query.compare(Slot("SLOT", values=[123, "x", "y"])))
         self.assertTrue(query.compare(Slot("SLOT", values=[123, 456, "y"])))
         self.assertTrue(query.compare(Slot("SLOT", values=[123, 456, 789])))
         self.assertFalse(query.compare(Slot("SLOT", values=["x", "y"])))
 
-    def test_slot_query_contains(self):
-        filler1q = FillerQuery(self.n, LiteralQuery(self.n, 123))
-        filler2q = FillerQuery(self.n, LiteralQuery(self.n, 456))
-        filler3q = FillerQuery(self.n, LiteralQuery(self.n, 789))
+    def test_slot_and(self):
+        query = SlotQuery(self.n, AndQuery(self.n, [NameQuery(self.n, "SLOT"), FillerQuery(self.n, LiteralQuery(self.n, 123))]))
 
-        query = SlotQuery(self.n, queries=[filler1q, filler2q, filler3q], intersects=False, contains=True, equals=False)
+        self.assertTrue(query.compare(Slot("SLOT", values=[123, "x", "y"])))
+        self.assertTrue(query.compare(Slot("SLOT", values=[123, 456, "y"])))
+        self.assertFalse(query.compare(Slot("OTHER", values=[123, 456, 789])))
+        self.assertFalse(query.compare(Slot("SLOT", values=["x", "y"])))
 
-        self.assertFalse(query.compare(Slot("SLOT", values=[123, "x", "y", "z"])))
-        self.assertFalse(query.compare(Slot("SLOT", values=[123, 456, "y", "z"])))
-        self.assertTrue(query.compare(Slot("SLOT", values=[123, 456, 789])))
-        self.assertTrue(query.compare(Slot("SLOT", values=[123, 456, 789, "z"])))
-        self.assertFalse(query.compare(Slot("SLOT", values=["x", "y", "z"])))
+    def test_slot_or(self):
+        query = SlotQuery(self.n, OrQuery(self.n, [NameQuery(self.n, "SLOT"), FillerQuery(self.n, LiteralQuery(self.n, 123))]))
 
-    def test_slot_query_equals(self):
-        filler1q = FillerQuery(self.n, LiteralQuery(self.n, 123))
-        filler2q = FillerQuery(self.n, LiteralQuery(self.n, 456))
-        filler3q = FillerQuery(self.n, LiteralQuery(self.n, 789))
+        self.assertTrue(query.compare(Slot("SLOT", values=[123, "x", "y"])))
+        self.assertTrue(query.compare(Slot("SLOT", values=[123, 456, "y"])))
+        self.assertTrue(query.compare(Slot("OTHER", values=[123, 456, 789])))
+        self.assertTrue(query.compare(Slot("SLOT", values=["x", "y"])))
 
-        query = SlotQuery(self.n, queries=[filler1q, filler2q, filler3q], intersects=False, contains=False, equals=True)
+    def test_slot_not(self):
+        query = SlotQuery(self.n, NotQuery(self.n, NameQuery(self.n, "SLOT")))
 
-        self.assertFalse(query.compare(Slot("SLOT", values=[123, "x", "y", "z"])))
-        self.assertFalse(query.compare(Slot("SLOT", values=[123, 456, "y", "z"])))
-        self.assertTrue(query.compare(Slot("SLOT", values=[123, 456, 789])))
-        self.assertFalse(query.compare(Slot("SLOT", values=[123, 456, 789, "z"])))
-        self.assertFalse(query.compare(Slot("SLOT", values=["x", "y", "z"])))
+        self.assertFalse(query.compare(Slot("SLOT", values=[123, "x", "y"])))
+        self.assertFalse(query.compare(Slot("SLOT", values=[123, 456, "y"])))
+        self.assertTrue(query.compare(Slot("OTHER", values=[123, 456, 789])))
+        self.assertFalse(query.compare(Slot("SLOT", values=["x", "y"])))
 
-    def test_slot_query_multiple_comparators_uses_toughest(self):
-        filler1q = FillerQuery(self.n, LiteralQuery(self.n, 123))
-        filler2q = FillerQuery(self.n, LiteralQuery(self.n, 456))
-        filler3q = FillerQuery(self.n, LiteralQuery(self.n, 789))
+    def test_slot_exact_fillers(self):
+        query = SlotQuery(self.n, ExactQuery(self.n, [FillerQuery(self.n, LiteralQuery(self.n, 123))]))
 
-        query = SlotQuery(self.n, queries=[filler1q, filler2q, filler3q], intersects=True, contains=False, equals=True)
-
-        self.assertFalse(query.compare(Slot("SLOT", values=[123, "x", "y", "z"])))
-        self.assertFalse(query.compare(Slot("SLOT", values=[123, 456, "y", "z"])))
-        self.assertTrue(query.compare(Slot("SLOT", values=[123, 456, 789])))
-        self.assertFalse(query.compare(Slot("SLOT", values=[123, 456, 789, "z"])))
-        self.assertFalse(query.compare(Slot("SLOT", values=["x", "y", "z"])))
-
-    def test_slot_query_no_comparators_defaults_to_false(self):
-        filler1q = FillerQuery(self.n, LiteralQuery(self.n, 123))
-        filler2q = FillerQuery(self.n, LiteralQuery(self.n, 456))
-        filler3q = FillerQuery(self.n, LiteralQuery(self.n, 789))
-
-        query = SlotQuery(self.n, queries=[filler1q, filler2q, filler3q], intersects=False, contains=False, equals=False)
-
-        self.assertFalse(query.compare(Slot("SLOT", values=[123, "x", "y", "z"])))
-        self.assertFalse(query.compare(Slot("SLOT", values=[123, 456, "y", "z"])))
+        self.assertTrue(query.compare(Slot("SLOT", values=[123])))
+        self.assertFalse(query.compare(Slot("SLOT", values=[123, "x", "y"])))
+        self.assertFalse(query.compare(Slot("SLOT", values=[123, 456, "y"])))
         self.assertFalse(query.compare(Slot("SLOT", values=[123, 456, 789])))
-        self.assertFalse(query.compare(Slot("SLOT", values=[123, 456, 789, "z"])))
-        self.assertFalse(query.compare(Slot("SLOT", values=["x", "y", "z"])))
+        self.assertFalse(query.compare(Slot("SLOT", values=["x", "y"])))
 
-    def test_slot_query_comparators_without_query_are_ignored(self):
-        query = SlotQuery(self.n, intersects=False, contains=False, equals=False)
+    def test_slot_exact_as_inner_query(self):
+        query = SlotQuery(self.n, AndQuery(self.n, [NameQuery(self.n, "SLOT"), ExactQuery(self.n, [FillerQuery(self.n, LiteralQuery(self.n, 123))])]))
 
-        self.assertFalse(query.compare(Slot("SLOT", values=[123, "x", "y", "z"])))
-        self.assertFalse(query.compare(Slot("SLOT", values=[123, 456, "y", "z"])))
+        self.assertTrue(query.compare(Slot("SLOT", values=[123])))
+        self.assertFalse(query.compare(Slot("OTHER", values=[123])))
+        self.assertFalse(query.compare(Slot("SLOT", values=[123, "x", "y"])))
+        self.assertFalse(query.compare(Slot("SLOT", values=[123, 456, "y"])))
         self.assertFalse(query.compare(Slot("SLOT", values=[123, 456, 789])))
-        self.assertFalse(query.compare(Slot("SLOT", values=[123, 456, 789, "z"])))
-        self.assertFalse(query.compare(Slot("SLOT", values=["x", "y", "z"])))
+        self.assertFalse(query.compare(Slot("SLOT", values=["x", "y"])))
 
-    def test_slot_query_name_and_comparators_are_anded(self):
-        filler1q = FillerQuery(self.n, LiteralQuery(self.n, 123))
-        filler2q = FillerQuery(self.n, LiteralQuery(self.n, 456))
-        filler3q = FillerQuery(self.n, LiteralQuery(self.n, 789))
+    def test_slot_query_compare_frame(self):
+        query = SlotQuery(self.n, NameQuery(self.n, "SLOT"))
 
-        query = SlotQuery(self.n, name="AGENT", queries=[filler1q, filler2q, filler3q], intersects=True, contains=False, equals=False)
+        frame1 = Frame("FRAME1")
+        frame2 = Frame("FRAME1")
 
-        self.assertTrue(query.compare(Slot("AGENT", values=[123, "x", "y", "z"])))
-        self.assertFalse(query.compare(Slot("THEME", values=[123, 456, "y", "z"])))
-        self.assertFalse(query.compare(Slot("AGENT", values=["x", "y", "z"])))
+        frame1["SLOT"] = 123
+        frame2["OTHER"] = 123
 
-    def test_slot_query_all_query_types(self):
-        q1 = FillerQuery(self.n, LiteralQuery(self.n, 123))
-        q2 = LiteralQuery(self.n, 456)
-        q3 = IdentifierQuery(self.n, "ONT.ALL")
+        self.assertTrue(query.compare(frame1))
+        self.assertFalse(query.compare(frame2))
 
-        query = SlotQuery(self.n, queries=[q1, q2, q3], intersects=True, contains=False, equals=False)
 
-        self.assertTrue(query.compare(Slot("SLOT", values=[123, "y", "z"])))
-        self.assertTrue(query.compare(Slot("SLOT", values=[456, "y", "z"])))
-        self.assertTrue(query.compare(Slot("SLOT", values=[Identifier("ONT", "ALL"), "y", "z"])))
+class NameQueryTestCase(unittest.TestCase):
+
+    def setUp(self):
+        self.n = Network()
+
+    def test_name_query_compare_slot(self):
+        query = NameQuery(self.n, "NAME1")
+
+        self.assertTrue(query.compare(Slot("NAME1")))
+        self.assertFalse(query.compare(Slot("NAME2")))
 
 
 class FillerQueryTestCase(unittest.TestCase):
@@ -262,6 +326,13 @@ class FillerQueryTestCase(unittest.TestCase):
 
         self.assertTrue(query.compare(Filler("ONT.ALL")))
         self.assertFalse(query.compare(Filler("123")))
+
+    def test_filler_query_compare_slot(self):
+        query = FillerQuery(self.n, LiteralQuery(self.n, 123))
+
+        self.assertTrue(query.compare(Slot("SLOT", values=123)))
+        self.assertTrue(query.compare(Slot("SLOT", values=[123, 456])))
+        self.assertFalse(query.compare(Slot("SLOT", values=[])))
 
 
 class LiteralQueryTestCase(unittest.TestCase):
