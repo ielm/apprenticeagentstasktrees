@@ -152,13 +152,21 @@ class LiteralQuery(Query):
 
 class IdentifierQuery(Query):
 
-    def __init__(self, network: Network, identifier: Union[Identifier, str]=None, isa: Union[Identifier, str]=None, parent: Union[Identifier, str]=None):
+    def __init__(self, network: Network, identifier: Union[Identifier, Frame, str]=None, isa: Union[Identifier, Frame, str]=None, parent: Union[Identifier, Frame, str]=None):
         super().__init__(network)
 
+        if isinstance(identifier, Frame):
+            identifier = identifier._identifier
         if isinstance(identifier, str):
             identifier = Identifier.parse(identifier)
+
+        if isinstance(isa, Frame):
+            isa = isa._identifier
         if isinstance(isa, str):
             isa = Identifier.parse(isa)
+
+        if isinstance(parent, Frame):
+            parent = parent._identifier
         if isinstance(parent, str):
             parent = Identifier.parse(parent)
 
