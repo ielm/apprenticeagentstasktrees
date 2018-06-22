@@ -1,4 +1,5 @@
 from backend.models.graph import Filler, Frame, Identifier, Network, Slot
+from enum import Enum
 from functools import reduce
 from typing import Any, List, Union
 
@@ -172,7 +173,12 @@ class LiteralQuery(Query):
 
 class IdentifierQuery(Query):
 
-    def __init__(self, network: Network, identifier: Union[Identifier, Frame, str]=None, isa: Union[Identifier, Frame, str]=None, parent: Union[Identifier, Frame, str]=None):
+    class Comparator(Enum):
+        EQUALS = 1      # Is self.identifier exactly the same as the input
+        ISA = 2         # Is self.identifier an ancestor of the input
+        ISPARENT = 3    # Is self.identifier the immediate parent of the input
+
+    def __init__(self, network: Network, identifier: Union[Identifier, Frame, str], comparator: Comparator):
         super().__init__(network)
 
         if isinstance(identifier, Frame):
@@ -180,34 +186,20 @@ class IdentifierQuery(Query):
         if isinstance(identifier, str):
             identifier = Identifier.parse(identifier)
 
-        if isinstance(isa, Frame):
-            isa = isa._identifier
-        if isinstance(isa, str):
-            isa = Identifier.parse(isa)
-
-        if isinstance(parent, Frame):
-            parent = parent._identifier
-        if isinstance(parent, str):
-            parent = Identifier.parse(parent)
-
         self.identifier = identifier
-        self.isa = isa
-        self.parent = parent
+        self.comparator = comparator
 
     def compare(self, other: Union[Identifier, str]) -> bool:
         if isinstance(other, str):
             other = Identifier.parse(other)
 
-        if self.identifier is not None:
-            if self.identifier == other:
-                return True
+        if self.comparator == self.Comparator.EQUALS:
+            return self.identifier == other
 
-        if self.isa is not None:
-            if other.resolve(None, self.network) ^ self.isa.resolve(None, self.network):
-                return True
+        if self.comparator == self.Comparator.ISA:
+            return other.resolve(None, self.network) ^ self.identifier.resolve(None, self.network)
 
-        if self.parent is not None:
-            if other.resolve(None, self.network)["IS-A"] == self.parent:
-                return True
+        if self.comparator == self.Comparator.ISPARENT:
+            return other.resolve(None, self.network)["IS-A"] == self.identifier
 
         return False
