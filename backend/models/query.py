@@ -1,3 +1,4 @@
+from backend.models.grammar import Grammar
 from backend.models.graph import Filler, Frame, Identifier, Network, Slot
 from enum import Enum
 from functools import reduce
@@ -160,6 +161,11 @@ class FillerQuery(Query):
 
         return self.query.compare(other._value)
 
+    def __eq__(self, other):
+        if not isinstance(other, FillerQuery):
+            return super().__eq__(other)
+        return self.network == other.network and self.query == other.query
+
 
 class LiteralQuery(Query):
 
@@ -169,6 +175,11 @@ class LiteralQuery(Query):
 
     def compare(self, other) -> bool:
         return self.value == other
+
+    def __eq__(self, other):
+        if not isinstance(other, LiteralQuery):
+            return super().__eq__(other)
+        return self.network == other.network and self.value == other.value
 
 
 class IdentifierQuery(Query):
@@ -203,3 +214,9 @@ class IdentifierQuery(Query):
             return other.resolve(None, self.network)["IS-A"] == self.identifier
 
         return False
+
+    def __eq__(self, other):
+        if not isinstance(other, IdentifierQuery):
+            return super().__eq__(other)
+
+        return self.network == other.network and self.identifier == other.identifier and self.comparator == other.comparator

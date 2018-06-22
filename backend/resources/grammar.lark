@@ -1,0 +1,29 @@
+start: identifier
+
+filler_query: (identifier_query | literal_query)
+identifier_query: (EQUALS | ISA | ISPARENT) identifier
+literal_query: EQUALS literal
+
+literal: (integer | double | string)
+integer: INTEGER
+double: INTEGER "." INTEGER
+string: ("\"") (ALPHA | INTEGER)+ ("\"")
+
+identifier: "@" (graph ".")? name ("." instance)?
+graph: GRAPH
+name: NAME
+instance: INSTANCE
+
+EQUALS: "="
+ISA: "^="
+ISPARENT: "^."
+
+GRAPH: /[a-zA-Z]+/
+NAME: /[a-zA-Z]+/
+INSTANCE: /[0-9]+/
+
+INTEGER: /[0-9]+/
+ALPHA: /[a-zA-Z]+/
+
+WHITESPACE: (" " | /\t/ )+
+%ignore WHITESPACE
