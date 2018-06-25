@@ -13,6 +13,15 @@ class Query(object):
     def compare(self, other) -> bool:
         return False
 
+    @classmethod
+    def parse(cls, network: Network, input: str) -> 'Query':
+        result = Grammar.parse(network, input, start="frame_query")
+
+        if not isinstance(result, Query):
+            raise Exception("Parsed value for \"" + input + "\" is not a Query.")
+
+        return result
+
 
 class AndQuery(Query):
 

@@ -26,6 +26,9 @@ class GrammarTransformer(Transformer):
         from backend.models.query import FrameQuery
         return FrameQuery(self.network, matches[0])
 
+    def frame_id_query(self, matches):
+        return matches[0]
+
     def logical_slot_query(self, matches):
         return matches[0]
 

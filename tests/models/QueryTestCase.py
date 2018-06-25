@@ -20,6 +20,19 @@ class TestQuery(Query):
         return self.result(other)
 
 
+class ParseQueryTestCase(unittest.TestCase):
+
+    def test_parse(self):
+        n = Network()
+        g = n.register("GRAPH")
+        f = g.register("GRAPH.FRAME.1")
+        f["SLOT"] = 123
+
+        q = Query.parse(n, "SHOW FRAMES WHERE ($=@GRAPH.FRAME.1 AND SLOT=123)")
+        result = g.search(q)
+        self.assertEqual(result, [f])
+
+
 class AndQueryTestCase(unittest.TestCase):
 
     def setUp(self):
