@@ -22,6 +22,29 @@ class GrammarTransformer(Transformer):
     def start(self, matches):
         return matches[0]
 
+    def frame_query(self, matches):
+        from backend.models.query import FrameQuery
+        return FrameQuery(self.network, matches[0])
+
+    def logical_slot_query(self, matches):
+        return matches[0]
+
+    def logical_and_slot_query(self, matches):
+        from backend.models.query import AndQuery
+        return AndQuery(self.network, matches)
+
+    def logical_or_slot_query(self, matches):
+        from backend.models.query import OrQuery
+        return OrQuery(self.network, matches)
+
+    def logical_not_slot_query(self, matches):
+        from backend.models.query import NotQuery
+        return NotQuery(self.network, matches[0])
+
+    def logical_exact_slot_query(self, matches):
+        from backend.models.query import ExactQuery
+        return ExactQuery(self.network, matches[0].queries)
+
     def slot_query(self, matches):
         from backend.models.query import SlotQuery
         return SlotQuery(self.network, matches[0])

@@ -116,6 +116,11 @@ class FrameQuery(Query):
     def compare(self, other: Frame) -> bool:
         return self.subquery.compare(other)
 
+    def __eq__(self, other):
+        if not isinstance(other, FrameQuery):
+            return super().__eq__(other)
+        return self.network == other.network and self.subquery == other.subquery
+
 
 class SlotQuery(Query):
 

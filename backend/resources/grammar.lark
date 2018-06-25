@@ -1,11 +1,18 @@
 start: identifier
 
+frame_query: "WHERE" logical_slot_query
+logical_slot_query: (slot_query | "(" slot_query ")" | logical_and_slot_query | logical_or_slot_query | logical_not_slot_query | logical_exact_slot_query)
+logical_and_slot_query: "(" logical_slot_query ("AND" logical_slot_query)+ ")"
+logical_or_slot_query: "(" logical_slot_query ("OR" logical_slot_query)+ ")"
+logical_not_slot_query: "NOT" logical_slot_query
+logical_exact_slot_query: "EXACTLY" logical_and_slot_query
+
 slot_query: (slot_name_only_query | slot_name_fillers_query)
 slot_name_only_query: "HAS" NAME
 slot_name_fillers_query: (NAME | WILDCARD) (logical_filler_query)
 logical_filler_query: (filler_query | "(" filler_query ")" | logical_and_filler_query | logical_or_filler_query | logical_not_filler_query | logical_exact_filler_query)
-logical_and_filler_query: "(" logical_filler_query ("AND" logical_filler_query) + ")"
-logical_or_filler_query: "(" logical_filler_query ("OR" logical_filler_query) + ")"
+logical_and_filler_query: "(" logical_filler_query ("AND" logical_filler_query)+ ")"
+logical_or_filler_query: "(" logical_filler_query ("OR" logical_filler_query)+ ")"
 logical_not_filler_query: "NOT" logical_filler_query
 logical_exact_filler_query: "EXACTLY" logical_and_filler_query
 
