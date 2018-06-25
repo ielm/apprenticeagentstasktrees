@@ -98,6 +98,7 @@ class GrammarTestCase(unittest.TestCase):
         self.assertEqual(FrameQuery(self.n, OrQuery(self.n, [iq, sq1])), Grammar.parse(self.n, "WHERE ($ =@WM.HUMAN.1 OR THEME = 123)", start="frame_query"))
         self.assertEqual(FrameQuery(self.n, NotQuery(self.n, iq)), Grammar.parse(self.n, "WHERE NOT ($ =@WM.HUMAN.1)", start="frame_query"))
         self.assertEqual(FrameQuery(self.n, NotQuery(self.n, iq)), Grammar.parse(self.n, "WHERE NOT $ =@WM.HUMAN.1", start="frame_query"))
+        self.assertEqual(FrameQuery(self.n, IdentifierQuery(self.n, "ONT.EVENT", IdentifierQuery.Comparator.ISA)), Grammar.parse(self.n, "WHERE $^=@ONT.EVENT", start="frame_query"))
 
     def test_parse_view_graph(self):
         g = self.n.register("TEST")

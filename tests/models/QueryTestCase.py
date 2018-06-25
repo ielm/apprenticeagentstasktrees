@@ -153,6 +153,18 @@ class FrameQueryTestCase(unittest.TestCase):
         self.assertTrue(query.compare(Frame("ONT.EVENT")))
         self.assertFalse(query.compare(Frame("ONT.OBJECT")))
 
+    def test_frame_query_identifier_isa(self):
+        g = self.n.register("ONT")
+        all = g.register("ALL")
+        object = g.register("OBJECT", isa="ONT.ALL")
+        event = g.register("EVENT", isa="ONT.ALL")
+        pevent = g.register("PHYSICAL-EVENT", isa="ONT.EVENT")
+
+        query = FrameQuery(self.n, IdentifierQuery(self.n, "ONT.EVENT", IdentifierQuery.Comparator.ISA))
+
+        self.assertTrue(query.compare(pevent))
+        self.assertFalse(query.compare(object))
+
     def test_frame_query_slot(self):
         query = FrameQuery(self.n, SlotQuery(self.n, NameQuery(self.n, "SLOT")))
 

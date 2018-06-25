@@ -43,7 +43,7 @@ def graph_to_json(graph):
 
                     converted["relations"].append({
                         "slot": s,
-                        "value": modified.render(),
+                        "value": modified.render(graph=False),
                     })
                 else:
                     converted["attributes"].append({

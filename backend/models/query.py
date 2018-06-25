@@ -244,9 +244,12 @@ class IdentifierQuery(Query):
         self.identifier = identifier
         self.comparator = comparator
 
-    def compare(self, other: Union[Identifier, str]) -> bool:
+    def compare(self, other: Union[Frame, Identifier, str]) -> bool:
         if isinstance(other, str):
             other = Identifier.parse(other)
+
+        if isinstance(other, Frame):
+            other = other._identifier
 
         if self.comparator == self.Comparator.EQUALS:
             return self.identifier == other

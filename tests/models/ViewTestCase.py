@@ -51,3 +51,17 @@ class ViewTestCase(unittest.TestCase):
         self.assertTrue("TEST.FRAME.2" in self.g)
         self.assertTrue("REL1" in self.g["TEST.FRAME.1"])
         self.assertTrue("REL2" in self.g["TEST.FRAME.1"])
+
+    def test_view_query_maintains_full_identifiers(self):
+        f1 = self.g.register("TEST.FRAME.1")
+        f2 = self.g.register("TEST.FRAME.2")
+
+        f1["REL1"] = f1
+        f1["REL2"] = "SOME.OTHER.1"
+
+        query = FrameQuery(self.n, IdentifierQuery(self.n, "TEST.FRAME.1", IdentifierQuery.Comparator.EQUALS))
+
+        v = View(self.n, self.g, query=query).view()
+        self.assertEqual(v._namespace, "TEST")
+        self.assertTrue(v["TEST.FRAME.1"]["REL1"] == "TEST.FRAME.1")
+        self.assertTrue(v["TEST.FRAME.1"]["REL2"] == "SOME.OTHER.1")
