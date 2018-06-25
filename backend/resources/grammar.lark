@@ -1,5 +1,14 @@
 start: identifier
 
+slot_query: (slot_name_only_query | slot_name_fillers_query)
+slot_name_only_query: "HAS" NAME
+slot_name_fillers_query: (NAME | WILDCARD) (logical_filler_query)
+logical_filler_query: (filler_query | "(" filler_query ")" | logical_and_filler_query | logical_or_filler_query | logical_not_filler_query | logical_exact_filler_query)
+logical_and_filler_query: "(" logical_filler_query ("AND" logical_filler_query) + ")"
+logical_or_filler_query: "(" logical_filler_query ("OR" logical_filler_query) + ")"
+logical_not_filler_query: "NOT" logical_filler_query
+logical_exact_filler_query: "EXACTLY" logical_and_filler_query
+
 filler_query: (identifier_query | literal_query)
 identifier_query: (EQUALS | ISA | ISPARENT) identifier
 literal_query: EQUALS literal
@@ -21,6 +30,7 @@ ISPARENT: "^."
 GRAPH: /[a-zA-Z]+/
 NAME: /[a-zA-Z]+/
 INSTANCE: /[0-9]+/
+WILDCARD: "*"
 
 INTEGER: /[0-9]+/
 ALPHA: /[a-zA-Z]+/

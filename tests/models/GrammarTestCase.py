@@ -1,6 +1,6 @@
 from backend.models.grammar import Grammar
 from backend.models.graph import Identifier, Literal, Network
-from backend.models.query import FillerQuery, IdentifierQuery, LiteralQuery
+from backend.models.query import AndQuery, ExactQuery, FillerQuery, IdentifierQuery, LiteralQuery, NameQuery, NotQuery, OrQuery, SlotQuery
 
 import unittest
 
@@ -63,3 +63,18 @@ class GrammarTestCase(unittest.TestCase):
     def test_parse_filler_query(self):
         self.assertEqual(FillerQuery(self.n, LiteralQuery(self.n, 123)), Grammar.parse(self.n, "=123", start="filler_query"))
         self.assertEqual(FillerQuery(self.n, IdentifierQuery(self.n, "WM.HUMAN.1", IdentifierQuery.Comparator.EQUALS)), Grammar.parse(self.n, "=@WM.HUMAN.1", start="filler_query"))
+
+    def test_parse_slot_query(self):
+        nq = NameQuery(self.n, "THEME")
+        fq1 = FillerQuery(self.n, LiteralQuery(self.n, 123))
+        fq2 = FillerQuery(self.n, LiteralQuery(self.n, 456))
+
+        self.assertEqual(SlotQuery(self.n, nq), Grammar.parse(self.n, "HAS THEME", start="slot_query"))
+        self.assertEqual(SlotQuery(self.n, fq1), Grammar.parse(self.n, "* = 123", start="slot_query"))
+        self.assertEqual(SlotQuery(self.n, fq1), Grammar.parse(self.n, "* (= 123)", start="slot_query"))
+        self.assertEqual(SlotQuery(self.n, AndQuery(self.n, [fq1, fq2])), Grammar.parse(self.n, "* (= 123 AND = 456)", start="slot_query"))
+        self.assertEqual(SlotQuery(self.n, OrQuery(self.n, [fq1, fq2])), Grammar.parse(self.n, "* (= 123 OR = 456)", start="slot_query"))
+        self.assertEqual(SlotQuery(self.n, NotQuery(self.n, fq1)), Grammar.parse(self.n, "* NOT = 123", start="slot_query"))
+        self.assertEqual(SlotQuery(self.n, NotQuery(self.n, fq1)), Grammar.parse(self.n, "* NOT (= 123)", start="slot_query"))
+        self.assertEqual(SlotQuery(self.n, ExactQuery(self.n, [fq1, fq2])), Grammar.parse(self.n, "* EXACTLY (= 123 AND = 456)", start="slot_query"))
+        self.assertEqual(SlotQuery(self.n, AndQuery(self.n, [nq, ExactQuery(self.n, [fq1, fq2])])), Grammar.parse(self.n, "THEME EXACTLY (= 123 AND = 456)", start="slot_query"))

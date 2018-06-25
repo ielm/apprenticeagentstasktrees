@@ -22,6 +22,40 @@ class GrammarTransformer(Transformer):
     def start(self, matches):
         return matches[0]
 
+    def slot_query(self, matches):
+        from backend.models.query import SlotQuery
+        return SlotQuery(self.network, matches[0])
+
+    def slot_name_only_query(self, matches):
+        from backend.models.query import NameQuery
+        return NameQuery(self.network, matches[0])
+
+    def slot_name_fillers_query(self, matches):
+        from backend.models.query import AndQuery, NameQuery
+        if matches[0] == "*":
+            return matches[1]
+        else:
+            return AndQuery(self.network, [NameQuery(self.network, matches[0]), matches[1]])
+
+    def logical_filler_query(self, matches):
+        return matches[0]
+
+    def logical_and_filler_query(self, matches):
+        from backend.models.query import AndQuery
+        return AndQuery(self.network, matches)
+
+    def logical_or_filler_query(self, matches):
+        from backend.models.query import OrQuery
+        return OrQuery(self.network, matches)
+
+    def logical_not_filler_query(self, matches):
+        from backend.models.query import NotQuery
+        return NotQuery(self.network, matches[0])
+
+    def logical_exact_filler_query(self, matches):
+        from backend.models.query import ExactQuery
+        return ExactQuery(self.network, matches[0].queries)
+
     def filler_query(self, matches):
         from backend.models.query import FillerQuery
         return FillerQuery(self.network, matches[0])

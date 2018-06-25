@@ -26,6 +26,11 @@ class AndQuery(Query):
 
         return reduce(lambda x, y: x and y, map(lambda query: query.compare(other), self.queries))
 
+    def __eq__(self, other):
+        if not isinstance(other, AndQuery):
+            return super().__eq__(other)
+        return self.network == other.network and self.queries == other.queries
+
 
 class OrQuery(Query):
 
@@ -38,6 +43,11 @@ class OrQuery(Query):
             return False
 
         return reduce(lambda x, y: x or y, map(lambda query: query.compare(other), self.queries))
+
+    def __eq__(self, other):
+        if not isinstance(other, OrQuery):
+            return super().__eq__(other)
+        return self.network == other.network and self.queries == other.queries
 
 
 class ExactQuery(Query):
@@ -76,6 +86,11 @@ class ExactQuery(Query):
             return False
         return self._contains(other, q)
 
+    def __eq__(self, other):
+        if not isinstance(other, ExactQuery):
+            return super().__eq__(other)
+        return self.network == other.network and self.queries == other.queries
+
 
 class NotQuery(Query):
 
@@ -85,6 +100,11 @@ class NotQuery(Query):
 
     def compare(self, other) -> bool:
         return not self.query.compare(other)
+
+    def __eq__(self, other):
+        if not isinstance(other, NotQuery):
+            return super().__eq__(other)
+        return self.network == other.network and self.query == other.query
 
 
 class FrameQuery(Query):
@@ -135,6 +155,11 @@ class SlotQuery(Query):
             return False
         return self._contains(slot, q)
 
+    def __eq__(self, other):
+        if not isinstance(other, SlotQuery):
+            return super().__eq__(other)
+        return self.network == other.network and self.subquery == other.subquery
+
 
 class NameQuery(Query):
 
@@ -144,6 +169,11 @@ class NameQuery(Query):
 
     def compare(self, other: Slot) -> bool:
         return other._name == self.name
+
+    def __eq__(self, other):
+        if not isinstance(other, NameQuery):
+            return super().__eq__(other)
+        return self.network == other.network and self.name == other.name
 
 
 class FillerQuery(Query):
