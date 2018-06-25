@@ -2,8 +2,6 @@ from backend.models.graph import Frame, Graph, Identifier, Network
 from backend.models.query import FrameQuery
 from typing import List, Union
 
-import copy
-
 
 class View(object):
 
@@ -24,7 +22,8 @@ class View(object):
         graph = self.network[self.namespace]
         namespace = self.namespace
 
-        frames = list(map(lambda frame: copy.deepcopy(frame), graph._storage.values() if self.query is None else graph.search(self.query)))
+        view = ViewGraph(namespace)
+        frames = list(map(lambda frame: frame.deep_copy(view), graph._storage.values() if self.query is None else graph.search(self.query)))
         excluded = set(map(lambda frame: frame._identifier.render(), graph.values())).difference(set(map(lambda frame: frame._identifier.render(), frames)))
 
         for f in excluded:
@@ -37,7 +36,9 @@ class View(object):
                 for s in to_remove:
                     del frame._storage[s]
 
-        return ViewGraph(namespace, frames)
+        view.set_frames(frames)
+
+        return view
 
     def __eq__(self, other):
         if not isinstance(other, View):
@@ -47,7 +48,9 @@ class View(object):
 
 class ViewGraph(Graph):
 
-    def __init__(self, namespace: str, frames: List[Frame]):
+    def __init__(self, namespace: str):
         super().__init__(namespace)
+
+    def set_frames(self, frames: List[Frame]):
         for frame in frames:
             self[frame._identifier] = frame

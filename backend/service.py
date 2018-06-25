@@ -6,6 +6,7 @@ from flask_cors import CORS
 
 from backend.agent import Agent
 from backend.contexts.LCTContext import LCTContext
+from backend.models.grammar import Grammar
 from backend.models.graph import Identifier, Network
 from backend.models.ontology import Ontology
 from backend.utils.YaleUtils import format_learned_event_yale, input_to_tmrs
@@ -17,6 +18,42 @@ CORS(app)
 n = Network()
 ontology = n.register(Ontology.init_default())
 agent = Agent(n, ontology)
+
+
+def graph_to_json(graph):
+    frames = []
+
+    for f in graph:
+        frame = graph[f]
+
+        converted = {
+            "name": frame._identifier.render(graph=False),
+            "relations": [],
+            "attributes": []
+        }
+
+        for s in frame:
+            slot = frame[s]
+            for filler in slot:
+                if isinstance(filler._value, Identifier):
+
+                    modified = Identifier(filler._value.graph, filler._value.name, instance=filler._value.instance)
+                    if modified.graph == id:
+                        modified.graph = None
+
+                    converted["relations"].append({
+                        "slot": s,
+                        "value": modified.render(),
+                    })
+                else:
+                    converted["attributes"].append({
+                        "slot": s,
+                        "value": filler._value.value
+                    })
+
+        frames.append(converted)
+
+    return json.dumps(frames)
 
 
 @app.errorhandler(Exception)
@@ -54,6 +91,14 @@ def network():
     return json.dumps(list(n._storage.keys()))
 
 
+@app.route("/view", methods=["POST"])
+def view():
+    data = request.data.decode("utf-8")
+    view = Grammar.parse(n, data)
+    view_graph = view.view()
+    return graph_to_json(view_graph)
+
+
 @app.route("/graph", methods=["GET"])
 def graph():
     if "id" not in request.args:
@@ -61,39 +106,7 @@ def graph():
 
     id = request.args["id"]
 
-    frames = []
-
-    for f in n[id]:
-        frame = n[id][f]
-
-        converted = {
-            "name": frame._identifier.render(graph=False),
-            "relations": [],
-            "attributes": []
-        }
-
-        for s in frame:
-            slot = frame[s]
-            for filler in slot:
-                if isinstance(filler._value, Identifier):
-
-                    modified = Identifier(filler._value.graph, filler._value.name, instance=filler._value.instance)
-                    if modified.graph == id:
-                        modified.graph = None
-
-                    converted["relations"].append({
-                        "slot": s,
-                        "value": modified.render(),
-                    })
-                else:
-                    converted["attributes"].append({
-                        "slot": s,
-                        "value": filler._value.value
-                    })
-
-        frames.append(converted)
-
-    return json.dumps(frames)
+    return graph_to_json(n[id])
 
 
 @app.route("/input", methods=["POST"])

@@ -76,6 +76,9 @@ class Identifier(object):
     def __repr__(self):
         return "@" + str(self)
 
+    def deep_copy(self):
+        return Identifier(self.graph, self.name, instance=self.instance)
+
 
 class Literal(object):
 
@@ -92,6 +95,9 @@ class Literal(object):
         if isinstance(other, Literal):
             other = other.value
         return self.value == other
+
+    def deep_copy(self):
+        return Literal(self.value)
 
 
 class Network(object):
@@ -339,6 +345,18 @@ class Frame(object):
     def __repr__(self):
         return str(self)
 
+    def deep_copy(self, graph: Graph):
+        copy = Frame(self._identifier.render())
+        copy._network = self._network
+        copy._graph = graph
+        copy._uuid = uuid4()
+
+        copy._storage = dict()
+        for slot in self._storage.values():
+            copy._storage[slot._name] = slot.deep_copy(copy)
+
+        return copy
+
 
 class Slot(object):
 
@@ -427,6 +445,14 @@ class Slot(object):
 
     def __repr__(self):
         return str(self)
+
+    def deep_copy(self, frame: Frame):
+        copy = Slot(self._name, frame=frame)
+        copy._storage = list()
+        for filler in self:
+            copy._storage.append(filler.deep_copy(frame))
+
+        return copy
 
 
 class Filler(object):
@@ -552,6 +578,13 @@ class Filler(object):
 
     def __repr__(self):
         return str(self)
+
+    def deep_copy(self, frame: Frame):
+        copy = Filler(self._value.deep_copy(), metadata=self._metadata)
+        copy._frame = frame
+        copy._uuid = uuid4()
+
+        return copy
 
 
 class UnknownFrameError(Exception): pass

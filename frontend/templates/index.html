@@ -45,6 +45,19 @@
             });
         }
 
+        function fetch_view(query) {
+            $.ajax({
+                url: "/view",
+                method: "POST",
+                data: query,
+                contentType: "text/plain"
+            }).done(function(data) {
+                render_graph(JSON.parse(data));
+            }).fail(function(error) {
+                console.log(error);
+            });
+        }
+
         function render_graph(graph) {
             _graph = graph;
 
@@ -170,6 +183,11 @@
                 }
             });
 
+            $("#viewButton").on("click", function() {
+                var query = $("#viewQuery").val();
+                fetch_view(query);
+            });
+
         });
 
     </script>
@@ -192,6 +210,13 @@
                                         {% endfor %}
                                     </select>
                                 </div>
+                            </div>
+                            <div class="form-group row">
+                                <label for="viewQuery" class="col-sm-2 col-form-label">View</label>
+                                <div class="col-sm-9">
+                                    <input type="text" id="viewQuery" class="form-control">
+                                </div>
+                                <button id="viewButton" class="btn btn-primary col-sm-1" type="button">Show</button>
                             </div>
                         </form>
                     </div>

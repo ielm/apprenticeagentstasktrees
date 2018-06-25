@@ -21,6 +21,15 @@ class ServiceTestCase(unittest.TestCase):
 
         self.assertEqual(set(json.loads(response.data)), expected)
 
+    def test_view(self):
+        g = n.register("TEST")
+
+        f1 = g.register("TEST.FRAME.1")
+        f2 = g.register("TEST.FRAME.2")
+
+        response = self.app.post("/view", data="VIEW TEST SHOW FRAMES WHERE $=@TEST.FRAME.1")
+        self.assertEqual(json.loads(response.data), [{"name": "FRAME.1", "relations": [], "attributes": []}])
+
     @unittest.skip("This requires both the ontosem and corenlp service to be running, otherwise it will fail.")
     def test_input(self):
 
