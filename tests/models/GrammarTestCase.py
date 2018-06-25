@@ -24,10 +24,10 @@ class GrammarTestCase(unittest.TestCase):
         self.assertEqual("TmR", Grammar.parse(self.n, "TmR", start="graph"))
 
     def test_parse_identifier(self):
-        self.assertEqual(Identifier("WM", "EVENT", instance=1), Grammar.parse(self.n, "@WM.EVENT.1", start="identifier"))
-        self.assertEqual(Identifier(None, "EVENT", instance=1), Grammar.parse(self.n, "@EVENT.1", start="identifier"))
-        self.assertEqual(Identifier("WM", "EVENT"), Grammar.parse(self.n, "@WM.EVENT", start="identifier"))
-        self.assertEqual(Identifier(None, "EVENT"), Grammar.parse(self.n, "@EVENT", start="identifier"))
+        self.assertEqual(Identifier("WM", "EVENT", instance=1), Grammar.parse(self.n, "WM.EVENT.1", start="identifier"))
+        self.assertEqual(Identifier(None, "EVENT", instance=1), Grammar.parse(self.n, "EVENT.1", start="identifier"))
+        self.assertEqual(Identifier("WM", "EVENT"), Grammar.parse(self.n, "WM.EVENT", start="identifier"))
+        self.assertEqual(Identifier(None, "EVENT"), Grammar.parse(self.n, "EVENT", start="identifier"))
 
     def test_parse_integer(self):
         self.assertEqual(1, Grammar.parse(self.n, "1", start="integer"))
@@ -54,16 +54,16 @@ class GrammarTestCase(unittest.TestCase):
         self.assertEqual(LiteralQuery(self.n, 123), Grammar.parse(self.n, "= 123", start="literal_query"))
 
     def test_parse_identifier_query(self):
-        self.assertEqual(IdentifierQuery(self.n, "WM.HUMAN.1", IdentifierQuery.Comparator.EQUALS), Grammar.parse(self.n, "=@WM.HUMAN.1", start="identifier_query"))
-        self.assertEqual(IdentifierQuery(self.n, "WM.HUMAN.1", IdentifierQuery.Comparator.EQUALS), Grammar.parse(self.n, "= @WM.HUMAN.1", start="identifier_query"))
-        self.assertEqual(IdentifierQuery(self.n, "WM.HUMAN.1", IdentifierQuery.Comparator.ISA), Grammar.parse(self.n, "^=@WM.HUMAN.1", start="identifier_query"))
-        self.assertEqual(IdentifierQuery(self.n, "WM.HUMAN.1", IdentifierQuery.Comparator.ISA), Grammar.parse(self.n, "^= @WM.HUMAN.1", start="identifier_query"))
-        self.assertEqual(IdentifierQuery(self.n, "WM.HUMAN.1", IdentifierQuery.Comparator.ISPARENT), Grammar.parse(self.n, "^.@WM.HUMAN.1", start="identifier_query"))
-        self.assertEqual(IdentifierQuery(self.n, "WM.HUMAN.1", IdentifierQuery.Comparator.ISPARENT), Grammar.parse(self.n, "^. @WM.HUMAN.1", start="identifier_query"))
+        self.assertEqual(IdentifierQuery(self.n, "WM.HUMAN.1", IdentifierQuery.Comparator.EQUALS), Grammar.parse(self.n, "=WM.HUMAN.1", start="identifier_query"))
+        self.assertEqual(IdentifierQuery(self.n, "WM.HUMAN.1", IdentifierQuery.Comparator.EQUALS), Grammar.parse(self.n, "= WM.HUMAN.1", start="identifier_query"))
+        self.assertEqual(IdentifierQuery(self.n, "WM.HUMAN.1", IdentifierQuery.Comparator.ISA), Grammar.parse(self.n, "^WM.HUMAN.1", start="identifier_query"))
+        self.assertEqual(IdentifierQuery(self.n, "WM.HUMAN.1", IdentifierQuery.Comparator.ISA), Grammar.parse(self.n, "^ WM.HUMAN.1", start="identifier_query"))
+        self.assertEqual(IdentifierQuery(self.n, "WM.HUMAN.1", IdentifierQuery.Comparator.ISPARENT), Grammar.parse(self.n, "^.WM.HUMAN.1", start="identifier_query"))
+        self.assertEqual(IdentifierQuery(self.n, "WM.HUMAN.1", IdentifierQuery.Comparator.ISPARENT), Grammar.parse(self.n, "^. WM.HUMAN.1", start="identifier_query"))
 
     def test_parse_filler_query(self):
         self.assertEqual(FillerQuery(self.n, LiteralQuery(self.n, 123)), Grammar.parse(self.n, "=123", start="filler_query"))
-        self.assertEqual(FillerQuery(self.n, IdentifierQuery(self.n, "WM.HUMAN.1", IdentifierQuery.Comparator.EQUALS)), Grammar.parse(self.n, "=@WM.HUMAN.1", start="filler_query"))
+        self.assertEqual(FillerQuery(self.n, IdentifierQuery(self.n, "WM.HUMAN.1", IdentifierQuery.Comparator.EQUALS)), Grammar.parse(self.n, "=WM.HUMAN.1", start="filler_query"))
 
     def test_parse_slot_query(self):
         nq = NameQuery(self.n, "THEME")
@@ -93,12 +93,12 @@ class GrammarTestCase(unittest.TestCase):
         self.assertEqual(FrameQuery(self.n, NotQuery(self.n, sq1)), Grammar.parse(self.n, "WHERE NOT THEME = 123", start="frame_query"))
         self.assertEqual(FrameQuery(self.n, NotQuery(self.n, sq1)), Grammar.parse(self.n, "WHERE NOT (THEME = 123)", start="frame_query"))
         self.assertEqual(FrameQuery(self.n, ExactQuery(self.n, [sq1, sq2])), Grammar.parse(self.n, "WHERE EXACTLY (THEME = 123 AND THEME = 456)", start="frame_query"))
-        self.assertEqual(FrameQuery(self.n, iq), Grammar.parse(self.n, "WHERE $ =@WM.HUMAN.1", start="frame_query"))
-        self.assertEqual(FrameQuery(self.n, AndQuery(self.n, [iq, sq1])), Grammar.parse(self.n, "WHERE ($ =@WM.HUMAN.1 AND THEME = 123)", start="frame_query"))
-        self.assertEqual(FrameQuery(self.n, OrQuery(self.n, [iq, sq1])), Grammar.parse(self.n, "WHERE ($ =@WM.HUMAN.1 OR THEME = 123)", start="frame_query"))
-        self.assertEqual(FrameQuery(self.n, NotQuery(self.n, iq)), Grammar.parse(self.n, "WHERE NOT ($ =@WM.HUMAN.1)", start="frame_query"))
-        self.assertEqual(FrameQuery(self.n, NotQuery(self.n, iq)), Grammar.parse(self.n, "WHERE NOT $ =@WM.HUMAN.1", start="frame_query"))
-        self.assertEqual(FrameQuery(self.n, IdentifierQuery(self.n, "ONT.EVENT", IdentifierQuery.Comparator.ISA)), Grammar.parse(self.n, "WHERE $^=@ONT.EVENT", start="frame_query"))
+        self.assertEqual(FrameQuery(self.n, iq), Grammar.parse(self.n, "WHERE @ =WM.HUMAN.1", start="frame_query"))
+        self.assertEqual(FrameQuery(self.n, AndQuery(self.n, [iq, sq1])), Grammar.parse(self.n, "WHERE (@ =WM.HUMAN.1 AND THEME = 123)", start="frame_query"))
+        self.assertEqual(FrameQuery(self.n, OrQuery(self.n, [iq, sq1])), Grammar.parse(self.n, "WHERE (@ =WM.HUMAN.1 OR THEME = 123)", start="frame_query"))
+        self.assertEqual(FrameQuery(self.n, NotQuery(self.n, iq)), Grammar.parse(self.n, "WHERE NOT (@ =WM.HUMAN.1)", start="frame_query"))
+        self.assertEqual(FrameQuery(self.n, NotQuery(self.n, iq)), Grammar.parse(self.n, "WHERE NOT @ =WM.HUMAN.1", start="frame_query"))
+        self.assertEqual(FrameQuery(self.n, IdentifierQuery(self.n, "ONT.EVENT", IdentifierQuery.Comparator.ISA)), Grammar.parse(self.n, "WHERE @^ONT.EVENT", start="frame_query"))
 
     def test_parse_view_graph(self):
         g = self.n.register("TEST")
@@ -107,4 +107,4 @@ class GrammarTestCase(unittest.TestCase):
     def test_parse_view_graph_with_query(self):
         g = self.n.register("TEST")
         query = FrameQuery(self.n, IdentifierQuery(self.n, "TEST.FRAME.1", IdentifierQuery.Comparator.EQUALS))
-        self.assertEqual(View(self.n, g, query=query), Grammar.parse(self.n, "VIEW TEST SHOW FRAMES WHERE $=@TEST.FRAME.1"))
+        self.assertEqual(View(self.n, g, query=query), Grammar.parse(self.n, "VIEW TEST SHOW FRAMES WHERE @=TEST.FRAME.1"))

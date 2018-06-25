@@ -6,7 +6,7 @@ view_query: frame_query
 
 frame_query: ("SHOW" "FRAMES")? "WHERE" logical_slot_query
 logical_slot_query: (frame_id_query | "(" frame_id_query ")" | slot_query | "(" slot_query ")" | logical_and_slot_query | logical_or_slot_query | logical_not_slot_query | logical_exact_slot_query)
-frame_id_query: "$" identifier_query
+frame_id_query: "@" identifier_query
 logical_and_slot_query: "(" logical_slot_query ("AND" logical_slot_query)+ ")"
 logical_or_slot_query: "(" logical_slot_query ("OR" logical_slot_query)+ ")"
 logical_not_slot_query: "NOT" logical_slot_query
@@ -30,13 +30,13 @@ integer: INTEGER
 double: INTEGER "." INTEGER
 string: ("\"") (ALPHA | INTEGER)+ ("\"")
 
-identifier: "@" (graph ".")? name ("." instance)?
+identifier: (graph ".")? name ("." instance)?
 graph: GRAPH
 name: NAME
 instance: INSTANCE
 
 EQUALS: "="
-ISA: "^="
+ISA: "^"
 ISPARENT: "^."
 
 GRAPH: /[a-zA-Z]+/

@@ -104,7 +104,7 @@ class GrammarTransformer(Transformer):
         comparator = None
         if matches[0] == "=":
             comparator = IdentifierQuery.Comparator.EQUALS
-        elif matches[0] == "^=":
+        elif matches[0] == "^":
             comparator = IdentifierQuery.Comparator.ISA
         elif matches[0] == "^.":
             comparator = IdentifierQuery.Comparator.ISPARENT
