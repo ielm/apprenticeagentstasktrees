@@ -22,6 +22,19 @@ class GrammarTransformer(Transformer):
     def start(self, matches):
         return matches[0]
 
+    def view(self, matches):
+        from backend.models.view import View
+
+        query = matches[1]
+
+        return View(self.network, matches[0], query=query)
+
+    def view_all(self, matches):
+        return None
+
+    def view_query(self, matches):
+        return matches[0]
+
     def frame_query(self, matches):
         from backend.models.query import FrameQuery
         return FrameQuery(self.network, matches[0])

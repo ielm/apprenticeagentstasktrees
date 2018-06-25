@@ -1,4 +1,8 @@
-start: identifier
+start: (view)
+
+view: "VIEW" GRAPH (view_all | view_query)
+view_all: "SHOW" "ALL"
+view_query: frame_query
 
 frame_query: ("SHOW" "FRAMES")? "WHERE" logical_slot_query
 logical_slot_query: (frame_id_query | "(" frame_id_query ")" | slot_query | "(" slot_query ")" | logical_and_slot_query | logical_or_slot_query | logical_not_slot_query | logical_exact_slot_query)
