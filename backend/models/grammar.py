@@ -25,9 +25,9 @@ class GrammarTransformer(Transformer):
     def view(self, matches):
         from backend.models.view import View
 
-        query = matches[1]
+        query = matches[2]
 
-        return View(self.network, matches[0], query=query)
+        return View(self.network, matches[1], query=query)
 
     def view_all(self, matches):
         return None
@@ -36,8 +36,8 @@ class GrammarTransformer(Transformer):
         return matches[0]
 
     def frame_query(self, matches):
-        from backend.models.query import FrameQuery
-        return FrameQuery(self.network, matches[0])
+        from backend.models.query import FrameQuery, Query
+        return FrameQuery(self.network, list(filter(lambda match: isinstance(match, Query), matches))[0])
 
     def frame_id_query(self, matches):
         return matches[0]
@@ -46,20 +46,20 @@ class GrammarTransformer(Transformer):
         return matches[0]
 
     def logical_and_slot_query(self, matches):
-        from backend.models.query import AndQuery
-        return AndQuery(self.network, matches)
+        from backend.models.query import AndQuery, Query
+        return AndQuery(self.network, list(filter(lambda match: isinstance(match, Query), matches)))
 
     def logical_or_slot_query(self, matches):
-        from backend.models.query import OrQuery
-        return OrQuery(self.network, matches)
+        from backend.models.query import OrQuery, Query
+        return OrQuery(self.network, list(filter(lambda match: isinstance(match, Query), matches)))
 
     def logical_not_slot_query(self, matches):
         from backend.models.query import NotQuery
-        return NotQuery(self.network, matches[0])
+        return NotQuery(self.network, matches[1])
 
     def logical_exact_slot_query(self, matches):
         from backend.models.query import ExactQuery
-        return ExactQuery(self.network, matches[0].queries)
+        return ExactQuery(self.network, matches[1].queries)
 
     def slot_query(self, matches):
         from backend.models.query import SlotQuery
@@ -67,7 +67,7 @@ class GrammarTransformer(Transformer):
 
     def slot_name_only_query(self, matches):
         from backend.models.query import NameQuery
-        return NameQuery(self.network, matches[0])
+        return NameQuery(self.network, matches[1])
 
     def slot_name_fillers_query(self, matches):
         from backend.models.query import AndQuery, NameQuery
@@ -80,20 +80,20 @@ class GrammarTransformer(Transformer):
         return matches[0]
 
     def logical_and_filler_query(self, matches):
-        from backend.models.query import AndQuery
-        return AndQuery(self.network, matches)
+        from backend.models.query import AndQuery, Query
+        return AndQuery(self.network, list(filter(lambda match: isinstance(match, Query), matches)))
 
     def logical_or_filler_query(self, matches):
-        from backend.models.query import OrQuery
-        return OrQuery(self.network, matches)
+        from backend.models.query import OrQuery, Query
+        return OrQuery(self.network, list(filter(lambda match: isinstance(match, Query), matches)))
 
     def logical_not_filler_query(self, matches):
         from backend.models.query import NotQuery
-        return NotQuery(self.network, matches[0])
+        return NotQuery(self.network, matches[1])
 
     def logical_exact_filler_query(self, matches):
         from backend.models.query import ExactQuery
-        return ExactQuery(self.network, matches[0].queries)
+        return ExactQuery(self.network, matches[1].queries)
 
     def filler_query(self, matches):
         from backend.models.query import FillerQuery

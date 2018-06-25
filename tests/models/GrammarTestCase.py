@@ -71,13 +71,18 @@ class GrammarTestCase(unittest.TestCase):
         fq2 = FillerQuery(self.n, LiteralQuery(self.n, 456))
 
         self.assertEqual(SlotQuery(self.n, nq), Grammar.parse(self.n, "HAS THEME", start="slot_query"))
+        self.assertEqual(SlotQuery(self.n, nq), Grammar.parse(self.n, "has THEME", start="slot_query"))
         self.assertEqual(SlotQuery(self.n, fq1), Grammar.parse(self.n, "* = 123", start="slot_query"))
         self.assertEqual(SlotQuery(self.n, fq1), Grammar.parse(self.n, "* (= 123)", start="slot_query"))
         self.assertEqual(SlotQuery(self.n, AndQuery(self.n, [fq1, fq2])), Grammar.parse(self.n, "* (= 123 AND = 456)", start="slot_query"))
+        self.assertEqual(SlotQuery(self.n, AndQuery(self.n, [fq1, fq2])), Grammar.parse(self.n, "* (= 123 and = 456)", start="slot_query"))
         self.assertEqual(SlotQuery(self.n, OrQuery(self.n, [fq1, fq2])), Grammar.parse(self.n, "* (= 123 OR = 456)", start="slot_query"))
+        self.assertEqual(SlotQuery(self.n, OrQuery(self.n, [fq1, fq2])), Grammar.parse(self.n, "* (= 123 or = 456)", start="slot_query"))
         self.assertEqual(SlotQuery(self.n, NotQuery(self.n, fq1)), Grammar.parse(self.n, "* NOT = 123", start="slot_query"))
+        self.assertEqual(SlotQuery(self.n, NotQuery(self.n, fq1)), Grammar.parse(self.n, "* not = 123", start="slot_query"))
         self.assertEqual(SlotQuery(self.n, NotQuery(self.n, fq1)), Grammar.parse(self.n, "* NOT (= 123)", start="slot_query"))
         self.assertEqual(SlotQuery(self.n, ExactQuery(self.n, [fq1, fq2])), Grammar.parse(self.n, "* EXACTLY (= 123 AND = 456)", start="slot_query"))
+        self.assertEqual(SlotQuery(self.n, ExactQuery(self.n, [fq1, fq2])), Grammar.parse(self.n, "* exactly (= 123 AND = 456)", start="slot_query"))
         self.assertEqual(SlotQuery(self.n, AndQuery(self.n, [nq, ExactQuery(self.n, [fq1, fq2])])), Grammar.parse(self.n, "THEME EXACTLY (= 123 AND = 456)", start="slot_query"))
 
     def test_parse_frame_query(self):
@@ -86,13 +91,19 @@ class GrammarTestCase(unittest.TestCase):
         sq2 = SlotQuery(self.n, AndQuery(self.n, [NameQuery(self.n, "THEME"), FillerQuery(self.n, LiteralQuery(self.n, 456))]))
 
         self.assertEqual(FrameQuery(self.n, sq1), Grammar.parse(self.n, "WHERE THEME = 123", start="frame_query"))
+        self.assertEqual(FrameQuery(self.n, sq1), Grammar.parse(self.n, "where THEME = 123", start="frame_query"))
         self.assertEqual(FrameQuery(self.n, sq1), Grammar.parse(self.n, "SHOW FRAMES WHERE THEME = 123", start="frame_query"))
+        self.assertEqual(FrameQuery(self.n, sq1), Grammar.parse(self.n, "show frames where THEME = 123", start="frame_query"))
         self.assertEqual(FrameQuery(self.n, sq1), Grammar.parse(self.n, "WHERE (THEME = 123)", start="frame_query"))
         self.assertEqual(FrameQuery(self.n, AndQuery(self.n, [sq1, sq2])), Grammar.parse(self.n, "WHERE (THEME = 123 AND THEME = 456)", start="frame_query"))
+        self.assertEqual(FrameQuery(self.n, AndQuery(self.n, [sq1, sq2])), Grammar.parse(self.n, "WHERE (THEME = 123 and THEME = 456)", start="frame_query"))
         self.assertEqual(FrameQuery(self.n, OrQuery(self.n, [sq1, sq2])), Grammar.parse(self.n, "WHERE (THEME = 123 OR THEME = 456)", start="frame_query"))
+        self.assertEqual(FrameQuery(self.n, OrQuery(self.n, [sq1, sq2])), Grammar.parse(self.n, "WHERE (THEME = 123 or THEME = 456)", start="frame_query"))
         self.assertEqual(FrameQuery(self.n, NotQuery(self.n, sq1)), Grammar.parse(self.n, "WHERE NOT THEME = 123", start="frame_query"))
+        self.assertEqual(FrameQuery(self.n, NotQuery(self.n, sq1)), Grammar.parse(self.n, "WHERE not THEME = 123", start="frame_query"))
         self.assertEqual(FrameQuery(self.n, NotQuery(self.n, sq1)), Grammar.parse(self.n, "WHERE NOT (THEME = 123)", start="frame_query"))
         self.assertEqual(FrameQuery(self.n, ExactQuery(self.n, [sq1, sq2])), Grammar.parse(self.n, "WHERE EXACTLY (THEME = 123 AND THEME = 456)", start="frame_query"))
+        self.assertEqual(FrameQuery(self.n, ExactQuery(self.n, [sq1, sq2])), Grammar.parse(self.n, "WHERE exactly (THEME = 123 AND THEME = 456)", start="frame_query"))
         self.assertEqual(FrameQuery(self.n, iq), Grammar.parse(self.n, "WHERE @ =WM.HUMAN.1", start="frame_query"))
         self.assertEqual(FrameQuery(self.n, AndQuery(self.n, [iq, sq1])), Grammar.parse(self.n, "WHERE (@ =WM.HUMAN.1 AND THEME = 123)", start="frame_query"))
         self.assertEqual(FrameQuery(self.n, OrQuery(self.n, [iq, sq1])), Grammar.parse(self.n, "WHERE (@ =WM.HUMAN.1 OR THEME = 123)", start="frame_query"))
@@ -103,8 +114,10 @@ class GrammarTestCase(unittest.TestCase):
     def test_parse_view_graph(self):
         g = self.n.register("TEST")
         self.assertEqual(View(self.n, g), Grammar.parse(self.n, "VIEW TEST SHOW ALL"))
+        self.assertEqual(View(self.n, g), Grammar.parse(self.n, "view TEST show all"))
 
     def test_parse_view_graph_with_query(self):
         g = self.n.register("TEST")
         query = FrameQuery(self.n, IdentifierQuery(self.n, "TEST.FRAME.1", IdentifierQuery.Comparator.EQUALS))
         self.assertEqual(View(self.n, g, query=query), Grammar.parse(self.n, "VIEW TEST SHOW FRAMES WHERE @=TEST.FRAME.1"))
+        self.assertEqual(View(self.n, g, query=query), Grammar.parse(self.n, "view TEST show frames where @=TEST.FRAME.1"))
