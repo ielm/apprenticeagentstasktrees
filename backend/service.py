@@ -73,6 +73,11 @@ def index():
     return render_template("index.html", network=n._storage.keys())
 
 
+@app.route("/grammar", methods=["GET"])
+def grammar():
+    return render_template("grammar.html")
+
+
 @app.route("/reset", methods=["DELETE"])
 def reset():
     global n

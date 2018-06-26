@@ -208,14 +208,13 @@
             <div class="col-sm-8">
                 <div class="card">
                     <div class="card-header">
-                        <form>
-                            <div class="form-group row">
-                                <button id="viewButton" class="btn btn-primary col-sm-1" type="button">View</button>
-                                <div class="col-sm-11">
-                                    <input type="text" id="viewQuery" class="form-control">
-                                </div>
+                        <div class="input-group mb-3">
+                            <input id="viewQuery" type="text" class="form-control form-control-sm" placeholder="View query">
+                            <div class="input-group-append">
+                                <button id="viewButton" class="btn btn-sm btn-primary" type="button">View</button>
                             </div>
-                        </form>
+                        </div>
+                        <small id="help" class="form-text text-muted" style="margin-top: -12px; margin-left: 1px;">Write your graph view query above; see <a href="/grammar">help</a>.</small>
                     </div>
                     <div class="card-body">
                         <div id="graph" style="height: 500px;"></div>
