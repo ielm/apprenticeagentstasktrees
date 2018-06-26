@@ -1,6 +1,6 @@
 start: (view)
 
-view: VIEW GRAPH (view_all | view_query)
+view: VIEW graph (view_all | view_query)
 view_all: SHOW ALL
 view_query: frame_query
 
@@ -31,7 +31,8 @@ double: INTEGER "." INTEGER
 string: ("\"") (ALPHA | INTEGER)+ ("\"")
 
 identifier: (graph ".")? name ("." instance)?
-graph: GRAPH
+graph: (GRAPH | tmr)
+tmr: "TMR" "#" INTEGER
 name: NAME
 instance: INSTANCE
 
@@ -46,6 +47,7 @@ SHOW: "show"i
 VIEW: "view"i
 WHERE: "where"i
 
+DASH: "-"
 EQUALS: "="
 ISA: "^"
 ISPARENT: "^."

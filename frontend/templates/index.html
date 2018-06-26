@@ -166,11 +166,6 @@
 
         $(document).ready(function() {
 
-            $("#selectGraph").on("change", function() {
-                var graph = $("#selectGraph").val();
-                fetch_graph(graph);
-            });
-
             $("body").on("click", ".frame-link", function(e) {
                 var id = $(e.target).data("frame");
                 for (var i in _graph) {
@@ -188,6 +183,20 @@
                 fetch_view(query);
             });
 
+            $("#viewQuery").on("keyup", function(e) {
+                if (e.key == "Enter") {
+                    var query = $("#viewQuery").val();
+                    fetch_view(query);
+                }
+            });
+
+            $(".graph-link").on("click", function(e) {
+                var graph = $(e.target).data("graph");
+                var query = "VIEW " + graph + " SHOW ALL";
+                $("#viewQuery").val(query);
+                fetch_view(query);
+            });
+
         });
 
     </script>
@@ -201,22 +210,10 @@
                     <div class="card-header">
                         <form>
                             <div class="form-group row">
-                                <label for="selectGraph" class="col-sm-2 col-form-label">Graph</label>
-                                <div class="col-sm-10">
-                                    <select class="form-control" id="selectGraph">
-                                        <option>--</option>
-                                        {% for n in network %}
-                                        <option value="{{n}}">{{n}}</option>
-                                        {% endfor %}
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="form-group row">
-                                <label for="viewQuery" class="col-sm-2 col-form-label">View</label>
-                                <div class="col-sm-9">
+                                <button id="viewButton" class="btn btn-primary col-sm-1" type="button">View</button>
+                                <div class="col-sm-11">
                                     <input type="text" id="viewQuery" class="form-control">
                                 </div>
-                                <button id="viewButton" class="btn btn-primary col-sm-1" type="button">Show</button>
                             </div>
                         </form>
                     </div>
@@ -226,6 +223,18 @@
                 </div>
             </div>
             <div class="col-sm-4">
+                <div class="card" style="margin-bottom: 25px;">
+                    <div class="card-header">
+                        Graphs
+                    </div>
+                    <div class="card-body">
+                        <div id="graphs">
+                            {% for n in network %}
+                            <a href="#" class="graph-link badge badge-info" data-graph="{{n}}">{{n}}</a>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
                 <div class="card">
                     <div class="card-header">
                         Details

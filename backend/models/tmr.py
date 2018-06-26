@@ -1,12 +1,14 @@
 from backend.models.graph import Frame, Graph, Literal
 from backend.models.ontology import Ontology
 from backend.models.syntax import Syntax
+from backend.utils.AtomicCounter import AtomicCounter
 
 from typing import Union
-from uuid import uuid4
 
 
 class TMR(Graph):
+
+    counter = AtomicCounter()
 
     @staticmethod
     def new(ontology, sentence=None, syntax=None, tmr=None, namespace=None):
@@ -33,7 +35,7 @@ class TMR(Graph):
         if ontology is None:
             raise Exception("TMRs must have an anchoring ontology provided.")
         if namespace is None:
-            namespace = "TMR#" + str(uuid4())
+            namespace = "TMR#" + str(TMR.counter.increment())
 
         super().__init__(namespace)
 

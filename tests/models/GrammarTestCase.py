@@ -22,6 +22,7 @@ class GrammarTestCase(unittest.TestCase):
     def test_parse_graph(self):
         self.assertEqual("WM", Grammar.parse(self.n, "WM", start="graph"))
         self.assertEqual("TmR", Grammar.parse(self.n, "TmR", start="graph"))
+        self.assertEqual("TMR#123456", Grammar.parse(self.n, "TMR#123456", start="graph"))
 
     def test_parse_identifier(self):
         self.assertEqual(Identifier("WM", "EVENT", instance=1), Grammar.parse(self.n, "WM.EVENT.1", start="identifier"))
@@ -112,9 +113,11 @@ class GrammarTestCase(unittest.TestCase):
         self.assertEqual(FrameQuery(self.n, IdentifierQuery(self.n, "ONT.EVENT", IdentifierQuery.Comparator.ISA)), Grammar.parse(self.n, "WHERE @^ONT.EVENT", start="frame_query"))
 
     def test_parse_view_graph(self):
-        g = self.n.register("TEST")
-        self.assertEqual(View(self.n, g), Grammar.parse(self.n, "VIEW TEST SHOW ALL"))
-        self.assertEqual(View(self.n, g), Grammar.parse(self.n, "view TEST show all"))
+        g1 = self.n.register("TEST")
+        g2 = self.n.register("TMR#123")
+        self.assertEqual(View(self.n, g1), Grammar.parse(self.n, "VIEW TEST SHOW ALL"))
+        self.assertEqual(View(self.n, g1), Grammar.parse(self.n, "view TEST show all"))
+        self.assertEqual(View(self.n, g2), Grammar.parse(self.n, "view TMR#123 show all"))
 
     def test_parse_view_graph_with_query(self):
         g = self.n.register("TEST")

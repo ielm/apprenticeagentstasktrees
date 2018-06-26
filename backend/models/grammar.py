@@ -123,6 +123,9 @@ class GrammarTransformer(Transformer):
     def graph(self, matches):
         return str(matches[0])
 
+    def tmr(self, matches):
+        return "TMR#" + str(matches[0])
+
     def name(self, matches):
         return str(matches[0])
 
