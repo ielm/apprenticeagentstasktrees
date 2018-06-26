@@ -388,6 +388,7 @@ class IdentifierQueryTestCase(unittest.TestCase):
 
         self.assertTrue(query.compare(Identifier("GRAPH", "NAME", instance=123)))
         self.assertTrue(query.compare("GRAPH.NAME.123"))
+        self.assertTrue(query.compare(Filler("GRAPH.NAME.123")))
         self.assertFalse(query.compare(Identifier("GRAPH", "NAME")))
 
     def test_identifier_query_exact_parsed(self):
@@ -395,6 +396,7 @@ class IdentifierQueryTestCase(unittest.TestCase):
 
         self.assertTrue(query.compare(Identifier("GRAPH", "NAME", instance=123)))
         self.assertTrue(query.compare("GRAPH.NAME.123"))
+        self.assertTrue(query.compare(Filler("GRAPH.NAME.123")))
         self.assertFalse(query.compare(Identifier("GRAPH", "NAME")))
 
     def test_identifier_query_exact_frame(self):
@@ -402,6 +404,7 @@ class IdentifierQueryTestCase(unittest.TestCase):
 
         self.assertTrue(query.compare(Identifier("GRAPH", "NAME", instance=123)))
         self.assertTrue(query.compare("GRAPH.NAME.123"))
+        self.assertTrue(query.compare(Filler("GRAPH.NAME.123")))
         self.assertFalse(query.compare(Identifier("GRAPH", "NAME")))
 
     def test_identifier_query_isa(self):
@@ -409,6 +412,7 @@ class IdentifierQueryTestCase(unittest.TestCase):
 
         self.assertTrue(query.compare(Identifier("ONT", "PHYSICAL-EVENT")))
         self.assertTrue(query.compare("ONT.EVENT"))
+        self.assertTrue(query.compare(Filler("ONT.EVENT")))
         self.assertFalse(query.compare(Identifier("ONT", "OBJECT")))
 
     def test_identifier_query_isa_parsed(self):
@@ -416,6 +420,7 @@ class IdentifierQueryTestCase(unittest.TestCase):
 
         self.assertTrue(query.compare(Identifier("ONT", "PHYSICAL-EVENT")))
         self.assertTrue(query.compare("ONT.EVENT"))
+        self.assertTrue(query.compare(Filler("ONT.EVENT")))
         self.assertFalse(query.compare(Identifier("ONT", "OBJECT")))
 
     def test_identifier_query_isa_frame(self):
@@ -423,6 +428,7 @@ class IdentifierQueryTestCase(unittest.TestCase):
 
         self.assertTrue(query.compare(Identifier("ONT", "PHYSICAL-EVENT")))
         self.assertTrue(query.compare("ONT.EVENT"))
+        self.assertTrue(query.compare(Filler("ONT.EVENT")))
         self.assertFalse(query.compare(Identifier("ONT", "OBJECT")))
 
     def test_identifier_query_parent(self):
@@ -430,6 +436,7 @@ class IdentifierQueryTestCase(unittest.TestCase):
 
         self.assertTrue(query.compare(Identifier("ONT", "EVENT")))
         self.assertTrue(query.compare("ONT.EVENT"))
+        self.assertTrue(query.compare(Filler("ONT.EVENT")))
         self.assertFalse(query.compare(Identifier("ONT", "PHYSICAL-EVENT")))
 
     def test_identifier_query_parent_parsed(self):
@@ -437,6 +444,7 @@ class IdentifierQueryTestCase(unittest.TestCase):
 
         self.assertTrue(query.compare(Identifier("ONT", "EVENT")))
         self.assertTrue(query.compare("ONT.EVENT"))
+        self.assertTrue(query.compare(Filler("ONT.EVENT")))
         self.assertFalse(query.compare(Identifier("ONT", "PHYSICAL-EVENT")))
 
     def test_identifier_query_parent_frame(self):
@@ -444,4 +452,5 @@ class IdentifierQueryTestCase(unittest.TestCase):
 
         self.assertTrue(query.compare(Identifier("ONT", "EVENT")))
         self.assertTrue(query.compare("ONT.EVENT"))
+        self.assertTrue(query.compare(Filler("ONT.EVENT")))
         self.assertFalse(query.compare(Identifier("ONT", "PHYSICAL-EVENT")))
