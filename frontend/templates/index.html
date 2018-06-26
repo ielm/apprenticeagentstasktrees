@@ -21,6 +21,19 @@
             padding-left: 8px;
             padding-right: 8px;
         }
+        .table > thead > tr:first-child > td,
+        .table > tbody > tr:first-child > td {
+            border: none;
+        }
+        .reload-icon {
+            filter: invert(.5) sepia(1) saturate(2) hue-rotate(75deg);
+        }
+        .reload-icon:hover {
+            filter: invert(.5) sepia(0) saturate(1) hue-rotate(75deg);
+        }
+        .error-icon {
+            filter: invert(.5) sepia(1) saturate(5) hue-rotate(314deg);
+        }
     </style>
 
     <script src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
@@ -52,9 +65,13 @@
                 data: query,
                 contentType: "text/plain"
             }).done(function(data) {
+                history_success(query);
                 render_graph(JSON.parse(data));
             }).fail(function(error) {
-                console.log(error);
+                var lines = error.responseText.trim().split("\n");
+                var line = lines[lines.length - 1];
+                history_error(query, line);
+                console.log(lines);
             });
         }
 
@@ -137,6 +154,37 @@
 
         }
 
+        function history_success(history) {
+            var content = {
+                history: history,
+            };
+
+            var template = document.getElementById('history-success-template').innerHTML;
+            Mustache.parse(template, ["{|", "|}"]);
+            var rendered = Mustache.render(template, content);
+            $($(document).find("#history-table tbody")[0]).prepend($(rendered));
+
+            while ($($(document).find("#history-table tbody")[0]).children().length > 5) {
+                $($(document).find("#history-table tbody")[0]).children().last().remove();
+            }
+        }
+
+        function history_error(history, error) {
+            var content = {
+                history: history,
+                error: error,
+            };
+
+            var template = document.getElementById('history-error-template').innerHTML;
+            Mustache.parse(template, ["{|", "|}"]);
+            var rendered = Mustache.render(template, content);
+            $($(document).find("#history-table tbody")[0]).prepend($(rendered));
+
+            while ($($(document).find("#history-table tbody")[0]).children().length > 5) {
+                $($(document).find("#history-table tbody")[0]).children().last().remove();
+            }
+        }
+
     </script>
 
     <script id="frame-template" type="x-tmpl-mustache">
@@ -160,6 +208,20 @@
             </tr>
             {|/frame.attributes|}
         </table>
+    </script>
+
+    <script id="history-success-template" type="x-tmpl-mustache">
+        <tr>
+            <td><img class="reload-icon" src="/assets/svg/reload.svg" alt="arrow-thick-right" style="height: 12px" data-query="{|history|}"></td>
+            <td>{|history|}</td>
+        </tr>
+    </script>
+
+    <script id="history-error-template" type="x-tmpl-mustache">
+        <tr>
+            <td><img class="error-icon" src="/assets/svg/circle-x.svg" alt="arrow-thick-right" style="height: 12px"></td>
+            <td>{|history|} <br> {|error|}</td>
+        </tr>
     </script>
 
     <script>
@@ -193,6 +255,12 @@
             $(".graph-link").on("click", function(e) {
                 var graph = $(e.target).data("graph");
                 var query = "VIEW " + graph + " SHOW ALL";
+                $("#viewQuery").val(query);
+                fetch_view(query);
+            });
+
+            $("body").on("click", ".reload-icon", function(e) {
+                var query = $(e.target).data("query");
                 $("#viewQuery").val(query);
                 fetch_view(query);
             });
@@ -234,12 +302,24 @@
                         </div>
                     </div>
                 </div>
-                <div class="card">
+                <div class="card" style="margin-bottom: 25px;">
                     <div class="card-header">
                         Details
                     </div>
                     <div class="card-body">
                         <div id="frame"></div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        History
+                    </div>
+                    <div class="card-body">
+                        <div>
+                            <table id="history-table" class="table table-sm">
+                                <tbody></tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>
