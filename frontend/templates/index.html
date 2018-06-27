@@ -94,7 +94,7 @@
             var relations = graph
                 .map(function(frame) {
                     return Array.from(frame["relations"])
-                        .filter(r => ["AGENT-OF", "THEME-OF", "INSTRUMENT-OF", "SCOPE-OF"].indexOf(r.slot) == -1)
+                        .filter(r => ["AGENT-OF", "THEME-OF", "INSTRUMENT-OF", "SCOPE-OF", "DESTINATION-OF"].indexOf(r.slot) == -1)
                         .map(function(relation) {
                             return {
                                 from: frame["name"],

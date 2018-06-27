@@ -37,7 +37,7 @@ class LCTPreHeuristicsTestCase(ApprenticeAgentsTestCase):
         event.context()[LCTContext.LEARNING] = True
         event.context()[LCTContext.CURRENT] = True
 
-        tmr = self.n.register(TMR.new("ONT"))
+        tmr = self.n.register(TMR.new(self.ontology))
         event1 = tmr.register("EVENT.1", isa="ONT.EVENT")
         event1["TIME"] = [["<", "FIND-ANCHOR-TIME"]]
 

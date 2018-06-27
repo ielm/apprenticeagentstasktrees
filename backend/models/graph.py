@@ -441,7 +441,7 @@ class Slot(object):
         return self.compare(other, isa=False, intersection=True)
 
     def __str__(self):
-        return str(self._storage)
+        return self._name + "=" + str(self._storage)
 
     def __repr__(self):
         return str(self)

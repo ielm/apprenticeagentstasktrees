@@ -198,7 +198,7 @@ class FRTestCase(unittest.TestCase):
                 "1": {},
                 "basicDeps": []
             }]
-        }, self.ontology._namespace, namespace="TMR"))
+        }, self.ontology, namespace="TMR"))
 
         iresolves = self.fr.resolve_tmr(tmr)
 
@@ -216,6 +216,10 @@ class FRTestCase(unittest.TestCase):
         self.ontology.register("HUMAN", isa="ALL")
         self.ontology.register("ROBOT", isa="ALL")
         self.ontology.register("SET", isa="ALL")
+        self.ontology.register("PROPERTY", isa="ALL")
+        self.ontology.register("RELATION", isa="PROPERTY")
+        self.ontology.register("AGENT", isa="RELATION")
+        self.ontology.register("AGENT-OF", isa="RELATION")
 
         tmr = self.n.register(TMR({
             "sentence": "Test.",
@@ -224,12 +228,12 @@ class FRTestCase(unittest.TestCase):
                     "TMR": {
                         "CONCEPT-1": {
                             "concept": "CONCEPT",
-                            "AGENT": ["THING-2"],
+                            "AGENT": "THING-2",
                             "sent-word-ind": [1, [0]]
                         },
                         "THING-2": {
                             "concept": "THING",
-                            "AGENT-OF": ["CONCEPT-1"],
+                            "AGENT-OF": "CONCEPT-1",
                             "sent-word-ind": [1, [1]]
                         },
                     }
@@ -240,7 +244,7 @@ class FRTestCase(unittest.TestCase):
                 "1": {},
                 "basicDeps": []
             }]
-        }, self.ontology._namespace))
+        }, self.ontology))
 
         self.fr.learn_tmr(tmr)
 

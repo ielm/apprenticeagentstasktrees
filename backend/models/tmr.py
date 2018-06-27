@@ -1,9 +1,9 @@
-from backend.models.graph import Frame, Graph, Literal
+from backend.models.graph import Frame, Graph, Identifier, Literal
 from backend.models.ontology import Ontology
 from backend.models.syntax import Syntax
 from backend.utils.AtomicCounter import AtomicCounter
 
-from typing import Union
+import re
 
 
 class TMR(Graph):
@@ -11,7 +11,7 @@ class TMR(Graph):
     counter = AtomicCounter()
 
     @staticmethod
-    def new(ontology, sentence=None, syntax=None, tmr=None, namespace=None):
+    def new(ontology: Ontology, sentence=None, syntax=None, tmr=None, namespace=None):
         if sentence is None:
             sentence = ""
         if syntax is None:
@@ -31,7 +31,7 @@ class TMR(Graph):
             "tmr": tmr
         }, ontology, namespace=namespace)
 
-    def __init__(self, tmr_dict: dict, ontology: Union[Ontology, str], namespace: str=None):
+    def __init__(self, tmr_dict: dict, ontology: Ontology, namespace: str=None):
         if ontology is None:
             raise Exception("TMRs must have an anchoring ontology provided.")
         if namespace is None:
@@ -39,11 +39,7 @@ class TMR(Graph):
 
         super().__init__(namespace)
 
-        _ontology = ontology
-        if isinstance(ontology, Ontology):
-            ontology = ontology._namespace
-
-        self.ontology = ontology
+        self.ontology = ontology._namespace
         self.sentence = tmr_dict["sentence"]
         self.syntax = Syntax(tmr_dict["syntax"][0])
 
@@ -54,10 +50,17 @@ class TMR(Graph):
 
                 concept = inst_dict["concept"]
                 if concept is not None and ontology is not None:
-                    if not concept.startswith(ontology):
-                        concept = ontology + "." + concept
+                    if not concept.startswith(self.ontology):
+                        concept = self.ontology + "." + concept
 
-                self[key] = TMRInstance(key, properties=inst_dict, isa=concept, index=inst_dict["sent-word-ind"][1], ontology=_ontology)
+                self[key] = TMRInstance(key, properties=inst_dict, isa=concept, index=inst_dict["sent-word-ind"][1], ontology=ontology)
+
+        for instance in self._storage.values():
+            for slot in instance._storage.values():
+                for filler in slot:
+                    if isinstance(filler._value, Identifier) and filler._value.graph is None and not filler._value.render() in self:
+                        filler._value.graph = self.ontology
+
 
     def __setitem__(self, key, value):
         if not isinstance(value, TMRInstance):
@@ -117,7 +120,7 @@ class TMR(Graph):
 
 class TMRInstance(Frame):
 
-    def __init__(self, name, properties=None, isa=None, index=None, ontology=None):
+    def __init__(self, name, properties=None, isa=None, index=None, ontology: Ontology=None):
         super().__init__(name, isa=isa)
 
         if properties is None:
@@ -131,13 +134,17 @@ class TMRInstance(Frame):
                 _properties[key] = properties[key]
 
         for key in _properties:
+            # Sometimes TMR instances have a -1, etc., rather than being a list; by dropping this value,
+            # and using += below, they are automatically converted to a list if required.
+            original_key = key
+            key = re.sub(r"-[0-9]+$", "", key)
+
             if ontology is not None \
-                    and isinstance(ontology, Ontology) \
                     and key in ontology \
-                    and (ontology[key] ^ ontology["ATTRIBUTE"] or ontology[key] ^ ontology["EXTRA-ONTOLOGICAL"]):
-                self[key] = Literal(_properties[key])
+                    and (ontology[key] ^ ontology["RELATION"] or ontology[key] ^ ontology["ONTOLOGY-SLOT"]):
+                self[key] += Identifier.parse(_properties[original_key])
             else:
-                self[key] = _properties[key]
+                self[key] += Literal(_properties[original_key])
 
         self.token_index = index
 
