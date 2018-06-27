@@ -23,8 +23,7 @@ class Ontology(Graph):
 
     def __init__(self, namespace, wrapped=None):
         super().__init__(namespace)
-        if wrapped is not None:
-            self._wrapped = wrapped
+        self._wrapped = wrapped
 
     def __getitem__(self, item):
         try:
@@ -79,7 +78,7 @@ class Ontology(Graph):
         if self._wrapped is not None:
             iters += iter(self._wrapped)
 
-        return itertools.chain(iters)
+        return itertools.chain(*iters)
 
     def _is_relation(self, slot):
         if slot not in self._wrapped:

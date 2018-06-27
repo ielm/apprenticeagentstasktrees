@@ -1,7 +1,7 @@
 import json
 
 from backend.models.tmr import TMR
-from backend.service import app, n, ontology
+from backend.service import app, graph_to_json, n, ontology
 
 import unittest
 
@@ -28,7 +28,76 @@ class ServiceTestCase(unittest.TestCase):
         f2 = g.register("TEST.FRAME.2")
 
         response = self.app.post("/view", data="VIEW TEST SHOW FRAMES WHERE @=TEST.FRAME.1")
-        self.assertEqual(json.loads(response.data), [{"name": "FRAME.1", "relations": [], "attributes": []}])
+        self.assertEqual(json.loads(response.data), [{"type": "OTHER", "graph": "TEST", "name": "FRAME.1", "relations": [], "attributes": []}])
+
+    def test_graph_to_json_types(self):
+        from backend.models.fr import FR
+        from backend.models.graph import Graph
+        from backend.models.ontology import Ontology
+
+        g1 = Graph("G1")
+        g1.register("TEST.1")
+
+        g2 = Ontology("ONT")
+        g2.register("ALL")
+
+        g3 = TMR.new(g2, namespace="TMR#1")
+        g3.register("TEST.3")
+
+        g4 = FR("FR#1", g2)
+        g4.register("TEST.4", generate_index=False)
+
+        self.assertEqual(json.loads(graph_to_json(g1)), [{"type": "OTHER", "graph": "G1", "name": "TEST.1", "relations": [], "attributes": []}])
+        self.assertEqual(json.loads(graph_to_json(g2)), [{"type": "ONTOLOGY", "graph": "ONT", "name": "ALL", "relations": [], "attributes": []}])
+        self.assertEqual(json.loads(graph_to_json(g3)), [{"type": "TMR", "graph": "TMR#1", "name": "TEST.3", "relations": [], "attributes": []}])
+        self.assertEqual(json.loads(graph_to_json(g4)), [{"type": "FR", "graph": "FR#1", "name": "TEST.4", "relations": [], "attributes": []}])
+
+    def test_graph_to_json_relations(self):
+        g = n.register("TEST")
+
+        f1 = g.register("TEST.FRAME.1")
+        f2 = g.register("TEST.FRAME.2")
+
+        f1["REL"] = f2
+
+        expected = [{
+            "type": "OTHER",
+            "graph": "TEST",
+            "name": "FRAME.1",
+            "relations": [{
+                "slot": "REL",
+                "graph": "TEST",
+                "value": "FRAME.2"
+            }],
+            "attributes": []
+        }, {
+            "type": "OTHER",
+            "graph": "TEST",
+            "name": "FRAME.2",
+            "relations": [],
+            "attributes": []
+        }]
+
+        self.assertEqual(json.loads(graph_to_json(g)), expected)
+
+    def test_graph_to_json_attributes(self):
+        g = n.register("TEST")
+
+        f = g.register("TEST.FRAME.1")
+        f["ATTR"] = 123
+
+        expected = [{
+            "type": "OTHER",
+            "graph": "TEST",
+            "name": "FRAME.1",
+            "relations": [],
+            "attributes": [{
+                "slot": "ATTR",
+                "value": 123
+            }]
+        }]
+
+        self.assertEqual(json.loads(graph_to_json(g)), expected)
 
     @unittest.skip("This requires both the ontosem and corenlp service to be running, otherwise it will fail.")
     def test_input(self):

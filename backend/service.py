@@ -21,12 +21,22 @@ agent = Agent(n, ontology)
 
 
 def graph_to_json(graph):
+    types = {
+        "TMR": "TMR",
+        "FR": "FR",
+        "Ontology": "ONTOLOGY"
+    }
+
+    type = "OTHER" if graph.__class__.__name__ not in types else types[graph.__class__.__name__]
+
     frames = []
 
     for f in graph:
         frame = graph[f]
 
         converted = {
+            "type": type,
+            "graph": graph._namespace,
             "name": frame._identifier.render(graph=False),
             "relations": [],
             "attributes": []
@@ -38,10 +48,11 @@ def graph_to_json(graph):
                 if isinstance(filler._value, Identifier):
 
                     modified = Identifier(filler._value.graph, filler._value.name, instance=filler._value.instance)
-                    if modified.graph == id:
-                        modified.graph = None
+                    if modified.graph is None:
+                        modified.graph = graph._namespace
 
                     converted["relations"].append({
+                        "graph": modified.graph,
                         "slot": s,
                         "value": modified.render(graph=False),
                     })

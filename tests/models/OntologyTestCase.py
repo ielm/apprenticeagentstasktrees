@@ -39,3 +39,10 @@ class OntologyTestCase(unittest.TestCase):
         o["OBJECT"]["XYZ"] += "a"
 
         self.assertEqual(1, len(o["OBJECT"]["XYZ"]))
+
+    def test_unwrapped_ontology_iterates(self):
+        o = Ontology("ONT")
+        all = o.register("ALL")
+
+        for f in o:
+            self.assertEqual(f, all.name())
