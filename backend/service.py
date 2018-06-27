@@ -21,21 +21,13 @@ agent = Agent(n, ontology)
 
 
 def graph_to_json(graph):
-    types = {
-        "TMR": "TMR",
-        "FR": "FR",
-        "Ontology": "ONTOLOGY"
-    }
-
-    type = "OTHER" if graph.__class__.__name__ not in types else types[graph.__class__.__name__]
-
     frames = []
 
     for f in graph:
         frame = graph[f]
 
         converted = {
-            "type": type,
+            "type": frame.__class__.__name__,
             "graph": graph._namespace,
             "name": frame._identifier.render(graph=False),
             "relations": [],

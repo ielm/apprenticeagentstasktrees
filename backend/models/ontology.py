@@ -3,6 +3,7 @@ from backend.models.graph import Filler, Frame, Graph, Identifier, Slot
 import itertools
 import pickle
 from pkgutil import get_data
+from typing import List, Union
 
 
 class Ontology(Graph):
@@ -25,6 +26,9 @@ class Ontology(Graph):
         super().__init__(namespace)
         self._wrapped = wrapped
 
+    def _frame_type(self):
+        return OntologyFrame
+
     def __getitem__(self, item):
         try:
             return super().__getitem__(item)
@@ -38,7 +42,7 @@ class Ontology(Graph):
 
         original = self._wrapped[item]
 
-        frame = Frame(Identifier(self._namespace, item))
+        frame = OntologyFrame(Identifier(self._namespace, item))
         frame._graph = self
 
         for slot in original:
@@ -102,6 +106,12 @@ class Ontology(Graph):
             if self._is_relation(parent):
                 return True
         return False
+
+
+class OntologyFrame(Frame):
+
+    def __init__(self, identifier: Union[Identifier, str], isa: Union['Slot', 'Filler', List['Filler'], Identifier, List['Identifier'], str, List[str]]=None):
+        super().__init__(identifier, isa)
 
 
 class OntologyFiller(Filler):

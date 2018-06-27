@@ -346,7 +346,7 @@ class Frame(object):
         return str(self)
 
     def deep_copy(self, graph: Graph):
-        copy = Frame(self._identifier.render())
+        copy = self.__class__(self._identifier)
         copy._network = self._network
         copy._graph = graph
         copy._uuid = uuid4()
