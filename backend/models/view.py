@@ -24,7 +24,7 @@ class View(object):
 
         view = ViewGraph(namespace)
         frames = list(map(lambda frame: frame.deep_copy(view), graph._storage.values() if self.query is None else graph.search(self.query)))
-        excluded = set(map(lambda frame: frame._identifier.render(), graph.values())).difference(set(map(lambda frame: frame._identifier.render(), frames)))
+        excluded = set(map(lambda frame: frame._identifier.render(), graph._storage.values())).difference(set(map(lambda frame: frame._identifier.render(), frames)))
 
         for f in excluded:
             for frame in frames:

@@ -34,6 +34,18 @@
         .error-icon {
             filter: invert(.5) sepia(1) saturate(5) hue-rotate(314deg);
         }
+        .TMRInstance {
+            color: #4286f4;
+        }
+        .FRInstance {
+            color: #488962;
+        }
+        .OntologyFrame {
+            color: #aa6536;
+        }
+        .Frame {
+            color: black;
+        }
     </style>
 
     <script src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
@@ -41,6 +53,35 @@
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mustache.js/2.3.0/mustache.min.js"></script>
+
+    <script>
+        var colors = {
+            "TMRInstance": {
+                border: "#4286f4",
+                background: "#9bc1ff",
+                highlight: {
+                    border: "#4286f4",
+                    background: "#9bc1ff",
+                }
+            },
+            "FRInstance": {
+                border: "#488962",
+                background: "#7cba95",
+                highlight: {
+                    border: "#488962",
+                    background: "#7cba95",
+                }
+            },
+            "OntologyFrame": {
+                border: "#aa6536",
+                background: "#d8a988",
+                highlight: {
+                    border: "#aa6536",
+                    background: "#d8a988",
+                }
+            }
+        };
+    </script>
 
     <script>
 
@@ -88,6 +129,7 @@
                     return {
                         id: frame["graph"] + "." + frame["name"],
                         label: frame["name"],
+                        color: colors[frame["type"]],
                     }
                 });
 
