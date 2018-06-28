@@ -1,4 +1,5 @@
-from backend.models.graph import Graph, Network
+from backend.models.graph import Network
+from backend.models.path import Path
 from backend.models.query import FrameQuery, IdentifierQuery
 from backend.models.view import View
 
@@ -65,3 +66,99 @@ class ViewTestCase(unittest.TestCase):
         self.assertEqual(v._namespace, "TEST")
         self.assertTrue(v["TEST.FRAME.1"]["REL1"] == "TEST.FRAME.1")
         self.assertTrue(v["TEST.FRAME.1"]["REL2"] == "SOME.OTHER.1")
+
+    def test_view_query_follows_path(self):
+        f1 = self.g.register("TEST.FRAME.1")
+        f2 = self.g.register("TEST.FRAME.2")
+
+        f1["REL1"] = f2
+
+        query = FrameQuery(self.n, IdentifierQuery(self.n, "TEST.FRAME.1", IdentifierQuery.Comparator.EQUALS))
+        path = Path().to("REL1")
+
+        v = View(self.n, self.g, query=query, follow=path).view()
+        self.assertTrue("TEST.FRAME.1" in v)
+        self.assertTrue("TEST.FRAME.2" in v)
+
+    def test_view_query_follows_multiple_paths(self):
+        f1 = self.g.register("TEST.FRAME.1")
+        f2 = self.g.register("TEST.FRAME.2")
+        f3 = self.g.register("TEST.FRAME.3")
+
+        f1["REL1"] = f2
+        f1["REL2"] = f3
+
+        query = FrameQuery(self.n, IdentifierQuery(self.n, "TEST.FRAME.1", IdentifierQuery.Comparator.EQUALS))
+        path1 = Path().to("REL1")
+        path2 = Path().to("REL2")
+
+        v = View(self.n, self.g, query=query, follow=[path1, path2]).view()
+        self.assertTrue("TEST.FRAME.1" in v)
+        self.assertTrue("TEST.FRAME.2" in v)
+        self.assertTrue("TEST.FRAME.3" in v)
+
+    def test_view_query_follows_multi_step_path(self):
+        f1 = self.g.register("TEST.FRAME.1")
+        f2 = self.g.register("TEST.FRAME.2")
+        f3 = self.g.register("TEST.FRAME.3")
+
+        f1["REL1"] = f2
+        f2["REL2"] = f3
+
+        query = FrameQuery(self.n, IdentifierQuery(self.n, "TEST.FRAME.1", IdentifierQuery.Comparator.EQUALS))
+        path = Path().to("REL1").to("REL2")
+
+        v = View(self.n, self.g, query=query, follow=path).view()
+        self.assertTrue("TEST.FRAME.1" in v)
+        self.assertTrue("TEST.FRAME.2" in v)
+        self.assertTrue("TEST.FRAME.3" in v)
+
+    def test_view_query_follows_recursive_path(self):
+        f1 = self.g.register("TEST.FRAME.1")
+        f2 = self.g.register("TEST.FRAME.2")
+        f3 = self.g.register("TEST.FRAME.3")
+
+        f1["REL"] = f2
+        f2["REL"] = f3
+
+        query = FrameQuery(self.n, IdentifierQuery(self.n, "TEST.FRAME.1", IdentifierQuery.Comparator.EQUALS))
+        path = Path().to("REL", recursive=True)
+
+        v = View(self.n, self.g, query=query, follow=path).view()
+        self.assertTrue("TEST.FRAME.1" in v)
+        self.assertTrue("TEST.FRAME.2" in v)
+        self.assertTrue("TEST.FRAME.3" in v)
+
+    def test_view_query_follows_recursive_path_with_cycles(self):
+        f1 = self.g.register("TEST.FRAME.1")
+        f2 = self.g.register("TEST.FRAME.2")
+        f3 = self.g.register("TEST.FRAME.3")
+
+        f1["REL"] = f2
+        f2["REL"] = f3
+        f3["REL"] = f1
+
+        query = FrameQuery(self.n, IdentifierQuery(self.n, "TEST.FRAME.1", IdentifierQuery.Comparator.EQUALS))
+        path = Path().to("REL", recursive=True)
+
+        v = View(self.n, self.g, query=query, follow=path).view()
+        self.assertTrue("TEST.FRAME.1" in v)
+        self.assertTrue("TEST.FRAME.2" in v)
+        self.assertTrue("TEST.FRAME.3" in v)
+        self.assertEqual(3, len(v))
+
+    def test_view_query_follows_path_with_inner_query(self):
+        f1 = self.g.register("TEST.FRAME.1")
+        f2 = self.g.register("TEST.FRAME.2")
+        f3 = self.g.register("TEST.FRAME.3")
+
+        f1["REL"] = [f2, f3]
+
+        query = FrameQuery(self.n, IdentifierQuery(self.n, "TEST.FRAME.1", IdentifierQuery.Comparator.EQUALS))
+        inner_query = FrameQuery(self.n, IdentifierQuery(self.n, "TEST.FRAME.2", IdentifierQuery.Comparator.EQUALS))
+        path = Path().to("REL", query=inner_query)
+
+        v = View(self.n, self.g, query=query, follow=path).view()
+        self.assertTrue("TEST.FRAME.1" in v)
+        self.assertTrue("TEST.FRAME.2" in v)
+        self.assertTrue("TEST.FRAME.3" not in v)
