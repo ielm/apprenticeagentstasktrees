@@ -76,6 +76,9 @@ class TMR(Graph):
     def _frame_type(self):
         return TMRInstance
 
+    def register(self, id, isa=None, generate_index=True):
+        return super().register(id, isa=isa, generate_index=generate_index)
+
     def find_main_event(self):
         event = None
         for instance in self.values():

@@ -29,6 +29,9 @@ class Ontology(Graph):
     def _frame_type(self):
         return OntologyFrame
 
+    def register(self, id, isa=None, generate_index=False):
+        return super().register(id, isa=isa, generate_index=generate_index)
+
     def __getitem__(self, item):
         try:
             return super().__getitem__(item)

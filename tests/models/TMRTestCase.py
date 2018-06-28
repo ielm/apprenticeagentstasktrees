@@ -30,9 +30,9 @@ class TMRTestCase(unittest.TestCase):
     def test_tmr_as_graph(self):
         tmr = TMR.new(self.ontology)
 
-        agent1 = tmr.register("AGENT.1")
-        event1 = tmr.register("EVENT.1")
-        theme1 = tmr.register("THEME.1")
+        agent1 = tmr.register("AGENT")
+        event1 = tmr.register("EVENT")
+        theme1 = tmr.register("THEME")
 
         event1["AGENT"] = "AGENT.1"
         event1["THEME"] = "THEME.1"
@@ -56,26 +56,26 @@ class TMRTestCase(unittest.TestCase):
     def test_tmr_is_event_or_object(self):
         tmr = self.n.register(TMR.new(self.ontology))
 
-        tmr.register("OBJECT-1", isa="ONT.OBJECT")
-        tmr.register("EVENT-1", isa="ONT.EVENT")
+        tmr.register("OBJECT", isa="ONT.OBJECT")
+        tmr.register("EVENT", isa="ONT.EVENT")
 
-        self.assertTrue(tmr["OBJECT-1"].isa("ONT.OBJECT"))
-        self.assertFalse(tmr["OBJECT-1"].isa("ONT.EVENT"))
+        self.assertTrue(tmr["OBJECT.1"].isa("ONT.OBJECT"))
+        self.assertFalse(tmr["OBJECT.1"].isa("ONT.EVENT"))
 
-        self.assertTrue(tmr["EVENT-1"].isa("ONT.EVENT"))
-        self.assertFalse(tmr["EVENT-1"].isa("ONT.OBJECT"))
+        self.assertTrue(tmr["EVENT.1"].isa("ONT.EVENT"))
+        self.assertFalse(tmr["EVENT.1"].isa("ONT.OBJECT"))
 
-        self.assertTrue(tmr["OBJECT-1"] ^ "ONT.OBJECT")
-        self.assertFalse(tmr["OBJECT-1"] ^ "ONT.EVENT")
+        self.assertTrue(tmr["OBJECT.1"] ^ "ONT.OBJECT")
+        self.assertFalse(tmr["OBJECT.1"] ^ "ONT.EVENT")
 
-        self.assertTrue(tmr["EVENT-1"] ^ "ONT.EVENT")
-        self.assertFalse(tmr["EVENT-1"] ^ "ONT.OBJECT")
+        self.assertTrue(tmr["EVENT.1"] ^ "ONT.EVENT")
+        self.assertFalse(tmr["EVENT.1"] ^ "ONT.OBJECT")
 
-        self.assertTrue(tmr["OBJECT-1"].is_object())
-        self.assertFalse(tmr["OBJECT-1"].is_event())
+        self.assertTrue(tmr["OBJECT.1"].is_object())
+        self.assertFalse(tmr["OBJECT.1"].is_event())
 
-        self.assertTrue(tmr["EVENT-1"].is_event())
-        self.assertFalse(tmr["EVENT-1"].is_object())
+        self.assertTrue(tmr["EVENT.1"].is_event())
+        self.assertFalse(tmr["EVENT.1"].is_object())
 
     def test_tmr_find_main_event(self):
         tmr = self.n.register(TMR.new(self.ontology))
@@ -125,13 +125,13 @@ class TMRTestCase(unittest.TestCase):
 
         tmr = self.n.register(TMR.new(self.ontology))
 
-        aspect1 = tmr.register("ASPECT-1", isa="ONT.ASPECT")
-        event1 = tmr.register("EVENT-1", isa="ONT.EVENT")
+        aspect1 = tmr.register("ASPECT", isa="ONT.ASPECT")
+        event1 = tmr.register("EVENT", isa="ONT.EVENT")
 
         self.assertFalse(tmr.is_postfix())
 
         aspect1["PHASE"] = "END"
-        aspect1["SCOPE"] = "EVENT-1"
+        aspect1["SCOPE"] = "EVENT.1"
 
         self.assertTrue(tmr.is_postfix())
 

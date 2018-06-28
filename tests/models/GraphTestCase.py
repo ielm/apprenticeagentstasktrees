@@ -281,6 +281,16 @@ class GraphTestCase(unittest.TestCase):
         f = g.register("FRAME.2", isa="FRAME.1")
         self.assertTrue(f.isa("NMSP.FRAME.1"))
 
+    def test_graph_register_generate_index(self):
+        g = Graph("NMSP")
+        g.register("FRAME", generate_index=True)
+        g.register("FRAME", generate_index=True)
+        g.register("XYZ", generate_index=True)
+
+        self.assertTrue("FRAME.1" in g)
+        self.assertTrue("FRAME.2" in g)
+        self.assertTrue("XYZ.1" in g)
+
     def test_graph_search(self):
         n = Network()
 

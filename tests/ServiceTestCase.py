@@ -39,13 +39,13 @@ class ServiceTestCase(unittest.TestCase):
         net = Network()
 
         g1 = net.register(Graph("G1"))
-        g1.register("TEST.1")
+        g1.register("TEST.1", generate_index=False)
 
         g2 = net.register(Ontology("ONT"))
-        g2.register("ALL")
+        g2.register("ALL", generate_index=False)
 
         g3 = net.register(TMR.new(g2, namespace="TMR#1"))
-        g3.register("TEST.3")
+        g3.register("TEST.3", generate_index=False)
 
         g4 = net.register(FR("FR#1", g2))
         g4.register("TEST.4", generate_index=False)

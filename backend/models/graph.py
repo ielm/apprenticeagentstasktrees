@@ -176,6 +176,7 @@ class Graph(Mapping):
         self._namespace = namespace
         self._storage = dict()
         self._network = None
+        self._indexes = dict()
 
     def __setitem__(self, key: Union[Identifier, str], value: 'Frame'):
         if not isinstance(value, Frame):
@@ -220,9 +221,21 @@ class Graph(Mapping):
     def _frame_type(self) -> Type['Frame']:
         return Frame
 
-    def register(self, id: str, isa: Union['Slot', 'Filler', List['Filler'], Identifier, List['Identifier'], str, List[str]]=None) -> 'Frame':
+    def _next_index(self, concept):
+        if concept in self._indexes:
+            index = self._indexes[concept] + 1
+            self._indexes[concept] = index
+            return index
+
+        self._indexes[concept] = 1
+        return 1
+
+    def register(self, id: str, isa: Union['Slot', 'Filler', List['Filler'], Identifier, List['Identifier'], str, List[str]]=None, generate_index: bool=False) -> 'Frame':
         if type(id) != str:
             raise TypeError()
+
+        if generate_index:
+            id = id + "." + str(self._next_index(id))
 
         frame = self._frame_type()(id, isa=isa)
         self[id] = frame
