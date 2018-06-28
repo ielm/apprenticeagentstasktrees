@@ -48,6 +48,8 @@ class TMR(Graph):
             if key == key.upper():
                 inst_dict = result[key]
 
+                key = re.sub(r"-([0-9]+)$", ".\\1", key)
+
                 concept = inst_dict["concept"]
                 if concept is not None and ontology is not None:
                     if not concept.startswith(self.ontology):
@@ -137,7 +139,7 @@ class TMRInstance(Frame):
                 _properties[key] = properties[key]
 
         for key in _properties:
-            # Sometimes TMR instances have a -1, etc., rather than being a list; by dropping this value,
+            # Sometimes TMR instance slots have a -1, etc., rather than being a list; by dropping this value,
             # and using += below, they are automatically converted to a list if required.
             original_key = key
             key = re.sub(r"-[0-9]+$", "", key)
@@ -145,7 +147,9 @@ class TMRInstance(Frame):
             if ontology is not None \
                     and key in ontology \
                     and (ontology[key] ^ ontology["RELATION"] or ontology[key] ^ ontology["ONTOLOGY-SLOT"]):
-                self[key] += Identifier.parse(_properties[original_key])
+                value = _properties[original_key]
+                value = re.sub(r"-([0-9]+)$", ".\\1", value)
+                self[key] += Identifier.parse(value)
             else:
                 self[key] += Literal(_properties[original_key])
 

@@ -48,10 +48,10 @@ class TMRTestCase(unittest.TestCase):
         r = self.load_resource("tests.resources", "DemoMay2018_Analyses.json", parse_json=True)
         tmr = self.n.register(TMR(r[0], self.ontology))
 
-        self.assertEqual(tmr["BUILD-1"]["THEME"][0].resolve(), tmr["CHAIR-1"])
-        self.assertTrue(tmr["BUILD-1"]["THEME"] ^ "ONT.CHAIR")
-        self.assertTrue(tmr["BUILD-1"]["AGENT"] == "SET-1")
-        self.assertTrue(tmr["BUILD-1"]["THEME"] ^ "ONT.OBJECT")
+        self.assertEqual(tmr["BUILD.1"]["THEME"][0].resolve(), tmr["CHAIR.1"])
+        self.assertTrue(tmr["BUILD.1"]["THEME"] ^ "ONT.CHAIR")
+        self.assertTrue(tmr["BUILD.1"]["AGENT"] == "SET-1")
+        self.assertTrue(tmr["BUILD.1"]["THEME"] ^ "ONT.OBJECT")
 
     def test_tmr_is_event_or_object(self):
         tmr = self.n.register(TMR.new(self.ontology))
@@ -205,7 +205,7 @@ class TMRInstanceTestCase(unittest.TestCase):
         r = self.load_resource("tests.resources", "DemoMay2018_Analyses.json", parse_json=True)
         tmr = self.n.register(TMR(r[8], self.ontology))
 
-        self.assertTrue(tmr["BRACKET-1"]["MADE-OF"][0]._value.graph == "ONT")
+        self.assertTrue(tmr["BRACKET.1"]["MADE-OF"][0]._value.graph == "ONT")
 
     def test_tmr_imported_collapses_numbered_properties(self):
         r = self.load_resource("tests.resources", "DemoMay2018_Analyses.json", parse_json=True)
@@ -218,8 +218,8 @@ class TMRInstanceTestCase(unittest.TestCase):
         self.assertEqual("SCREWDRIVER-1", _tmr["FASTEN-1"]["INSTRUMENT-1"])
 
         tmr = self.n.register(TMR(analysis, self.ontology))
-        self.assertTrue("INSTRUMENT" in tmr["FASTEN-1"])
-        self.assertFalse("INSTRUMENT-1" in tmr["FASTEN-1"])
-        self.assertEqual(2, len(tmr["FASTEN-1"]["INSTRUMENT"]))
-        self.assertTrue(tmr["FASTEN-1"]["INSTRUMENT"] == _tmr["FASTEN-1"]["INSTRUMENT"])
-        self.assertTrue(tmr["FASTEN-1"]["INSTRUMENT"] == _tmr["FASTEN-1"]["INSTRUMENT-1"])
+        self.assertTrue("INSTRUMENT" in tmr["FASTEN.1"])
+        self.assertFalse("INSTRUMENT.1" in tmr["FASTEN.1"])
+        self.assertEqual(2, len(tmr["FASTEN.1"]["INSTRUMENT"]))
+        self.assertTrue(tmr["FASTEN.1"]["INSTRUMENT"] == _tmr["FASTEN-1"]["INSTRUMENT"])
+        self.assertTrue(tmr["FASTEN.1"]["INSTRUMENT"] == _tmr["FASTEN-1"]["INSTRUMENT-1"])
