@@ -1,8 +1,13 @@
 start: (view)
 
-view: VIEW graph (view_all | view_query)
+view: VIEW graph (view_all | view_query) (FOLLOW path (AND FOLLOW path)*)?
 view_all: SHOW ALL
 view_query: frame_query
+
+path: step ((THEN)? step)*
+step: "[" relation (RECURSIVE)? "]->" (to)?
+relation: (RELATION | WILDCARD)
+to: TO logical_slot_query
 
 frame_query: (SHOW FRAMES)? WHERE logical_slot_query
 logical_slot_query: (frame_id_query | "(" frame_id_query ")" | slot_query | "(" slot_query ")" | logical_and_slot_query | logical_or_slot_query | logical_not_slot_query | logical_exact_slot_query)
@@ -39,11 +44,14 @@ instance: INSTANCE
 ALL: "all"i
 AND: "and"i
 EXACTLY: "exactly"i
+FOLLOW: "follow"i
 FRAMES: "frames"i
 HAS: "has"i
 NOT: "not"i
 OR: "or"i
 SHOW: "show"i
+THEN: "then"i
+TO: "to"i
 VIEW: "view"i
 WHERE: "where"i
 
@@ -51,10 +59,12 @@ DASH: "-"
 EQUALS: "="
 ISA: "^"
 ISPARENT: "^."
+RECURSIVE: "*"
 
 GRAPH: /[a-zA-Z]+/
 NAME: /[a-zA-Z]+/
 INSTANCE: /[0-9]+/
+RELATION: /[a-zA-Z0-9\-]+/
 WILDCARD: "*"
 
 INTEGER: /[0-9]+/

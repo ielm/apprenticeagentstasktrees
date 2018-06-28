@@ -22,6 +22,17 @@ class PathTestCase(unittest.TestCase):
 
         self.assertTrue(f2 in results)
 
+    def test_path_single_step_with_wildcard(self):
+        f1 = self.g.register("TEST.FRAME.1")
+        f2 = self.g.register("TEST.FRAME.2")
+
+        f1["REL1"] = f2
+
+        path = Path().to("*")
+        results = path.start(f1)
+
+        self.assertTrue(f2 in results)
+
     def test_path_multiple_steps(self):
         f1 = self.g.register("TEST.FRAME.1")
         f2 = self.g.register("TEST.FRAME.2")

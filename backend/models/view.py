@@ -28,7 +28,7 @@ class View(object):
         namespace = self.namespace
 
         view = ViewGraph(namespace)
-        frames = graph._storage.values() if self.query is None else graph.search(self.query)
+        frames = list(graph._storage.values()) if self.query is None else graph.search(self.query)
 
         if self.follow is not None:
             followed_results = []

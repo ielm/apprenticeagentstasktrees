@@ -15,7 +15,11 @@ class Path(object):
         return str(self)
 
     def to(self, relation: str, recursive: bool=False, query: FrameQuery=None) -> 'Path':
-        self.steps.append(Path.PathStep(relation, recursive, query))
+        self.steps.append(PathStep(relation, recursive, query))
+        return self
+
+    def to_step(self, step: 'PathStep') -> 'Path':
+        self.steps.append(step)
         return self
 
     def start(self, frame: Frame) -> List[Frame]:
@@ -45,23 +49,40 @@ class Path(object):
 
         return results
 
-    def _follow(self, frame: Frame, step: 'Path.PathStep') -> List[Frame]:
+    def _follow(self, frame: Frame, step: 'PathStep') -> List[Frame]:
         results = []
-        for filler in frame[step.relation]:
+
+        fillers = frame[step.relation]._storage
+        if step.relation == "*":
+            for slot in frame:
+                fillers.extend(frame[slot]._storage)
+
+        for filler in fillers:
             frame = filler.resolve()
             if step.query is None or step.query.compare(frame):
                 results.append(frame)
         return results
 
-    class PathStep(object):
+    def __eq__(self, other):
+        if not isinstance(other, Path):
+            return super().__eq__(other)
+        return self.steps == other.steps
 
-        def __init__(self, relation: str, recursive: bool, query: FrameQuery):
-            self.relation = relation
-            self.recursive = recursive
-            self.query = query
 
-        def __str__(self):
-            return "[" + self.relation + ("*" if self.recursive else "") + "]->" + ("q" if self.query is not None else "")
+class PathStep(object):
 
-        def __repr__(self):
-            return str(self)
+    def __init__(self, relation: str, recursive: bool, query: FrameQuery):
+        self.relation = relation
+        self.recursive = recursive
+        self.query = query
+
+    def __str__(self):
+        return "[" + self.relation + ("*" if self.recursive else "") + "]->" + ("q" if self.query is not None else "")
+
+    def __repr__(self):
+        return str(self)
+
+    def __eq__(self, other):
+        if not isinstance(other, PathStep):
+            return super().__eq__(other)
+        return self.relation == other.relation and self.recursive == other.recursive and self.query == other.query

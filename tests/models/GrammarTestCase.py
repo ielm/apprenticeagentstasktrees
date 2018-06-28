@@ -1,5 +1,6 @@
 from backend.models.grammar import Grammar
 from backend.models.graph import Identifier, Literal, Network
+from backend.models.path import Path
 from backend.models.query import AndQuery, ExactQuery, FillerQuery, FrameQuery, IdentifierQuery, LiteralQuery, NameQuery, NotQuery, OrQuery, SlotQuery
 from backend.models.view import View
 
@@ -124,3 +125,22 @@ class GrammarTestCase(unittest.TestCase):
         query = FrameQuery(self.n, IdentifierQuery(self.n, "TEST.FRAME.1", IdentifierQuery.Comparator.EQUALS))
         self.assertEqual(View(self.n, g, query=query), Grammar.parse(self.n, "VIEW TEST SHOW FRAMES WHERE @=TEST.FRAME.1"))
         self.assertEqual(View(self.n, g, query=query), Grammar.parse(self.n, "view TEST show frames where @=TEST.FRAME.1"))
+
+    def test_parse_follow(self):
+        self.assertEqual(Path().to("REL"), Grammar.parse(self.n, "[REL]->", start="path"))
+        self.assertEqual(Path().to("*"), Grammar.parse(self.n, "[*]->", start="path"))
+        self.assertEqual(Path().to("REL1").to("REL2"), Grammar.parse(self.n, "[REL1]->[REL2]->", start="path"))
+        self.assertEqual(Path().to("REL1").to("REL2"), Grammar.parse(self.n, "[REL1]-> [REL2]->", start="path"))
+        self.assertEqual(Path().to("REL1").to("REL2"), Grammar.parse(self.n, "[REL1]-> THEN [REL2]->", start="path"))
+        self.assertEqual(Path().to("REL", recursive=True), Grammar.parse(self.n, "[REL*]->", start="path"))
+        self.assertEqual(Path().to("REL", recursive=True), Grammar.parse(self.n, "[REL *]->", start="path"))
+        self.assertEqual(Path().to("REL", query=FrameQuery(self.n, IdentifierQuery(self.n, "TEST.FRAME.1", IdentifierQuery.Comparator.EQUALS))), Grammar.parse(self.n, "[REL]->TO @ = TEST.FRAME.1", start="path"))
+        self.assertEqual(Path().to("REL", query=FrameQuery(self.n, IdentifierQuery(self.n, "TEST.FRAME.1", IdentifierQuery.Comparator.EQUALS))), Grammar.parse(self.n, "[REL]-> TO @ = TEST.FRAME.1", start="path"))
+        self.assertEqual(Path().to("REL", query=FrameQuery(self.n, IdentifierQuery(self.n, "TEST.FRAME.1", IdentifierQuery.Comparator.EQUALS))).to("OTHER"), Grammar.parse(self.n, "[REL]-> TO @ = TEST.FRAME.1 [OTHER]->", start="path"))
+        self.assertEqual(Path().to("REL", query=FrameQuery(self.n, IdentifierQuery(self.n, "TEST.FRAME.1", IdentifierQuery.Comparator.EQUALS))).to("OTHER"), Grammar.parse(self.n, "[REL]-> TO @ = TEST.FRAME.1 THEN [OTHER]->", start="path"))
+
+    def test_parse_view_graph_with_path(self):
+        g = self.n.register("TEST")
+        self.assertEqual(View(self.n, g, follow=Path().to("REL")), Grammar.parse(self.n, "VIEW TEST SHOW ALL FOLLOW [REL]->"))
+        self.assertEqual(View(self.n, g, follow=Path().to("REL").to("OTHER")), Grammar.parse(self.n, "view TEST SHOW ALL FOLLOW [REL]->[OTHER]->"))
+        self.assertEqual(View(self.n, g, follow=[Path().to("REL1"), Path().to("REL2")]), Grammar.parse(self.n, "view TEST SHOW ALL FOLLOW [REL1]-> AND FOLLOW [REL2]->"))

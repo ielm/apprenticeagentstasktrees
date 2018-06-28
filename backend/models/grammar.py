@@ -23,17 +23,50 @@ class GrammarTransformer(Transformer):
         return matches[0]
 
     def view(self, matches):
+        from backend.models.path import Path
         from backend.models.view import View
 
         query = matches[2]
 
-        return View(self.network, matches[1], query=query)
+        paths = list(filter(lambda match: isinstance(match, Path), matches))
+        if len(paths) == 0:
+            paths = None
+
+        return View(self.network, matches[1], query=query, follow=paths)
 
     def view_all(self, matches):
         return None
 
     def view_query(self, matches):
         return matches[0]
+
+    def path(self, matches):
+        from backend.models.path import Path, PathStep
+        path = Path()
+        for match in filter(lambda match: isinstance(match, PathStep), matches):
+            path.to_step(match)
+        return path
+
+    def step(self, matches):
+        from backend.models.path import PathStep
+        from backend.models.query import FrameQuery
+        from lark.lexer import Token
+        relation = matches[0]
+        recursive = "RECURSIVE" in map(lambda token: token.type, filter(lambda match: isinstance(match, Token), matches))
+        query = None
+
+        for match in matches:
+            if isinstance(match, FrameQuery):
+                query = match
+
+        return PathStep(relation, recursive, query)
+
+    def to(self, matches):
+        from backend.models.query import FrameQuery, Query
+        return FrameQuery(self.network, list(filter(lambda match: isinstance(match, Query), matches))[0])
+
+    def relation(self, matches):
+        return str(matches[0])
 
     def frame_query(self, matches):
         from backend.models.query import FrameQuery, Query
