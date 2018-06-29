@@ -644,5 +644,12 @@ class FrameTestCase(unittest.TestCase):
         fa2 = g.register("A2")
         fb = g.register("B", isa=["A1", "A2"])
 
-        self.assertEquals(fb.concept(), "TEST.A1&TEST.A2")
-        self.assertEquals(fb.concept(full_path=False), "A1&A2")
+        self.assertEqual(fb.concept(), "TEST.A1&TEST.A2")
+        self.assertEqual(fb.concept(full_path=False), "A1&A2")
+
+    def test_frame_deep_copy_copies_identifiers(self):
+        f = Frame("TEST.A.1")
+        c = f.deep_copy(None)
+
+        self.assertEqual(c._identifier, f._identifier)
+        self.assertNotEqual(id(f._identifier), id(c._identifier))

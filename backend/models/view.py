@@ -68,4 +68,9 @@ class ViewGraph(Graph):
 
     def set_frames(self, frames: List[Frame]):
         for frame in frames:
+            original_graph = frame._identifier.graph
             self[frame._identifier] = frame
+            frame._identifier.graph = original_graph
+
+    def _modify_key(self, key: Union[Identifier, str]) -> str:
+        return key

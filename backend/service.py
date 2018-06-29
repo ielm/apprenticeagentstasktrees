@@ -28,7 +28,7 @@ def graph_to_json(graph):
 
         converted = {
             "type": frame.__class__.__name__,
-            "graph": graph._namespace,
+            "graph": graph._namespace if frame._identifier.graph is None else frame._identifier.graph,
             "name": frame._identifier.render(graph=False),
             "relations": [],
             "attributes": []
