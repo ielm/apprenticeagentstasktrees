@@ -33,10 +33,20 @@ class FRResolveHumanAndRobotAsSingletonsHeuristic(FRResolutionHeuristic):
             if len(fr_instances) > 0:
                 resolves["HUMAN"] = {fr_instances[0].name()}
 
+        if "ONT.HUMAN" in resolves:
+            fr_instances = self.fr.search(concept="HUMAN")
+            if len(fr_instances) > 0:
+                resolves["ONT.HUMAN"] = {fr_instances[0].name()}
+
         if "ROBOT" in resolves:
             fr_instances = self.fr.search(concept="ROBOT")
             if len(fr_instances) > 0:
                 resolves["ROBOT"] = {fr_instances[0].name()}
+
+        if "ONT.ROBOT" in resolves:
+            fr_instances = self.fr.search(concept="ROBOT")
+            if len(fr_instances) > 0:
+                resolves["ONT.ROBOT"] = {fr_instances[0].name()}
 
 
 # If the input is an object, and its syntactic dependencies contain a determined article ("the"), look for the
@@ -79,9 +89,9 @@ class FRResolveSetsWithIdenticalMembersHeuristic(FRResolutionHeuristic):
 
         # Convert any HUMAN and ROBOT mentions to their singleton FR representations
         def convert(filler):
-            if filler == "HUMAN":
+            if filler == "HUMAN" or filler == "ONT.HUMAN":
                 return self.fr._namespace + ".HUMAN.1"
-            if filler == "ROBOT":
+            if filler == "ROBOT" or filler == "ONT.ROBOT":
                 return self.fr._namespace + ".ROBOT.1"
             return filler.render()
         instance_members = list(map(lambda filler: convert(filler), instance_members))

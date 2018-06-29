@@ -192,7 +192,7 @@ class FR(Graph):
                 pframe = self._network.lookup(slot, graph=self.ontology)
                 if pframe is not None and pframe.isa(self.ontology["RELATION"]):
                     for filler in frame[slot]:
-                        results[filler._value.render(graph=False)] = None
+                        results[filler._value.render()] = None
             except Exception: pass
 
         for id in results:
@@ -238,6 +238,8 @@ class FR(Graph):
             if resolves[id] is None and id in tmr:
                 concept = tmr[id] if type(tmr[id]) == str else tmr[id].concept(full_path=False)
                 resolves[id] = {self.register(concept, isa=self.ontology[concept], generate_index=True).name()}
+            elif resolves[id] is None and id in self.ontology: # Make singletons
+                resolves[id] = {self.register(self.ontology[id]._identifier.name, isa=self.ontology[id], generate_index=True).name()}
 
         for instance in tmr:
             for resolved in resolves[tmr[instance]._identifier.render(graph=False)]:

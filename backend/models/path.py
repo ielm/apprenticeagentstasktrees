@@ -1,4 +1,4 @@
-from backend.models.graph import Frame
+from backend.models.graph import Frame, Identifier
 from backend.models.query import FrameQuery
 from typing import List
 
@@ -56,6 +56,7 @@ class Path(object):
         if step.relation == "*":
             for slot in frame:
                 fillers.extend(frame[slot]._storage)
+        fillers = list(filter(lambda filler: isinstance(filler._value, Identifier), fillers))
 
         for filler in fillers:
             frame = filler.resolve()

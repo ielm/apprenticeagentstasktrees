@@ -70,9 +70,6 @@ class TMR(Graph):
         super().__setitem__(key, value)
 
     def __getitem__(self, key):
-        if key == "HUMAN" or key == "ROBOT":
-            return key
-
         return super().__getitem__(key)
 
     def _frame_type(self):
@@ -149,7 +146,12 @@ class TMRInstance(Frame):
                     and (ontology[key] ^ ontology["RELATION"] or ontology[key] ^ ontology["ONTOLOGY-SLOT"]):
                 value = _properties[original_key]
                 value = re.sub(r"-([0-9]+)$", ".\\1", value)
-                self[key] += Identifier.parse(value)
+                identifier = Identifier.parse(value)
+
+                if identifier.graph is None and identifier.instance is None:
+                    identifier.graph = ontology._namespace
+
+                self[key] += identifier
             else:
                 self[key] += Literal(_properties[original_key])
 

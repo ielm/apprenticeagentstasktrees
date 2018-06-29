@@ -223,3 +223,17 @@ class TMRInstanceTestCase(unittest.TestCase):
         self.assertEqual(2, len(tmr["FASTEN.1"]["INSTRUMENT"]))
         self.assertTrue(tmr["FASTEN.1"]["INSTRUMENT"] == _tmr["FASTEN-1"]["INSTRUMENT"])
         self.assertTrue(tmr["FASTEN.1"]["INSTRUMENT"] == _tmr["FASTEN-1"]["INSTRUMENT-1"])
+
+    def test_tmr_imported_assigns_ontology_to_unspecified_identifiers(self):
+        self.ontology.register("RELATION", isa="PROPERTY")
+        self.ontology.register("AGENT", isa="RELATION")
+
+        r = self.load_resource("tests.resources", "DemoMay2018_Analyses.json", parse_json=True)
+        analysis = r[8]
+        _tmr = analysis["tmr"][0]["results"][0]["TMR"]
+
+        self.assertTrue("HUMAN" in _tmr["FASTEN-1"]["AGENT"])
+
+        tmr = self.n.register(TMR(analysis, self.ontology))
+        self.assertTrue(isinstance(tmr["FASTEN.1"]["AGENT"][0]._value, Identifier))
+        self.assertEqual(tmr["FASTEN.1"]["AGENT"][0]._value.graph, self.ontology._namespace)
