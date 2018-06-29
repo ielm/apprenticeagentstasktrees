@@ -198,6 +198,90 @@
                 </p>
             </div>
         </div>
+        <h3>Paths</h3>
+        <p>
+            After querying a view, you can add paths to follow from all matching frames in the view; any frame
+            found on the declared path will be added to the view.
+        </p>
+        <h4>Following a Single Relation</h4>
+        <p>
+            To follow a single relation from all matches, use the "FOLLOW" path syntax.  The example below shows following
+            the AGENT relation from the matching frame:
+        </p>
+        <div class="card bg-light mb-3">
+            <div class="card-header example-header">Example</div>
+            <div class="card-body example-body">
+                <p class="card-text example-text">
+                    <span class="keyword">VIEW</span> [graph] <span class="keyword">WHERE</span> @ = EXAMPLE.1 <span class="keyword">FOLLOW</span> [AGENT]->
+                </p>
+            </div>
+        </div>
+        <h4>Following a Path</h4>
+        <p>
+            To follow a path of more than one relation, chain them together (optionally with the "THEN" keyword):
+        </p>
+        <div class="card bg-light mb-3">
+            <div class="card-header example-header">Example</div>
+            <div class="card-body example-body">
+                <p class="card-text example-text">
+                    <span class="keyword">VIEW</span> [graph] <span class="keyword">WHERE</span> @ = EXAMPLE.1 <span class="keyword">FOLLOW</span> [AGENT]-> [IS-A]-> <br>
+                    <span class="keyword">VIEW</span> [graph] <span class="keyword">WHERE</span> @ = EXAMPLE.1 <span class="keyword">FOLLOW</span> [AGENT]-> <span class="keyword">THEN</span> [IS-A]->
+                </p>
+            </div>
+        </div>
+        <h4>Following Multiple Paths</h4>
+        <p>
+            To follow more than one unique path from the starting matches, use the "AND" operator:
+        </p>
+        <div class="card bg-light mb-3">
+            <div class="card-header example-header">Example</div>
+            <div class="card-body example-body">
+                <p class="card-text example-text">
+                    <span class="keyword">VIEW</span> [graph] <span class="keyword">WHERE</span> @ = EXAMPLE.1 <span class="keyword">FOLLOW</span> [AGENT]-> <span class="keyword">AND FOLLOW</span> [THEME]->
+                </p>
+            </div>
+        </div>
+        <h4>Following a Path Recursively</h4>
+        <p>
+            To follow the same step on a path as many times as can be (cycles will be detected and ignored), use the "*"
+            symbol adjacent to the relation to follow:
+        </p>
+        <div class="card bg-light mb-3">
+            <div class="card-header example-header">Example</div>
+            <div class="card-body example-body">
+                <p class="card-text example-text">
+                    <span class="keyword">VIEW</span> [graph] <span class="keyword">WHERE</span> @ = EXAMPLE.1 <span class="keyword">FOLLOW</span> [IS-A*]->
+                </p>
+            </div>
+        </div>
+        <h4>Path Step Querying</h4>
+        <p>
+            To follow a path, but only along steps that match certain criteria, use the "TO" operator to specify a complete
+            query (see above) that any frame at that step must match for the path to pass through:
+        </p>
+        <div class="card bg-light mb-3">
+            <div class="card-header example-header">Example</div>
+            <div class="card-body example-body">
+                <p class="card-text example-text">
+                    <span class="keyword">VIEW</span> [graph] <span class="keyword">WHERE</span> @ = EXAMPLE.1 <span class="keyword">FOLLOW</span> [AGENT]-> <span class="keyword">TO</span> [query] <br>
+                    <span class="keyword">VIEW</span> [graph] <span class="keyword">WHERE</span> @ = EXAMPLE.1 <span class="keyword">FOLLOW</span> [AGENT]-> <span class="keyword">TO</span> @ ^ ONT.HUMAN
+                </p>
+            </div>
+        </div>
+        <h4>Following any Path</h4>
+        <p>
+            To follow any path (regardless of the relation), use the "*" wildcard.  Warning: if you use both the wildcard,
+            and the recursive marker, you will render a view of everything in any way connected to your query, regardless
+            of how distant (this will typically mean rendering the entire ontology).
+        </p>
+        <div class="card bg-light mb-3">
+            <div class="card-header example-header">Example</div>
+            <div class="card-body example-body">
+                <p class="card-text example-text">
+                    <span class="keyword">VIEW</span> [graph] <span class="keyword">WHERE</span> @ = EXAMPLE.1 <span class="keyword">FOLLOW</span> [*]->
+                </p>
+            </div>
+        </div>
     </div>
 </body>
 </html>
