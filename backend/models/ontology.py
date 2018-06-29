@@ -1,4 +1,4 @@
-from backend.models.graph import Filler, Frame, Graph, Identifier, Slot
+from backend.models.graph import Filler, Frame, Graph, Identifier, Literal, Slot
 
 import itertools
 import pickle
@@ -49,6 +49,7 @@ class Ontology(Graph):
         frame._graph = self
 
         for slot in original:
+            relation = self._is_relation(slot)
             for facet in original[slot]:
                 fillers = original[slot][facet]
                 if fillers is None:
@@ -56,7 +57,7 @@ class Ontology(Graph):
 
                 if not isinstance(fillers, list):
                     fillers = [fillers]
-                fillers = list(map(lambda f: OntologyFiller(Identifier(self._namespace, f), facet), fillers))
+                fillers = list(map(lambda f: OntologyFiller(Identifier(self._namespace, f) if relation else Literal(f), facet), fillers))
                 frame[slot] = Slot(slot, values=fillers, frame=frame)
 
         self[item] = frame
@@ -90,6 +91,9 @@ class Ontology(Graph):
     def _is_relation(self, slot):
         if slot not in self._wrapped:
             return False
+
+        if slot in ["RELATION", "INVERSE", "IS-A", "INSTANCES", "ONTO-INSTANCES", "DOMAIN", "RANGE"]:
+            return True
 
         frame = self._wrapped[slot]
 
