@@ -1,3 +1,4 @@
+from backend.models.graph import Literal
 from backend.models.ontology import Ontology
 
 import unittest
@@ -16,6 +17,8 @@ class OntologyTestCase(unittest.TestCase):
         self.assertTrue(o["HUMAN"].isa("PHYSICAL-OBJECT"))
         self.assertTrue(o["HUMAN"] ^ "OBJECT")
         self.assertTrue(o["HUMAN"] ^ "ONT.OBJECT")
+
+        self.assertTrue(isinstance(o["FASTEN"]["ABSOLUTE-DAY"][0]._value, Literal))
 
         self.assertTrue(9494, len(o))
         self.assertTrue(9494, sum(1 for _ in iter(o)))
@@ -39,3 +42,10 @@ class OntologyTestCase(unittest.TestCase):
         o["OBJECT"]["XYZ"] += "a"
 
         self.assertEqual(1, len(o["OBJECT"]["XYZ"]))
+
+    def test_unwrapped_ontology_iterates(self):
+        o = Ontology("ONT")
+        all = o.register("ALL")
+
+        for f in o:
+            self.assertEqual(f, all.name())

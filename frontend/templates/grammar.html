@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Grammar</title>
+
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+    <script src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
+
+    <style>
+        .keyword {
+            font-weight: bold;
+            color: brown;
+        }
+        .example-header {
+            padding: 4px;
+        }
+        .example-body {
+            padding: 4px;
+        }
+        .example-text {
+            font-family: monospace;
+        }
+    </style>
+
+</head>
+<body>
+    <div class="container">
+        <h1>Grammar Overview</h1>
+        <p>
+            This page contains a quick overview of the querying grammar currently available for investigating graphs in the agent.
+        </p>
+        <h2>Keywords and Case</h2>
+        <p>
+            The grammar uses a variety of keywords, all of which are case-insensitive.  They are shown in this help document
+            like so: <span class="example-text keyword">KEYWORD</span>.  Non-keywords (such as the name of a graph, frame, slot, etc.)
+            are case sensitive, and must be put in exactly they exist in the data to find a match.
+        </p>
+        <h2>Views</h2>
+        <p>
+            The grammar currently requires that a view is constructed of an existing graph; to do this, you must start all
+            queries with:
+        </p>
+        <div class="card bg-light mb-3">
+            <div class="card-header example-header">Example</div>
+            <div class="card-body example-body">
+                <p class="card-text example-text">
+                    <span class="keyword">VIEW</span> [graph] <br>
+                    <span class="keyword">VIEW</span> TMR#123
+                </p>
+            </div>
+        </div>
+        <p>
+            After declaring a graph to view, you must select what from the graph to project into the view.  The easiest
+            way to do this is to choose to "show all" (which will render the entire graph):
+        </p>
+        <div class="card bg-light mb-3">
+            <div class="card-header example-header">Example</div>
+            <div class="card-body example-body">
+                <p class="card-text example-text">
+                    <span class="keyword">VIEW</span> [graph] <span class="keyword">SHOW ALL</span> <br>
+                    <span class="keyword">VIEW</span> TMR#123 <span class="keyword">SHOW ALL</span>
+                </p>
+            </div>
+        </div>
+        <h3>Queries</h3>
+        <p>
+            Instead of simply "showing all", which might render far too much on the screen at once, you can instead
+            show only frames matching a certain criteria (and all relations between them).  To do this, you'll use
+            the "show frames where" syntax:
+        </p>
+        <div class="card bg-light mb-3">
+            <div class="card-header example-header">Example</div>
+            <div class="card-body example-body">
+                <p class="card-text example-text">
+                    <span class="keyword">VIEW</span> [graph] <span class="keyword">SHOW FRAMES WHERE</span> [query] <br>
+                    <span class="keyword">VIEW</span> [graph] <span class="keyword">WHERE</span> [query] <br>
+                </p>
+            </div>
+        </div>
+        <h4>Identifier Queries</h4>
+        <p>
+            You can specify a particular frame or ontologically matched frames using an identifier query.  Use the "@"
+            symbol to compare a frame's identifier, and then compare it to another valid identifier (these identifiers
+            should be fully-qualified, meaning their graph name should be include: "WM.HUMAN.1" is fully qualified, while
+            "HUMAN.1" is not). To look for a specific frame by name:
+        </p>
+        <div class="card bg-light mb-3">
+            <div class="card-header example-header">Example</div>
+            <div class="card-body example-body">
+                <p class="card-text example-text">
+                    <span class="keyword">VIEW</span> [graph] <span class="keyword">WHERE</span> @ = WM.HUMAN.1
+                </p>
+            </div>
+        </div>
+        <p>
+            To look for any frame that is of a certain ontological type (IS-A), use the "^" comparator:
+        </p>
+        <div class="card bg-light mb-3">
+            <div class="card-header example-header">Example</div>
+            <div class="card-body example-body">
+                <p class="card-text example-text">
+                    <span class="keyword">VIEW</span> [graph] <span class="keyword">WHERE</span> @ ^ ONT.OBJECT
+                </p>
+            </div>
+        </div>
+        <p>
+            To look for any frame that is of a certain ontological type (immediate parent only), use the ".^" comparator:
+        </p>
+        <div class="card bg-light mb-3">
+            <div class="card-header example-header">Example</div>
+            <div class="card-body example-body">
+                <p class="card-text example-text">
+                    <span class="keyword">VIEW</span> [graph] <span class="keyword">WHERE</span> @ ^. ONT.HUMAN
+                </p>
+            </div>
+        </div>
+        <h4>Slot Queries</h4>
+        <p>
+            In addition to, or in lieu of, searching on identifiers, you can also search based on property matches.
+            To begin, you can look for any instance that has a slot (regardless of contents), using the "HAS" operator.
+        </p>
+        <p>
+            To look for any frame that is of a certain ontological type, use the "^" comparator:
+        </p>
+        <div class="card bg-light mb-3">
+            <div class="card-header example-header">Example</div>
+            <div class="card-body example-body">
+                <p class="card-text example-text">
+                    <span class="keyword">VIEW</span> [graph] <span class="keyword">WHERE HAS</span> [property] <br>
+                    <span class="keyword">VIEW</span> [graph] <span class="keyword">WHERE HAS</span> THEME
+                </p>
+            </div>
+        </div>
+        <h4>Filler Queries</h4>
+        <p>
+            To look for frames that have particular values in a slot, filler queries can be used:
+        </p>
+        <div class="card bg-light mb-3">
+            <div class="card-header example-header">Example</div>
+            <div class="card-body example-body">
+                <p class="card-text example-text">
+                    <span class="keyword">VIEW</span> [graph] <span class="keyword">WHERE</span> [property] = [value]<br>
+                    <span class="keyword">VIEW</span> [graph] <span class="keyword">WHERE</span> HEIGHT = 123 <br>
+                    <span class="keyword">VIEW</span> [graph] <span class="keyword">WHERE</span> NAME = "Joe"
+                </p>
+            </div>
+        </div>
+        <p>
+            Values can be identifiers as well, and the identifier querying (from above) can be used:
+        </p>
+        <div class="card bg-light mb-3">
+            <div class="card-header example-header">Example</div>
+            <div class="card-body example-body">
+                <p class="card-text example-text">
+                    <span class="keyword">VIEW</span> [graph] <span class="keyword">WHERE</span> AGENT = WM.HUMAN.1 <br>
+                    <span class="keyword">VIEW</span> [graph] <span class="keyword">WHERE</span> AGENT ^ ONT.OBJECT <br>
+                    <span class="keyword">VIEW</span> [graph] <span class="keyword">WHERE</span> AGENT ^. ONT.HUMAN
+                </p>
+            </div>
+        </div>
+        <p>
+            The slot can be a wildcard, if only the value is of interest:
+        </p>
+        <div class="card bg-light mb-3">
+            <div class="card-header example-header">Example</div>
+            <div class="card-body example-body">
+                <p class="card-text example-text">
+                    <span class="keyword">VIEW</span> [graph] <span class="keyword">WHERE</span> * = WM.HUMAN.1
+                </p>
+            </div>
+        </div>
+        <h4>Logical Querying</h4>
+        <p>
+            Both slot and filler queries can have logical combinations applied: and, or, not, and exactly are available.
+            If an "and" query is used, all of the subqueries must match.  If an "or" query is used, only one of the
+            subqueries must match.  If a "not" query is used, the single subquery must not match.  If an "exactly"
+            query is used, all of the subqueries must match, AND, every subelement being queried must match (in other
+            words, an "and" query find intersection > 0, while an "exactly" query finds difference = 0).
+        </p>
+        <p>
+            In all cases, logical operators require parenthesis to surround their components:
+        </p>
+        <div class="card bg-light mb-3">
+            <div class="card-header example-header">Example</div>
+            <div class="card-body example-body">
+                <p class="card-text example-text">
+                    <span class="keyword">VIEW</span> [graph] <span class="keyword">WHERE</span> (@ ^ ONT.HUMAN <span class="keyword">AND</span> AGENT-OF=WM.HUMAN.1) <br>
+                    <span class="keyword">VIEW</span> [graph] <span class="keyword">WHERE</span> (@ ^ ONT.HUMAN <span class="keyword">OR</span> AGENT-OF=WM.HUMAN.1) <br>
+                    <span class="keyword">VIEW</span> [graph] <span class="keyword">WHERE</span> <span class="keyword">NOT</span> (@ = WM.HUMAN.1) <br>
+                    <span class="keyword">VIEW</span> [graph] <span class="keyword">WHERE</span> <span class="keyword">EXACTLY</span> (AGENT = WM.HUMAN.1 <span class="keyword">AND</span> THEME = WM.OBJECT.1) <br>
+                    <span class="keyword">VIEW</span> [graph] <span class="keyword">WHERE</span> AGENT (= WM.HUMAN.1 <span class="keyword">AND</span> = WM.AGENT.2) <br>
+                    <span class="keyword">VIEW</span> [graph] <span class="keyword">WHERE</span> AGENT (= WM.HUMAN.1 <span class="keyword">OR</span> = WM.AGENT.2) <br>
+                    <span class="keyword">VIEW</span> [graph] <span class="keyword">WHERE</span> AGENT NOT (= WM.HUMAN.1) <br>
+                    <span class="keyword">VIEW</span> [graph] <span class="keyword">WHERE</span> AGENT <span class="keyword">EXACTLY</span> (= WM.HUMAN.1 <span class="keyword">OR</span> = WM.AGENT.2) <br>
+                </p>
+            </div>
+        </div>
+        <h3>Paths</h3>
+        <p>
+            After querying a view, you can add paths to follow from all matching frames in the view; any frame
+            found on the declared path will be added to the view.
+        </p>
+        <h4>Following a Single Relation</h4>
+        <p>
+            To follow a single relation from all matches, use the "FOLLOW" path syntax.  The example below shows following
+            the AGENT relation from the matching frame:
+        </p>
+        <div class="card bg-light mb-3">
+            <div class="card-header example-header">Example</div>
+            <div class="card-body example-body">
+                <p class="card-text example-text">
+                    <span class="keyword">VIEW</span> [graph] <span class="keyword">WHERE</span> @ = EXAMPLE.1 <span class="keyword">FOLLOW</span> [AGENT]->
+                </p>
+            </div>
+        </div>
+        <h4>Following a Path</h4>
+        <p>
+            To follow a path of more than one relation, chain them together (optionally with the "THEN" keyword):
+        </p>
+        <div class="card bg-light mb-3">
+            <div class="card-header example-header">Example</div>
+            <div class="card-body example-body">
+                <p class="card-text example-text">
+                    <span class="keyword">VIEW</span> [graph] <span class="keyword">WHERE</span> @ = EXAMPLE.1 <span class="keyword">FOLLOW</span> [AGENT]-> [IS-A]-> <br>
+                    <span class="keyword">VIEW</span> [graph] <span class="keyword">WHERE</span> @ = EXAMPLE.1 <span class="keyword">FOLLOW</span> [AGENT]-> <span class="keyword">THEN</span> [IS-A]->
+                </p>
+            </div>
+        </div>
+        <h4>Following Multiple Paths</h4>
+        <p>
+            To follow more than one unique path from the starting matches, use the "AND" operator:
+        </p>
+        <div class="card bg-light mb-3">
+            <div class="card-header example-header">Example</div>
+            <div class="card-body example-body">
+                <p class="card-text example-text">
+                    <span class="keyword">VIEW</span> [graph] <span class="keyword">WHERE</span> @ = EXAMPLE.1 <span class="keyword">FOLLOW</span> [AGENT]-> <span class="keyword">AND FOLLOW</span> [THEME]->
+                </p>
+            </div>
+        </div>
+        <h4>Following a Path Recursively</h4>
+        <p>
+            To follow the same step on a path as many times as can be (cycles will be detected and ignored), use the "*"
+            symbol adjacent to the relation to follow:
+        </p>
+        <div class="card bg-light mb-3">
+            <div class="card-header example-header">Example</div>
+            <div class="card-body example-body">
+                <p class="card-text example-text">
+                    <span class="keyword">VIEW</span> [graph] <span class="keyword">WHERE</span> @ = EXAMPLE.1 <span class="keyword">FOLLOW</span> [IS-A*]->
+                </p>
+            </div>
+        </div>
+        <h4>Path Step Querying</h4>
+        <p>
+            To follow a path, but only along steps that match certain criteria, use the "TO" operator to specify a complete
+            query (see above) that any frame at that step must match for the path to pass through:
+        </p>
+        <div class="card bg-light mb-3">
+            <div class="card-header example-header">Example</div>
+            <div class="card-body example-body">
+                <p class="card-text example-text">
+                    <span class="keyword">VIEW</span> [graph] <span class="keyword">WHERE</span> @ = EXAMPLE.1 <span class="keyword">FOLLOW</span> [AGENT]-> <span class="keyword">TO</span> [query] <br>
+                    <span class="keyword">VIEW</span> [graph] <span class="keyword">WHERE</span> @ = EXAMPLE.1 <span class="keyword">FOLLOW</span> [AGENT]-> <span class="keyword">TO</span> @ ^ ONT.HUMAN
+                </p>
+            </div>
+        </div>
+        <h4>Following any Path</h4>
+        <p>
+            To follow any path (regardless of the relation), use the "*" wildcard.  Warning: if you use both the wildcard,
+            and the recursive marker, you will render a view of everything in any way connected to your query, regardless
+            of how distant (this will typically mean rendering the entire ontology).
+        </p>
+        <div class="card bg-light mb-3">
+            <div class="card-header example-header">Example</div>
+            <div class="card-body example-body">
+                <p class="card-text example-text">
+                    <span class="keyword">VIEW</span> [graph] <span class="keyword">WHERE</span> @ = EXAMPLE.1 <span class="keyword">FOLLOW</span> [*]->
+                </p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

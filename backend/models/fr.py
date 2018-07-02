@@ -1,4 +1,5 @@
 from backend.models.graph import Filler, Frame, Graph, Identifier
+from backend.models.query import FrameQuery, IdentifierQuery
 from backend.heuristics.fr_heuristics import *
 from backend.utils.AgentLogger import AgentLogger
 
@@ -13,7 +14,6 @@ class FR(Graph):
         self.ontology = ontology
 
         self._logger = AgentLogger()
-        self._indexes = dict()
 
         self.heuristics = [
             FRResolveHumanAndRobotAsSingletonsHeuristic,
@@ -36,15 +36,16 @@ class FR(Graph):
         self._indexes = dict()
 
     def register(self, id, isa=None, generate_index=True):
-        if generate_index:
-            id = id + "." + str(self.__next_index(id))
-        return super().register(id, isa=isa)
+        return super().register(id, isa=isa, generate_index=generate_index)
 
     def _frame_type(self):
         return FRInstance
 
-    def search(self, concept=None, subtree=None, descendant=None, attributed_tmr_instance=None, context=None, has_fillers=None):
+    def search(self, query: FrameQuery=None, concept=None, subtree=None, descendant=None, attributed_tmr_instance=None, context=None, has_fillers=None):
         results = list(self.values())
+
+        if query is not None:
+            results = list(filter(lambda instance: query.compare(instance), results))
 
         if concept is not None:
             results = list(filter(lambda instance: instance.concept() == self.ontology[concept].name(), results))
@@ -191,7 +192,7 @@ class FR(Graph):
                 pframe = self._network.lookup(slot, graph=self.ontology)
                 if pframe is not None and pframe.isa(self.ontology["RELATION"]):
                     for filler in frame[slot]:
-                        results[filler._value.render(graph=False)] = None
+                        results[filler._value.render()] = None
             except Exception: pass
 
         for id in results:
@@ -237,19 +238,12 @@ class FR(Graph):
             if resolves[id] is None and id in tmr:
                 concept = tmr[id] if type(tmr[id]) == str else tmr[id].concept(full_path=False)
                 resolves[id] = {self.register(concept, isa=self.ontology[concept], generate_index=True).name()}
+            elif resolves[id] is None and id in self.ontology: # Make singletons
+                resolves[id] = {self.register(self.ontology[id]._identifier.name, isa=self.ontology[id], generate_index=True).name()}
 
         for instance in tmr:
             for resolved in resolves[tmr[instance]._identifier.render(graph=False)]:
                 self.populate(resolved, tmr[instance], resolves)
-
-    def __next_index(self, concept):
-        if concept in self._indexes:
-            index = self._indexes[concept] + 1
-            self._indexes[concept] = index
-            return index
-
-        self._indexes[concept] = 1
-        return 1
 
     def __str__(self):
         lines = [self._namespace]

@@ -1,8 +1,9 @@
-from backend.models.graph import Filler, Frame, Graph, Identifier, Slot
+from backend.models.graph import Filler, Frame, Graph, Identifier, Literal, Slot
 
 import itertools
 import pickle
 from pkgutil import get_data
+from typing import List, Union
 
 
 class Ontology(Graph):
@@ -23,8 +24,13 @@ class Ontology(Graph):
 
     def __init__(self, namespace, wrapped=None):
         super().__init__(namespace)
-        if wrapped is not None:
-            self._wrapped = wrapped
+        self._wrapped = wrapped
+
+    def _frame_type(self):
+        return OntologyFrame
+
+    def register(self, id, isa=None, generate_index=False):
+        return super().register(id, isa=isa, generate_index=generate_index)
 
     def __getitem__(self, item):
         try:
@@ -39,10 +45,11 @@ class Ontology(Graph):
 
         original = self._wrapped[item]
 
-        frame = Frame(Identifier(self._namespace, item))
+        frame = OntologyFrame(Identifier(self._namespace, item))
         frame._graph = self
 
         for slot in original:
+            relation = self._is_relation(slot)
             for facet in original[slot]:
                 fillers = original[slot][facet]
                 if fillers is None:
@@ -50,8 +57,8 @@ class Ontology(Graph):
 
                 if not isinstance(fillers, list):
                     fillers = [fillers]
-                fillers = list(map(lambda f: OntologyFiller(Identifier(self._namespace, f), facet), fillers))
-                frame[slot] = Slot(fillers, frame=frame)
+                fillers = list(map(lambda f: OntologyFiller(Identifier(self._namespace, f) if relation else Literal(f), facet), fillers))
+                frame[slot] = Slot(slot, values=fillers, frame=frame)
 
         self[item] = frame
 
@@ -79,11 +86,14 @@ class Ontology(Graph):
         if self._wrapped is not None:
             iters += iter(self._wrapped)
 
-        return itertools.chain(iters)
+        return itertools.chain(*iters)
 
     def _is_relation(self, slot):
         if slot not in self._wrapped:
             return False
+
+        if slot in ["RELATION", "INVERSE", "IS-A", "INSTANCES", "ONTO-INSTANCES", "DOMAIN", "RANGE"]:
+            return True
 
         frame = self._wrapped[slot]
 
@@ -103,6 +113,12 @@ class Ontology(Graph):
             if self._is_relation(parent):
                 return True
         return False
+
+
+class OntologyFrame(Frame):
+
+    def __init__(self, identifier: Union[Identifier, str], isa: Union['Slot', 'Filler', List['Filler'], Identifier, List['Identifier'], str, List[str]]=None):
+        super().__init__(identifier, isa)
 
 
 class OntologyFiller(Filler):

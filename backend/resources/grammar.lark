@@ -1,0 +1,74 @@
+start: (view)
+
+view: VIEW graph (view_all | view_query) (FOLLOW path (AND FOLLOW path)*)?
+view_all: SHOW ALL
+view_query: frame_query
+
+path: step ((THEN)? step)*
+step: "[" relation (RECURSIVE)? "]->" (to)?
+relation: (RELATION | WILDCARD)
+to: TO logical_slot_query
+
+frame_query: (SHOW FRAMES)? WHERE logical_slot_query
+logical_slot_query: (frame_id_query | "(" frame_id_query ")" | slot_query | "(" slot_query ")" | logical_and_slot_query | logical_or_slot_query | logical_not_slot_query | logical_exact_slot_query)
+frame_id_query: "@" identifier_query
+logical_and_slot_query: "(" logical_slot_query (AND logical_slot_query)+ ")"
+logical_or_slot_query: "(" logical_slot_query (OR logical_slot_query)+ ")"
+logical_not_slot_query: NOT logical_slot_query
+logical_exact_slot_query: EXACTLY logical_and_slot_query
+
+slot_query: (slot_name_only_query | slot_name_fillers_query)
+slot_name_only_query: HAS NAME
+slot_name_fillers_query: (NAME | WILDCARD) (logical_filler_query)
+logical_filler_query: (filler_query | "(" filler_query ")" | logical_and_filler_query | logical_or_filler_query | logical_not_filler_query | logical_exact_filler_query)
+logical_and_filler_query: "(" logical_filler_query (AND logical_filler_query)+ ")"
+logical_or_filler_query: "(" logical_filler_query (OR logical_filler_query)+ ")"
+logical_not_filler_query: NOT logical_filler_query
+logical_exact_filler_query: EXACTLY logical_and_filler_query
+
+filler_query: (identifier_query | literal_query)
+identifier_query: (EQUALS | ISA | ISPARENT) identifier
+literal_query: EQUALS literal
+
+literal: (integer | double | string)
+integer: INTEGER
+double: INTEGER "." INTEGER
+string: ("\"") (ALPHA | INTEGER)+ ("\"")
+
+identifier: (graph ".")? name ("." instance)?
+graph: (GRAPH | tmr)
+tmr: "TMR" "#" INTEGER
+name: NAME
+instance: INSTANCE
+
+ALL: "all"i
+AND: "and"i
+EXACTLY: "exactly"i
+FOLLOW: "follow"i
+FRAMES: "frames"i
+HAS: "has"i
+NOT: "not"i
+OR: "or"i
+SHOW: "show"i
+THEN: "then"i
+TO: "to"i
+VIEW: "view"i
+WHERE: "where"i
+
+DASH: "-"
+EQUALS: "="
+ISA: "^"
+ISPARENT: "^."
+RECURSIVE: "*"
+
+GRAPH: /[a-zA-Z]+/
+NAME: /[a-zA-Z]+/
+INSTANCE: /[0-9]+/
+RELATION: /[a-zA-Z0-9\-]+/
+WILDCARD: "*"
+
+INTEGER: /[0-9]+/
+ALPHA: /[a-zA-Z]+/
+
+WHITESPACE: (" " | /\t/ )+
+%ignore WHITESPACE

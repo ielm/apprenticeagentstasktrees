@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Agent View</title>
+
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis.min.css">
+
+    <style>
+        .frame-link {
+            cursor: pointer;
+        }
+        .relations-table {
+            font-size: small;
+        }
+        .attributes-table {
+            font-size: small;
+        }
+        .property-icon {
+            padding-left: 8px;
+            padding-right: 8px;
+        }
+        .table > thead > tr:first-child > td,
+        .table > tbody > tr:first-child > td {
+            border: none;
+        }
+        .reload-icon {
+            filter: invert(.5) sepia(1) saturate(2) hue-rotate(75deg);
+        }
+        .reload-icon:hover {
+            filter: invert(.5) sepia(0) saturate(1) hue-rotate(75deg);
+        }
+        .error-icon {
+            filter: invert(.5) sepia(1) saturate(5) hue-rotate(314deg);
+        }
+        .TMRInstance {
+            color: #4286f4;
+        }
+        .FRInstance {
+            color: #488962;
+        }
+        .OntologyFrame {
+            color: #aa6536;
+        }
+        .Frame {
+            color: black;
+        }
+    </style>
+
+    <script src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mustache.js/2.3.0/mustache.min.js"></script>
+
+    <script>
+        var colors = {
+            "TMRInstance": {
+                border: "#4286f4",
+                background: "#9bc1ff",
+                highlight: {
+                    border: "#4286f4",
+                    background: "#9bc1ff",
+                }
+            },
+            "FRInstance": {
+                border: "#488962",
+                background: "#7cba95",
+                highlight: {
+                    border: "#488962",
+                    background: "#7cba95",
+                }
+            },
+            "OntologyFrame": {
+                border: "#aa6536",
+                background: "#d8a988",
+                highlight: {
+                    border: "#aa6536",
+                    background: "#d8a988",
+                }
+            }
+        };
+    </script>
+
+    <script>
+
+        var _graph;
+        var _network;  // VIS network object, not a LEIA network of graphs
+
+        function fetch_graph(id) {
+            $.ajax({
+                url: "/graph?id=" + encodeURIComponent(id),
+                method: "GET"
+            }).done(function(data) {
+                render_graph(JSON.parse(data));
+            }).fail(function(error) {
+                console.log(error);
+            });
+        }
+
+        function fetch_view(query) {
+            $.ajax({
+                url: "/view",
+                method: "POST",
+                data: query,
+                contentType: "text/plain"
+            }).done(function(data) {
+                history_success(query);
+                render_graph(JSON.parse(data));
+            }).fail(function(error) {
+                var lines = error.responseText.trim().split("\n");
+                var line = lines[lines.length - 1];
+                history_error(query, line);
+                console.log(lines);
+            });
+        }
+
+        function render_graph(graph) {
+            _graph = graph;
+
+            var framesByID = {};
+            for (var frame in graph) {
+                framesByID[graph[frame]["graph"] + "." + graph[frame]["name"]] = graph[frame];
+            }
+
+            var frames = graph
+                .map(function(frame) {
+                    return {
+                        id: frame["graph"] + "." + frame["name"],
+                        label: frame["name"],
+                        color: colors[frame["type"]],
+                    }
+                });
+
+            var relations = graph
+                .map(function(frame) {
+                    return Array.from(frame["relations"])
+                        .filter(r => ["AGENT-OF", "THEME-OF", "INSTRUMENT-OF", "SCOPE-OF", "DESTINATION-OF"].indexOf(r.slot) == -1)
+                        .map(function(relation) {
+                            return {
+                                from: frame["graph"] + "." + frame["name"],
+                                to: relation["graph"] + "." + relation["value"],
+                                label: relation["slot"],
+                                arrows: "to",
+                            }
+                        })
+                })
+                .reduce(function (f1, f2) {return f1.concat(f2)});
+
+            var nodes = new vis.DataSet(frames);
+            var edges = new vis.DataSet(relations);
+
+            var data = {
+                nodes: nodes,
+                edges: edges
+            };
+            var options = {
+                "physics": {
+                    "barnesHut": {
+                        "springLength": 300
+                    }
+                },
+                "layout": {
+                    "randomSeed": 3
+                }
+            };
+
+            var network = new vis.Network($(document).find("#graph")[0], data, options);
+
+            network.on("selectNode", function(params) {
+                load_frame(framesByID[params["nodes"][0]]);
+            });
+
+            network.on("dragStart", function(params) {
+                if (params["nodes"][0] == undefined) {
+                    return;
+                }
+                load_frame(framesByID[params["nodes"][0]]);
+            });
+
+            _network = network;
+
+        }
+
+        function load_frame(frame) {
+
+            var content = {
+                frame: frame,
+            };
+
+            var template = document.getElementById('frame-template').innerHTML;
+            Mustache.parse(template, ["{|", "|}"]);
+            var rendered = Mustache.render(template, content);
+            $(document).find("#frame")[0].innerHTML = rendered;
+
+        }
+
+        function history_success(history) {
+            var content = {
+                history: history,
+            };
+
+            var template = document.getElementById('history-success-template').innerHTML;
+            Mustache.parse(template, ["{|", "|}"]);
+            var rendered = Mustache.render(template, content);
+            $($(document).find("#history-table tbody")[0]).prepend($(rendered));
+
+            while ($($(document).find("#history-table tbody")[0]).children().length > 5) {
+                $($(document).find("#history-table tbody")[0]).children().last().remove();
+            }
+        }
+
+        function history_error(history, error) {
+            var content = {
+                history: history,
+                error: error,
+            };
+
+            var template = document.getElementById('history-error-template').innerHTML;
+            Mustache.parse(template, ["{|", "|}"]);
+            var rendered = Mustache.render(template, content);
+            $($(document).find("#history-table tbody")[0]).prepend($(rendered));
+
+            while ($($(document).find("#history-table tbody")[0]).children().length > 5) {
+                $($(document).find("#history-table tbody")[0]).children().last().remove();
+            }
+        }
+
+    </script>
+
+    <script id="frame-template" type="x-tmpl-mustache">
+        <p><strong>{|frame.name|}</strong></p>
+        <table class='relations-table'>
+            {|#frame.relations|}
+            <tr>
+                <td>{|slot|}</td>
+                <td class="property-icon"><img src="/assets/svg/arrow-thick-right.svg" alt="arrow-thick-right" style="height: 12px"></td>
+                <td><a class='frame-link' data-frame='{|graph|}.{|value|}'>{|graph|}.{|value|}</a></td>
+            </tr>
+            {|/frame.relations|}
+        </table>
+        <p></p>
+        <table class='attributes-table'>
+            {|#frame.attributes|}
+            <tr>
+                <td>{|slot|}
+                <td class="property-icon"><img src="/assets/svg/list.svg" alt="list" style="height: 12px"></td>
+                <td>{|value|}</td>
+            </tr>
+            {|/frame.attributes|}
+        </table>
+    </script>
+
+    <script id="history-success-template" type="x-tmpl-mustache">
+        <tr>
+            <td><img class="reload-icon" src="/assets/svg/reload.svg" alt="arrow-thick-right" style="height: 12px" data-query="{|history|}"></td>
+            <td>{|history|}</td>
+        </tr>
+    </script>
+
+    <script id="history-error-template" type="x-tmpl-mustache">
+        <tr>
+            <td><img class="error-icon" src="/assets/svg/circle-x.svg" alt="arrow-thick-right" style="height: 12px"></td>
+            <td>{|history|} <br> {|error|}</td>
+        </tr>
+    </script>
+
+    <script>
+
+        $(document).ready(function() {
+
+            $("body").on("click", ".frame-link", function(e) {
+                var id = $(e.target).data("frame");
+                for (var i in _graph) {
+                    var frame = _graph[i];
+                    if (frame.graph + "." + frame.name == id) {
+                        load_frame(frame);
+                        _network.selectNodes([id]);
+                        break;
+                    }
+                }
+            });
+
+            $("#viewButton").on("click", function() {
+                var query = $("#viewQuery").val();
+                fetch_view(query);
+            });
+
+            $("#viewQuery").on("keyup", function(e) {
+                if (e.key == "Enter") {
+                    var query = $("#viewQuery").val();
+                    fetch_view(query);
+                }
+            });
+
+            $(".graph-link").on("click", function(e) {
+                var graph = $(e.target).data("graph");
+                var query = "VIEW " + graph + " SHOW ALL";
+                $("#viewQuery").val(query);
+                fetch_view(query);
+            });
+
+            $("body").on("click", ".reload-icon", function(e) {
+                var query = $(e.target).data("query");
+                $("#viewQuery").val(query);
+                fetch_view(query);
+            });
+
+        });
+
+    </script>
+
+</head>
+<body>
+    <div class="container">
+        <div class="row" style="margin-top: 25px;">
+            <div class="col-sm-8">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="input-group mb-3">
+                            <input id="viewQuery" type="text" class="form-control form-control-sm" placeholder="View query">
+                            <div class="input-group-append">
+                                <button id="viewButton" class="btn btn-sm btn-primary" type="button">View</button>
+                            </div>
+                        </div>
+                        <small id="help" class="form-text text-muted" style="margin-top: -12px; margin-left: 1px;">Write your graph view query above; see <a href="/grammar">help</a>.</small>
+                    </div>
+                    <div class="card-body">
+                        <div id="graph" style="height: 500px;"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-sm-4">
+                <div class="card" style="margin-bottom: 25px;">
+                    <div class="card-header">
+                        Graphs
+                    </div>
+                    <div class="card-body">
+                        <div id="graphs">
+                            {% for n in network %}
+                            <a href="#" class="graph-link badge badge-info" data-graph="{{n}}">{{n}}</a>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                <div class="card" style="margin-bottom: 25px;">
+                    <div class="card-header">
+                        Details
+                    </div>
+                    <div class="card-body">
+                        <div id="frame"></div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        History
+                    </div>
+                    <div class="card-body">
+                        <div>
+                            <table id="history-table" class="table table-sm">
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

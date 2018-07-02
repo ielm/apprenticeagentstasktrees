@@ -5,6 +5,12 @@ from uuid import uuid4
 
 import re
 
+# Use the below block of code to avoid cyclic imports,
+# while still allowing top-level imports for type hints.
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from backend.models.query import FrameQuery
+
 
 class Identifier(object):
 
@@ -70,16 +76,28 @@ class Identifier(object):
     def __repr__(self):
         return "@" + str(self)
 
+    def deep_copy(self):
+        return Identifier(self.graph, self.name, instance=self.instance)
+
 
 class Literal(object):
 
     def __init__(self, value):
         self.value = value
 
+    def __str__(self):
+        return str(self.value)
+
+    def __repr__(self):
+        return str(self)
+
     def __eq__(self, other):
         if isinstance(other, Literal):
             other = other.value
         return self.value == other
+
+    def deep_copy(self):
+        return Literal(self.value)
 
 
 class Network(object):
@@ -158,6 +176,7 @@ class Graph(Mapping):
         self._namespace = namespace
         self._storage = dict()
         self._network = None
+        self._indexes = dict()
 
     def __setitem__(self, key: Union[Identifier, str], value: 'Frame'):
         if not isinstance(value, Frame):
@@ -202,17 +221,29 @@ class Graph(Mapping):
     def _frame_type(self) -> Type['Frame']:
         return Frame
 
-    def register(self, id: str, isa: Union['Slot', 'Filler', List['Filler'], Identifier, List['Identifier'], str, List[str]]=None) -> 'Frame':
+    def _next_index(self, concept):
+        if concept in self._indexes:
+            index = self._indexes[concept] + 1
+            self._indexes[concept] = index
+            return index
+
+        self._indexes[concept] = 1
+        return 1
+
+    def register(self, id: str, isa: Union['Slot', 'Filler', List['Filler'], Identifier, List['Identifier'], str, List[str]]=None, generate_index: bool=False) -> 'Frame':
         if type(id) != str:
             raise TypeError()
+
+        if generate_index:
+            id = id + "." + str(self._next_index(id))
 
         frame = self._frame_type()(id, isa=isa)
         self[id] = frame
 
         return frame
 
-    def search(self):
-        raise Exception("NYI")
+    def search(self, query: 'FrameQuery') -> List['Frame']:
+        return list(filter(lambda frame: query.compare(frame), self._storage.values()))
 
     def clear(self):
         self._storage = dict()
@@ -297,12 +328,12 @@ class Frame(object):
         if type(value) != list:
             value = [value]
 
-        self._storage[key] = Slot(values=value, frame=self)
+        self._storage[key] = Slot(key, values=value, frame=self)
 
     def __getitem__(self, item):
         if item in self._storage:
             return self._storage[item]
-        return Slot(frame=self)
+        return Slot(item, frame=self)
 
     def __delitem__(self, key):
         del self._storage[key]
@@ -327,10 +358,23 @@ class Frame(object):
     def __repr__(self):
         return str(self)
 
+    def deep_copy(self, graph: Graph):
+        copy = self.__class__(self._identifier.deep_copy())
+        copy._network = self._network
+        copy._graph = graph
+        copy._uuid = uuid4()
+
+        copy._storage = dict()
+        for slot in self._storage.values():
+            copy._storage[slot._name] = slot.deep_copy(copy)
+
+        return copy
+
 
 class Slot(object):
 
-    def __init__(self, values=None, frame: Frame=None):
+    def __init__(self, name: str, values=None, frame: Frame=None):
+        self._name = name
         self._storage = list()
         self._frame = frame
 
@@ -368,7 +412,7 @@ class Slot(object):
         if not isinstance(other, Slot):
             return self + other
 
-        result = Slot(values=self._storage, frame=self._frame)
+        result = Slot(self._name, values=self._storage, frame=self._frame)
         result._storage.extend(other._storage)
         return result
 
@@ -410,10 +454,18 @@ class Slot(object):
         return self.compare(other, isa=False, intersection=True)
 
     def __str__(self):
-        return str(self._storage)
+        return self._name + "=" + str(self._storage)
 
     def __repr__(self):
         return str(self)
+
+    def deep_copy(self, frame: Frame):
+        copy = Slot(self._name, frame=frame)
+        copy._storage = list()
+        for filler in self:
+            copy._storage.append(filler.deep_copy(frame))
+
+        return copy
 
 
 class Filler(object):
@@ -539,6 +591,13 @@ class Filler(object):
 
     def __repr__(self):
         return str(self)
+
+    def deep_copy(self, frame: Frame):
+        copy = Filler(self._value.deep_copy(), metadata=self._metadata)
+        copy._frame = frame
+        copy._uuid = uuid4()
+
+        return copy
 
 
 class UnknownFrameError(Exception): pass
