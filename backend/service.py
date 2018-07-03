@@ -9,6 +9,7 @@ from backend.contexts.LCTContext import LCTContext
 from backend.models.grammar import Grammar
 from backend.models.graph import Identifier, Network
 from backend.models.ontology import Ontology
+from backend.models.query import Query
 from backend.utils.YaleUtils import format_learned_event_yale, input_to_tmrs
 
 app = Flask(__name__, template_folder="../frontend/templates/")
@@ -129,7 +130,7 @@ def input():
         agent.input(tmr)
 
     if isinstance(agent.context, LCTContext):
-        learning = list(map(lambda instance: instance.name(), agent.wo_memory.search(context={LCTContext.LEARNING: True})))
+        learning = list(map(lambda instance: instance.name(), agent.wo_memory.search(query=Query.parsef(agent.network, "WHERE {LEARNING} = True", LEARNING=LCTContext.LEARNING))))
         return json.dumps({
             LCTContext.LEARNING: learning
         })

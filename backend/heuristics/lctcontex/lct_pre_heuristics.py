@@ -1,8 +1,9 @@
 from backend.contexts.context import AgendaProcessor, HeuristicException, FRResolutionAgendaProcessor
 from backend.heuristics.fr_heuristics import FRResolveHumanAndRobotAsSingletonsHeuristic, FRResolveSetsWithIdenticalMembersHeuristic
 from backend.heuristics.lctcontex.lct_fr_import_heuristics import FRImportDoNotImportRequestActions
+from backend.models.query import Query
 
-from uuid import uuid4
+import random
 
 # ------ Pre-Heuristics -------
 
@@ -35,7 +36,7 @@ class IdentifyClosingOfKnownTaskAgendaProcessor(AgendaProcessor):
             target = -1
             for index, le in enumerate(hierarchy):
                 if le in resolved[event._identifier.render(graph=False)]:
-                    if agent.wo_memory[le].context()[self.context.LEARNING]:
+                    if agent.wo_memory[le][self.context.LEARNING]:
                         target = index
 
             for i in range(0, target + 1):
@@ -66,16 +67,20 @@ class IdentifyCompletedTaskAgendaProcessor(AgendaProcessor):
         if not tmr.is_postfix():
             raise HeuristicException()
 
-        if len(agent.wo_memory.search(context={self.context.LEARNED: True})) == 0:
+        if len(agent.wo_memory.search(query=Query.parsef(agent.network, "WHERE {LEARNED} = True", LEARNED=self.context.LEARNED))) == 0:
             raise HeuristicException()
 
-        if len(agent.wo_memory.search(context={self.context.LEARNING: True})) > 0:
+        if len(agent.wo_memory.search(query=Query.parsef(agent.network, "WHERE {LEARNING} = True", LEARNING=self.context.LEARNING))) > 0:
             raise HeuristicException()
+
+        cid = random.randint(0, 1000000)
+        for frame in agent.wo_memory._storage.values():
+            frame[self.context.FROM_CONTEXT] = cid
 
         agent.lt_memory.import_fr(agent.wo_memory,
                                   import_heuristics=[FRImportDoNotImportRequestActions],
                                   resolve_heuristics=[FRResolveHumanAndRobotAsSingletonsHeuristic, FRResolveSetsWithIdenticalMembersHeuristic],
-                                  update_context={self.context.FROM_CONTEXT: [uuid4()]})
+                                  )
         agent.wo_memory.clear()
 
 

@@ -44,7 +44,7 @@ def format_pretty_name(fr, fr_instance):
 
         name += " " + themes + " (" + agents + ")"
 
-        name = ("+" if "*LCT.current" in fr_instance.context() and fr_instance.context()["*LCT.current"] else "") + name
+        name = ("+" if "*LCT.current" in fr_instance and fr_instance["*LCT.current"] else "") + name
 
     return name
 

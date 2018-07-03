@@ -1,4 +1,4 @@
-from backend.models.graph import Filler, Frame, Graph, Identifier
+from backend.models.graph import Filler, Frame, Graph, Identifier, Literal
 from backend.models.query import FrameQuery, IdentifierQuery
 from backend.heuristics.fr_heuristics import *
 from backend.utils.AgentLogger import AgentLogger
@@ -41,7 +41,7 @@ class FR(Graph):
     def _frame_type(self):
         return FRInstance
 
-    def search(self, query: FrameQuery=None, concept=None, subtree=None, descendant=None, attributed_tmr_instance=None, context=None, has_fillers=None):
+    def search(self, query: FrameQuery=None, concept=None, subtree=None, descendant=None, attributed_tmr_instance=None, has_fillers=None):
         results = list(self.values())
 
         if query is not None:
@@ -58,9 +58,6 @@ class FR(Graph):
 
         if attributed_tmr_instance is not None:
             results = list(filter(lambda instance: instance.is_attributed_to(attributed_tmr_instance), results))
-
-        if context is not None:
-            results = list(filter(lambda instance: instance.does_match_context(context), results))
 
         if has_fillers is not None:
             sets = dict((s.name(), s) for s in self.search(concept="SET"))
@@ -80,6 +77,10 @@ class FR(Graph):
 
         for slot in frame:
             for filler in frame[slot]:
+                if isinstance(filler._value, Literal):
+                    fr_instance[slot] += Literal(filler._value)
+                    continue
+
                 identifier = filler._value
 
                 if isinstance(identifier, Frame):
@@ -122,13 +123,11 @@ class FR(Graph):
     # 2) Resolve heuristics are the normal FR resolution heuristics; if none are provided, then no resolution occurs.
     #    That is, the normal heuristics in this FR are ignored during this operation - either none are used, or an
     #    overriding list must be provided.
-    def import_fr(self, other_fr, import_heuristics=None, resolve_heuristics=None, update_context=None):
+    def import_fr(self, other_fr, import_heuristics=None, resolve_heuristics=None):
         if import_heuristics is None:
             import_heuristics = []
         if resolve_heuristics is None:
             resolve_heuristics = []
-        if update_context is None:
-            update_context = {}
 
         status = {k: True for k in other_fr.keys()}
         for heuristic in import_heuristics:
@@ -155,24 +154,6 @@ class FR(Graph):
                 else:
                     resolved = list(resolved)[0]
             self.populate(resolved, other_fr[k], resolves=resolves)
-
-            # Merge contexts (needlessly complicated due to list types needing to be merged)
-            context = copy.deepcopy(other_fr[k].context())
-            for k in update_context:
-                if k not in context:
-                    context[k] = update_context[k]
-                    continue
-
-                if type(context[k]) == list and type(update_context[k]) != list:
-                    update_context[k] = [update_context[k]]
-                if type(context[k]) != list and type(update_context[k]) == list:
-                    context[k] = [context[k]]
-                if type(context[k]) == list:
-                    context[k].extend(update_context[k])
-                else:
-                    context[k] = update_context[k]
-            for k in context:
-                self[resolved].context()[k] = context[k]
 
         return resolves
 
@@ -257,31 +238,12 @@ class FRInstance(Frame):
     def __init__(self, name, isa=None):
         super().__init__(name, isa=isa)
         self._from = dict()
-        self._context = dict()
-
-    def context(self):
-        return self._context
 
     def attribute_to(self, tmrinstance):
         self._from[tmrinstance._uuid] = tmrinstance
 
     def is_attributed_to(self, tmrinstance):
         return tmrinstance._uuid in self._from
-
-    def does_match_context(self, context: dict) -> bool:
-        if type(context) is not dict:
-            raise Exception("Context must be a dictionary.")
-
-        for c in context:
-            if c not in self._context:
-                return False
-            if type(self._context[c]) == list:
-                if self._context[c] != context[c] and context[c] not in self._context[c]:
-                    return False
-            elif self._context[c] != context[c]:
-                return False
-
-        return True
 
     # TODO: this should be part of default searching capability
     def has_fillers(self, query, expand_sets=None):

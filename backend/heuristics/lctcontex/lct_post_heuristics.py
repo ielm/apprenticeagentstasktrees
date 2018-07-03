@@ -1,4 +1,5 @@
 from backend.contexts.context import AgendaProcessor, HeuristicException
+from backend.models.query import Query
 from backend.utils import FRUtils
 
 
@@ -29,7 +30,7 @@ class IdentifyPreconditionsAgendaProcessor(AgendaProcessor):
                     if cr in purpose:
                         filler_query[cr] = purpose[cr][0].resolve()
 
-                results = agent.wo_memory.search(context={self.context.LEARNING: True}, has_fillers=filler_query)
+                results = agent.wo_memory.search(query=Query.parsef(agent.network, "WHERE {LEARNING} = True", LEARNING=self.context.LEARNING), has_fillers=filler_query)
                 for result in results:
                     result["PRECONDITION"] += fr_event
 
@@ -62,7 +63,7 @@ class HandleRequestedActionsAgendaProcessor(AgendaProcessor):
 
         if event ^ agent.ontology["REQUEST-ACTION"] and "ROBOT" in event["BENEFICIARY"]:
             fr_currently_learning_events = agent.wo_memory.search(
-                context={self.context.LEARNING: True, self.context.CURRENT: True})
+                query=Query.parsef(agent.network, "WHERE ({LEARNING} = True and {CURRENT} = True)", LEARNING=self.context.LEARNING, CURRENT=self.context.CURRENT))
             for fr_current_event in fr_currently_learning_events:
                 for theme in fr_themes:
                     fr_current_event["HAS-EVENT-AS-PART"] += theme
@@ -89,7 +90,7 @@ class HandleCurrentActionAgendaProcessor(AgendaProcessor):
             fr_event = agent.wo_memory.search(attributed_tmr_instance=event)[0]
 
             fr_currently_learning_events = agent.wo_memory.search(
-                context={self.context.LEARNING: True, self.context.CURRENT: True})
+                query=Query.parsef(agent.network, "WHERE ({LEARNING} = True and {CURRENT} = True)", LEARNING=self.context.LEARNING, CURRENT=self.context.CURRENT))
             for fr_current_event in fr_currently_learning_events:
                 fr_current_event["HAS-EVENT-AS-PART"] += fr_event
 
@@ -118,14 +119,14 @@ class RecognizeSubEventsAgendaProcessor(AgendaProcessor):
             fr_event = agent.wo_memory.search(attributed_tmr_instance=event)[0]
 
             fr_currently_learning_events = agent.wo_memory.search(
-                context={self.context.LEARNING: True, self.context.CURRENT: True})
+                query=Query.parse(agent.network, "WHERE (" + self.context.LEARNING + " = True and " + self.context.CURRENT + " = True)"))
             for fr_current_event in fr_currently_learning_events:
-                fr_current_event.context()[self.context.CURRENT] = False
-                fr_current_event.context()[self.context.WAITING_ON] = fr_event.name()
+                fr_current_event[self.context.CURRENT] = False
+                fr_current_event[self.context.WAITING_ON] = fr_event.name()
                 fr_current_event["HAS-EVENT-AS-PART"] += fr_event
 
-            fr_event.context()[self.context.LEARNING] = True
-            fr_event.context()[self.context.CURRENT] = True
+            fr_event[self.context.LEARNING] = True
+            fr_event[self.context.CURRENT] = True
 
             self.halt_siblings()
             return
@@ -222,13 +223,13 @@ class RecognizePartsOfObjectAgendaProcessor(AgendaProcessor):
         if len(parts) == 0:
             raise HeuristicException()
 
-        if self.context.LEARNING not in fr_event.context() or not fr_event.context()[self.context.LEARNING]:
+        if self.context.LEARNING not in fr_event or not fr_event[self.context.LEARNING]:
             raise HeuristicException()
 
         if not fr_event ^ agent.ontology["BUILD"]:
             raise HeuristicException()
 
-        results = agent.wo_memory.search(context={self.context.LEARNING: True, self.context.WAITING_ON: fr_event.name()})
+        results = agent.wo_memory.search(query=Query.parsef(agent.network, "WHERE ({LEARNING} = True and {WAITING_ON} = {EVENT})", LEARNING=self.context.LEARNING, WAITING_ON=self.context.WAITING_ON, EVENT=fr_event.name()))
         if len(results) == 0:
             raise HeuristicException()
 
