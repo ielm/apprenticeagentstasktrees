@@ -31,7 +31,7 @@ class RecallTaskFromLongTermMemoryAgendaProcessor(AgendaProcessor):
         event = tmr.find_main_event()
         themes = _fillers_to_concepts(tmr, event["THEME"])
 
-        results = agent.lt_memory.search(concept=event.concept())
+        results = agent.lt_memory.search(query=Query.parsef(agent.network, "WHERE @ ^ {CONCEPT}", CONCEPT=event.concept()))
         results = list(filter(lambda result: len(_fillers_to_concepts(agent.lt_memory, result["THEME"]).intersection(themes)) > 0, results))
 
         if len(results) == 0:

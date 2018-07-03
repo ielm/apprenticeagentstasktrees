@@ -1,5 +1,5 @@
 from backend.models.graph import Filler, Frame, Graph, Identifier, Literal
-from backend.models.query import FrameQuery, IdentifierQuery
+from backend.models.query import FrameQuery, Query
 from backend.heuristics.fr_heuristics import *
 from backend.utils.AgentLogger import AgentLogger
 
@@ -41,14 +41,11 @@ class FR(Graph):
     def _frame_type(self):
         return FRInstance
 
-    def search(self, query: FrameQuery=None, concept=None, subtree=None, descendant=None, attributed_tmr_instance=None, has_fillers=None):
+    def search(self, query: FrameQuery=None, subtree=None, descendant=None, attributed_tmr_instance=None, has_fillers=None):
         results = list(self.values())
 
         if query is not None:
             results = list(filter(lambda instance: query.compare(instance), results))
-
-        if concept is not None:
-            results = list(filter(lambda instance: instance.concept() == self.ontology[concept].name(), results))
 
         if subtree is not None:
             results = list(filter(lambda instance: instance ^ subtree, results))
@@ -60,7 +57,7 @@ class FR(Graph):
             results = list(filter(lambda instance: instance.is_attributed_to(attributed_tmr_instance), results))
 
         if has_fillers is not None:
-            sets = dict((s.name(), s) for s in self.search(concept="SET"))
+            sets = dict((s.name(), s) for s in self.search(query=Query.parsef(self._network, "WHERE @ ^ {ONT}.SET", ONT=self.ontology._namespace)))
             results = list(filter(lambda instance: instance.has_fillers(has_fillers, expand_sets=sets), results))
 
         return results

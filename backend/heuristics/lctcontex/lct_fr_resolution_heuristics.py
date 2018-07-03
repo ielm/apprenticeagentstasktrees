@@ -44,7 +44,7 @@ class FRResolveUndeterminedThemesOfLearning(ContextBasedFRResolutionHeuristic):
                 purpose_ofs = map(lambda purpose_of: purpose_of.resolve(), theme_of["PURPOSE-OF"])
                 purpose_ofs = filter(lambda purpose_of: purpose_of ^ self.fr.ontology["EVENT"], purpose_ofs)
                 if len(list(purpose_ofs)) > 0:
-                    results = self.fr.search(concept=instance.concept())
+                    results = self.fr.search(Query.parsef(self.fr._network, "WHERE @ ^ {CONCEPT}", CONCEPT=instance.concept()))
                     resolves[instance._identifier.render(graph=False)] = set(map(lambda result: result.name(), results))
                     return True
 
