@@ -19,6 +19,8 @@ class GrammarTestCase(unittest.TestCase):
     def test_parse_name(self):
         self.assertEqual("EVENT", Grammar.parse(self.n, "EVENT", start="name"))
         self.assertEqual("EvEnT", Grammar.parse(self.n, "EvEnT", start="name"))
+        self.assertEqual("EvEn_T", Grammar.parse(self.n, "EvEn_T", start="name"))
+        self.assertEqual("*EvEn.T", Grammar.parse(self.n, "*EvEn.T", start="name"))
 
     def test_parse_graph(self):
         self.assertEqual("WM", Grammar.parse(self.n, "WM", start="graph"))
@@ -30,6 +32,10 @@ class GrammarTestCase(unittest.TestCase):
         self.assertEqual(Identifier(None, "EVENT", instance=1), Grammar.parse(self.n, "EVENT.1", start="identifier"))
         self.assertEqual(Identifier("WM", "EVENT"), Grammar.parse(self.n, "WM.EVENT", start="identifier"))
         self.assertEqual(Identifier(None, "EVENT"), Grammar.parse(self.n, "EVENT", start="identifier"))
+        with self.assertRaises(Exception):
+            Grammar.parse(self.n, "True", start="identifier")
+        with self.assertRaises(Exception):
+            Grammar.parse(self.n, "False", start="identifier")
 
     def test_parse_integer(self):
         self.assertEqual(1, Grammar.parse(self.n, "1", start="integer"))
@@ -50,6 +56,10 @@ class GrammarTestCase(unittest.TestCase):
         self.assertEqual(Literal("test"), Grammar.parse(self.n, "\"test\"", start="literal"))
         self.assertEqual(Literal("123"), Grammar.parse(self.n, "\"123\"", start="literal"))
         self.assertEqual("12ac3b3", Grammar.parse(self.n, "\"12ac3b3\"", start="literal"))
+        self.assertEqual(True, Grammar.parse(self.n, "True", start="literal"))
+        self.assertEqual(True, Grammar.parse(self.n, "TRUE", start="literal"))
+        self.assertEqual(False, Grammar.parse(self.n, "False", start="literal"))
+        self.assertEqual(False, Grammar.parse(self.n, "FaLsE", start="literal"))
 
     def test_parse_literal_query(self):
         self.assertEqual(LiteralQuery(self.n, 123), Grammar.parse(self.n, "=123", start="literal_query"))

@@ -173,3 +173,6 @@ class GrammarTransformer(Transformer):
 
     def string(self, matches):
         return "".join(matches)
+
+    def boolean(self, matches):
+        return matches[0].lower() == "true"

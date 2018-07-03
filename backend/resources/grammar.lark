@@ -30,7 +30,8 @@ filler_query: (identifier_query | literal_query)
 identifier_query: (EQUALS | ISA | ISPARENT) identifier
 literal_query: EQUALS literal
 
-literal: (integer | double | string)
+literal: (integer | double | string | boolean)
+boolean: (TRUE | FALSE)
 integer: INTEGER
 double: INTEGER "." INTEGER
 string: ("\"") (ALPHA | INTEGER)+ ("\"")
@@ -44,6 +45,7 @@ instance: INSTANCE
 ALL: "all"i
 AND: "and"i
 EXACTLY: "exactly"i
+FALSE: "false"i
 FOLLOW: "follow"i
 FRAMES: "frames"i
 HAS: "has"i
@@ -52,6 +54,7 @@ OR: "or"i
 SHOW: "show"i
 THEN: "then"i
 TO: "to"i
+TRUE: "true"i
 VIEW: "view"i
 WHERE: "where"i
 
@@ -62,7 +65,7 @@ ISPARENT: "^."
 RECURSIVE: "*"
 
 GRAPH: /[a-zA-Z]+/
-NAME: /[a-zA-Z\.\*]+/
+NAME: /(?!True|False)[a-zA-Z\.\*\_]+/i
 INSTANCE: /[0-9]+/
 RELATION: /[a-zA-Z0-9\-]+/
 WILDCARD: "*"
