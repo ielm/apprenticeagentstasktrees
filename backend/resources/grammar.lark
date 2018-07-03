@@ -62,7 +62,7 @@ ISPARENT: "^."
 RECURSIVE: "*"
 
 GRAPH: /[a-zA-Z]+/
-NAME: /[a-zA-Z]+/
+NAME: /[a-zA-Z\.\*]+/
 INSTANCE: /[0-9]+/
 RELATION: /[a-zA-Z0-9\-]+/
 WILDCARD: "*"

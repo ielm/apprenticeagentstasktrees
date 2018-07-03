@@ -76,6 +76,7 @@ class GrammarTestCase(unittest.TestCase):
         self.assertEqual(SlotQuery(self.n, nq), Grammar.parse(self.n, "has THEME", start="slot_query"))
         self.assertEqual(SlotQuery(self.n, fq1), Grammar.parse(self.n, "* = 123", start="slot_query"))
         self.assertEqual(SlotQuery(self.n, fq1), Grammar.parse(self.n, "* (= 123)", start="slot_query"))
+        self.assertEqual(SlotQuery(self.n, AndQuery(self.n, [NameQuery(self.n, "*CTX.SLOT"), fq1])), Grammar.parse(self.n, "*CTX.SLOT = 123", start="slot_query"))
         self.assertEqual(SlotQuery(self.n, AndQuery(self.n, [fq1, fq2])), Grammar.parse(self.n, "* (= 123 AND = 456)", start="slot_query"))
         self.assertEqual(SlotQuery(self.n, AndQuery(self.n, [fq1, fq2])), Grammar.parse(self.n, "* (= 123 and = 456)", start="slot_query"))
         self.assertEqual(SlotQuery(self.n, OrQuery(self.n, [fq1, fq2])), Grammar.parse(self.n, "* (= 123 OR = 456)", start="slot_query"))
