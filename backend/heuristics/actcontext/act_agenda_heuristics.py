@@ -2,6 +2,7 @@ from backend.contexts.context import AgendaProcessor, HeuristicException
 from backend.contexts.LCTContext import LCTContext
 from backend.models.fr import FR
 from backend.models.graph import Identifier
+from backend.models.query import Query
 from functools import reduce
 
 import operator
@@ -38,11 +39,12 @@ class RecallTaskFromLongTermMemoryAgendaProcessor(AgendaProcessor):
 
         for result in results:
             temp = FR("TEMP", agent.ontology)
-            for instance in agent.lt_memory.search(context={LCTContext.FROM_CONTEXT: result.context()[LCTContext.FROM_CONTEXT][0]}):
+            for instance in agent.lt_memory.search(query=Query.parsef(agent.network, "WHERE {FROM_CONTEXT} = {CONTEXT}", FROM_CONTEXT=LCTContext.FROM_CONTEXT, CONTEXT=result[LCTContext.FROM_CONTEXT][0])):
                 temp[Identifier(None, instance._identifier.name, instance=instance._identifier.instance)] = instance
             id_map = agent.wo_memory.import_fr(temp)
 
-            agent.wo_memory[id_map[result._identifier.render(graph=False)]].context()[self.context.DOING] = True
+            # agent.wo_memory[id_map[result._identifier.render(graph=False)]].context()[self.context.DOING] = True
+            agent.wo_memory[id_map[result._identifier.render(graph=False)]][self.context.DOING] = True
 
 
 # Assuming a currently doing task, finds any preconditions for that task and makes them into actions on the agent queue.
@@ -56,7 +58,7 @@ class QueuePreconditionActionsAgendaProcessor(AgendaProcessor):
         self.context = context
 
     def _logic(self, agent, tmr):
-        doing = agent.wo_memory.search(context={self.context.DOING: True})
+        doing = agent.wo_memory.search(query=Query.parsef(agent.network, "WHERE {DOING} = True", DOING=self.context.DOING))
 
         if len(doing) == 0:
             raise HeuristicException()

@@ -22,6 +22,10 @@ class Query(object):
 
         return result
 
+    @classmethod
+    def parsef(cls, network: Network, input: str, **kwargs):
+        return Query.parse(network, input.format(**kwargs))
+
 
 class AndQuery(Query):
 
