@@ -237,3 +237,13 @@ class TMRInstanceTestCase(unittest.TestCase):
         tmr = self.n.register(TMR(analysis, self.ontology))
         self.assertTrue(isinstance(tmr["FASTEN.1"]["AGENT"][0]._value, Identifier))
         self.assertEqual(tmr["FASTEN.1"]["AGENT"][0]._value.graph, self.ontology._namespace)
+
+    def test_tmr_instance_uses_instance_of(self):
+        tmr = self.n.register(TMR.new(self.ontology))
+        instance = tmr.register("NAME", isa="ONT.OBJECT")
+
+        self.assertIn("INSTANCE-OF", instance)
+        self.assertNotIn("IS-A", instance)
+        self.assertTrue(instance ^ "ONT.OBJECT")
+        self.assertTrue(instance.is_object())
+        self.assertFalse(instance.is_event())

@@ -340,7 +340,8 @@ class IdentifierQuery(Query):
             return other.resolve(None, self.network) ^ self.identifier.resolve(None, self.network)
 
         if self.comparator == self.Comparator.ISPARENT:
-            return other.resolve(None, self.network)["IS-A"] == self.identifier
+            other = other.resolve(None, self.network)
+            return other[other._ISA_type()] == self.identifier
 
         return False
 

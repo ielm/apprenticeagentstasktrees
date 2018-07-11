@@ -24,7 +24,7 @@ class FRImportHeuristic(object):
 class FRResolveHumanAndRobotAsSingletonsHeuristic(FRResolutionHeuristic):
 
     def resolve(self, instance, resolves, tmr=None):
-        if instance["IS-A"] == self.fr.ontology["HUMAN"] or instance["IS-A"] == self.fr.ontology["ROBOT"]:
+        if instance[instance._ISA_type()] == self.fr.ontology["HUMAN"] or instance[instance._ISA_type()] == self.fr.ontology["ROBOT"]:
             fr_instances = self.fr.search(query=Frame.q(self.fr._network).isa(instance.concept()))
             if len(fr_instances) > 0:
                 resolves[instance._identifier.render(graph=False)] = {fr_instances[0].name()}

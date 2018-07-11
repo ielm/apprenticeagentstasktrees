@@ -320,3 +320,13 @@ class FRTestCase(unittest.TestCase):
         self.assertEqual(2, len(destination))
         self.assertTrue("DEST.CONCEPT.1" in destination)
         self.assertTrue("DEST.CONCEPT.2" in destination)
+
+    def test_fr_uses_instance_of(self):
+        self.ontology.register("ALL")
+        self.ontology.register("OBJECT", isa="ALL")
+
+        instance = self.fr.register("TEST", isa="ONT.OBJECT")
+
+        self.assertIn("INSTANCE-OF", instance)
+        self.assertNotIn("IS-A", instance)
+        self.assertTrue(instance ^ "ONT.OBJECT")

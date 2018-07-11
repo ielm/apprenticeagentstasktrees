@@ -163,7 +163,7 @@ class FR(Graph):
         results = dict()
         results[frame._identifier.render(graph=False)] = None
         for slot in frame:
-            if slot == "IS-A":
+            if slot == frame._ISA_type():
                 continue
 
             try:
@@ -235,6 +235,9 @@ class FRInstance(Frame):
     def __init__(self, name, isa=None):
         super().__init__(name, isa=isa)
         self._from = dict()
+
+    def _ISA_type(self):
+        return "INSTANCE-OF"
 
     def attribute_to(self, tmrinstance):
         self._from[tmrinstance._uuid] = tmrinstance

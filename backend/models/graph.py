@@ -267,7 +267,10 @@ class Frame(object):
         self._uuid = uuid4()
 
         if isa is not None:
-            self["IS-A"] = isa
+            self[self._ISA_type()] = isa
+
+    def _ISA_type(self):
+        return "IS-A"
 
     def name(self) -> str:
         return str(self._identifier)
@@ -301,7 +304,7 @@ class Frame(object):
     # TODO: return list of Identifiers
     def ancestors(self) -> [str]:
         result = []
-        for parent in self["IS-A"]:
+        for parent in self[self._ISA_type()]:
             parent = parent.resolve()
 
             if parent is None:
@@ -315,7 +318,7 @@ class Frame(object):
         return result
 
     def concept(self, full_path: bool=True) -> str:
-        identifiers = list(map(lambda filler: filler._value, filter(lambda filler: isinstance(filler._value, Identifier), self["IS-A"])))
+        identifiers = list(map(lambda filler: filler._value, filter(lambda filler: isinstance(filler._value, Identifier), self[self._ISA_type()])))
         identifiers = list(map(lambda identifier: identifier if identifier.graph is not None else Identifier(self._graph._namespace, identifier.name, instance=identifier.instance), identifiers))
 
         concepts = list(map(lambda identifier: identifier.render(graph=full_path, instance=False), identifiers))
