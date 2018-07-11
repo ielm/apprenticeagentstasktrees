@@ -141,6 +141,8 @@ class GrammarTransformer(Transformer):
             comparator = IdentifierQuery.Comparator.ISA
         elif matches[0] == "^.":
             comparator = IdentifierQuery.Comparator.ISPARENT
+        elif matches[0] == ">":
+            comparator = IdentifierQuery.Comparator.SUBCLASSES
         set = True
         if matches[1] == "!":
             set = False

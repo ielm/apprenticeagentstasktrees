@@ -311,6 +311,7 @@ class IdentifierQuery(Query):
         EQUALS = 1      # Is self.identifier exactly the same as the input
         ISA = 2         # Is self.identifier an ancestor of the input
         ISPARENT = 3    # Is self.identifier the immediate parent of the input
+        SUBCLASSES = 4  # Is self.identifier a child of the input
 
     def __init__(self, network: Network, identifier: Union[Identifier, Frame, str], comparator: Comparator, set: bool=True):
         super().__init__(network)
@@ -352,6 +353,9 @@ class IdentifierQuery(Query):
         if self.comparator == self.Comparator.ISPARENT:
             other = other.resolve(None, self.network)
             return other[other._ISA_type()] == self.identifier
+
+        if self.comparator == self.Comparator.SUBCLASSES:
+            return self.identifier.resolve(None, self.network) ^ other.resolve(None, self.network)
 
         return False
 

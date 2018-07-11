@@ -455,6 +455,30 @@ class IdentifierQueryTestCase(unittest.TestCase):
         self.assertTrue(query.compare(Filler("ONT.EVENT")))
         self.assertFalse(query.compare(Identifier("ONT", "PHYSICAL-EVENT")))
 
+    def test_identifier_query_subclasses(self):
+        query = IdentifierQuery(self.n, Identifier("ONT", "EVENT"), IdentifierQuery.Comparator.SUBCLASSES)
+
+        self.assertTrue(query.compare(Identifier("ONT", "ALL")))
+        self.assertTrue(query.compare("ONT.ALL"))
+        self.assertTrue(query.compare(Filler("ONT.ALL")))
+        self.assertFalse(query.compare(Identifier("ONT", "PHYSICAL-EVENT")))
+
+    def test_identifier_query_subclasses_parsed(self):
+        query = IdentifierQuery(self.n, "ONT.EVENT", IdentifierQuery.Comparator.SUBCLASSES)
+
+        self.assertTrue(query.compare(Identifier("ONT", "ALL")))
+        self.assertTrue(query.compare("ONT.ALL"))
+        self.assertTrue(query.compare(Filler("ONT.ALL")))
+        self.assertFalse(query.compare(Identifier("ONT", "PHYSICAL-EVENT")))
+
+    def test_identifier_query_subclasses_frame(self):
+        query = IdentifierQuery(self.n, Frame("ONT.EVENT"), IdentifierQuery.Comparator.SUBCLASSES)
+
+        self.assertTrue(query.compare(Identifier("ONT", "ALL")))
+        self.assertTrue(query.compare("ONT.ALL"))
+        self.assertTrue(query.compare(Filler("ONT.ALL")))
+        self.assertFalse(query.compare(Identifier("ONT", "PHYSICAL-EVENT")))
+
     def test_identifier_query_expand_sets(self):
         self.ontology.register("SET", isa="ONT.ALL")
 
