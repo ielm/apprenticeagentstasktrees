@@ -41,7 +41,7 @@ class FR(Graph):
     def _frame_type(self):
         return FRInstance
 
-    def search(self, query: FrameQuery=None, descendant=None, attributed_tmr_instance=None):
+    def search(self, query: FrameQuery=None, descendant=None):
         results = list(self.values())
 
         if query is not None:
@@ -49,9 +49,6 @@ class FR(Graph):
 
         if descendant is not None:
             results = list(filter(lambda instance: self.ontology[descendant] ^ self.ontology[instance.concept()], results))
-
-        if attributed_tmr_instance is not None:
-            results = list(filter(lambda instance: instance.is_attributed_to(attributed_tmr_instance), results))
 
         return results
 
@@ -225,23 +222,24 @@ class FR(Graph):
 
 class FRInstance(Frame):
 
+    ATTRIBUTED_TO = "*FR.attributed_to"
+
     def __init__(self, name, isa=None):
         super().__init__(name, isa=isa)
-        self._from = dict()
 
     def _ISA_type(self):
         return "INSTANCE-OF"
 
     def attribute_to(self, tmrinstance):
-        self._from[tmrinstance._uuid] = tmrinstance
+        self[FRInstance.ATTRIBUTED_TO] += tmrinstance
 
     def is_attributed_to(self, tmrinstance):
-        return tmrinstance._uuid in self._from
+        return tmrinstance in self[FRInstance.ATTRIBUTED_TO]
 
     def lemmas(self):
         lemmas = []
-        for tmr_instance in self._from.keys():
-            tmr_instance = self._from[tmr_instance]
+        for tmr_instance in self[FRInstance.ATTRIBUTED_TO]:
+            tmr_instance = tmr_instance.resolve()
             lemma = " ".join(map(lambda ti: tmr_instance._graph.syntax.index[str(ti)]["lemma"], tmr_instance.token_index))
             lemmas.append(lemma)
         return lemmas
