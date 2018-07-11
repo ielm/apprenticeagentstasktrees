@@ -89,7 +89,7 @@ class FRResolveUnderterminedThemesOfLearningInPostfix(ContextBasedFRResolutionHe
         from backend.contexts.LCTContext import LCTContext
 
         for theme_of in theme_ofs:
-            results = self.fr.search(descendant=theme_of.concept(), query=Frame.q(self.fr._network).f(LCTContext.LEARNING, True))
+            results = self.fr.search(query=Frame.q(self.fr._network).sub(theme_of.concept(), from_concept=True).f(LCTContext.LEARNING, True))
             for result in results:
                 for theme in result["THEME"]:
                     if theme ^ self.fr.ontology[instance.concept()]:
@@ -122,7 +122,7 @@ class FRResolveLearningEvents(ContextBasedFRResolutionHeuristic):
 
         from backend.contexts.LCTContext import LCTContext
 
-        for candidate in self.fr.search(descendant=instance.concept(), query=Frame.q(self.fr._network).f(LCTContext.LEARNING, True)):
+        for candidate in self.fr.search(query=Frame.q(self.fr._network).sub(instance.concept(), from_concept=True).f(LCTContext.LEARNING, True)):
             case_roles = ["AGENT", "THEME"]
 
             passed = True

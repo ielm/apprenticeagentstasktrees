@@ -41,14 +41,11 @@ class FR(Graph):
     def _frame_type(self):
         return FRInstance
 
-    def search(self, query: FrameQuery=None, descendant=None):
+    def search(self, query: FrameQuery=None):
         results = list(self.values())
 
         if query is not None:
             results = list(filter(lambda instance: query.compare(instance), results))
-
-        if descendant is not None:
-            results = list(filter(lambda instance: self.ontology[descendant] ^ self.ontology[instance.concept()], results))
 
         return results
 

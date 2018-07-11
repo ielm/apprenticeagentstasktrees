@@ -164,7 +164,7 @@ class SimpleFrameQuery(FrameQuery):
         self._append(IdentifierQuery(self.network, identifier, IdentifierQuery.Comparator.EQUALS))
         return self
 
-    def isa(self, identifier: Union[Frame, Filler, Identifier, str], set: bool=True) -> 'SimpleFrameQuery':
+    def isa(self, identifier: Union[Frame, Filler, Identifier, str], set: bool=True, from_concept: bool=False) -> 'SimpleFrameQuery':
         if isinstance(identifier, Frame):
             identifier = identifier._identifier
         elif isinstance(identifier, Filler):
@@ -172,7 +172,18 @@ class SimpleFrameQuery(FrameQuery):
         elif isinstance(identifier, str):
             identifier = Identifier.parse(identifier)
 
-        self._append(IdentifierQuery(self.network, identifier, IdentifierQuery.Comparator.ISA, set=set))
+        self._append(IdentifierQuery(self.network, identifier, IdentifierQuery.Comparator.ISA, set=set, from_concept=from_concept))
+        return self
+
+    def sub(self, identifier: Union[Frame, Filler, Identifier, str], set: bool=True, from_concept: bool=False) -> 'SimpleFrameQuery':
+        if isinstance(identifier, Frame):
+            identifier = identifier._identifier
+        elif isinstance(identifier, Filler):
+            identifier = identifier._value
+        elif isinstance(identifier, str):
+            identifier = Identifier.parse(identifier)
+
+        self._append(IdentifierQuery(self.network, identifier, IdentifierQuery.Comparator.SUBCLASSES, set=set, from_concept=from_concept))
         return self
 
     def has(self, slot: Union[Slot, str]) -> 'SimpleFrameQuery':
