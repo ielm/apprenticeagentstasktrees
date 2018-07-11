@@ -214,10 +214,10 @@ class RecognizePartsOfObjectAgendaProcessor(AgendaProcessor):
         fr_event = agent.wo_memory.search(attributed_tmr_instance=event)[0]
 
         parts = list(
-            map(lambda theme: agent.wo_memory.search(subtree=agent.ontology["OBJECT"], attributed_tmr_instance=theme.resolve()),
+            map(lambda theme: agent.wo_memory.search(query=Frame.q(agent.network).isa(agent.ontology["OBJECT"]), attributed_tmr_instance=theme.resolve()),
                 event["THEME"]))
         parts += list(
-            map(lambda theme: agent.wo_memory.search(subtree=agent.ontology["OBJECT"], attributed_tmr_instance=theme.resolve()),
+            map(lambda theme: agent.wo_memory.search(query=Frame.q(agent.network).isa(agent.ontology["OBJECT"]), attributed_tmr_instance=theme.resolve()),
                 event["DESTINATION"]))
         parts = [item for sublist in parts for item in sublist]
 
