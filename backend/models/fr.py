@@ -41,7 +41,7 @@ class FR(Graph):
     def _frame_type(self):
         return FRInstance
 
-    def search(self, query: FrameQuery=None, subtree=None, descendant=None, attributed_tmr_instance=None, has_fillers=None):
+    def search(self, query: FrameQuery=None, subtree=None, descendant=None, attributed_tmr_instance=None):
         results = list(self.values())
 
         if query is not None:
@@ -55,10 +55,6 @@ class FR(Graph):
 
         if attributed_tmr_instance is not None:
             results = list(filter(lambda instance: instance.is_attributed_to(attributed_tmr_instance), results))
-
-        if has_fillers is not None:
-            sets = dict((s.name(), s) for s in self.search(query=Frame.q(self._network).isa(self.ontology["SET"])))
-            results = list(filter(lambda instance: instance.has_fillers(has_fillers, expand_sets=sets), results))
 
         return results
 
@@ -244,29 +240,6 @@ class FRInstance(Frame):
 
     def is_attributed_to(self, tmrinstance):
         return tmrinstance._uuid in self._from
-
-    # TODO: this should be part of default searching capability
-    def has_fillers(self, query, expand_sets=None):
-        if expand_sets is None:
-            expand_sets = dict()
-
-        for key in query:
-            if key not in self:
-                return False
-
-            value = query[key]
-            slot = self[key]
-
-            filler_values = list(map(lambda filler: filler.resolve(), slot))
-            sets_to_expand = list(filter(lambda set: expand_sets[set] in filler_values, expand_sets.keys()))
-            expanded_values = list(map(lambda set: expand_sets[set]["MEMBER-TYPE"], sets_to_expand))
-            for slot in expanded_values:
-                filler_values.extend(slot._storage)
-
-            if value not in filler_values:
-                return False
-
-        return True
 
     def lemmas(self):
         lemmas = []

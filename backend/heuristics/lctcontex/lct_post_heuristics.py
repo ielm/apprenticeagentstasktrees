@@ -24,13 +24,14 @@ class IdentifyPreconditionsAgendaProcessor(AgendaProcessor):
             for p in fr_event["PURPOSE"]:
                 purpose = p.resolve()
 
+                q = Frame.q(agent.network).f(self.context.LEARNING, True)
+
                 case_roles_to_match = ["AGENT", "THEME"]
-                filler_query = {}
                 for cr in case_roles_to_match:
                     if cr in purpose:
-                        filler_query[cr] = purpose[cr][0].resolve()
+                        q.f(cr, purpose[cr][0].resolve())
 
-                results = agent.wo_memory.search(query=Frame.q(agent.network).f(self.context.LEARNING, True), has_fillers=filler_query)
+                results = agent.wo_memory.search(query=q)
                 for result in results:
                     result["PRECONDITION"] += fr_event
 
