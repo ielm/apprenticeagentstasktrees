@@ -25,7 +25,7 @@ class FRResolveHumanAndRobotAsSingletonsHeuristic(FRResolutionHeuristic):
 
     def resolve(self, instance, resolves, tmr=None):
         if instance[instance._ISA_type()] == self.fr.ontology["HUMAN"] or instance[instance._ISA_type()] == self.fr.ontology["ROBOT"]:
-            fr_instances = self.fr.search(query=Frame.q(self.fr._network).isa(instance.concept()))
+            fr_instances = self.fr.search(Frame.q(self.fr._network).isa(instance.concept()))
             if len(fr_instances) > 0:
                 resolves[instance._identifier.render(graph=False)] = {fr_instances[0].name()}
 
@@ -68,7 +68,7 @@ class FRResolveDeterminedObjectsHeuristic(FRResolutionHeuristic):
         if "THE" not in tokens:
             return
 
-        fr_instances = self.fr.search(query=Frame.q(self.fr._network).isa(instance.concept()))
+        fr_instances = self.fr.search(Frame.q(self.fr._network).isa(instance.concept()))
 
         if len(fr_instances) == 0:
             return

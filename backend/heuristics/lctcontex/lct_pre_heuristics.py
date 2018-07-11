@@ -67,10 +67,10 @@ class IdentifyCompletedTaskAgendaProcessor(AgendaProcessor):
         if not tmr.is_postfix():
             raise HeuristicException()
 
-        if len(agent.wo_memory.search(query=Frame.q(agent.network).f(self.context.LEARNED, True))) == 0:
+        if len(agent.wo_memory.search(Frame.q(agent.network).f(self.context.LEARNED, True))) == 0:
             raise HeuristicException()
 
-        if len(agent.wo_memory.search(query=Frame.q(agent.network).f(self.context.LEARNING, True))) > 0:
+        if len(agent.wo_memory.search(Frame.q(agent.network).f(self.context.LEARNING, True))) > 0:
             raise HeuristicException()
 
         cid = random.randint(0, 1000000)

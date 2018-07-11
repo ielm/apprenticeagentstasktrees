@@ -19,7 +19,7 @@ class IdentifyPreconditionsAgendaProcessor(AgendaProcessor):
     def _logic(self, agent, tmr):
         if not tmr.is_prefix() and not tmr.is_postfix():
             event = tmr.find_main_event()
-            fr_event = agent.wo_memory.search(query=Frame.q(agent.network).f(FRInstance.ATTRIBUTED_TO, event))[0]
+            fr_event = agent.wo_memory.search(Frame.q(agent.network).f(FRInstance.ATTRIBUTED_TO, event))[0]
 
             found = False
             for p in fr_event["PURPOSE"]:
@@ -32,7 +32,7 @@ class IdentifyPreconditionsAgendaProcessor(AgendaProcessor):
                     if cr in purpose:
                         q.f(cr, purpose[cr][0].resolve())
 
-                results = agent.wo_memory.search(query=q)
+                results = agent.wo_memory.search(q)
                 for result in results:
                     result["PRECONDITION"] += fr_event
 
@@ -60,12 +60,12 @@ class HandleRequestedActionsAgendaProcessor(AgendaProcessor):
             raise HeuristicException()
 
         event = tmr.find_main_event()
-        fr_event = agent.wo_memory.search(query=Frame.q(agent.network).f(FRInstance.ATTRIBUTED_TO, event))[0]
+        fr_event = agent.wo_memory.search(Frame.q(agent.network).f(FRInstance.ATTRIBUTED_TO, event))[0]
         fr_themes = fr_event["THEME"]
 
         if event ^ agent.ontology["REQUEST-ACTION"] and "ROBOT" in event["BENEFICIARY"]:
             fr_currently_learning_events = agent.wo_memory.search(
-                query=Frame.q(agent.network).f(self.context.LEARNING, True).f(self.context.CURRENT, True))
+                Frame.q(agent.network).f(self.context.LEARNING, True).f(self.context.CURRENT, True))
             for fr_current_event in fr_currently_learning_events:
                 for theme in fr_themes:
                     fr_current_event["HAS-EVENT-AS-PART"] += theme
@@ -89,10 +89,10 @@ class HandleCurrentActionAgendaProcessor(AgendaProcessor):
     def _logic(self, agent, tmr):
         if not tmr.is_prefix() and not tmr.is_postfix():
             event = tmr.find_main_event()
-            fr_event = agent.wo_memory.search(query=Frame.q(agent.network).f(FRInstance.ATTRIBUTED_TO, event))[0]
+            fr_event = agent.wo_memory.search(Frame.q(agent.network).f(FRInstance.ATTRIBUTED_TO, event))[0]
 
             fr_currently_learning_events = agent.wo_memory.search(
-                query=Frame.q(agent.network).f(self.context.LEARNING, True).f(self.context.CURRENT, True))
+                Frame.q(agent.network).f(self.context.LEARNING, True).f(self.context.CURRENT, True))
             for fr_current_event in fr_currently_learning_events:
                 fr_current_event["HAS-EVENT-AS-PART"] += fr_event
 
@@ -118,10 +118,10 @@ class RecognizeSubEventsAgendaProcessor(AgendaProcessor):
     def _logic(self, agent, tmr):
         if tmr.is_prefix():
             event = tmr.find_main_event()
-            fr_event = agent.wo_memory.search(query=Frame.q(agent.network).f(FRInstance.ATTRIBUTED_TO, event))[0]
+            fr_event = agent.wo_memory.search(Frame.q(agent.network).f(FRInstance.ATTRIBUTED_TO, event))[0]
 
             fr_currently_learning_events = agent.wo_memory.search(
-                query=Frame.q(agent.network).f(self.context.LEARNING, True).f(self.context.CURRENT, True))
+                Frame.q(agent.network).f(self.context.LEARNING, True).f(self.context.CURRENT, True))
             for fr_current_event in fr_currently_learning_events:
                 fr_current_event[self.context.CURRENT] = False
                 fr_current_event[self.context.WAITING_ON] = fr_event.name()
@@ -158,7 +158,7 @@ class IdentifyClosingOfUnknownTaskAgendaProcessor(AgendaProcessor):
             raise HeuristicException()
 
         event = tmr.find_main_event()
-        fr_event = agent.wo_memory.search(query=Frame.q(agent.network).f(FRInstance.ATTRIBUTED_TO, event))[0]
+        fr_event = agent.wo_memory.search(Frame.q(agent.network).f(FRInstance.ATTRIBUTED_TO, event))[0]
 
         hierarchy = self.context.learning_hierarchy()
 
@@ -212,13 +212,13 @@ class RecognizePartsOfObjectAgendaProcessor(AgendaProcessor):
 
     def _logic(self, agent, tmr):
         event = tmr.find_main_event()
-        fr_event = agent.wo_memory.search(query=Frame.q(agent.network).f(FRInstance.ATTRIBUTED_TO, event))[0]
+        fr_event = agent.wo_memory.search(Frame.q(agent.network).f(FRInstance.ATTRIBUTED_TO, event))[0]
 
         parts = list(
-            map(lambda theme: agent.wo_memory.search(query=Frame.q(agent.network).isa(agent.ontology["OBJECT"]).f(FRInstance.ATTRIBUTED_TO, theme.resolve())),
+            map(lambda theme: agent.wo_memory.search(Frame.q(agent.network).isa(agent.ontology["OBJECT"]).f(FRInstance.ATTRIBUTED_TO, theme.resolve())),
                 event["THEME"]))
         parts += list(
-            map(lambda theme: agent.wo_memory.search(query=Frame.q(agent.network).isa(agent.ontology["OBJECT"]).f(FRInstance.ATTRIBUTED_TO, theme.resolve())),
+            map(lambda theme: agent.wo_memory.search(Frame.q(agent.network).isa(agent.ontology["OBJECT"]).f(FRInstance.ATTRIBUTED_TO, theme.resolve())),
                 event["DESTINATION"]))
         parts = [item for sublist in parts for item in sublist]
 
@@ -231,7 +231,7 @@ class RecognizePartsOfObjectAgendaProcessor(AgendaProcessor):
         if not fr_event ^ agent.ontology["BUILD"]:
             raise HeuristicException()
 
-        results = agent.wo_memory.search(query=Frame.q(agent.network).f(self.context.LEARNING, True).f(self.context.WAITING_ON, fr_event.name()))
+        results = agent.wo_memory.search(Frame.q(agent.network).f(self.context.LEARNING, True).f(self.context.WAITING_ON, fr_event.name()))
         if len(results) == 0:
             raise HeuristicException()
 

@@ -41,14 +41,6 @@ class FR(Graph):
     def _frame_type(self):
         return FRInstance
 
-    def search(self, query: FrameQuery=None):
-        results = list(self.values())
-
-        if query is not None:
-            results = list(filter(lambda instance: query.compare(instance), results))
-
-        return results
-
     # Fills an existing FR Instance with properties found in a Frame object; the properties must be resolved
     # to existing FR Instances to be added.
     # fr_id: The id/name of an existing FR Instance (e.g., OBJECT-FR1).
