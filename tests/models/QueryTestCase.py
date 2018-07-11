@@ -494,3 +494,12 @@ class IdentifierQueryTestCase(unittest.TestCase):
         self.assertTrue(IdentifierQuery(self.n, f1, IdentifierQuery.Comparator.EQUALS).compare(set))
         self.assertTrue(IdentifierQuery(self.n, f2, IdentifierQuery.Comparator.EQUALS).compare(set))
         self.assertFalse(IdentifierQuery(self.n, f3, IdentifierQuery.Comparator.EQUALS).compare(set))
+
+    def test_identifier_query_starting_from_concept(self):
+        self.ontology.register("PHYSICAL-OBJECT", isa="ONT.OBJECT")
+
+        g = self.n.register("OTHER")
+        f = g.register("OBJECT", isa="ONT.OBJECT", generate_index=True)
+
+        self.assertFalse(IdentifierQuery(self.n, "ONT.PHYSICAL-OBJECT", IdentifierQuery.Comparator.SUBCLASSES).compare(f))
+        self.assertTrue(IdentifierQuery(self.n, "ONT.PHYSICAL-OBJECT", IdentifierQuery.Comparator.SUBCLASSES, from_concept=True).compare(f))

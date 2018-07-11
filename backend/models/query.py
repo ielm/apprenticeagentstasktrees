@@ -313,7 +313,7 @@ class IdentifierQuery(Query):
         ISPARENT = 3    # Is self.identifier the immediate parent of the input
         SUBCLASSES = 4  # Is self.identifier a child of the input
 
-    def __init__(self, network: Network, identifier: Union[Identifier, Frame, str], comparator: Comparator, set: bool=True):
+    def __init__(self, network: Network, identifier: Union[Identifier, Frame, str], comparator: Comparator, set: bool=True, from_concept: bool=False):
         super().__init__(network)
 
         if isinstance(identifier, Frame):
@@ -324,6 +324,7 @@ class IdentifierQuery(Query):
         self.identifier = identifier
         self.comparator = comparator
         self.set = set
+        self.from_concept = from_concept
 
     def compare(self, other: Union[Frame, Identifier, Filler, str]) -> bool:
         if isinstance(other, Filler):
@@ -337,6 +338,9 @@ class IdentifierQuery(Query):
 
         if not isinstance(other, Identifier):
             return False
+
+        if self.from_concept:
+            other = Identifier.parse(other.resolve(None, self.network).concept(full_path=True))
 
         if self.set:
             frame = other.resolve(None, self.network)
@@ -363,4 +367,4 @@ class IdentifierQuery(Query):
         if not isinstance(other, IdentifierQuery):
             return super().__eq__(other)
 
-        return self.network == other.network and self.identifier == other.identifier and self.comparator == other.comparator and self.set == other.set
+        return self.network == other.network and self.identifier == other.identifier and self.comparator == other.comparator and self.set == other.set and self.from_concept == other.from_concept

@@ -134,6 +134,10 @@ class GrammarTransformer(Transformer):
 
     def identifier_query(self, matches):
         from backend.models.query import IdentifierQuery
+        from_concept = False
+        if matches[0] == "~":
+            from_concept = True
+            matches = matches[1:]
         comparator = None
         if matches[0] == "=":
             comparator = IdentifierQuery.Comparator.EQUALS
@@ -146,7 +150,7 @@ class GrammarTransformer(Transformer):
         set = True
         if matches[1] == "!":
             set = False
-        return IdentifierQuery(self.network, matches[-1], comparator, set=set)
+        return IdentifierQuery(self.network, matches[-1], comparator, set=set, from_concept=from_concept)
 
     def literal_query(self, matches):
         from backend.models.query import LiteralQuery
