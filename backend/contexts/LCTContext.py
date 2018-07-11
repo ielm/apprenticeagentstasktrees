@@ -4,8 +4,8 @@ from backend.heuristics.lctcontex.lct_fr_resolution_heuristics import *
 from backend.heuristics.lctcontex.lct_post_heuristics import *
 from backend.heuristics.lctcontex.lct_pre_heuristics import *
 
+from backend.models.graph import Frame
 from backend.models.ontology import OntologyFiller
-from backend.models.query import Query
 
 
 # An agent context for (L)earning (C)omplex (T)asks.
@@ -54,17 +54,16 @@ class LCTContext(AgentContext):
     # Helper function for returning the learning hierarchy; starting with LTC.current, and finding each "parent"
     # via the LCT.waiting_on property; the names are returned in that order (element 0 is current).
     def learning_hierarchy(self):
-        results = self.agent.wo_memory.search(query=Query.parsef(self.agent.network, "WHERE ({LEARNING} = True and {CURRENT} = True)", LEARNING=self.LEARNING, CURRENT=self.CURRENT))
+        results = self.agent.wo_memory.search(query=Frame.q(self.agent.network).f(self.LEARNING, True).f(self.CURRENT, True))
         if len(results) != 1:
             return []
 
         hierarchy = [results[0].name()]
 
-        results = self.agent.wo_memory.search(query=Query.parsef(self.agent.network, "WHERE ({LEARNING} = True and {CURRENT} = False and {WAITING_ON} = {HIERARCHY})", LEARNING=self.LEARNING, CURRENT=self.CURRENT, WAITING_ON=self.WAITING_ON, HIERARCHY=hierarchy[-1]))
+        results = self.agent.wo_memory.search(query=Frame.q(self.agent.network).f(self.LEARNING, True).f(self.CURRENT, False).f(self.WAITING_ON, hierarchy[-1]))
         while len(results) == 1:
             hierarchy.append(results[0].name())
-            results = self.agent.wo_memory.search(query=Query.parsef(self.agent.network, "WHERE ({LEARNING} = True and {CURRENT} = False and {WAITING_ON} = {HIERARCHY})", LEARNING=self.LEARNING, CURRENT=self.CURRENT, WAITING_ON=self.WAITING_ON, HIERARCHY=hierarchy[-1]))
-
+            results = self.agent.wo_memory.search(query=Frame.q(self.agent.network).f(self.LEARNING, True).f(self.CURRENT, False).f(self.WAITING_ON, hierarchy[-1]))
         return hierarchy
 
     # Helper function for marking a single instance that is currently LTC.learning as finished learning.  This means
@@ -81,7 +80,7 @@ class LCTContext(AgentContext):
 
         instance[self.LEARNED] = True
 
-        for parent in self.agent.wo_memory.search(query=Query.parsef(self.agent.network, "WHERE {WAITING_ON} = {INSTANCE}", WAITING_ON=self.WAITING_ON, INSTANCE=instance.name())):
+        for parent in self.agent.wo_memory.search(query=Frame.q(self.agent.network).f(self.WAITING_ON, instance.name())):
             if roll_up_current:
                 parent[self.CURRENT] = True
             if self.WAITING_ON in parent:

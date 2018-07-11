@@ -9,7 +9,7 @@ import re
 # while still allowing top-level imports for type hints.
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from backend.models.query import FrameQuery
+    from backend.models.query import FrameQuery, SimpleFrameQuery
 
 
 class Identifier(object):
@@ -83,6 +83,8 @@ class Identifier(object):
 class Literal(object):
 
     def __init__(self, value):
+        if isinstance(value, Literal):
+            value = value.value
         self.value = value
 
     def __str__(self):
@@ -369,6 +371,11 @@ class Frame(object):
             copy._storage[slot._name] = slot.deep_copy(copy)
 
         return copy
+
+    @classmethod
+    def q(cls, n: Network, comparator: str="and") -> 'SimpleFrameQuery':
+        from backend.models.query import SimpleFrameQuery
+        return SimpleFrameQuery(n, comparator=comparator)
 
 
 class Slot(object):

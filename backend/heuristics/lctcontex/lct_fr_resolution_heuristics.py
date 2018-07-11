@@ -1,5 +1,5 @@
 from backend.contexts.context import ContextBasedFRResolutionHeuristic
-from backend.models.query import Query
+from backend.models.graph import Frame
 
 
 # ------ FR Resolution Heuristics -------
@@ -44,7 +44,7 @@ class FRResolveUndeterminedThemesOfLearning(ContextBasedFRResolutionHeuristic):
                 purpose_ofs = map(lambda purpose_of: purpose_of.resolve(), theme_of["PURPOSE-OF"])
                 purpose_ofs = filter(lambda purpose_of: purpose_of ^ self.fr.ontology["EVENT"], purpose_ofs)
                 if len(list(purpose_ofs)) > 0:
-                    results = self.fr.search(Query.parsef(self.fr._network, "WHERE @ ^ {CONCEPT}", CONCEPT=instance.concept()))
+                    results = self.fr.search(Frame.q(self.fr._network).isa(instance.concept()))
                     resolves[instance._identifier.render(graph=False)] = set(map(lambda result: result.name(), results))
                     return True
 
@@ -89,7 +89,7 @@ class FRResolveUnderterminedThemesOfLearningInPostfix(ContextBasedFRResolutionHe
         from backend.contexts.LCTContext import LCTContext
 
         for theme_of in theme_ofs:
-            results = self.fr.search(descendant=theme_of.concept(), query=Query.parsef(self.fr._network, "WHERE {LEARNING} = True", LEARNING=LCTContext.LEARNING))
+            results = self.fr.search(descendant=theme_of.concept(), query=Frame.q(self.fr._network).f(LCTContext.LEARNING, True))
             for result in results:
                 for theme in result["THEME"]:
                     if theme ^ self.fr.ontology[instance.concept()]:
@@ -122,7 +122,7 @@ class FRResolveLearningEvents(ContextBasedFRResolutionHeuristic):
 
         from backend.contexts.LCTContext import LCTContext
 
-        for candidate in self.fr.search(descendant=instance.concept(), query=Query.parse(self.fr._network, "WHERE " + LCTContext.LEARNING + "=True")):
+        for candidate in self.fr.search(descendant=instance.concept(), query=Frame.q(self.fr._network).f(LCTContext.LEARNING, True)):
             case_roles = ["AGENT", "THEME"]
 
             passed = True

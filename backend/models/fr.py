@@ -1,5 +1,5 @@
 from backend.models.graph import Filler, Frame, Graph, Identifier, Literal
-from backend.models.query import FrameQuery, Query
+from backend.models.query import FrameQuery
 from backend.heuristics.fr_heuristics import *
 from backend.utils.AgentLogger import AgentLogger
 
@@ -57,7 +57,7 @@ class FR(Graph):
             results = list(filter(lambda instance: instance.is_attributed_to(attributed_tmr_instance), results))
 
         if has_fillers is not None:
-            sets = dict((s.name(), s) for s in self.search(query=Query.parsef(self._network, "WHERE @ ^ {ONT}.SET", ONT=self.ontology._namespace)))
+            sets = dict((s.name(), s) for s in self.search(query=Frame.q(self._network).isa(self.ontology["SET"])))
             results = list(filter(lambda instance: instance.has_fillers(has_fillers, expand_sets=sets), results))
 
         return results

@@ -1,7 +1,7 @@
 from backend.contexts.context import AgendaProcessor, HeuristicException, FRResolutionAgendaProcessor
 from backend.heuristics.fr_heuristics import FRResolveHumanAndRobotAsSingletonsHeuristic, FRResolveSetsWithIdenticalMembersHeuristic
 from backend.heuristics.lctcontex.lct_fr_import_heuristics import FRImportDoNotImportRequestActions
-from backend.models.query import Query
+from backend.models.graph import Frame
 
 import random
 
@@ -67,10 +67,10 @@ class IdentifyCompletedTaskAgendaProcessor(AgendaProcessor):
         if not tmr.is_postfix():
             raise HeuristicException()
 
-        if len(agent.wo_memory.search(query=Query.parsef(agent.network, "WHERE {LEARNED} = True", LEARNED=self.context.LEARNED))) == 0:
+        if len(agent.wo_memory.search(query=Frame.q(agent.network).f(self.context.LEARNED, True))) == 0:
             raise HeuristicException()
 
-        if len(agent.wo_memory.search(query=Query.parsef(agent.network, "WHERE {LEARNING} = True", LEARNING=self.context.LEARNING))) > 0:
+        if len(agent.wo_memory.search(query=Frame.q(agent.network).f(self.context.LEARNING, True))) > 0:
             raise HeuristicException()
 
         cid = random.randint(0, 1000000)
