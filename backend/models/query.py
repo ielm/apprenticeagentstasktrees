@@ -164,7 +164,7 @@ class SimpleFrameQuery(FrameQuery):
         self._append(IdentifierQuery(self.network, identifier, IdentifierQuery.Comparator.EQUALS))
         return self
 
-    def isa(self, identifier: Union[Frame, Filler, Identifier, str]) -> 'SimpleFrameQuery':
+    def isa(self, identifier: Union[Frame, Filler, Identifier, str], set: bool=True) -> 'SimpleFrameQuery':
         if isinstance(identifier, Frame):
             identifier = identifier._identifier
         elif isinstance(identifier, Filler):
@@ -172,7 +172,7 @@ class SimpleFrameQuery(FrameQuery):
         elif isinstance(identifier, str):
             identifier = Identifier.parse(identifier)
 
-        self._append(IdentifierQuery(self.network, identifier, IdentifierQuery.Comparator.ISA))
+        self._append(IdentifierQuery(self.network, identifier, IdentifierQuery.Comparator.ISA, set=set))
         return self
 
     def has(self, slot: Union[Slot, str]) -> 'SimpleFrameQuery':
@@ -312,7 +312,7 @@ class IdentifierQuery(Query):
         ISA = 2         # Is self.identifier an ancestor of the input
         ISPARENT = 3    # Is self.identifier the immediate parent of the input
 
-    def __init__(self, network: Network, identifier: Union[Identifier, Frame, str], comparator: Comparator):
+    def __init__(self, network: Network, identifier: Union[Identifier, Frame, str], comparator: Comparator, set: bool=True):
         super().__init__(network)
 
         if isinstance(identifier, Frame):
@@ -322,6 +322,7 @@ class IdentifierQuery(Query):
 
         self.identifier = identifier
         self.comparator = comparator
+        self.set = set
 
     def compare(self, other: Union[Frame, Identifier, Filler, str]) -> bool:
         if isinstance(other, Filler):
@@ -332,6 +333,15 @@ class IdentifierQuery(Query):
 
         if isinstance(other, Frame):
             other = other._identifier
+
+        if not isinstance(other, Identifier):
+            return False
+
+        if self.set:
+            frame = other.resolve(None, self.network)
+            for filler in frame["MEMBER-TYPE"]:
+                if self.compare(filler):
+                    return True
 
         if self.comparator == self.Comparator.EQUALS:
             return self.identifier == other
@@ -349,4 +359,4 @@ class IdentifierQuery(Query):
         if not isinstance(other, IdentifierQuery):
             return super().__eq__(other)
 
-        return self.network == other.network and self.identifier == other.identifier and self.comparator == other.comparator
+        return self.network == other.network and self.identifier == other.identifier and self.comparator == other.comparator and self.set == other.set

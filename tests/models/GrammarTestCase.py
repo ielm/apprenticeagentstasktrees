@@ -68,10 +68,13 @@ class GrammarTestCase(unittest.TestCase):
     def test_parse_identifier_query(self):
         self.assertEqual(IdentifierQuery(self.n, "WM.HUMAN.1", IdentifierQuery.Comparator.EQUALS), Grammar.parse(self.n, "=WM.HUMAN.1", start="identifier_query"))
         self.assertEqual(IdentifierQuery(self.n, "WM.HUMAN.1", IdentifierQuery.Comparator.EQUALS), Grammar.parse(self.n, "= WM.HUMAN.1", start="identifier_query"))
+        self.assertEqual(IdentifierQuery(self.n, "WM.HUMAN.1", IdentifierQuery.Comparator.EQUALS, set=False), Grammar.parse(self.n, "=! WM.HUMAN.1", start="identifier_query"))
         self.assertEqual(IdentifierQuery(self.n, "WM.HUMAN.1", IdentifierQuery.Comparator.ISA), Grammar.parse(self.n, "^WM.HUMAN.1", start="identifier_query"))
         self.assertEqual(IdentifierQuery(self.n, "WM.HUMAN.1", IdentifierQuery.Comparator.ISA), Grammar.parse(self.n, "^ WM.HUMAN.1", start="identifier_query"))
+        self.assertEqual(IdentifierQuery(self.n, "WM.HUMAN.1", IdentifierQuery.Comparator.ISA, set=False), Grammar.parse(self.n, "^! WM.HUMAN.1", start="identifier_query"))
         self.assertEqual(IdentifierQuery(self.n, "WM.HUMAN.1", IdentifierQuery.Comparator.ISPARENT), Grammar.parse(self.n, "^.WM.HUMAN.1", start="identifier_query"))
         self.assertEqual(IdentifierQuery(self.n, "WM.HUMAN.1", IdentifierQuery.Comparator.ISPARENT), Grammar.parse(self.n, "^. WM.HUMAN.1", start="identifier_query"))
+        self.assertEqual(IdentifierQuery(self.n, "WM.HUMAN.1", IdentifierQuery.Comparator.ISPARENT, set=False), Grammar.parse(self.n, "^.! WM.HUMAN.1", start="identifier_query"))
 
     def test_parse_filler_query(self):
         self.assertEqual(FillerQuery(self.n, LiteralQuery(self.n, 123)), Grammar.parse(self.n, "=123", start="filler_query"))

@@ -148,7 +148,7 @@ class FrameQueryTestCase(unittest.TestCase):
         self.n = Network()
 
     def test_frame_query_identifier(self):
-        query = FrameQuery(self.n, IdentifierQuery(self.n, "ONT.EVENT", IdentifierQuery.Comparator.EQUALS))
+        query = FrameQuery(self.n, IdentifierQuery(self.n, "ONT.EVENT", IdentifierQuery.Comparator.EQUALS, set=False))
 
         self.assertTrue(query.compare(Frame("ONT.EVENT")))
         self.assertFalse(query.compare(Frame("ONT.OBJECT")))
@@ -180,7 +180,7 @@ class FrameQueryTestCase(unittest.TestCase):
         self.assertFalse(query.compare(frame3))
 
     def test_frame_and(self):
-        query = FrameQuery(self.n, AndQuery(self.n, [IdentifierQuery(self.n, "FRAME1", IdentifierQuery.Comparator.EQUALS), SlotQuery(self.n, NameQuery(self.n, "SLOT"))]))
+        query = FrameQuery(self.n, AndQuery(self.n, [IdentifierQuery(self.n, "FRAME1", IdentifierQuery.Comparator.EQUALS, set=False), SlotQuery(self.n, NameQuery(self.n, "SLOT"))]))
 
         frame1 = Frame("FRAME1")
         frame2 = Frame("FRAME2")
@@ -192,7 +192,7 @@ class FrameQueryTestCase(unittest.TestCase):
         self.assertFalse(query.compare(frame2))
 
     def test_frame_or(self):
-        query = FrameQuery(self.n, OrQuery(self.n, [IdentifierQuery(self.n, "FRAME1", IdentifierQuery.Comparator.EQUALS), SlotQuery(self.n, NameQuery(self.n, "SLOT"))]))
+        query = FrameQuery(self.n, OrQuery(self.n, [IdentifierQuery(self.n, "FRAME1", IdentifierQuery.Comparator.EQUALS, set=False), SlotQuery(self.n, NameQuery(self.n, "SLOT"))]))
 
         frame1 = Frame("FRAME1")
         frame2 = Frame("FRAME2")
@@ -204,7 +204,7 @@ class FrameQueryTestCase(unittest.TestCase):
         self.assertTrue(query.compare(frame2))
 
     def test_frame_not(self):
-        query = FrameQuery(self.n, NotQuery(self.n, IdentifierQuery(self.n, "FRAME1", IdentifierQuery.Comparator.EQUALS)))
+        query = FrameQuery(self.n, NotQuery(self.n, IdentifierQuery(self.n, "FRAME1", IdentifierQuery.Comparator.EQUALS, set=False)))
 
         frame1 = Frame("FRAME1")
         frame2 = Frame("FRAME2")
@@ -230,7 +230,7 @@ class FrameQueryTestCase(unittest.TestCase):
         self.assertFalse(query.compare(frame2))
 
     def test_frame_exact_as_inner_query(self):
-        query = FrameQuery(self.n, AndQuery(self.n,[IdentifierQuery(self.n, "FRAME1", IdentifierQuery.Comparator.EQUALS), ExactQuery(self.n, [SlotQuery(self.n, NameQuery(self.n, "SLOT"))])]))
+        query = FrameQuery(self.n, AndQuery(self.n,[IdentifierQuery(self.n, "FRAME1", IdentifierQuery.Comparator.EQUALS, set=False), ExactQuery(self.n, [SlotQuery(self.n, NameQuery(self.n, "SLOT"))])]))
 
         frame1 = Frame("FRAME1")
         frame2 = Frame("FRAME2")
@@ -347,7 +347,7 @@ class FillerQueryTestCase(unittest.TestCase):
         self.assertFalse(query.compare(Filler("123")))
 
     def test_filler_query_compare_identifier(self):
-        query = FillerQuery(self.n, IdentifierQuery(self.n, "ONT.ALL", IdentifierQuery.Comparator.EQUALS))
+        query = FillerQuery(self.n, IdentifierQuery(self.n, "ONT.ALL", IdentifierQuery.Comparator.EQUALS, set=False))
 
         self.assertTrue(query.compare(Filler("ONT.ALL")))
         self.assertFalse(query.compare(Filler("123")))
@@ -384,7 +384,7 @@ class IdentifierQueryTestCase(unittest.TestCase):
         self.ontology.register("PHYSICAL-EVENT", isa="ONT.EVENT")
 
     def test_identifier_query_equals(self):
-        query = IdentifierQuery(self.n, Identifier("GRAPH", "NAME", instance=123), IdentifierQuery.Comparator.EQUALS)
+        query = IdentifierQuery(self.n, Identifier("GRAPH", "NAME", instance=123), IdentifierQuery.Comparator.EQUALS, set=False)
 
         self.assertTrue(query.compare(Identifier("GRAPH", "NAME", instance=123)))
         self.assertTrue(query.compare("GRAPH.NAME.123"))
@@ -392,7 +392,7 @@ class IdentifierQueryTestCase(unittest.TestCase):
         self.assertFalse(query.compare(Identifier("GRAPH", "NAME")))
 
     def test_identifier_query_exact_parsed(self):
-        query = IdentifierQuery(self.n, "GRAPH.NAME.123", IdentifierQuery.Comparator.EQUALS)
+        query = IdentifierQuery(self.n, "GRAPH.NAME.123", IdentifierQuery.Comparator.EQUALS, set=False)
 
         self.assertTrue(query.compare(Identifier("GRAPH", "NAME", instance=123)))
         self.assertTrue(query.compare("GRAPH.NAME.123"))
@@ -400,7 +400,7 @@ class IdentifierQueryTestCase(unittest.TestCase):
         self.assertFalse(query.compare(Identifier("GRAPH", "NAME")))
 
     def test_identifier_query_exact_frame(self):
-        query = IdentifierQuery(self.n, Frame("GRAPH.NAME.123"), IdentifierQuery.Comparator.EQUALS)
+        query = IdentifierQuery(self.n, Frame("GRAPH.NAME.123"), IdentifierQuery.Comparator.EQUALS, set=False)
 
         self.assertTrue(query.compare(Identifier("GRAPH", "NAME", instance=123)))
         self.assertTrue(query.compare("GRAPH.NAME.123"))
@@ -454,3 +454,19 @@ class IdentifierQueryTestCase(unittest.TestCase):
         self.assertTrue(query.compare("ONT.EVENT"))
         self.assertTrue(query.compare(Filler("ONT.EVENT")))
         self.assertFalse(query.compare(Identifier("ONT", "PHYSICAL-EVENT")))
+
+    def test_identifier_query_expand_sets(self):
+        self.ontology.register("SET", isa="ONT.ALL")
+
+        g = self.n.register("OTHER")
+        f1 = g.register("OBJECT", isa="ONT.OBJECT", generate_index=True)
+        f2 = g.register("OBJECT", isa="ONT.OBJECT", generate_index=True)
+        f3 = g.register("OBJECT", isa="ONT.OBJECT", generate_index=True)
+
+        set = g.register("SET", isa="ONT.SET")
+        set["MEMBER-TYPE"] = [f1, f2]
+
+        self.assertTrue(IdentifierQuery(self.n, set, IdentifierQuery.Comparator.EQUALS).compare(set))
+        self.assertTrue(IdentifierQuery(self.n, f1, IdentifierQuery.Comparator.EQUALS).compare(set))
+        self.assertTrue(IdentifierQuery(self.n, f2, IdentifierQuery.Comparator.EQUALS).compare(set))
+        self.assertFalse(IdentifierQuery(self.n, f3, IdentifierQuery.Comparator.EQUALS).compare(set))

@@ -27,7 +27,7 @@ logical_not_filler_query: NOT logical_filler_query
 logical_exact_filler_query: EXACTLY logical_and_filler_query
 
 filler_query: (identifier_query | literal_query)
-identifier_query: (EQUALS | ISA | ISPARENT) identifier
+identifier_query: (EQUALS | ISA | ISPARENT) (EXPAND_SETS_DISABLED)? identifier
 literal_query: EQUALS literal
 
 literal: (integer | double | string | boolean)
@@ -60,6 +60,7 @@ WHERE: "where"i
 
 DASH: "-"
 EQUALS: "="
+EXPAND_SETS_DISABLED: "!"
 ISA: "^"
 ISPARENT: "^."
 RECURSIVE: "*"

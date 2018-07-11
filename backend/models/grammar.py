@@ -141,7 +141,10 @@ class GrammarTransformer(Transformer):
             comparator = IdentifierQuery.Comparator.ISA
         elif matches[0] == "^.":
             comparator = IdentifierQuery.Comparator.ISPARENT
-        return IdentifierQuery(self.network, matches[1], comparator)
+        set = True
+        if matches[1] == "!":
+            set = False
+        return IdentifierQuery(self.network, matches[-1], comparator, set=set)
 
     def literal_query(self, matches):
         from backend.models.query import LiteralQuery

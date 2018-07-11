@@ -429,6 +429,9 @@ class Slot(object):
     def __iadd__(self, other):
         if not isinstance(other, Filler):
             other = Filler(other)
+        if other in self._storage:
+            return self
+
         other._frame = self._frame
 
         self._storage.append(other)

@@ -30,22 +30,22 @@ class FRResolveHumanAndRobotAsSingletonsHeuristic(FRResolutionHeuristic):
                 resolves[instance._identifier.render(graph=False)] = {fr_instances[0].name()}
 
         if "HUMAN" in resolves:
-            fr_instances = self.fr.search(Frame.q(self.fr._network).isa(self.fr.ontology["HUMAN"]))
+            fr_instances = self.fr.search(Frame.q(self.fr._network).isa(self.fr.ontology["HUMAN"], set=False))
             if len(fr_instances) > 0:
                 resolves["HUMAN"] = {fr_instances[0].name()}
 
         if "ONT.HUMAN" in resolves:
-            fr_instances = self.fr.search(Frame.q(self.fr._network).isa(self.fr.ontology["HUMAN"]))
+            fr_instances = self.fr.search(Frame.q(self.fr._network).isa(self.fr.ontology["HUMAN"], set=False))
             if len(fr_instances) > 0:
                 resolves["ONT.HUMAN"] = {fr_instances[0].name()}
 
         if "ROBOT" in resolves:
-            fr_instances = self.fr.search(Frame.q(self.fr._network).isa(self.fr.ontology["ROBOT"]))
+            fr_instances = self.fr.search(Frame.q(self.fr._network).isa(self.fr.ontology["ROBOT"], set=False))
             if len(fr_instances) > 0:
                 resolves["ROBOT"] = {fr_instances[0].name()}
 
         if "ONT.ROBOT" in resolves:
-            fr_instances = self.fr.search(Frame.q(self.fr._network).isa(self.fr.ontology["ROBOT"]))
+            fr_instances = self.fr.search(Frame.q(self.fr._network).isa(self.fr.ontology["ROBOT"], set=False))
             if len(fr_instances) > 0:
                 resolves["ONT.ROBOT"] = {fr_instances[0].name()}
 
