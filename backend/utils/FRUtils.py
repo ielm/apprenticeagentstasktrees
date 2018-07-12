@@ -60,6 +60,6 @@ def expand_sets(fr, fr_instances):
         if not fr_instance ^ fr.ontology["SET"]:
             results.append(fr_instance)
         else:
-            results.extend(map(lambda member: member.resolve(), fr_instance["MEMBER-TYPE"]))
+            results.extend(map(lambda member: member.resolve(), fr_instance["ELEMENTS"]))
 
     return results

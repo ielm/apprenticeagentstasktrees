@@ -355,7 +355,7 @@ class IdentifierQuery(Query):
 
         if self.set:
             frame = other.resolve(None, self.network)
-            for filler in frame["MEMBER-TYPE"]:
+            for filler in frame["ELEMENTS"]:
                 if self.compare(filler):
                     return True
 

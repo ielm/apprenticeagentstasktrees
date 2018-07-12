@@ -105,7 +105,7 @@ class FRResolveSetsWithIdenticalMembersHeuristic(FRResolutionHeuristic):
 
         fr_instances = self.fr.search(Frame.q(self.fr._network).isa(self.fr.ontology["SET"]))
         for fr_instance in fr_instances:
-            fr_instance_members = list(map(lambda filler: filler.resolve().name(), fr_instance["MEMBER-TYPE"]))
+            fr_instance_members = list(map(lambda filler: filler.resolve().name(), fr_instance["ELEMENTS"]))
             if set(fr_instance_members) == set(instance_members):
                 resolves[instance._identifier.render(graph=False)] = {fr_instance.name()}
             if set(fr_instance_members) == set(resolved_instance_members):

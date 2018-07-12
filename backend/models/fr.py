@@ -72,6 +72,9 @@ class FR(Graph):
                 if value is None:
                     continue
 
+                if slot == "MEMBER-TYPE":
+                    slot = "ELEMENTS"
+
                 if isinstance(value, str):
                     fr_instance[slot] += value
                 elif isinstance(value, set):

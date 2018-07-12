@@ -488,7 +488,7 @@ class IdentifierQueryTestCase(unittest.TestCase):
         f3 = g.register("OBJECT", isa="ONT.OBJECT", generate_index=True)
 
         set = g.register("SET", isa="ONT.SET")
-        set["MEMBER-TYPE"] = [f1, f2]
+        set["ELEMENTS"] = [f1, f2]
 
         self.assertTrue(IdentifierQuery(self.n, set, IdentifierQuery.Comparator.EQUALS).compare(set))
         self.assertTrue(IdentifierQuery(self.n, f1, IdentifierQuery.Comparator.EQUALS).compare(set))
