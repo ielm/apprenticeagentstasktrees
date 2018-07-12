@@ -129,7 +129,7 @@ def input():
         agent.input(tmr)
 
     if isinstance(agent.context, LCTContext):
-        learning = list(map(lambda instance: instance.name(), agent.wo_memory.search(query=Frame.q(agent.network).f(LCTContext.LEARNING, True))))
+        learning = list(map(lambda instance: instance.name(), agent.wo_memory.search(Frame.q(agent.network).f(LCTContext.LEARNING, True))))
         return json.dumps({
             LCTContext.LEARNING: learning
         })

@@ -68,7 +68,7 @@ RECURSIVE: "*"
 SUBCLASSES: ">"
 
 GRAPH: /[a-zA-Z]+/
-NAME: /(?!True|False)[a-zA-Z\.\*\_]+/i
+NAME: /(?!True|False)[a-zA-Z\.\*\_\-]+/i
 INSTANCE: /[0-9]+/
 RELATION: /[a-zA-Z0-9\-]+/
 WILDCARD: "*"

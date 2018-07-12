@@ -19,6 +19,7 @@ class GrammarTestCase(unittest.TestCase):
     def test_parse_name(self):
         self.assertEqual("EVENT", Grammar.parse(self.n, "EVENT", start="name"))
         self.assertEqual("EvEnT", Grammar.parse(self.n, "EvEnT", start="name"))
+        self.assertEqual("Ev-EnT", Grammar.parse(self.n, "Ev-EnT", start="name"))
         self.assertEqual("EvEn_T", Grammar.parse(self.n, "EvEn_T", start="name"))
         self.assertEqual("*EvEn.T", Grammar.parse(self.n, "*EvEn.T", start="name"))
 
