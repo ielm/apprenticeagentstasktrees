@@ -99,3 +99,63 @@ class LCTPostHeuristicsTestCase(ApprenticeAgentsTestCase):
         agent.wo_memory["EVENT.3"]["AGENT"] = ["ONT.ROBOT"]
         with self.assertRaises(HeuristicException):
             MockedHeuristic(context)._logic(agent, tmr)
+
+    def test_HandleRequestedActionsAgendaProcessor(self):
+
+        self.ontology.register("REQUEST-ACTION", isa="ONT.EVENT")
+
+        def setup():
+            agent = Agent(ontology=self.ontology)
+            context = LCTContext(agent)
+
+            agent.wo_memory.heuristics = [FRResolveHumanAndRobotAsSingletonsHeuristic]
+
+            frevent = agent.wo_memory.register("EVENT", isa="ONT.EVENT")
+            frevent[LCTContext.LEARNING] = True
+            frevent[LCTContext.CURRENT] = True
+
+            tmr = agent.register(TMR.new(self.ontology))
+            event = tmr.register("EVENT", isa="ONT.REQUEST-ACTION")
+            theme = tmr.register("EVENT", isa="ONT.EVENT")
+            event["BENEFICIARY"] = "ROBOT"
+            event["THEME"] = theme
+
+            agent.wo_memory.learn_tmr(tmr)
+
+            return agent, context, tmr
+
+        effect = False
+        class MockedHeuristic(HandleRequestedActionsAgendaProcessor):
+            def halt_siblings(self):
+                nonlocal effect
+                effect = True
+
+        # If matched, the heuristic adds the input event's THEME as a HAS-EVENT-AS-PART.
+        agent, context, tmr = setup()
+        MockedHeuristic(context).process(agent, tmr)
+        self.assertTrue(agent.wo_memory["EVENT.1"]["HAS-EVENT-AS-PART"] == agent.wo_memory["EVENT.2"])
+        self.assertTrue(effect)
+
+        # Fails if tmr is prefix.
+        agent, context, tmr = setup()
+        tmr["EVENT.1"]["TIME"] = [[">", "FIND-ANCHOR-TIME"]]
+        with self.assertRaises(HeuristicException):
+            MockedHeuristic(context)._logic(agent, tmr)
+
+        # Fails if tmr is postfix.
+        agent, context, tmr = setup()
+        tmr["EVENT.1"]["TIME"] = [["<", "FIND-ANCHOR-TIME"]]
+        with self.assertRaises(HeuristicException):
+            MockedHeuristic(context)._logic(agent, tmr)
+
+        # Fails if the main event is not a REQUEST-ACTION.
+        agent, context, tmr = setup()
+        tmr["EVENT.1"]["INSTANCE-OF"] = "ONT.EVENT"
+        with self.assertRaises(HeuristicException):
+            MockedHeuristic(context)._logic(agent, tmr)
+
+        # Fails if the robot is not the BENEFICIARY.
+        agent, context, tmr = setup()
+        del tmr["EVENT.1"]["BENEFICIARY"]
+        with self.assertRaises(HeuristicException):
+            MockedHeuristic(context)._logic(agent, tmr)
