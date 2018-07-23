@@ -35,7 +35,7 @@ class YaleUtilsTestCase(ApprenticeAgentsTestCase):
         n = Network()
         ontology = n.register(Ontology.init_default())
 
-        agent = Agent(n, ontology=ontology)
+        agent = Agent(ontology=ontology)
         for i in input:
             agent.input(i)
 
@@ -67,7 +67,7 @@ class YaleUtilsTestCase(ApprenticeAgentsTestCase):
         n = Network()
         ontology = n.register(Ontology.init_default())
 
-        agent = Agent(n, ontology=ontology)
+        agent = Agent(ontology=ontology)
         for i in input:
             agent.input(i)
 

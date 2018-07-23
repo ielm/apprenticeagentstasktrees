@@ -30,7 +30,7 @@ class LCTPreHeuristicsTestCase(ApprenticeAgentsTestCase):
         self.ontology.register("FASTEN", isa="ONT.EVENT")
 
     def test_IdentifyClosingOfKnownTaskAgendaProcessor(self):
-        agent = Agent(self.n, ontology=self.ontology)
+        agent = Agent(ontology=self.ontology)
         context = LCTContext(agent)
 
         event = agent.wo_memory.register("EVENT", isa="ONT.EVENT")

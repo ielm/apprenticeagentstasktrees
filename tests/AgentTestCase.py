@@ -41,7 +41,7 @@ class AgentTestCase(unittest.TestCase): # TODO: Clean up AATestCase and move bac
             # demo[11],  # We finished assembling the chair.
         ]
 
-        agent = Agent(self.n, ontology=self.ontology)
+        agent = Agent(ontology=self.ontology)
         agent.logger().enable()
 
         print("")
@@ -67,7 +67,7 @@ class AgentTestCase(unittest.TestCase): # TODO: Clean up AATestCase and move bac
         file = os.path.abspath(__package__) + "/resources/DemoMay2018_Analyses.json"
         demo = self.resource(file)
 
-        agent = Agent(self.n, ontology=self.ontology)
+        agent = Agent(ontology=self.ontology)
         agent.logger().disable()
 
         input = [

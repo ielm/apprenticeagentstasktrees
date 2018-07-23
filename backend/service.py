@@ -17,8 +17,7 @@ CORS(app)
 
 n = Network()
 ontology = n.register(Ontology.init_default())
-agent = Agent(n, ontology)
-
+agent = Agent(ontology=ontology)
 
 def graph_to_json(graph):
     frames = []
@@ -89,7 +88,7 @@ def reset():
 
     n = Network()
     ontology = n.register(Ontology.init_default())
-    agent = Agent(n, ontology)
+    agent = Agent(ontology)
 
     return "OK"
 
@@ -129,7 +128,7 @@ def input():
         agent.input(tmr)
 
     if isinstance(agent.context, LCTContext):
-        learning = list(map(lambda instance: instance.name(), agent.wo_memory.search(Frame.q(agent.network).f(LCTContext.LEARNING, True))))
+        learning = list(map(lambda instance: instance.name(), agent.wo_memory.search(Frame.q(network).f(LCTContext.LEARNING, True))))
         return json.dumps({
             LCTContext.LEARNING: learning
         })
