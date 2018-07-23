@@ -157,6 +157,9 @@ class TMRInstance(Frame):
 
         self.token_index = index
 
+    def _ISA_type(self):
+        return "INSTANCE-OF"
+
     def is_event(self):
         return self.isa(self._graph.ontology + ".EVENT")
 

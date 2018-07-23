@@ -1,7 +1,7 @@
 from backend.contexts.context import AgendaProcessor, HeuristicException
 from backend.contexts.LCTContext import LCTContext
 from backend.models.fr import FR
-from backend.models.graph import Identifier
+from backend.models.graph import Frame, Identifier
 from functools import reduce
 
 import operator
@@ -30,7 +30,7 @@ class RecallTaskFromLongTermMemoryAgendaProcessor(AgendaProcessor):
         event = tmr.find_main_event()
         themes = _fillers_to_concepts(tmr, event["THEME"])
 
-        results = agent.lt_memory.search(concept=event.concept())
+        results = agent.lt_memory.search(Frame.q(agent.network).isa(event.concept()))
         results = list(filter(lambda result: len(_fillers_to_concepts(agent.lt_memory, result["THEME"]).intersection(themes)) > 0, results))
 
         if len(results) == 0:
@@ -38,11 +38,11 @@ class RecallTaskFromLongTermMemoryAgendaProcessor(AgendaProcessor):
 
         for result in results:
             temp = FR("TEMP", agent.ontology)
-            for instance in agent.lt_memory.search(context={LCTContext.FROM_CONTEXT: result.context()[LCTContext.FROM_CONTEXT][0]}):
+            for instance in agent.lt_memory.search(Frame.q(agent.network).f(LCTContext.FROM_CONTEXT, result[LCTContext.FROM_CONTEXT][0])):
                 temp[Identifier(None, instance._identifier.name, instance=instance._identifier.instance)] = instance
             id_map = agent.wo_memory.import_fr(temp)
 
-            agent.wo_memory[id_map[result._identifier.render(graph=False)]].context()[self.context.DOING] = True
+            agent.wo_memory[id_map[result._identifier.render(graph=False)]][self.context.DOING] = True
 
 
 # Assuming a currently doing task, finds any preconditions for that task and makes them into actions on the agent queue.
@@ -56,7 +56,7 @@ class QueuePreconditionActionsAgendaProcessor(AgendaProcessor):
         self.context = context
 
     def _logic(self, agent, tmr):
-        doing = agent.wo_memory.search(context={self.context.DOING: True})
+        doing = agent.wo_memory.search(Frame.q(agent.network).f(self.context.DOING, True))
 
         if len(doing) == 0:
             raise HeuristicException()

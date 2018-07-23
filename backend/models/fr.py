@@ -1,5 +1,5 @@
-from backend.models.graph import Filler, Frame, Graph, Identifier
-from backend.models.query import FrameQuery, IdentifierQuery
+from backend.models.graph import Filler, Frame, Graph, Identifier, Literal
+from backend.models.query import FrameQuery
 from backend.heuristics.fr_heuristics import *
 from backend.utils.AgentLogger import AgentLogger
 
@@ -41,33 +41,6 @@ class FR(Graph):
     def _frame_type(self):
         return FRInstance
 
-    def search(self, query: FrameQuery=None, concept=None, subtree=None, descendant=None, attributed_tmr_instance=None, context=None, has_fillers=None):
-        results = list(self.values())
-
-        if query is not None:
-            results = list(filter(lambda instance: query.compare(instance), results))
-
-        if concept is not None:
-            results = list(filter(lambda instance: instance.concept() == self.ontology[concept].name(), results))
-
-        if subtree is not None:
-            results = list(filter(lambda instance: instance ^ subtree, results))
-
-        if descendant is not None:
-            results = list(filter(lambda instance: self.ontology[descendant] ^ self.ontology[instance.concept()], results))
-
-        if attributed_tmr_instance is not None:
-            results = list(filter(lambda instance: instance.is_attributed_to(attributed_tmr_instance), results))
-
-        if context is not None:
-            results = list(filter(lambda instance: instance.does_match_context(context), results))
-
-        if has_fillers is not None:
-            sets = dict((s.name(), s) for s in self.search(concept="SET"))
-            results = list(filter(lambda instance: instance.has_fillers(has_fillers, expand_sets=sets), results))
-
-        return results
-
     # Fills an existing FR Instance with properties found in a Frame object; the properties must be resolved
     # to existing FR Instances to be added.
     # fr_id: The id/name of an existing FR Instance (e.g., OBJECT-FR1).
@@ -80,6 +53,10 @@ class FR(Graph):
 
         for slot in frame:
             for filler in frame[slot]:
+                if isinstance(filler._value, Literal):
+                    fr_instance[slot] += Literal(filler._value)
+                    continue
+
                 identifier = filler._value
 
                 if isinstance(identifier, Frame):
@@ -94,6 +71,9 @@ class FR(Graph):
 
                 if value is None:
                     continue
+
+                if slot == "MEMBER-TYPE":
+                    slot = "ELEMENTS"
 
                 if isinstance(value, str):
                     fr_instance[slot] += value
@@ -122,13 +102,11 @@ class FR(Graph):
     # 2) Resolve heuristics are the normal FR resolution heuristics; if none are provided, then no resolution occurs.
     #    That is, the normal heuristics in this FR are ignored during this operation - either none are used, or an
     #    overriding list must be provided.
-    def import_fr(self, other_fr, import_heuristics=None, resolve_heuristics=None, update_context=None):
+    def import_fr(self, other_fr, import_heuristics=None, resolve_heuristics=None):
         if import_heuristics is None:
             import_heuristics = []
         if resolve_heuristics is None:
             resolve_heuristics = []
-        if update_context is None:
-            update_context = {}
 
         status = {k: True for k in other_fr.keys()}
         for heuristic in import_heuristics:
@@ -156,24 +134,6 @@ class FR(Graph):
                     resolved = list(resolved)[0]
             self.populate(resolved, other_fr[k], resolves=resolves)
 
-            # Merge contexts (needlessly complicated due to list types needing to be merged)
-            context = copy.deepcopy(other_fr[k].context())
-            for k in update_context:
-                if k not in context:
-                    context[k] = update_context[k]
-                    continue
-
-                if type(context[k]) == list and type(update_context[k]) != list:
-                    update_context[k] = [update_context[k]]
-                if type(context[k]) != list and type(update_context[k]) == list:
-                    context[k] = [context[k]]
-                if type(context[k]) == list:
-                    context[k].extend(update_context[k])
-                else:
-                    context[k] = update_context[k]
-            for k in context:
-                self[resolved].context()[k] = context[k]
-
         return resolves
 
     # Locates each mention of an Instance in the input Frame (including itself), and attempts to resolve those
@@ -185,7 +145,7 @@ class FR(Graph):
         results = dict()
         results[frame._identifier.render(graph=False)] = None
         for slot in frame:
-            if slot == "IS-A":
+            if slot == frame._ISA_type():
                 continue
 
             try:
@@ -254,62 +214,24 @@ class FR(Graph):
 
 class FRInstance(Frame):
 
+    ATTRIBUTED_TO = "*FR.attributed_to"
+
     def __init__(self, name, isa=None):
         super().__init__(name, isa=isa)
-        self._from = dict()
-        self._context = dict()
 
-    def context(self):
-        return self._context
+    def _ISA_type(self):
+        return "INSTANCE-OF"
 
     def attribute_to(self, tmrinstance):
-        self._from[tmrinstance._uuid] = tmrinstance
+        self[FRInstance.ATTRIBUTED_TO] += tmrinstance
 
     def is_attributed_to(self, tmrinstance):
-        return tmrinstance._uuid in self._from
-
-    def does_match_context(self, context: dict) -> bool:
-        if type(context) is not dict:
-            raise Exception("Context must be a dictionary.")
-
-        for c in context:
-            if c not in self._context:
-                return False
-            if type(self._context[c]) == list:
-                if self._context[c] != context[c] and context[c] not in self._context[c]:
-                    return False
-            elif self._context[c] != context[c]:
-                return False
-
-        return True
-
-    # TODO: this should be part of default searching capability
-    def has_fillers(self, query, expand_sets=None):
-        if expand_sets is None:
-            expand_sets = dict()
-
-        for key in query:
-            if key not in self:
-                return False
-
-            value = query[key]
-            slot = self[key]
-
-            filler_values = list(map(lambda filler: filler.resolve(), slot))
-            sets_to_expand = list(filter(lambda set: expand_sets[set] in filler_values, expand_sets.keys()))
-            expanded_values = list(map(lambda set: expand_sets[set]["MEMBER-TYPE"], sets_to_expand))
-            for slot in expanded_values:
-                filler_values.extend(slot._storage)
-
-            if value not in filler_values:
-                return False
-
-        return True
+        return tmrinstance in self[FRInstance.ATTRIBUTED_TO]
 
     def lemmas(self):
         lemmas = []
-        for tmr_instance in self._from.keys():
-            tmr_instance = self._from[tmr_instance]
+        for tmr_instance in self[FRInstance.ATTRIBUTED_TO]:
+            tmr_instance = tmr_instance.resolve()
             lemma = " ".join(map(lambda ti: tmr_instance._graph.syntax.index[str(ti)]["lemma"], tmr_instance.token_index))
             lemmas.append(lemma)
         return lemmas

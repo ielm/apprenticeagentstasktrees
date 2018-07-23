@@ -34,8 +34,8 @@ class LCTPreHeuristicsTestCase(ApprenticeAgentsTestCase):
         context = LCTContext(agent)
 
         event = agent.wo_memory.register("EVENT", isa="ONT.EVENT")
-        event.context()[LCTContext.LEARNING] = True
-        event.context()[LCTContext.CURRENT] = True
+        event[LCTContext.LEARNING] = True
+        event[LCTContext.CURRENT] = True
 
         tmr = self.n.register(TMR.new(self.ontology))
         event1 = tmr.register("EVENT.1", isa="ONT.EVENT")
@@ -43,6 +43,6 @@ class LCTPreHeuristicsTestCase(ApprenticeAgentsTestCase):
 
         IdentifyClosingOfKnownTaskAgendaProcessor(context).process(agent, tmr)
 
-        self.assertTrue(LCTContext.LEARNING not in event.context())
-        self.assertTrue(LCTContext.CURRENT not in event.context())
-        self.assertEqual(event.context()[LCTContext.LEARNED], True)
+        self.assertTrue(LCTContext.LEARNING not in event)
+        self.assertTrue(LCTContext.CURRENT not in event)
+        self.assertEqual(event[LCTContext.LEARNED], True)

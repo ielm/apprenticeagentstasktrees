@@ -1,5 +1,5 @@
 from backend.models.grammar import Grammar
-from backend.models.graph import Filler, Frame, Identifier, Network, Slot
+from backend.models.graph import Filler, Frame, Identifier, Literal, Network, Slot
 from enum import Enum
 from functools import reduce
 from typing import Any, List, Union
@@ -21,6 +21,10 @@ class Query(object):
             raise Exception("Parsed value for \"" + input + "\" is not a Query.")
 
         return result
+
+    @classmethod
+    def parsef(cls, network: Network, input: str, **kwargs):
+        return Query.parse(network, input.format(**kwargs))
 
 
 class AndQuery(Query):
@@ -131,6 +135,92 @@ class FrameQuery(Query):
         return self.network == other.network and self.subquery == other.subquery
 
 
+class SimpleFrameQuery(FrameQuery):
+
+    def __init__(self, network: Network, comparator="and"):
+        logic = AndQuery(network, [])
+        if comparator == "or":
+            logic = OrQuery(network, [])
+        elif comparator == "not":
+            logic = NotQuery(network, None)
+        elif comparator == "exactly":
+            logic = ExactQuery(network, [])
+        super().__init__(network, logic)
+
+    def _append(self, query: Query):
+        if isinstance(self.subquery, NotQuery):
+            self.subquery.query = query
+        else:
+            self.subquery.queries.append(query)
+
+    def id(self, identifier: Union[Frame, Filler, Identifier, str]) -> 'SimpleFrameQuery':
+        if isinstance(identifier, Frame):
+            identifier = identifier._identifier
+        elif isinstance(identifier, Filler):
+            identifier = identifier._value
+        elif isinstance(identifier, str):
+            identifier = Identifier.parse(identifier)
+
+        self._append(IdentifierQuery(self.network, identifier, IdentifierQuery.Comparator.EQUALS))
+        return self
+
+    def isa(self, identifier: Union[Frame, Filler, Identifier, str], set: bool=True, from_concept: bool=False) -> 'SimpleFrameQuery':
+        if isinstance(identifier, Frame):
+            identifier = identifier._identifier
+        elif isinstance(identifier, Filler):
+            identifier = identifier._value
+        elif isinstance(identifier, str):
+            identifier = Identifier.parse(identifier)
+
+        self._append(IdentifierQuery(self.network, identifier, IdentifierQuery.Comparator.ISA, set=set, from_concept=from_concept))
+        return self
+
+    def sub(self, identifier: Union[Frame, Filler, Identifier, str], set: bool=True, from_concept: bool=False) -> 'SimpleFrameQuery':
+        if isinstance(identifier, Frame):
+            identifier = identifier._identifier
+        elif isinstance(identifier, Filler):
+            identifier = identifier._value
+        elif isinstance(identifier, str):
+            identifier = Identifier.parse(identifier)
+
+        self._append(IdentifierQuery(self.network, identifier, IdentifierQuery.Comparator.SUBCLASSES, set=set, from_concept=from_concept))
+        return self
+
+    def has(self, slot: Union[Slot, str]) -> 'SimpleFrameQuery':
+        if isinstance(slot, Slot):
+            slot = slot._name
+
+        self._append(SlotQuery(self.network, NameQuery(self.network, slot)))
+        return self
+
+    def f(self, slot: Union[Slot, str], filler: Union[Filler, Identifier, Literal, Any]) -> 'SimpleFrameQuery':
+        if isinstance(slot, Slot):
+            slot = slot._name
+
+        if isinstance(filler, Filler):
+            filler = filler._value
+        elif not isinstance(filler, Identifier) and not isinstance(filler, Literal):
+            filler = Filler(filler)._value
+
+        vq = IdentifierQuery(self.network, filler, IdentifierQuery.Comparator.EQUALS) if isinstance(filler, Identifier) else LiteralQuery(self.network, filler)
+        vq = FillerQuery(self.network, vq)
+
+        self._append(SlotQuery(self.network, AndQuery(self.network, [NameQuery(self.network, slot), vq])))
+        return self
+
+    def fisa(self, slot: Union[Slot, str], filler: Union[Filler, Identifier]) -> 'SimpleFrameQuery':
+        if isinstance(slot, Slot):
+            slot = slot._name
+
+        if isinstance(filler, Filler):
+            filler = filler._value
+
+        vq = IdentifierQuery(self.network, filler, IdentifierQuery.Comparator.ISA)
+
+        self._append(SlotQuery(self.network, AndQuery(self.network, [NameQuery(self.network, slot), vq])))
+        return self
+
+
 class SlotQuery(Query):
 
     def __init__(self, network: Network, subquery: Union[AndQuery, OrQuery, ExactQuery, NotQuery, 'NameQuery', 'FillerQuery']):
@@ -232,8 +322,9 @@ class IdentifierQuery(Query):
         EQUALS = 1      # Is self.identifier exactly the same as the input
         ISA = 2         # Is self.identifier an ancestor of the input
         ISPARENT = 3    # Is self.identifier the immediate parent of the input
+        SUBCLASSES = 4  # Is self.identifier a child of the input
 
-    def __init__(self, network: Network, identifier: Union[Identifier, Frame, str], comparator: Comparator):
+    def __init__(self, network: Network, identifier: Union[Identifier, Frame, str], comparator: Comparator, set: bool=True, from_concept: bool=False):
         super().__init__(network)
 
         if isinstance(identifier, Frame):
@@ -243,6 +334,8 @@ class IdentifierQuery(Query):
 
         self.identifier = identifier
         self.comparator = comparator
+        self.set = set
+        self.from_concept = from_concept
 
     def compare(self, other: Union[Frame, Identifier, Filler, str]) -> bool:
         if isinstance(other, Filler):
@@ -254,6 +347,18 @@ class IdentifierQuery(Query):
         if isinstance(other, Frame):
             other = other._identifier
 
+        if not isinstance(other, Identifier):
+            return False
+
+        if self.from_concept:
+            other = Identifier.parse(other.resolve(None, self.network).concept(full_path=True))
+
+        if self.set:
+            frame = other.resolve(None, self.network)
+            for filler in frame["ELEMENTS"]:
+                if self.compare(filler):
+                    return True
+
         if self.comparator == self.Comparator.EQUALS:
             return self.identifier == other
 
@@ -261,7 +366,11 @@ class IdentifierQuery(Query):
             return other.resolve(None, self.network) ^ self.identifier.resolve(None, self.network)
 
         if self.comparator == self.Comparator.ISPARENT:
-            return other.resolve(None, self.network)["IS-A"] == self.identifier
+            other = other.resolve(None, self.network)
+            return other[other._ISA_type()] == self.identifier
+
+        if self.comparator == self.Comparator.SUBCLASSES:
+            return self.identifier.resolve(None, self.network) ^ other.resolve(None, self.network)
 
         return False
 
@@ -269,4 +378,4 @@ class IdentifierQuery(Query):
         if not isinstance(other, IdentifierQuery):
             return super().__eq__(other)
 
-        return self.network == other.network and self.identifier == other.identifier and self.comparator == other.comparator
+        return self.network == other.network and self.identifier == other.identifier and self.comparator == other.comparator and self.set == other.set and self.from_concept == other.from_concept

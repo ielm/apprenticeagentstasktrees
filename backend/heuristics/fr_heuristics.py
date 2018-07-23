@@ -1,3 +1,4 @@
+from backend.models.graph import Frame
 
 
 class FRResolutionHeuristic(object):
@@ -23,28 +24,28 @@ class FRImportHeuristic(object):
 class FRResolveHumanAndRobotAsSingletonsHeuristic(FRResolutionHeuristic):
 
     def resolve(self, instance, resolves, tmr=None):
-        if instance["IS-A"] == self.fr.ontology["HUMAN"] or instance["IS-A"] == self.fr.ontology["ROBOT"]:
-            fr_instances = self.fr.search(concept=instance.concept())
+        if instance[instance._ISA_type()] == self.fr.ontology["HUMAN"] or instance[instance._ISA_type()] == self.fr.ontology["ROBOT"]:
+            fr_instances = self.fr.search(Frame.q(self.fr._network).isa(instance.concept()))
             if len(fr_instances) > 0:
                 resolves[instance._identifier.render(graph=False)] = {fr_instances[0].name()}
 
         if "HUMAN" in resolves:
-            fr_instances = self.fr.search(concept="HUMAN")
+            fr_instances = self.fr.search(Frame.q(self.fr._network).isa(self.fr.ontology["HUMAN"], set=False))
             if len(fr_instances) > 0:
                 resolves["HUMAN"] = {fr_instances[0].name()}
 
         if "ONT.HUMAN" in resolves:
-            fr_instances = self.fr.search(concept="HUMAN")
+            fr_instances = self.fr.search(Frame.q(self.fr._network).isa(self.fr.ontology["HUMAN"], set=False))
             if len(fr_instances) > 0:
                 resolves["ONT.HUMAN"] = {fr_instances[0].name()}
 
         if "ROBOT" in resolves:
-            fr_instances = self.fr.search(concept="ROBOT")
+            fr_instances = self.fr.search(Frame.q(self.fr._network).isa(self.fr.ontology["ROBOT"], set=False))
             if len(fr_instances) > 0:
                 resolves["ROBOT"] = {fr_instances[0].name()}
 
         if "ONT.ROBOT" in resolves:
-            fr_instances = self.fr.search(concept="ROBOT")
+            fr_instances = self.fr.search(Frame.q(self.fr._network).isa(self.fr.ontology["ROBOT"], set=False))
             if len(fr_instances) > 0:
                 resolves["ONT.ROBOT"] = {fr_instances[0].name()}
 
@@ -67,7 +68,7 @@ class FRResolveDeterminedObjectsHeuristic(FRResolutionHeuristic):
         if "THE" not in tokens:
             return
 
-        fr_instances = self.fr.search(concept=instance.concept())
+        fr_instances = self.fr.search(Frame.q(self.fr._network).isa(instance.concept()))
 
         if len(fr_instances) == 0:
             return
@@ -102,9 +103,9 @@ class FRResolveSetsWithIdenticalMembersHeuristic(FRResolutionHeuristic):
                 if resolves[instance_member] is not None:
                     resolved_instance_members = resolved_instance_members.union(resolves[instance_member])
 
-        fr_instances = self.fr.search(concept="SET")
+        fr_instances = self.fr.search(Frame.q(self.fr._network).isa(self.fr.ontology["SET"]))
         for fr_instance in fr_instances:
-            fr_instance_members = list(map(lambda filler: filler.resolve().name(), fr_instance["MEMBER-TYPE"]))
+            fr_instance_members = list(map(lambda filler: filler.resolve().name(), fr_instance["ELEMENTS"]))
             if set(fr_instance_members) == set(instance_members):
                 resolves[instance._identifier.render(graph=False)] = {fr_instance.name()}
             if set(fr_instance_members) == set(resolved_instance_members):

@@ -117,6 +117,41 @@
                 </p>
             </div>
         </div>
+        <p>
+            To look for any frame that is a parent of a another frame, use the ">" comparator:
+        </p>
+        <div class="card bg-light mb-3">
+            <div class="card-header example-header">Example</div>
+            <div class="card-body example-body">
+                <p class="card-text example-text">
+                    <span class="keyword">VIEW</span> [graph] <span class="keyword">WHERE</span> @ > ONT.HUMAN
+                </p>
+            </div>
+        </div>
+        <p>
+            To disable auto-expansion of SETs (that is, matching a set when one or more of its members is a match), use
+            the "!" operator after any of the above comparators:
+        </p>
+        <div class="card bg-light mb-3">
+            <div class="card-header example-header">Example</div>
+            <div class="card-body example-body">
+                <p class="card-text example-text">
+                    <span class="keyword">VIEW</span> [graph] <span class="keyword">WHERE</span> @ ^.! ONT.HUMAN
+                </p>
+            </div>
+        </div>
+        <p>
+            To compare the anchoring concept of a frame, rather than the frame itself, use the "~" operator after any
+            of the above comparators:
+        </p>
+        <div class="card bg-light mb-3">
+            <div class="card-header example-header">Example</div>
+            <div class="card-body example-body">
+                <p class="card-text example-text">
+                    <span class="keyword">VIEW</span> [graph] <span class="keyword">WHERE</span> @ ~> ONT.HUMAN
+                </p>
+            </div>
+        </div>
         <h4>Slot Queries</h4>
         <p>
             In addition to, or in lieu of, searching on identifiers, you can also search based on property matches.

@@ -162,3 +162,18 @@ class ViewTestCase(unittest.TestCase):
         self.assertTrue("TEST.FRAME.1" in v)
         self.assertTrue("TEST.FRAME.2" in v)
         self.assertTrue("TEST.FRAME.3" not in v)
+
+    def test_view_query_follows_paths_and_updates_relations_with_absolute_identifiers(self):
+        ont = self.n.register("ONT")
+        all = ont.register("ALL")
+        thing = ont.register("THING", isa="ALL")
+
+        self.assertIsNone(thing["IS-A"][0]._value.graph)
+        self.assertEqual(thing["IS-A"][0].resolve(), all)
+
+        f = self.g.register("TEST.FRAME.1", isa="ONT.THING")
+
+        path = Path().to("*").to("*")
+        v = View(self.n, self.g, follow=path).view()
+
+        self.assertEqual(v["ONT.THING"]["IS-A"][0]._value.graph, "ONT")

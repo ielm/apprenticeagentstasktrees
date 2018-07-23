@@ -4,6 +4,7 @@ from backend.heuristics.lctcontex.lct_fr_resolution_heuristics import *
 from backend.heuristics.lctcontex.lct_post_heuristics import *
 from backend.heuristics.lctcontex.lct_pre_heuristics import *
 
+from backend.models.graph import Frame
 from backend.models.ontology import OntologyFiller
 
 
@@ -53,17 +54,16 @@ class LCTContext(AgentContext):
     # Helper function for returning the learning hierarchy; starting with LTC.current, and finding each "parent"
     # via the LCT.waiting_on property; the names are returned in that order (element 0 is current).
     def learning_hierarchy(self):
-        results = self.agent.wo_memory.search(context={LCTContext.LEARNING: True, LCTContext.CURRENT: True})
+        results = self.agent.wo_memory.search(Frame.q(self.agent.network).f(self.LEARNING, True).f(self.CURRENT, True))
         if len(results) != 1:
             return []
 
         hierarchy = [results[0].name()]
 
-        results = self.agent.wo_memory.search(context={LCTContext.LEARNING: True, LCTContext.CURRENT: False, LCTContext.WAITING_ON: hierarchy[-1]})
+        results = self.agent.wo_memory.search(Frame.q(self.agent.network).f(self.LEARNING, True).f(self.CURRENT, False).f(self.WAITING_ON, hierarchy[-1]))
         while len(results) == 1:
             hierarchy.append(results[0].name())
-            results = self.agent.wo_memory.search(context={LCTContext.LEARNING: True, LCTContext.CURRENT: False, LCTContext.WAITING_ON: hierarchy[-1]})
-
+            results = self.agent.wo_memory.search(Frame.q(self.agent.network).f(self.LEARNING, True).f(self.CURRENT, False).f(self.WAITING_ON, hierarchy[-1]))
         return hierarchy
 
     # Helper function for marking a single instance that is currently LTC.learning as finished learning.  This means
@@ -72,16 +72,16 @@ class LCTContext(AgentContext):
     # and is marked as LCT.current if this instance was considered current.
     def finish_learning(self, instance):
         instance = self.agent.wo_memory[instance]
-        roll_up_current = instance.context()[self.CURRENT]
+        roll_up_current = instance[self.CURRENT][0].resolve()
 
         for context in [self.LEARNING, self.CURRENT, self.WAITING_ON]:
-            if context in instance.context():
-                del instance.context()[context]
+            if context in instance:
+                del instance[context]
 
-        instance.context()[self.LEARNED] = True
+        instance[self.LEARNED] = True
 
-        for parent in self.agent.wo_memory.search(context={self.WAITING_ON: instance.name()}):
+        for parent in self.agent.wo_memory.search(Frame.q(self.agent.network).f(self.WAITING_ON, instance.name())):
             if roll_up_current:
-                parent.context()[self.CURRENT] = True
-            if self.WAITING_ON in parent.context():
-                del parent.context()[self.WAITING_ON]
+                parent[self.CURRENT] = True
+            if self.WAITING_ON in parent:
+                del parent[self.WAITING_ON]

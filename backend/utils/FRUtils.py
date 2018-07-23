@@ -44,7 +44,7 @@ def format_pretty_name(fr, fr_instance):
 
         name += " " + themes + " (" + agents + ")"
 
-        name = ("+" if "*LCT.current" in fr_instance.context() and fr_instance.context()["*LCT.current"] else "") + name
+        name = ("+" if "*LCT.current" in fr_instance and fr_instance["*LCT.current"] else "") + name
 
     return name
 
@@ -60,6 +60,6 @@ def expand_sets(fr, fr_instances):
         if not fr_instance ^ fr.ontology["SET"]:
             results.append(fr_instance)
         else:
-            results.extend(map(lambda member: member.resolve(), fr_instance["MEMBER-TYPE"]))
+            results.extend(map(lambda member: member.resolve(), fr_instance["ELEMENTS"]))
 
     return results

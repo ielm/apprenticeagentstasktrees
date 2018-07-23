@@ -32,16 +32,16 @@ class LCTContextTestCase(ApprenticeAgentsTestCase):
         event3 = agent.wo_memory.register("EVENT", isa="ONT.EVENT")
         event4 = agent.wo_memory.register("EVENT", isa="ONT.EVENT")
 
-        event1.context()[LCTContext.LEARNING] = True
-        event1.context()[LCTContext.CURRENT] = False
-        event1.context()[LCTContext.WAITING_ON] = event2.name()
+        event1[LCTContext.LEARNING] = True
+        event1[LCTContext.CURRENT] = False
+        event1[LCTContext.WAITING_ON] = event2.name()
 
-        event2.context()[LCTContext.LEARNING] = True
-        event2.context()[LCTContext.CURRENT] = False
-        event2.context()[LCTContext.WAITING_ON] = event3.name()
+        event2[LCTContext.LEARNING] = True
+        event2[LCTContext.CURRENT] = False
+        event2[LCTContext.WAITING_ON] = event3.name()
 
-        event3.context()[LCTContext.LEARNING] = True
-        event3.context()[LCTContext.CURRENT] = True
+        event3[LCTContext.LEARNING] = True
+        event3[LCTContext.CURRENT] = True
 
         self.assertEqual(context.learning_hierarchy(), [event3.name(), event2.name(), event1.name()])
 
@@ -51,7 +51,7 @@ class LCTContextTestCase(ApprenticeAgentsTestCase):
 
         event1 = agent.wo_memory.register("EVENT", isa="ONT.EVENT")
 
-        event1.context()[LCTContext.LEARNED] = True
+        event1[LCTContext.LEARNED] = True
 
         self.assertEqual(context.learning_hierarchy(), [])
 
@@ -62,20 +62,20 @@ class LCTContextTestCase(ApprenticeAgentsTestCase):
         event1 = agent.wo_memory.register("EVENT", isa="ONT.EVENT")
         event2 = agent.wo_memory.register("EVENT", isa="ONT.EVENT")
 
-        event1.context()[LCTContext.LEARNING] = True
-        event1.context()[LCTContext.CURRENT] = False
-        event1.context()[LCTContext.WAITING_ON] = event2.name()
+        event1[LCTContext.LEARNING] = True
+        event1[LCTContext.CURRENT] = False
+        event1[LCTContext.WAITING_ON] = event2.name()
 
-        event2.context()[LCTContext.LEARNING] = True
-        event2.context()[LCTContext.CURRENT] = True
+        event2[LCTContext.LEARNING] = True
+        event2[LCTContext.CURRENT] = True
 
         context.finish_learning(event2.name())
 
-        self.assertEqual(event1.context()[LCTContext.LEARNING], True)
-        self.assertEqual(event1.context()[LCTContext.CURRENT], True)
-        self.assertTrue(LCTContext.WAITING_ON not in event1.context())
+        self.assertEqual(event1[LCTContext.LEARNING], True)
+        self.assertEqual(event1[LCTContext.CURRENT], True)
+        self.assertTrue(LCTContext.WAITING_ON not in event1)
 
-        self.assertEqual(event2.context()[LCTContext.LEARNED], True)
-        self.assertTrue(LCTContext.LEARNING not in event2.context())
-        self.assertTrue(LCTContext.CURRENT not in event2.context())
-        self.assertTrue(LCTContext.WAITING_ON not in event2.context())
+        self.assertEqual(event2[LCTContext.LEARNED], True)
+        self.assertTrue(LCTContext.LEARNING not in event2)
+        self.assertTrue(LCTContext.CURRENT not in event2)
+        self.assertTrue(LCTContext.WAITING_ON not in event2)

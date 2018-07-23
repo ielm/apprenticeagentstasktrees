@@ -70,7 +70,12 @@ class ViewGraph(Graph):
         for frame in frames:
             original_graph = frame._identifier.graph
             self[frame._identifier] = frame
+
             frame._identifier.graph = original_graph
+            for slot in frame:
+                for filler in frame[slot]:
+                    if isinstance(filler._value, Identifier) and filler._value.graph is None:
+                        filler._value.graph = original_graph
 
     def _modify_key(self, key: Union[Identifier, str]) -> str:
         return key
