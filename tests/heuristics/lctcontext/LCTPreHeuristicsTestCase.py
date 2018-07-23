@@ -46,3 +46,43 @@ class LCTPreHeuristicsTestCase(ApprenticeAgentsTestCase):
         self.assertTrue(LCTContext.LEARNING not in event)
         self.assertTrue(LCTContext.CURRENT not in event)
         self.assertEqual(event[LCTContext.LEARNED], True)
+
+    def test_IdentifyCompletedTaskAgendaProcessor(self):
+
+        def setup():
+            agent = Agent(ontology=self.ontology)
+            context = LCTContext(agent)
+
+            tmr = self.n.register(TMR.new(self.ontology))
+            event1 = tmr.register("EVENT", isa="ONT.EVENT")
+            event1["TIME"] = [["<", "FIND-ANCHOR-TIME"]]
+
+            event = agent.wo_memory.register("EVENT", isa="ONT.EVENT")
+            event[LCTContext.LEARNED] = True
+
+            return agent, context, tmr
+
+        # If matched, the heuristic affects LT and WO memory.
+        agent, context, tmr = setup()
+        IdentifyCompletedTaskAgendaProcessor(context).process(agent, tmr)
+        self.assertEqual(0, len(agent.wo_memory))
+        self.assertTrue(len(agent.lt_memory) > 0)
+
+        # Fail if the TMR is not in postfix.
+        agent, context, tmr = setup()
+        tmr["EVENT.1"]["TIME"] = [[">", "FIND-ANCHOR-TIME"]]
+        with self.assertRaises(HeuristicException):
+            IdentifyCompletedTaskAgendaProcessor(context)._logic(agent, tmr)
+
+        # Fail if there is no LEARNED event.
+        agent, context, tmr = setup()
+        agent.wo_memory["EVENT.1"][LCTContext.LEARNED] = False
+        with self.assertRaises(HeuristicException):
+            IdentifyCompletedTaskAgendaProcessor(context)._logic(agent, tmr)
+
+        # Fail if there is any LEARNING event.
+        agent, context, tmr = setup()
+        learning = agent.wo_memory.register("EVENT", isa="ONT.EVENT")
+        learning[LCTContext.LEARNING] = True
+        with self.assertRaises(HeuristicException):
+            IdentifyCompletedTaskAgendaProcessor(context)._logic(agent, tmr)
