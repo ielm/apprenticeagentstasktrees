@@ -158,7 +158,7 @@ class IdentifyClosingOfUnknownTaskAgendaProcessor(AgendaProcessor):
             raise HeuristicException()
 
         event = tmr.find_main_event()
-        fr_event = agent.wo_memory.search(Frame.q(agent.network).f(FRInstance.ATTRIBUTED_TO, event))[0]
+        fr_event = agent.wo_memory.search(Frame.q(agent).f(FRInstance.ATTRIBUTED_TO, event))[0]
 
         hierarchy = self.context.learning_hierarchy()
 
@@ -167,7 +167,7 @@ class IdentifyClosingOfUnknownTaskAgendaProcessor(AgendaProcessor):
 
         for learning in hierarchy:
             learning = agent.wo_memory[learning]
-            if learning.concept != fr_event.concept:
+            if learning.concept() != fr_event.concept():
                 continue
             if not FRUtils.comparator(agent.wo_memory, fr_event, learning, "THEME", compare_concepts=True):
                 continue
@@ -178,12 +178,12 @@ class IdentifyClosingOfUnknownTaskAgendaProcessor(AgendaProcessor):
         children = list(map(lambda child: child.resolve(), current["HAS-EVENT-AS-PART"]))
         children = list(filter(lambda child: "HAS-EVENT-AS-PART" not in child, children))
 
-        current.context()[self.context.CURRENT] = False
-        current.context()[self.context.WAITING_ON] = fr_event.name()
+        current[self.context.CURRENT] = False
+        current[self.context.WAITING_ON] = fr_event.name()
         current["HAS-EVENT-AS-PART"] += fr_event
 
-        fr_event.context()[self.context.LEARNING] = True
-        fr_event.context()[self.context.CURRENT] = True
+        fr_event[self.context.LEARNING] = True
+        fr_event[self.context.CURRENT] = True
 
         for child in children:
             current["HAS-EVENT-AS-PART"] -= child
@@ -225,24 +225,18 @@ class RecognizePartsOfObjectAgendaProcessor(AgendaProcessor):
         if len(parts) == 0:
             raise HeuristicException()
 
-        if self.context.LEARNING not in fr_event or not fr_event[self.context.LEARNING]:
+        if fr_event[self.context.LEARNING] == False:
             raise HeuristicException()
 
         if not fr_event ^ agent.ontology["BUILD"]:
             raise HeuristicException()
 
-        results = agent.wo_memory.search(Frame.q(agent).f(self.context.LEARNING, True).f(self.context.WAITING_ON, fr_event.name()))
+        results = agent.wo_memory.search(Frame.q(agent).isa(agent.ontology["BUILD"]).has("THEME").f(self.context.LEARNING, True).f(self.context.WAITING_ON, fr_event.name()))
         if len(results) == 0:
             raise HeuristicException()
 
         success = False
         for result in results:
-            if not result ^ agent.ontology["BUILD"]:
-                continue
-
-            if len(result["THEME"]) != 1:
-                continue
-
             theme = result["THEME"][0].resolve()
 
             for part in parts:

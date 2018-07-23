@@ -159,3 +159,237 @@ class LCTPostHeuristicsTestCase(ApprenticeAgentsTestCase):
         del tmr["EVENT.1"]["BENEFICIARY"]
         with self.assertRaises(HeuristicException):
             MockedHeuristic(context)._logic(agent, tmr)
+
+    def test_HandleCurrentActionAgendaProcessor(self):
+
+        def setup():
+            agent = Agent(ontology=self.ontology)
+            context = LCTContext(agent)
+
+            agent.wo_memory.heuristics = [FRResolveHumanAndRobotAsSingletonsHeuristic]
+
+            frevent = agent.wo_memory.register("EVENT", isa="ONT.EVENT")
+            frevent[LCTContext.LEARNING] = True
+            frevent[LCTContext.CURRENT] = True
+
+            tmr = agent.register(TMR.new(self.ontology))
+            event = tmr.register("EVENT", isa="ONT.EVENT")
+
+            agent.wo_memory.learn_tmr(tmr)
+
+            return agent, context, tmr
+
+        effect = False
+
+        class MockedHeuristic(HandleCurrentActionAgendaProcessor):
+            def halt_siblings(self):
+                nonlocal effect
+                effect = True
+
+        # If matched, the heuristic adds the input event as a HAS-EVENT-AS-PART.
+        agent, context, tmr = setup()
+        MockedHeuristic(context).process(agent, tmr)
+        self.assertTrue(agent.wo_memory["EVENT.1"]["HAS-EVENT-AS-PART"] == agent.wo_memory["EVENT.2"])
+        self.assertTrue(effect)
+
+        # Fails if tmr is prefix.
+        agent, context, tmr = setup()
+        tmr["EVENT.1"]["TIME"] = [[">", "FIND-ANCHOR-TIME"]]
+        with self.assertRaises(HeuristicException):
+            MockedHeuristic(context)._logic(agent, tmr)
+
+        # Fails if tmr is postfix.
+        agent, context, tmr = setup()
+        tmr["EVENT.1"]["TIME"] = [["<", "FIND-ANCHOR-TIME"]]
+        with self.assertRaises(HeuristicException):
+            MockedHeuristic(context)._logic(agent, tmr)
+
+    def test_RecognizeSubEventsAgendaProcessor(self):
+
+        def setup():
+            agent = Agent(ontology=self.ontology)
+            context = LCTContext(agent)
+
+            agent.wo_memory.heuristics = [FRResolveHumanAndRobotAsSingletonsHeuristic]
+
+            frevent = agent.wo_memory.register("EVENT", isa="ONT.EVENT")
+            frevent[LCTContext.LEARNING] = True
+            frevent[LCTContext.CURRENT] = True
+
+            tmr = agent.register(TMR.new(self.ontology))
+            event = tmr.register("EVENT", isa="ONT.EVENT")
+            event["TIME"] = [[">", "FIND-ANCHOR-TIME"]]
+
+            agent.wo_memory.learn_tmr(tmr)
+
+            return agent, context, tmr
+
+        effect = False
+
+        class MockedHeuristic(RecognizeSubEventsAgendaProcessor):
+            def halt_siblings(self):
+                nonlocal effect
+                effect = True
+
+        # If matched, the heuristic adds the input event as a HAS-EVENT-AS-PART, and it is marked as LEARNING / CURRENT.
+        agent, context, tmr = setup()
+        MockedHeuristic(context).process(agent, tmr)
+        self.assertTrue(agent.wo_memory["EVENT.1"]["HAS-EVENT-AS-PART"] == agent.wo_memory["EVENT.2"])
+        self.assertTrue(agent.wo_memory["EVENT.1"][LCTContext.LEARNING] == True)
+        self.assertTrue(agent.wo_memory["EVENT.1"][LCTContext.CURRENT] == False)
+        self.assertTrue(agent.wo_memory["EVENT.2"][LCTContext.LEARNING] == True)
+        self.assertTrue(agent.wo_memory["EVENT.2"][LCTContext.CURRENT] == True)
+        self.assertTrue(effect)
+
+        # Fails if tmr is not prefix.
+        agent, context, tmr = setup()
+        del tmr["EVENT.1"]["TIME"]
+        with self.assertRaises(HeuristicException):
+            MockedHeuristic(context)._logic(agent, tmr)
+
+        # Fails if tmr is postfix.
+        agent, context, tmr = setup()
+        tmr["EVENT.1"]["TIME"] = [["<", "FIND-ANCHOR-TIME"]]
+        with self.assertRaises(HeuristicException):
+            MockedHeuristic(context)._logic(agent, tmr)
+
+    def test_IdentifyClosingOfUnknownTaskAgendaProcessor(self):
+
+        self.ontology.register("EVENT-A", isa="ONT.EVENT")
+        self.ontology.register("EVENT-B", isa="ONT.EVENT")
+
+        def setup():
+            agent = Agent(ontology=self.ontology)
+            context = LCTContext(agent)
+
+            agent.wo_memory.heuristics = [FRResolveHumanAndRobotAsSingletonsHeuristic]
+
+            frevent = agent.wo_memory.register("EVENT", isa="ONT.EVENT-A")
+            child1 = agent.wo_memory.register("EVENT", isa="ONT.EVENT")
+            child2 = agent.wo_memory.register("EVENT", isa="ONT.EVENT")
+            child3 = agent.wo_memory.register("EVENT", isa="ONT.EVENT")
+            frtheme = agent.wo_memory.register("EVENT", isa="ONT.EVENT-A")
+
+            frevent[LCTContext.LEARNING] = True
+            frevent[LCTContext.CURRENT] = True
+            frevent["HAS-EVENT-AS-PART"] = [child1, child2]
+            child2["HAS-EVENT-AS-PART"] = [child3]
+            frevent["THEME"] = frtheme
+
+            tmr = agent.register(TMR.new(self.ontology))
+            event = tmr.register("EVENT", isa="ONT.EVENT-B")
+            theme = tmr.register("EVENT", isa="ONT.EVENT-B")
+            event["TIME"] = [["<", "FIND-ANCHOR-TIME"]]
+            event["THEME"] = theme
+
+            agent.wo_memory.learn_tmr(tmr)
+
+            return agent, context, tmr
+
+        class MockedHeuristic(IdentifyClosingOfUnknownTaskAgendaProcessor):
+            pass
+
+        # If matched, the heuristic adds the input event as a HAS-EVENT-AS-PART, and moves existing non-complex events
+        # underneath itself.
+        agent, context, tmr = setup()
+        MockedHeuristic(context).process(agent, tmr)
+        self.assertTrue(agent.wo_memory["EVENT.1"]["HAS-EVENT-AS-PART"] == agent.wo_memory["EVENT.3"])
+        self.assertTrue(agent.wo_memory["EVENT.1"]["HAS-EVENT-AS-PART"] == agent.wo_memory["EVENT-B.1"])
+        self.assertTrue(agent.wo_memory["EVENT.3"]["HAS-EVENT-AS-PART"] == agent.wo_memory["EVENT.4"])
+        self.assertTrue(agent.wo_memory["EVENT-B.1"]["HAS-EVENT-AS-PART"] == agent.wo_memory["EVENT.2"])
+        self.assertTrue(agent.wo_memory["EVENT-B.1"][LCTContext.LEARNED] == True)
+
+        # Fails if tmr is prefix.
+        agent, context, tmr = setup()
+        tmr["EVENT.1"]["TIME"] = [[">", "FIND-ANCHOR-TIME"]]
+        with self.assertRaises(HeuristicException):
+            MockedHeuristic(context)._logic(agent, tmr)
+
+        # Fails if tmr is not postfix.
+        agent, context, tmr = setup()
+        del tmr["EVENT.1"]["TIME"]
+        with self.assertRaises(HeuristicException):
+            MockedHeuristic(context)._logic(agent, tmr)
+
+        # Fails if there is no LEARNING event.
+        agent, context, tmr = setup()
+        agent.wo_memory["EVENT.1"][LCTContext.LEARNING] = False
+        with self.assertRaises(HeuristicException):
+            MockedHeuristic(context)._logic(agent, tmr)
+
+        # Fails if there is the LEARNING event is the same as the input event and they share THEME concepts.
+        agent, context, tmr = setup()
+        agent.wo_memory["EVENT.1"]["INSTANCE-OF"] = ["ONT.EVENT-B"]
+        agent.wo_memory["EVENT.5"]["INSTANCE-OF"] = ["ONT.EVENT-B"]
+        with self.assertRaises(HeuristicException):
+            MockedHeuristic(context)._logic(agent, tmr)
+
+    def test_RecognizePartsOfObjectAgendaProcessor(self):
+
+        def setup():
+            agent = Agent(ontology=self.ontology)
+            context = LCTContext(agent)
+
+            agent.wo_memory.heuristics = [FRResolveHumanAndRobotAsSingletonsHeuristic]
+
+            frevent = agent.wo_memory.register("EVENT", isa="ONT.BUILD")
+            frtheme = agent.wo_memory.register("OBJECT", isa="ONT.OBJECT")
+            frevent[LCTContext.LEARNING] = True
+            frevent["THEME"] = frtheme
+
+            tmr = agent.register(TMR.new(self.ontology))
+            event = tmr.register("EVENT", isa="ONT.BUILD")
+            theme = tmr.register("EVENT", isa="ONT.OBJECT")
+            event[LCTContext.LEARNING] = True
+            event["THEME"] = theme
+
+            agent.wo_memory.learn_tmr(tmr)
+
+            frevent[LCTContext.WAITING_ON] = agent.wo_memory["BUILD.1"]
+
+            return agent, context, tmr
+
+        class MockedHeuristic(RecognizePartsOfObjectAgendaProcessor):
+            pass
+
+        # If matched, the heuristic adds the input event's THEMEs (objects) as a HAS-OBJECT-AS-PART to the currently
+        # LEARNING frame's theme (also an object)
+        agent, context, tmr = setup()
+        MockedHeuristic(context).process(agent, tmr)
+        self.assertTrue(agent.wo_memory["OBJECT.1"]["HAS-OBJECT-AS-PART"] == agent.wo_memory["OBJECT.2"])
+
+        # Fails if there are no "parts" (THEMEs or DESTINATIONs) to the input event.
+        agent, context, tmr = setup()
+        del tmr["EVENT.1"]["THEME"]
+        with self.assertRaises(HeuristicException):
+            MockedHeuristic(context)._logic(agent, tmr)
+
+        # Fails if the event is not flagged as LEARNING.
+        agent, context, tmr = setup()
+        agent.wo_memory["BUILD.1"][LCTContext.LEARNING] = False
+        with self.assertRaises(HeuristicException):
+            MockedHeuristic(context)._logic(agent, tmr)
+
+        # Fails if the event is not an instance of BUILD.
+        agent, context, tmr = setup()
+        agent.wo_memory["BUILD.1"]["INSTANCE-OF"] = ["ONT.EVENT"]
+        with self.assertRaises(HeuristicException):
+            MockedHeuristic(context)._logic(agent, tmr)
+
+        # Fails if the event is not being WAITING-ON by another LEARNING event.
+        agent, context, tmr = setup()
+        del agent.wo_memory["EVENT.1"][LCTContext.WAITING_ON]
+        with self.assertRaises(HeuristicException):
+            MockedHeuristic(context)._logic(agent, tmr)
+
+        # Fails if the event WAITING-ON this event is not a BUILD.
+        agent, context, tmr = setup()
+        agent.wo_memory["EVENT.1"]["INSTANCE-OF"] = ["ONT.EVENT"]
+        with self.assertRaises(HeuristicException):
+            MockedHeuristic(context)._logic(agent, tmr)
+
+        # Fails if the event WAITING-ON this event has no THEME.
+        agent, context, tmr = setup()
+        del agent.wo_memory["EVENT.1"]["THEME"]
+        with self.assertRaises(HeuristicException):
+            MockedHeuristic(context)._logic(agent, tmr)
