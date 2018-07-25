@@ -1,7 +1,7 @@
 from backend.models.graph import Frame
 from backend.models.mps import MPRegistry
 from enum import Enum
-from typing import List
+from typing import List, Union
 
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
@@ -11,12 +11,42 @@ if TYPE_CHECKING:
 class Agenda(object):
 
     def __init__(self, frame: Frame):
-        pass
+        self.frame = frame
 
-    '''
-    HAS-GOAL GOAL
-    SELECTED-ACTION ACTION  // blanked, and then reselected each time interval
-    '''
+    def goals(self, pending=False, active=True, abandoned=False, satisfied=False):
+        results = map(lambda g: Goal(g.resolve()), self.frame["GOAL"])
+
+        if not pending:
+            results = filter(lambda g: not g.is_pending(), results)
+
+        if not active:
+            results = filter(lambda g: not g.is_active(), results)
+
+        if not abandoned:
+            results = filter(lambda g: not g.is_abandoned(), results)
+
+        if not satisfied:
+            results = filter(lambda g: not g.is_satisfied(), results)
+
+        return list(results)
+
+    def add_goal(self, goal: Union['Goal', Frame]):
+        if isinstance(goal, Goal):
+            goal = goal.frame
+
+        if "STATUS" not in goal:
+            goal["STATUS"] = Goal.Status.PENDING
+
+        self.frame["GOAL"] += goal
+
+    def prepare_action(self, action: Union['Action', Frame]):
+        if isinstance(action, Action):
+            action = action.frame
+
+        self.frame["ACTION-TO-TAKE"] = action
+
+    def action(self):
+        return Action(self.frame["ACTION-TO-TAKE"][0].resolve())
 
 
 class Goal(object):
@@ -73,8 +103,25 @@ class Goal(object):
 
         return Action(MPRegistry[self.frame["ACTION-SELECTION"][0].resolve()["CALLS"][0].resolve().value](agent))
 
+    def __eq__(self, other):
+        if isinstance(other, Goal):
+            return self.frame == other.frame
+        if isinstance(other, Frame):
+            return self.frame == other
+        return super().__eq__(other)
+
 
 class Action(object):
 
     def __init__(self, frame: Frame):
         self.frame = frame
+
+    def execute(self, agent: 'Agent'):
+        MPRegistry[self.frame["RUN"][0].resolve()["CALLS"][0].resolve().value](agent)
+
+    def __eq__(self, other):
+        if isinstance(other, Action):
+            return self.frame == other.frame
+        if isinstance(other, Frame):
+            return self.frame == other
+        return super().__eq__(other)

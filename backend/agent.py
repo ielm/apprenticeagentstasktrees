@@ -62,6 +62,10 @@ class Agent(Network):
         # This is a temporary means of modifying the starting condition of the test agent; these changes should
         # be moved into an instance of the ontology (database), in the long-term.
 
+        # Define the agenda (it is not a unique concept, but rather, a series of properties used on anything that
+        # can have an agenda).  It uses the existing GOAL relation to point to AGENDA-GOAL instances (below).
+        self.ontology.register("ACTION-TO-TAKE", isa="ONT.RELATION")  # range = ACTION
+
         # Define goals on the agenda, and their properties
         self.ontology.register("AGENDA-GOAL", isa="ONT.ABSTRACT-IDEA")
         self.ontology.register("GOAL-RELATION", isa="ONT.RELATION")
