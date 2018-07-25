@@ -317,6 +317,9 @@ class Frame(object):
                 result.append(parent)
         return result
 
+    def parents(self) -> List[Identifier]:
+        return list(map(lambda isa: isa._value, self[self._ISA_type()]))
+
     def concept(self, full_path: bool=True) -> str:
         identifiers = list(map(lambda filler: filler._value, filter(lambda filler: isinstance(filler._value, Identifier), self[self._ISA_type()])))
         identifiers = list(map(lambda identifier: identifier if identifier.graph is not None else Identifier(self._graph._namespace, identifier.name, instance=identifier.instance), identifiers))

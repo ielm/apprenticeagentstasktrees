@@ -207,6 +207,32 @@ class GoalTestCase(unittest.TestCase):
         action = goal.pursue(None)
         self.assertEqual("IDLE.1", action.frame.name())
 
+    def test_inherits_non_instanced_priority_calculation(self):
+        graph = Graph("TEST")
+        f1 = graph.register("GOAL-DEF.1")
+        f2 = graph.register("GOAL-INST.1", isa="TEST.GOAL-DEF.1")
+        f3 = graph.register("PRIORITY-CALC.1")
+
+        f1["PRIORITY-CALCULATION"] = f3
+
+        goal = Goal(f2)
+        goal.inherit()
+        self.assertEqual(f3, goal.frame["PRIORITY-CALCULATION"][0].resolve())
+
+    def test_inherits_non_instanced_action_selection(self):
+        graph = Graph("TEST")
+        f1 = graph.register("GOAL-DEF.1")
+        f2 = graph.register("ACTION-SELECTION.1", isa="TEST.GOAL-DEF.1")
+        f3 = graph.register("ACTION-CALC.1")
+
+        f1["ACTION-SELECTION"] = f3
+
+        goal = Goal(f2)
+        goal.inherit()
+        self.assertEqual(f3, goal.frame["ACTION-SELECTION"][0].resolve())
+
+    # TODO: how to inherit GOAL-STATE and HAS-GOAL?
+
 
 class ActionTestCase(unittest.TestCase):
 

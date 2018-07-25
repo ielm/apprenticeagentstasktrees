@@ -103,6 +103,16 @@ class Goal(object):
 
         return Action(MPRegistry[self.frame["ACTION-SELECTION"][0].resolve()["CALLS"][0].resolve().value](agent))
 
+    def inherit(self):
+        # Grabs choice fields from the definition of this goal (from the immediate parent); in some cases it just
+        # links them locally, while in others it creates an instance (such as subgoals).  In all cases, this is
+        # non-destructive to fields that already exist.
+
+        parents = list(map(lambda isa: isa.resolve(), self.frame[self.frame._ISA_type()]))
+        for parent in parents:
+            self.frame["PRIORITY-CALCULATION"] += parent["PRIORITY-CALCULATION"]
+            self.frame["ACTION-SELECTION"] += parent["ACTION-SELECTION"]
+
     def __eq__(self, other):
         if isinstance(other, Goal):
             return self.frame == other.frame
