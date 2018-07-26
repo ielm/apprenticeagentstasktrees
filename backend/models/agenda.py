@@ -1,7 +1,7 @@
-from backend.models.graph import Frame
+from backend.models.graph import Frame, Graph, Identifier, Literal, Slot
 from backend.models.mps import MPRegistry
 from enum import Enum
-from typing import List, Union
+from typing import Any, Callable, List, Tuple, Union
 
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
@@ -57,6 +57,48 @@ class Goal(object):
         ABANDONED = 3
         SATISFIED = 4
 
+    @classmethod
+    def register(cls,
+                 graph: Graph, name: str,
+                 pcalc: List[Callable]=None,
+                 aselect: List[Callable]=None,
+                 state: List[Tuple[Union[str, Identifier], Union[str, Slot], Any]]=None
+                 ) -> 'Goal':
+        if pcalc is None:
+            pcalc = []
+
+        if aselect is None:
+            aselect = []
+
+        if state is None:
+            state = []
+
+        goal = graph.register("AGENDA-GOAL", generate_index=True)
+
+        for f in pcalc:
+            mp = graph.register("MEANING-PROCEDURE", generate_index=True)
+            mp["CALLS"] = Literal(f.__name__)
+            MPRegistry[f.__name__] = f
+            goal["PRIORITY-CALCULATION"] += mp
+
+        for f in aselect:
+            mp = graph.register("MEANING-PROCEDURE", generate_index=True)
+            mp["CALLS"] = Literal(f.__name__)
+            MPRegistry[f.__name__] = f
+            goal["ACTION-SELECTION"] += mp
+
+        for t in state:
+            property = t[1]
+            if isinstance(t[1], Slot):
+                property = t[1]._name
+
+            p = graph.register(property.upper(), generate_index=True)
+            p["DOMAIN"] = t[0]
+            p["RANGE"] = t[2]
+            goal["GOAL-STATE"] += p
+
+        return Goal(goal)
+
     def __init__(self, frame: Frame):
         self.frame = frame
 
@@ -110,8 +152,8 @@ class Goal(object):
 
         parents = list(map(lambda isa: isa.resolve(), self.frame[self.frame._ISA_type()]))
         for parent in parents:
-            self.frame["PRIORITY-CALCULATION"] += parent["PRIORITY-CALCULATION"]
-            self.frame["ACTION-SELECTION"] += parent["ACTION-SELECTION"]
+            self.frame["PRIORITY-CALCULATION"] = self.frame["PRIORITY-CALCULATION"] + parent["PRIORITY-CALCULATION"] # TODO: why doesn't += work the way it should?
+            self.frame["ACTION-SELECTION"] = self.frame["ACTION-SELECTION"] + parent["ACTION-SELECTION"]
 
     def __eq__(self, other):
         if isinstance(other, Goal):

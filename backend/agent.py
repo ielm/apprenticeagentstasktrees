@@ -1,7 +1,7 @@
 from backend.contexts.LCTContext import LCTContext
-from backend.models.agenda import Agenda
+from backend.models.agenda import Action, Agenda, Goal
 from backend.models.fr import FR
-from backend.models.graph import Network
+from backend.models.graph import Literal, Network
 from backend.models.ontology import Ontology
 from backend.models.tmr import TMR
 from backend.utils.AgentLogger import AgentLogger
@@ -49,11 +49,52 @@ class Agent(Network):
         agenda.process(self, tmr)
 
     def idea(self, input):
-        tmr = self.register(TMR(input, ontology=self.ontology))
-        self.input_memory.append(tmr)
-        self._logger.log("Input: '" + tmr.sentence + "'")
+        print("PRE:")
+        print(self.internal)
 
+        self._input(input)
+        print("I:")
+        print(self.internal)
+
+        self._decision()
+        print("D:")
+        print(self.internal)
+
+        self._execute()
+        print("E:")
+        print(self.internal)
+
+        self._assess()
+        print("A:")
+        print(self.internal)
+
+    def _input(self, input=None):
+        if input is not None:
+            tmr = self.register(TMR(input, ontology=self.ontology))
+            self.input_memory.append(tmr)
+            self._logger.log("Input: '" + tmr.sentence + "'")
+
+    def _decision(self):
         agenda = self.agenda()
+
+        priority = -1.0
+        selected = None
+        for goal in agenda.goals(pending=True, active=True):
+            goal.prioritize(self)
+            if goal.priority() > priority:
+                priority = goal.priority()
+                selected = goal
+        if selected is not None:
+            selected.status(Goal.Status.ACTIVE)
+            agenda.prepare_action(selected.pursue(self))
+
+    def _execute(self):
+        self.agenda().action().execute(self)
+        del self.agenda().frame["ACTION-TO-TAKE"]
+
+    def _assess(self):
+        for active in self.agenda().goals():
+            active.assess()
 
     def agenda(self):
         return Agenda(self.identity)
@@ -94,26 +135,32 @@ class Agent(Network):
 
         # Define a base goal and action (FIND-SOMETHING-TO-DO and IDLE)
         self.ontology.register("FIND-SOMETHING-TO-DO", isa="ONT.AGENDA-GOAL")
-        self.ontology["FIND-SOMETHING-TO-DO"]["PRIORITY-CALCULATION"] = "FIND-SOMETHING-TO-DO-PRIORITY"
-        self.ontology["FIND-SOMETHING-TO-DO"]["ACTION-SELECTION"] = "FIND-SOMETHING-TO-DO-ACTION"
+        self.ontology["FIND-SOMETHING-TO-DO"]["PRIORITY-CALCULATION"] = "ONT.FIND-SOMETHING-TO-DO-PRIORITY"
+        self.ontology["FIND-SOMETHING-TO-DO"]["ACTION-SELECTION"] = "ONT.FIND-SOMETHING-TO-DO-ACTION"
 
         self.ontology.register("FIND-SOMETHING-TO-DO-PRIORITY", isa="ONT.MEANING-PROCEDURE")
-        self.ontology["FIND-SOMETHING-TO-DO-PRIORITY"]["CALLS"] = "find_something_to_do_priority"
+        self.ontology["FIND-SOMETHING-TO-DO-PRIORITY"]["CALLS"] = Literal("find_something_to_do_priority")
 
         self.ontology.register("FIND-SOMETHING-TO-DO-ACTION", isa="ONT.MEANING-PROCEDURE")
-        self.ontology["FIND-SOMETHING-TO-DO-ACTION"]["CALLS"] = "find_something_to_do_action"
+        self.ontology["FIND-SOMETHING-TO-DO-ACTION"]["CALLS"] = Literal("find_something_to_do_action")
 
         self.ontology.register("IDLE", isa="ONT.ACTION")
         self.ontology["IDLE"]["RUN"] = "IDLE-MP"
 
         self.ontology.register("IDLE-MP", isa="ONT.MEANING-PROCEDURE")
-        self.ontology["IDLE-MP"]["CALLS"] = "idle"
+        self.ontology["IDLE-MP"]["CALLS"] = Literal("idle")
         self.ontology["IDLE-MP"]["ORDER"] = 1
 
     def _bootstrap(self):
         # Initializes the agent's current memory and environment, if any.
 
         goal = self.internal.register("FIND-SOMETHING-TO-DO", isa="ONT.FIND-SOMETHING-TO-DO")
-        goal["STATUS"] = "pending"
+        Goal(goal).inherit()
+        # goal["STATUS"] = "pending"
 
         self.identity["GOAL"] += goal
+
+        from backend.models.mps import MPRegistry
+        MPRegistry["find_something_to_do_priority"] = lambda agent: 0.1
+        MPRegistry["find_something_to_do_action"] = lambda agent: self.ontology["IDLE"]
+        MPRegistry["idle"] = lambda agent: print("ZZZZ")
