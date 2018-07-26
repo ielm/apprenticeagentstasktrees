@@ -120,7 +120,7 @@ class AgentTestCase(unittest.TestCase): # TODO: Clean up AATestCase and move bac
         target = self.agent.internal.register("FRAME")
         target["COLOR"] = "yellow"
 
-        goal = Goal.register(self.agent.internal, "GOAL", state=[("SELF.FRAME.1", "COLOR", "yellow")])
+        goal = Goal.register(self.agent.internal, "GOAL", condition=[("SELF.FRAME.1", "COLOR", "yellow")])
         goal.status(Goal.Status.ACTIVE)
         self.agent.agenda().add_goal(goal)
 

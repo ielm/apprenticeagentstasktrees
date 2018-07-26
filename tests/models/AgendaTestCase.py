@@ -1,4 +1,4 @@
-from backend.models.agenda import Action, Agenda, Goal
+from backend.models.agenda import Action, Agenda, Condition, Goal
 from backend.models.graph import Frame, Graph, Literal
 from backend.models.mps import MPRegistry
 from backend.models.ontology import Ontology
@@ -128,22 +128,82 @@ class GoalTestCase(unittest.TestCase):
         self.assertFalse("abandoned" in f["STATUS"])
         self.assertTrue("satisfied" in f["STATUS"])
 
+    # def test_assess(self):
+    #     graph = Graph("TEST")
+    #     f1 = graph.register("GOAL.1")
+    #     f2 = graph.register("OBJECT.1")
+    #     f3 = graph.register("COLOR.1")
+    #
+    #     f1["GOAL-STATE"] = f3
+    #     f3["DOMAIN"] = f2
+    #     f3["RANGE"] = "yellow"
+    #
+    #     goal = Goal(f1)
+    #     self.assertFalse(goal.is_satisfied())
+    #
+    #     f2["COLOR"] = "yellow"
+    #     goal.assess()
+    #     self.assertTrue(goal.is_satisfied())
+
+    def test_conditions(self):
+        graph = Graph("TEST")
+        g = graph.register("GOAL.1")
+        gc = graph.register("GOAL-CONDITION.1")
+
+        g["ON-CONDITION"] = gc
+
+        goal = Goal(g)
+        self.assertEqual(goal.conditions(), [Condition(gc)])
+        self.assertEqual(goal.conditions()[0].frame, gc)
+        self.assertIsInstance(goal.conditions()[0].frame, Frame)
+
     def test_assess(self):
         graph = Graph("TEST")
-        f1 = graph.register("GOAL.1")
-        f2 = graph.register("OBJECT.1")
-        f3 = graph.register("COLOR.1")
+        g = graph.register("GOAL.1")
+        gc = graph.register("GOAL-CONDITION.1")
+        wc = graph.register("COLOR.1")
+        obj = graph.register("OBJECT.1")
 
-        f1["GOAL-STATE"] = f3
-        f3["DOMAIN"] = f2
-        f3["RANGE"] = "yellow"
+        g["ON-CONDITION"] = gc
+        g["STATUS"] = Literal(Goal.Status.ACTIVE.name)
+        gc["WITH-CONDITION"] = wc
+        gc["APPLY-STATUS"] = Literal(Goal.Status.SATISFIED.name)
+        wc["DOMAIN"] = obj
+        wc["RANGE"] = "yellow"
 
-        goal = Goal(f1)
-        self.assertFalse(goal.is_satisfied())
+        goal = Goal(g)
+        self.assertTrue(goal.is_active())
 
-        f2["COLOR"] = "yellow"
+        goal.assess()
+        self.assertTrue(goal.is_active())
+
+        obj["COLOR"] = "yellow"
         goal.assess()
         self.assertTrue(goal.is_satisfied())
+
+    def test_assess_multiple_conditions(self):
+        graph = Graph("TEST")
+        g = graph.register("GOAL.1")
+        gc1 = graph.register("GOAL-CONDITION.1")
+        gc2 = graph.register("GOAL-CONDITION.2")
+        wc = graph.register("COLOR.1")
+        obj = graph.register("OBJECT.1")
+
+        g["ON-CONDITION"] = [gc1, gc2]
+        g["STATUS"] = Literal(Goal.Status.ACTIVE.name)
+        gc1["WITH-CONDITION"] = wc
+        gc1["APPLY-STATUS"] = Literal(Goal.Status.SATISFIED.name)
+        gc1["ORDER"] = 2
+        gc2["WITH-CONDITION"] = wc
+        gc2["APPLY-STATUS"] = Literal(Goal.Status.ABANDONED.name)
+        gc2["ORDER"] = 1
+        wc["DOMAIN"] = obj
+        wc["RANGE"] = "yellow"
+        obj["COLOR"] = "yellow"
+
+        goal = Goal(g)
+        goal.assess()
+        self.assertTrue(goal.is_abandoned())
 
     def test_subgoals(self):
         graph = Graph("TEST")
@@ -158,6 +218,7 @@ class GoalTestCase(unittest.TestCase):
         subgoals = list(map(lambda subgoal: subgoal.frame, subgoals))
         self.assertTrue(f2 in subgoals)
         self.assertTrue(f3 in subgoals)
+        self.assertIsInstance(subgoals[0], Frame)
 
     def test_prioritize(self):
 
@@ -232,6 +293,120 @@ class GoalTestCase(unittest.TestCase):
         self.assertEqual(f3, goal.frame["ACTION-SELECTION"][0].resolve())
 
     # TODO: how to inherit GOAL-STATE and HAS-GOAL?
+
+
+class ConditionTestCase(unittest.TestCase):
+
+    def test_order(self):
+        graph = Graph("TEST")
+        gc = graph.register("GOAL-CONDITION.1")
+        gc["ORDER"] = 1
+
+        self.assertEqual(Condition(gc).order(), 1)
+
+    def test_status(self):
+        graph = Graph("TEST")
+        gc = graph.register("GOAL-CONDITION.1")
+        gc["APPLY-STATUS"] = Literal(Goal.Status.SATISFIED.name)
+
+        self.assertEqual(Condition(gc).status(), Goal.Status.SATISFIED)
+
+    def test_assess_with(self):
+        graph = Graph("TEST")
+        gc = graph.register("GOAL-CONDITION.1")
+        wc = graph.register("COLOR.1")
+        obj = graph.register("OBJECT.1")
+
+        gc["WITH-CONDITION"] = wc
+        wc["DOMAIN"] = obj
+        wc["RANGE"] = "yellow"
+
+        condition = Condition(gc)
+
+        self.assertFalse(condition._assess_with(wc))
+
+        obj["COLOR"] = "yellow"
+
+        self.assertTrue(condition._assess_with(wc))
+
+    def test_assess_and(self):
+        graph = Graph("TEST")
+        gc = graph.register("GOAL-CONDITION.1")
+        wc1 = graph.register("COLOR.1")
+        wc2 = graph.register("NAME.1")
+        obj = graph.register("OBJECT.1")
+
+        gc["WITH-CONDITION"] = [wc1, wc2]
+        gc["LOGIC"] = Literal(Condition.Logic.AND.name)
+        wc1["DOMAIN"] = obj
+        wc1["RANGE"] = "yellow"
+        wc2["DOMAIN"] = obj
+        wc2["RANGE"] = "Test"
+
+        condition = Condition(gc)
+
+        self.assertFalse(condition.assess())
+
+        obj["COLOR"] = "yellow"
+
+        self.assertFalse(condition.assess())
+
+        obj["NAME"] = "Test"
+
+        self.assertTrue(condition.assess())
+
+    def test_assess_or(self):
+        graph = Graph("TEST")
+        gc = graph.register("GOAL-CONDITION.1")
+        wc1 = graph.register("COLOR.1")
+        wc2 = graph.register("NAME.1")
+        obj = graph.register("OBJECT.1")
+
+        gc["WITH-CONDITION"] = [wc1, wc2]
+        gc["LOGIC"] = Literal(Condition.Logic.OR.name)
+        wc1["DOMAIN"] = obj
+        wc1["RANGE"] = "yellow"
+        wc2["DOMAIN"] = obj
+        wc2["RANGE"] = "Test"
+
+        condition = Condition(gc)
+
+        self.assertFalse(condition.assess())
+
+        obj["COLOR"] = "yellow"
+
+        self.assertTrue(condition.assess())
+
+    def test_assess_not(self):
+        graph = Graph("TEST")
+        gc = graph.register("GOAL-CONDITION.1")
+        wc1 = graph.register("COLOR.1")
+        wc2 = graph.register("NAME.1")
+        obj = graph.register("OBJECT.1")
+
+        gc["WITH-CONDITION"] = [wc1, wc2]
+        gc["LOGIC"] = Literal(Condition.Logic.NOT.name)
+        wc1["DOMAIN"] = obj
+        wc1["RANGE"] = "yellow"
+        wc2["DOMAIN"] = obj
+        wc2["RANGE"] = "Test"
+
+        condition = Condition(gc)
+
+        self.assertTrue(condition.assess())
+
+        obj["COLOR"] = "yellow"
+
+        self.assertFalse(condition.assess())
+
+        obj["Name"] = "Test"
+
+        self.assertFalse(condition.assess())
+
+    def test_assess_no_conditions(self):
+        graph = Graph("TEST")
+        gc = graph.register("GOAL-CONDITION.1")
+        self.assertTrue(Condition(gc).assess())
 
 
 class ActionTestCase(unittest.TestCase):

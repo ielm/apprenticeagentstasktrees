@@ -110,7 +110,7 @@ class Agent(Network):
         # Define goals on the agenda, and their properties
         self.ontology.register("AGENDA-GOAL", isa="ONT.ABSTRACT-IDEA")
         self.ontology.register("GOAL-RELATION", isa="ONT.RELATION")
-        self.ontology.register("GOAL-STATE", isa="ONT.GOAL-RELATION")  # range = PROPERTY
+        self.ontology.register("ON-CONDITION", isa="ONT.GOAL-RELATION")  # range = GOAL-CONDITION
         self.ontology.register("PRIORITY-CALCULATION", isa="ONT.GOAL-RELATION")  # range = MEANING-PROCEDURE
         self.ontology.register("ACTION-SELECTION", isa="ONT.GOAL-RELATION")      # range = MEANING-PROCEDURE
         self.ontology.register("GOAL-ATTRIBUTE", isa="ONT.LITERAL-ATTRIBUTE")
@@ -119,6 +119,13 @@ class Agent(Network):
         # Define actions an agent can take, and their properties
         self.ontology.register("ACTION", isa="ONT.EVENT")
         self.ontology.register("RUN", isa="ONT.RELATION")  # range = MEANING-PROCEDURE
+
+        # Define status changing conditions a goal can have
+        self.ontology.register("GOAL-CONDITION", isa="ONT.ALGORITHM")
+        self.ontology.register("WITH-CONDITION", isa="ONT.RELATION")  # range = PROPERTY
+        self.ontology.register("LOGIC", isa="ONT.LITERAL-ATTRIBUTE")  # and, or, not
+        self.ontology.register("APPLY-STATUS", isa="ONT.STATUS")  # (from above: pending, active, abandoned, satisfied)
+        # (also uses ORDER) from above
 
         # Define meaning procedures, and their properties
         self.ontology.register("MEANING-PROCEDURE", isa="ONT.ALGORITHM")
@@ -137,12 +144,16 @@ class Agent(Network):
         self.ontology.register("FIND-SOMETHING-TO-DO", isa="ONT.AGENDA-GOAL")
         self.ontology["FIND-SOMETHING-TO-DO"]["PRIORITY-CALCULATION"] = "ONT.FIND-SOMETHING-TO-DO-PRIORITY"
         self.ontology["FIND-SOMETHING-TO-DO"]["ACTION-SELECTION"] = "ONT.FIND-SOMETHING-TO-DO-ACTION"
+        self.ontology["FIND-SOMETHING-TO-DO"]["ON-CONDITION"] = "ONT.FIND-SOMETHING-TO-DO-CONDITION"
 
         self.ontology.register("FIND-SOMETHING-TO-DO-PRIORITY", isa="ONT.MEANING-PROCEDURE")
         self.ontology["FIND-SOMETHING-TO-DO-PRIORITY"]["CALLS"] = Literal("find_something_to_do_priority")
 
         self.ontology.register("FIND-SOMETHING-TO-DO-ACTION", isa="ONT.MEANING-PROCEDURE")
         self.ontology["FIND-SOMETHING-TO-DO-ACTION"]["CALLS"] = Literal("find_something_to_do_action")
+
+        self.ontology.register("ONT.FIND-SOMETHING-TO-DO-CONDITION", isa="ONT.GOAL-CONDITION")
+        self.ontology["ONT.FIND-SOMETHING-TO-DO-CONDITION"]["APPLY-STATUS"] = Literal(Goal.Status.PENDING.name)
 
         self.ontology.register("IDLE", isa="ONT.ACTION")
         self.ontology["IDLE"]["RUN"] = "IDLE-MP"

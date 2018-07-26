@@ -1,6 +1,7 @@
 from backend.models.graph import Frame, Graph, Identifier, Literal, Slot
 from backend.models.mps import MPRegistry
 from enum import Enum
+from functools import reduce
 from typing import Any, Callable, List, Tuple, Union
 
 from typing import TYPE_CHECKING
@@ -62,7 +63,8 @@ class Goal(object):
                  graph: Graph, name: str,
                  pcalc: List[Callable]=None,
                  aselect: List[Callable]=None,
-                 state: List[Tuple[Union[str, Identifier], Union[str, Slot], Any]]=None
+                 condition: List[Tuple[Union[str, Identifier], Union[str, Slot], Any]]=None,
+                 set_status: 'Goal.Status'=None
                  ) -> 'Goal':
         if pcalc is None:
             pcalc = []
@@ -70,8 +72,11 @@ class Goal(object):
         if aselect is None:
             aselect = []
 
-        if state is None:
-            state = []
+        if condition is None:
+            condition = []
+
+        if set_status is None:
+            set_status = Goal.Status.SATISFIED
 
         goal = graph.register("AGENDA-GOAL", generate_index=True)
 
@@ -87,15 +92,20 @@ class Goal(object):
             MPRegistry[f.__name__] = f
             goal["ACTION-SELECTION"] += mp
 
-        for t in state:
-            property = t[1]
-            if isinstance(t[1], Slot):
-                property = t[1]._name
+        if len(condition) > 0:
+            c = graph.register("GOAL-CONDITION", generate_index=True)
+            c["LOGIC"] = Literal(Condition.Logic.AND.name)
+            c["APPLY-STATUS"] = Literal(set_status.name)
+            goal["ON-CONDITION"] += c
+            for t in condition:
+                property = t[1]
+                if isinstance(t[1], Slot):
+                    property = t[1]._name
 
-            p = graph.register(property.upper(), generate_index=True)
-            p["DOMAIN"] = t[0]
-            p["RANGE"] = t[2]
-            goal["GOAL-STATE"] += p
+                p = graph.register(property.upper(), generate_index=True)
+                p["DOMAIN"] = t[0]
+                p["RANGE"] = t[2]
+                c["WITH-CONDITION"] += p
 
         return Goal(goal)
 
@@ -103,32 +113,32 @@ class Goal(object):
         self.frame = frame
 
     def is_pending(self) -> bool:
-        return Goal.Status.PENDING.name.lower() in self.frame["STATUS"]
+        return Goal.Status.PENDING.name.lower() in self.frame["STATUS"] or Goal.Status.PENDING.name in self.frame["STATUS"]
 
     def is_active(self) -> bool:
-        return Goal.Status.ACTIVE.name.lower() in self.frame["STATUS"]
+        return Goal.Status.ACTIVE.name.lower() in self.frame["STATUS"] or Goal.Status.ACTIVE.name in self.frame["STATUS"]
 
     def is_abandoned(self) -> bool:
-        return Goal.Status.ABANDONED.name.lower() in self.frame["STATUS"]
+        return Goal.Status.ABANDONED.name.lower() in self.frame["STATUS"] or Goal.Status.ABANDONED.name in self.frame["STATUS"]
 
     def is_satisfied(self) -> bool:
-        return Goal.Status.SATISFIED.name.lower() in self.frame["STATUS"]
+        return Goal.Status.SATISFIED.name.lower() in self.frame["STATUS"] or Goal.Status.SATISFIED.name in self.frame["STATUS"]
 
     def status(self, status: 'Goal.Status'):
         self.frame["STATUS"] = status.name.lower()
 
     def assess(self):
-        for desired in self.frame["GOAL-STATE"]:
-            desired = desired.resolve()
-            domain = desired["DOMAIN"][0].resolve()
-            property = desired._identifier.name
-            if domain[property] != desired["RANGE"]:
+        conditions = sorted(self.conditions(), key=lambda condition: condition.order())
+        for condition in conditions:
+            if condition.assess():
+                self.status(condition.status())
                 return
 
-        self.status(Goal.Status.SATISFIED)
+    def conditions(self) -> List['Condition']:
+        return list(map(lambda condition: Condition(condition.resolve()), self.frame["ON-CONDITION"]))
 
     def subgoals(self) -> List['Goal']:
-        return list(map(lambda goal: Goal(goal), self.frame["HAS-GOAL"]))
+        return list(map(lambda goal: Goal(goal.resolve()), self.frame["HAS-GOAL"]))
 
     def prioritize(self, agent: 'Agent'):
         priority = max(map(lambda mp: MPRegistry[mp.resolve()["CALLS"][0].resolve().value](agent), self.frame["PRIORITY-CALCULATION"]))
@@ -154,6 +164,7 @@ class Goal(object):
         for parent in parents:
             self.frame["PRIORITY-CALCULATION"] = self.frame["PRIORITY-CALCULATION"] + parent["PRIORITY-CALCULATION"] # TODO: why doesn't += work the way it should?
             self.frame["ACTION-SELECTION"] = self.frame["ACTION-SELECTION"] + parent["ACTION-SELECTION"]
+            self.frame["ON-CONDITION"] = self.frame["ON-CONDITION"] + parent["ON-CONDITION"]
 
     def __eq__(self, other):
         if isinstance(other, Goal):
@@ -173,6 +184,55 @@ class Action(object):
 
     def __eq__(self, other):
         if isinstance(other, Action):
+            return self.frame == other.frame
+        if isinstance(other, Frame):
+            return self.frame == other
+        return super().__eq__(other)
+
+
+class Condition(object):
+
+    class Logic(Enum):
+        AND = 1
+        OR = 2
+        NOT = 3
+
+    def __init__(self, frame: Frame):
+        self.frame = frame
+
+    def order(self) -> int:
+        if "ORDER" in self.frame:
+            return self.frame["ORDER"][0].resolve().value
+
+    def status(self) -> Goal.Status:
+        if "APPLY-STATUS" in self.frame:
+            return Goal.Status[self.frame["APPLY-STATUS"][0].resolve().value]
+
+    def assess(self):
+        if "WITH-CONDITION" not in self.frame:
+            return True
+
+        results = map(lambda wc: self._assess_with(wc.resolve()), self.frame["WITH-CONDITION"])
+
+        if self.logic() == Condition.Logic.AND:
+            return reduce(lambda x, y: x and y, results)
+        if self.logic() == Condition.Logic.OR:
+            return reduce(lambda x, y: x or y, results)
+        if self.logic() == Condition.Logic.NOT:
+            return reduce(lambda x, y: x and y, map(lambda x: not x, results))
+
+    def logic(self):
+        if "LOGIC" in self.frame:
+            return Condition.Logic[self.frame["LOGIC"][0].resolve().value.upper()]
+        return Condition.Logic.AND
+
+    def _assess_with(self, condition: Frame):
+        domain = condition["DOMAIN"][0].resolve()
+        property = condition._identifier.name
+        return domain[property] == condition["RANGE"]
+
+    def __eq__(self, other):
+        if isinstance(other, Condition):
             return self.frame == other.frame
         if isinstance(other, Frame):
             return self.frame == other
