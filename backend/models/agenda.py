@@ -1,5 +1,5 @@
 from backend.models.graph import Frame, Graph, Identifier, Literal, Slot
-from backend.models.mps import MPRegistry
+from backend.models.mps import Executable, MeaningProcedure, MPRegistry
 from enum import Enum
 from functools import reduce
 from typing import Any, Callable, List, Tuple, Union
@@ -83,13 +83,13 @@ class Goal(object):
         for f in pcalc:
             mp = graph.register("MEANING-PROCEDURE", generate_index=True)
             mp["CALLS"] = Literal(f.__name__)
-            MPRegistry[f.__name__] = f
+            MPRegistry.register(f)
             goal["PRIORITY-CALCULATION"] += mp
 
         for f in aselect:
             mp = graph.register("MEANING-PROCEDURE", generate_index=True)
             mp["CALLS"] = Literal(f.__name__)
-            MPRegistry[f.__name__] = f
+            MPRegistry.register(f)
             goal["ACTION-SELECTION"] += mp
 
         if len(condition) > 0:
@@ -141,7 +141,7 @@ class Goal(object):
         return list(map(lambda goal: Goal(goal.resolve()), self.frame["HAS-GOAL"]))
 
     def prioritize(self, agent: 'Agent'):
-        priority = max(map(lambda mp: MPRegistry[mp.resolve()["CALLS"][0].resolve().value](agent), self.frame["PRIORITY-CALCULATION"]))
+        priority = max(map(lambda mp: MeaningProcedure(mp.resolve()).run(agent), self.frame["PRIORITY-CALCULATION"]))
         self.frame["PRIORITY"] = priority
 
     def priority(self):
@@ -153,7 +153,7 @@ class Goal(object):
         if len(self.frame["ACTION-SELECTION"]) != 1:
             raise Exception("No action selection MPs available.")
 
-        return Action(MPRegistry[self.frame["ACTION-SELECTION"][0].resolve()["CALLS"][0].resolve().value](agent))
+        return Action(MeaningProcedure(self.frame["ACTION-SELECTION"][0].resolve()).run(agent))
 
     def inherit(self):
         # Grabs choice fields from the definition of this goal (from the immediate parent); in some cases it just
@@ -180,7 +180,7 @@ class Action(object):
         self.frame = frame
 
     def execute(self, agent: 'Agent'):
-        MPRegistry[self.frame["RUN"][0].resolve()["CALLS"][0].resolve().value](agent)
+        Executable(self.frame).run(agent)
 
     def __eq__(self, other):
         if isinstance(other, Action):

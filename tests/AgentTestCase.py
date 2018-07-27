@@ -4,11 +4,10 @@ from backend.models.graph import Frame, Literal, Network
 from backend.models.mps import MPRegistry
 from backend.models.ontology import Ontology
 
-import json
 import unittest
 
 
-class AgentTestCase(unittest.TestCase): # TODO: Clean up AATestCase and move back to that
+class AgentTestCase(unittest.TestCase):
 
     def setUp(self):
 
@@ -17,7 +16,7 @@ class AgentTestCase(unittest.TestCase): # TODO: Clean up AATestCase and move bac
                 pass
 
         self.n = Network()
-        self.ontology = self.n.register(Ontology("ONT"))#self.n.register(Ontology.init_default())
+        self.ontology = self.n.register(Ontology("ONT"))
 
         self.ontology.register("ALL")
         self.ontology.register("OBJECT", isa="ONT.ALL")
@@ -102,7 +101,7 @@ class AgentTestCase(unittest.TestCase): # TODO: Clean up AATestCase and move bac
             nonlocal ran
             ran = True
 
-        MPRegistry[action_method.__name__] = action_method
+        MPRegistry.register(action_method)
 
         mp = self.agent.internal.register("MEANING-PROCEDURE")
         mp["CALLS"] = Literal(action_method.__name__)

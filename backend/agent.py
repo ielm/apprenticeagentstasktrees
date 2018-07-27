@@ -115,6 +115,7 @@ class Agent(Network):
         self.ontology.register("ACTION-SELECTION", isa="ONT.GOAL-RELATION")      # range = MEANING-PROCEDURE
         self.ontology.register("GOAL-ATTRIBUTE", isa="ONT.LITERAL-ATTRIBUTE")
         self.ontology.register("STATUS", isa="ONT.GOAL-ATTRIBUTE")  # pending, active, abandoned, satisfied
+        self.ontology.register("PRIORITY", isa="ONT.GOAL-ATTRIBUTE")  # 0 - 1
 
         # Define actions an agent can take, and their properties
         self.ontology.register("ACTION", isa="ONT.EVENT")
@@ -167,11 +168,10 @@ class Agent(Network):
 
         goal = self.internal.register("FIND-SOMETHING-TO-DO", isa="ONT.FIND-SOMETHING-TO-DO")
         Goal(goal).inherit()
-        # goal["STATUS"] = "pending"
 
         self.identity["GOAL"] += goal
 
         from backend.models.mps import MPRegistry
-        MPRegistry["find_something_to_do_priority"] = lambda agent: 0.1
-        MPRegistry["find_something_to_do_action"] = lambda agent: self.ontology["IDLE"]
-        MPRegistry["idle"] = lambda agent: print("ZZZZ")
+        MPRegistry.register(lambda agent: 0.1, name="find_something_to_do_priority")
+        MPRegistry.register(lambda agent: self.ontology["IDLE"], "find_something_to_do_action")
+        MPRegistry.register(lambda agent: print("ZZZZ"), "idle")

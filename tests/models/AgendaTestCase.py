@@ -1,7 +1,6 @@
 from backend.models.agenda import Action, Agenda, Condition, Goal
 from backend.models.graph import Frame, Graph, Literal
 from backend.models.mps import MPRegistry
-from backend.models.ontology import Ontology
 
 import unittest
 
@@ -128,23 +127,6 @@ class GoalTestCase(unittest.TestCase):
         self.assertFalse("abandoned" in f["STATUS"])
         self.assertTrue("satisfied" in f["STATUS"])
 
-    # def test_assess(self):
-    #     graph = Graph("TEST")
-    #     f1 = graph.register("GOAL.1")
-    #     f2 = graph.register("OBJECT.1")
-    #     f3 = graph.register("COLOR.1")
-    #
-    #     f1["GOAL-STATE"] = f3
-    #     f3["DOMAIN"] = f2
-    #     f3["RANGE"] = "yellow"
-    #
-    #     goal = Goal(f1)
-    #     self.assertFalse(goal.is_satisfied())
-    #
-    #     f2["COLOR"] = "yellow"
-    #     goal.assess()
-    #     self.assertTrue(goal.is_satisfied())
-
     def test_conditions(self):
         graph = Graph("TEST")
         g = graph.register("GOAL.1")
@@ -225,7 +207,7 @@ class GoalTestCase(unittest.TestCase):
         def priority_calculation(agent):
             return 0.5
 
-        MPRegistry[priority_calculation.__name__] = priority_calculation
+        MPRegistry.register(priority_calculation)
 
         graph = Graph("TEST")
         f1 = graph.register("GOAL.1")
@@ -254,7 +236,7 @@ class GoalTestCase(unittest.TestCase):
         def select_action(agent):
             return Frame("IDLE.1")  # Properties can be added here
 
-        MPRegistry[select_action.__name__] = select_action
+        MPRegistry.register(select_action)
 
         graph = Graph("TEST")
         f1 = graph.register("GOAL.1")
@@ -419,7 +401,7 @@ class ActionTestCase(unittest.TestCase):
             nonlocal executed
             executed = True
 
-        MPRegistry[execute_action.__name__] = execute_action
+        MPRegistry.register(execute_action)
 
         graph = Graph("TEST")
         f1 = graph.register("ACTION.1")
