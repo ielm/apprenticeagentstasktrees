@@ -1,4 +1,4 @@
-from backend.models.agenda import Action, Agenda, Condition, Goal
+from backend.models.agenda import Action, Agenda, Condition, Goal, Variable
 from backend.models.graph import Frame, Graph, Literal
 from backend.models.mps import MPRegistry
 
@@ -274,7 +274,17 @@ class GoalTestCase(unittest.TestCase):
         goal.inherit()
         self.assertEqual(f3, goal.frame["ACTION-SELECTION"][0].resolve())
 
-    # TODO: how to inherit GOAL-STATE and HAS-GOAL?
+    def test_inherits_non_instanced_conditions(self):
+        graph = Graph("TEST")
+        f1 = graph.register("GOAL-DEF.1")
+        f2 = graph.register("GOAL-INST.1", isa="TEST.GOAL-DEF.1")
+        f3 = graph.register("GOAL-CONDITION.1")
+
+        f1["ON-CONDITION"] = f3
+
+        goal = Goal(f2)
+        goal.inherit()
+        self.assertEqual(f3, goal.frame["ON-CONDITION"][0].resolve())
 
 
 class ConditionTestCase(unittest.TestCase):
@@ -389,6 +399,25 @@ class ConditionTestCase(unittest.TestCase):
         graph = Graph("TEST")
         gc = graph.register("GOAL-CONDITION.1")
         self.assertTrue(Condition(gc).assess())
+
+    def test_assess_with_variables(self):
+        graph = Graph("TEST")
+        gc = graph.register("GOAL-CONDITION.1")
+        wc = graph.register("COLOR.1")
+        obj = graph.register("OBJECT.1")
+
+        gc["WITH-CONDITION"] = wc
+        wc["DOMAIN"] = Variable("X")
+        wc["RANGE"] = "yellow"
+
+        condition = Condition(gc)
+
+        self.assertFalse(condition._assess_with(wc, mappings={}))
+
+        obj["COLOR"] = "yellow"
+
+        self.assertFalse(condition._assess_with(wc, mappings={}))
+        self.assertTrue(condition._assess_with(wc, mappings={"X": obj}))
 
 
 class ActionTestCase(unittest.TestCase):

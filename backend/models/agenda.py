@@ -2,7 +2,7 @@ from backend.models.graph import Frame, Graph, Identifier, Literal, Slot
 from backend.models.mps import Executable, MeaningProcedure, MPRegistry
 from enum import Enum
 from functools import reduce
-from typing import Any, Callable, List, Tuple, Union
+from typing import Any, Callable, Dict, List, Tuple, Union
 
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
@@ -208,11 +208,11 @@ class Condition(object):
         if "APPLY-STATUS" in self.frame:
             return Goal.Status[self.frame["APPLY-STATUS"][0].resolve().value]
 
-    def assess(self):
+    def assess(self, mappings: Dict[str, Union[str, Identifier, Frame]]=None):
         if "WITH-CONDITION" not in self.frame:
             return True
 
-        results = map(lambda wc: self._assess_with(wc.resolve()), self.frame["WITH-CONDITION"])
+        results = map(lambda wc: self._assess_with(wc.resolve(), mappings=mappings), self.frame["WITH-CONDITION"])
 
         if self.logic() == Condition.Logic.AND:
             return reduce(lambda x, y: x and y, results)
@@ -226,8 +226,16 @@ class Condition(object):
             return Condition.Logic[self.frame["LOGIC"][0].resolve().value.upper()]
         return Condition.Logic.AND
 
-    def _assess_with(self, condition: Frame):
+    def _assess_with(self, condition: Frame, mappings: Dict[str, Union[str, Identifier, Frame]]=None):
         domain = condition["DOMAIN"][0].resolve()
+
+        if isinstance(domain, Literal):
+            if isinstance(domain.value, Variable):
+                try:
+                    domain = domain.value.resolve(mappings)
+                except:
+                    return False
+
         property = condition._identifier.name
         return domain[property] == condition["RANGE"]
 
@@ -237,3 +245,26 @@ class Condition(object):
         if isinstance(other, Frame):
             return self.frame == other
         return super().__eq__(other)
+
+
+class Variable(object):
+
+    def __init__(self, name: str):
+        self.name = name
+
+    def resolve(self, mappings: Dict[str, Union[str, Identifier, Frame]]):
+        if mappings is None:
+            raise Exception("Cannot resolve variable with unknown mappings.")
+        if self.name not in mappings:
+            raise Exception("Variable '" + self.name + "' is not in target mappings.")
+
+        resolved = mappings[self.name]
+
+        if isinstance(resolved, str):
+            resolved = Identifier.parse(resolved)
+        if isinstance(resolved, Identifier):
+            resolved = resolved.resolve(None)
+        if not isinstance(resolved, Frame):
+            raise Exception("Cannot resolve variable '" + self.name + "' into a frame.")
+
+        return resolved
