@@ -3,6 +3,7 @@ from backend.models.agenda import Goal
 from backend.models.graph import Frame, Literal, Network
 from backend.models.mps import MPRegistry
 from backend.models.ontology import Ontology
+from backend.models.tmr import TMR
 
 import unittest
 
@@ -26,6 +27,9 @@ class AgentTestCase(unittest.TestCase):
         self.ontology.register("ASSEMBLE", isa="ONT.EVENT")
 
         self.agent = TestableAgent(ontology=self.ontology)
+
+        from backend.utils.AtomicCounter import AtomicCounter
+        TMR.counter = AtomicCounter()
 
     def tmr(self):
         return {
@@ -51,10 +55,12 @@ class AgentTestCase(unittest.TestCase):
         self.assertEqual(4, len(self.agent))
         self.assertEqual(0, len(self.agent.input_memory))
 
-        self.agent._input(input=self.tmr())
+        tmr = self.tmr()
+        self.agent._input(input=tmr)
         self.assertEqual(5, len(self.agent))
         self.assertIn("TMR#1", self.agent)
-        self.assertEqual(1, len(self.agent.input_memory))
+        self.assertEqual(1, len(self.agent.pending_inputs()))
+        self.assertEqual(tmr["sentence"], self.agent.pending_inputs()[0].sentence)
 
     def test_idea_decision(self):
         def priority_calculation(agent):
@@ -131,3 +137,4 @@ class AgentTestCase(unittest.TestCase):
         agent.logger().enable()
 
         agent.idea(None)
+        agent.idea(self.tmr())

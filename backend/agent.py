@@ -1,10 +1,11 @@
 from backend.contexts.LCTContext import LCTContext
-from backend.models.agenda import Action, Agenda, Goal
+from backend.models.agenda import Action, Agenda, Goal, Variable
 from backend.models.fr import FR
 from backend.models.graph import Literal, Network
 from backend.models.ontology import Ontology
 from backend.models.tmr import TMR
 from backend.utils.AgentLogger import AgentLogger
+from typing import Union
 
 
 class Agent(Network):
@@ -68,11 +69,22 @@ class Agent(Network):
         print("A:")
         print(self.internal)
 
-    def _input(self, input=None):
-        if input is not None:
-            tmr = self.register(TMR(input, ontology=self.ontology))
-            self.input_memory.append(tmr)
-            self._logger.log("Input: '" + tmr.sentence + "'")
+    def _input(self, input: Union[dict, TMR]=None):
+        if input is None:
+            return
+
+        if isinstance(input, dict):
+            input = TMR(input, ontology=self.ontology)
+
+        tmr = self.register(input)
+        # self.input_memory.append(tmr)
+
+        frame = self.internal.register("INPUT-TMR")
+        frame["REFERS-TO-GRAPH"] = Literal(tmr._namespace)
+        frame["ACKNOWLEDGED"] = False
+        self.identity["HAS-INPUT"] = frame
+
+        self._logger.log("Input: '" + tmr.sentence + "'")
 
     def _decision(self):
         agenda = self.agenda()
@@ -98,6 +110,13 @@ class Agent(Network):
 
     def agenda(self):
         return Agenda(self.identity)
+
+    def pending_inputs(self):
+        inputs = map(lambda input: input.resolve(), self.identity["HAS-INPUT"])
+        inputs = filter(lambda input: input["ACKNOWLEDGED"] == False, inputs)
+        inputs = map(lambda input: input["REFERS-TO-GRAPH"][0].resolve().value, inputs)
+        inputs = map(lambda input: self[input], inputs)
+        return list(inputs)
 
     def _augment_ontology(self):
         # This is a temporary means of modifying the starting condition of the test agent; these changes should
@@ -141,7 +160,13 @@ class Agent(Network):
         self.ontology.register("TARGET", isa="ONT.RELATION")  # range = MEANING-PROCEDURE; optional
         # (also uses ORDER) from above
 
-        # Define a base goal and action (FIND-SOMETHING-TO-DO and IDLE)
+        # Define inputs, and their properties
+        self.ontology.register("INPUT-TMR", isa="ONT.ABSTRACT-OBJECT")
+        self.ontology.register("REFERS-TO-GRAPH", isa="ONT.LITERAL-ATTRIBUTE")  # The namespace of a graph in the network
+        self.ontology.register("ACKNOWLEDGED", isa="ONT.LITERAL-ATTRIBUTE")  # True / False
+        self.ontology.register("HAS-INPUT", isa="ONT.RELATION")  # range = INPUT-TMR; applied to self.identity to track inputs
+
+        # Define a base goal and actions (FIND-SOMETHING-TO-DO, IDLE, and ACKNOWLEDGE-INPUT)
         self.ontology.register("FIND-SOMETHING-TO-DO", isa="ONT.AGENDA-GOAL")
         self.ontology["FIND-SOMETHING-TO-DO"]["PRIORITY-CALCULATION"] = "ONT.FIND-SOMETHING-TO-DO-PRIORITY"
         self.ontology["FIND-SOMETHING-TO-DO"]["ACTION-SELECTION"] = "ONT.FIND-SOMETHING-TO-DO-ACTION"
@@ -163,6 +188,41 @@ class Agent(Network):
         self.ontology["IDLE-MP"]["CALLS"] = Literal("idle")
         self.ontology["IDLE-MP"]["ORDER"] = 1
 
+        self.ontology.register("ACKNOWLEDGE-INPUT", isa="ONT.ACTION")
+        self.ontology["ACKNOWLEDGE-INPUT"]["RUN"] = "ACKNOWLEDGE-INPUT-MP"
+
+        self.ontology.register("ACKNOWLEDGE-INPUT-MP", isa="ONT.MEANING-PROCEDURE")
+        self.ontology["ACKNOWLEDGE-INPUT-MP"]["CALLS"] = Literal("acknowledge-input")
+        self.ontology["ACKNOWLEDGE-INPUT-MP"]["ORDER"] = 1
+
+        # Define a goal and action for understanding input
+        self.ontology.register("UNDERSTAND-INPUT", isa="ONT.AGENDA-GOAL")
+        self.ontology["UNDERSTAND-INPUT"]["PRIORITY-CALCULATION"] = "ONT.UNDERSTAND-INPUT-PRIORITY"
+        self.ontology["UNDERSTAND-INPUT"]["ACTION-SELECTION"] = "ONT.UNDERSTAND-INPUT-ACTION"
+        self.ontology["UNDERSTAND-INPUT"]["ON-CONDITION"] = "ONT.UNDERSTAND-INPUT-CONDITION"
+
+        self.ontology.register("UNDERSTAND-INPUT-PRIORITY", isa="ONT.MEANING-PROCEDURE")
+        self.ontology["UNDERSTAND-INPUT-PRIORITY"]["CALLS"] = Literal("understand_input_priority")
+
+        self.ontology.register("UNDERSTAND-INPUT-ACTION", isa="ONT.MEANING-PROCEDURE")
+        self.ontology["UNDERSTAND-INPUT-ACTION"]["CALLS"] = Literal("understand_input_action")
+
+        self.ontology.register("ONT.UNDERSTAND-INPUT-CONDITION", isa="ONT.GOAL-CONDITION")
+        self.ontology["ONT.UNDERSTAND-INPUT-CONDITION"]["WITH-CONDITION"] = "ONT.UNDERSTAND-INPUT-WITH-CONDITION"
+        self.ontology["ONT.UNDERSTAND-INPUT-CONDITION"]["APPLY-STATUS"] = Literal(Goal.Status.SATISFIED.name)
+
+        self.ontology.register("UNDERSTAND", isa="ONT.ACTION")
+        self.ontology["UNDERSTAND"]["RUN"] = "UNDERSTAND-MP"
+
+        self.ontology.register("UNDERSTAND-MP", isa="ONT.MEANING-PROCEDURE")
+        self.ontology["UNDERSTAND-MP"]["CALLS"] = Literal("understand_input_action")
+        self.ontology["UNDERSTAND-MP"]["ORDER"] = 1
+
+        self.ontology.register("ONT.UNDERSTAND-INPUT-WITH-CONDITION", isa="ONT.ACKNOWLEDGED")
+        self.ontology.register("DOMAIN", Variable("X"))
+        self.ontology.register("RANGE", True)
+
+
     def _bootstrap(self):
         # Initializes the agent's current memory and environment, if any.
 
@@ -171,7 +231,26 @@ class Agent(Network):
 
         self.identity["GOAL"] += goal
 
+        def acknowledge_input(agent):
+            inputs = agent.pending_inputs()
+            if len(inputs) == 0:
+                return
+            # TODO: here is where we need to note that inputs[0] is a variable (specifically, it is "X" in the condition, and also needed for the action)
+            goal = agent.internal.register("UNDERSTAND-INPUT", isa="ONT.UNDERSTAND-INPUT")
+            Goal(goal).inherit()
+            agent.identity["GOAL"] += goal
+
+        def understand_input(agent):
+            print("WE NEED VARIABLES HERE TOO")
+            # TODO: HACK, use variables to select just one
+            for i in agent.pending_inputs():
+                i["ACKNOWLEDGED"] = True
+
         from backend.models.mps import MPRegistry
         MPRegistry.register(lambda agent: 0.1, name="find_something_to_do_priority")
-        MPRegistry.register(lambda agent: self.ontology["IDLE"], "find_something_to_do_action")
+        MPRegistry.register(lambda agent: self.ontology["IDLE"] if len(self.pending_inputs()) == 0 else self.ontology["ACKNOWLEDGE-INPUT"], "find_something_to_do_action")
         MPRegistry.register(lambda agent: print("ZZZZ"), "idle")
+        MPRegistry.register(acknowledge_input, name="acknowledge-input")
+        MPRegistry.register(lambda agent: 0.9, name="understand_input_priority")
+        MPRegistry.register(lambda agent: self.ontology["UNDERSTAND"], name="understand_input_action")
+        MPRegistry.register(understand_input, name="understand_input_action")
