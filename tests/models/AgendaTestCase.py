@@ -530,26 +530,123 @@ class ConditionTestCase(unittest.TestCase):
         self.assertTrue(Condition(c).assess(VariableMap(vm)))
 
 
-# class ActionTestCase(unittest.TestCase):
-#
-#     def test_execute(self):
-#
-#         executed = False
-#
-#         def execute_action(agent):
-#             nonlocal executed
-#             executed = True
-#
-#         MPRegistry.register(execute_action)
-#
-#         graph = Graph("TEST")
-#         f1 = graph.register("ACTION.1")
-#         f2 = graph.register("MEANING-PROCEDURE.1")
-#
-#         f1["RUN"] = f2
-#         f2["CALLS"] = Literal(execute_action.__name__)
-#
-#         action = Action(f1)
-#
-#         action.execute(None)
-#         self.assertTrue(executed)
+class ActionTestCase(unittest.TestCase):
+
+    def test_name(self):
+        graph = Graph("TEST")
+        action = graph.register("ACTION.1")
+        action["NAME"] = Literal("Test Action")
+
+        self.assertEqual(Action(action).name(), "Test Action")
+
+    def test_select(self):
+
+        result = True
+
+        class TestStatement(Statement):
+            def run(self, varmap: VariableMap):
+                return result
+
+        graph = Statement.hierarchy()
+        action = graph.register("ACTION.1")
+        statement = graph.register("BOOLEAN-STATEMENT.1", isa="EXE.BOOLEAN-STATEMENT")
+
+        action["SELECT"] = statement
+        graph["BOOLEAN-STATEMENT"]["CLASSMAP"] = Literal(TestStatement)
+
+        self.assertTrue(Action(action).select(None))
+
+        result = False
+
+        self.assertFalse(Action(action).select(None))
+
+    def test_select_with_variable(self):
+
+        class TestStatement(Statement):
+            def run(self, varmap: VariableMap):
+                return varmap.resolve("X")
+
+        graph = Statement.hierarchy()
+        varmap = graph.register("VARMAP.1")
+        variable = graph.register("VARIABLE.1")
+        action = graph.register("ACTION.1")
+        statement = graph.register("BOOLEAN-STATEMENT.1", isa="EXE.BOOLEAN-STATEMENT")
+
+        varmap["_WITH"] = variable
+        variable["NAME"] = Literal("X")
+        variable["VALUE"] = True
+        action["SELECT"] = statement
+        graph["BOOLEAN-STATEMENT"]["CLASSMAP"] = Literal(TestStatement)
+
+        self.assertTrue(Action(action).select(VariableMap(varmap)))
+
+    def test_select_when_default(self):
+        graph = Statement.hierarchy()
+        action = graph.register("ACTION.1")
+        action["SELECT"] = Literal(Action.DEFAULT)
+
+        self.assertTrue(Action(action).select(None))
+
+    def test_is_default(self):
+        graph = Statement.hierarchy()
+        action = graph.register("ACTION.1")
+
+        self.assertFalse(Action(action).is_default())
+
+        action["SELECT"] = Literal(Action.DEFAULT)
+
+        self.assertTrue(Action(action).is_default())
+
+    def test_perform(self):
+
+        out = []
+
+        class TestStatement(Statement):
+            def run(self, varmap: VariableMap):
+                nonlocal out
+                out.append(self.frame["LOCAL"][0].resolve().value)
+
+        graph = Statement.hierarchy()
+        action = graph.register("ACTION.1")
+        statement1 = graph.register("STATEMENT.1", isa="EXE.STATEMENT")
+        statement2 = graph.register("STATEMENT.2", isa="EXE.STATEMENT")
+
+        graph["STATEMENT"]["CLASSMAP"] = Literal(TestStatement)
+        action["PERFORM"] = [statement1, statement2]
+        statement1["LOCAL"] = Literal("X")
+        statement2["LOCAL"] = Literal("Y")
+
+        Action(action).perform(None)
+
+        self.assertEqual(out, ["X", "Y"])
+
+    def test_perform_with_variables(self):
+        out = []
+
+        class TestStatement(Statement):
+            def run(self, varmap: VariableMap):
+                nonlocal out
+                out.append(varmap.resolve("X"))
+
+        graph = Statement.hierarchy()
+        action = graph.register("ACTION.1")
+        statement = graph.register("STATEMENT.1", isa="EXE.STATEMENT")
+        varmap = graph.register("VARMAP.1")
+        variable = graph.register("VARIABLE.1")
+
+        graph["STATEMENT"]["CLASSMAP"] = Literal(TestStatement)
+        action["PERFORM"] = statement
+        varmap["_WITH"] = variable
+        variable["NAME"] = Literal("X")
+        variable["VALUE"] = 123
+
+        Action(action).perform(VariableMap(varmap))
+
+        self.assertEqual(out, [123])
+
+    def test_perform_idle(self):
+        graph = Statement.hierarchy()
+        action = graph.register("ACTION.1")
+        action["PERFORM"] = Literal(Action.IDLE)
+
+        Action(action).perform(None)

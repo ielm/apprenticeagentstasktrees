@@ -188,11 +188,40 @@ class Goal(object):
 
 class Action(object):
 
+    DEFAULT = "DEFAULT"
+    IDLE = "IDLE"
+
     def __init__(self, frame: Frame):
         self.frame = frame
 
-    def execute(self, agent: 'Agent'):
-        Executable(self.frame).run(agent)
+    def name(self) -> str:
+        if "NAME" in self.frame:
+            return self.frame["NAME"][0].resolve().value
+
+    def select(self, varmap: VariableMap) -> bool:
+        if self.is_default():
+            return True
+
+        if "SELECT" in self.frame:
+            select = self.frame["SELECT"][0].resolve()
+            if isinstance(select, Frame) and select ^ "EXE.BOOLEAN-STATEMENT":
+                return Statement.from_instance(select).run(varmap)
+        return False
+
+    def is_default(self):
+        if "SELECT" in self.frame:
+            select = self.frame["SELECT"][0].resolve()
+            if select == Action.DEFAULT:
+                return True
+        return False
+
+    def perform(self, varmap: VariableMap):
+        for statement in self.frame["PERFORM"]:
+            statement = statement.resolve()
+            if statement == Action.IDLE:
+                pass
+            if isinstance(statement, Frame) and statement ^ "EXE.STATEMENT":
+                Statement.from_instance(statement).run(varmap)
 
     def __eq__(self, other):
         if isinstance(other, Action):
