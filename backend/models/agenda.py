@@ -1,9 +1,8 @@
-from backend.models.graph import Frame, Graph, Identifier, Literal, Slot
-from backend.models.mps import Executable, MeaningProcedure, MPRegistry
+from backend.models.graph import Frame, Graph, Identifier, Literal
 from backend.models.statement import Statement, VariableMap
 from enum import Enum
 from functools import reduce
-from typing import Any, Callable, Dict, List, Tuple, Union
+from typing import Any, Dict, List, Tuple, Union
 
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
@@ -16,7 +15,7 @@ class Agenda(object):
         self.frame = frame
 
     def goals(self, pending=False, active=True, abandoned=False, satisfied=False):
-        results = map(lambda g: Goal(g.resolve()), self.frame["GOAL"])
+        results = map(lambda g: Goal(g.resolve()), self.frame["HAS-GOAL"])
 
         if not pending:
             results = filter(lambda g: not g.is_pending(), results)
@@ -39,7 +38,7 @@ class Agenda(object):
         if "STATUS" not in goal:
             goal["STATUS"] = Goal.Status.PENDING
 
-        self.frame["GOAL"] += goal
+        self.frame["HAS-GOAL"] += goal
 
     def prepare_action(self, action: Union['Action', Frame]):
         if isinstance(action, Action):
@@ -51,7 +50,7 @@ class Agenda(object):
         return Action(self.frame["ACTION-TO-TAKE"][0].resolve())
 
 
-class Goal(object):
+class Goal(VariableMap):
 
     class Status(Enum):
         PENDING = 1
@@ -60,58 +59,26 @@ class Goal(object):
         SATISFIED = 4
 
     @classmethod
-    def register(cls,
-                 graph: Graph, name: str,
-                 pcalc: List[Callable]=None,
-                 aselect: List[Callable]=None,
-                 condition: List[Tuple[Union[str, Identifier], Union[str, Slot], Any]]=None,
-                 set_status: 'Goal.Status'=None
-                 ) -> 'Goal':
-        if pcalc is None:
-            pcalc = []
+    def instance_of(cls, graph: Graph, definition: Frame, params: List[Any], existing: Union[str, Identifier, Frame]=None):
+        if existing is not None:
+            if isinstance(existing, str):
+                existing = Identifier.parse(existing)
+            if isinstance(existing, Identifier):
+                existing = existing.resolve(graph)
 
-        if aselect is None:
-            aselect = []
+        frame = existing if existing is not None else graph.register("GOAL", isa=definition._identifier, generate_index=True)
+        frame["NAME"] = definition["NAME"]
+        frame["PRIORITY"] = definition["PRIORITY"]
+        frame["STATUS"] = Goal.Status.PENDING
+        frame["PLAN"] = definition["PLAN"]
+        frame["WHEN"] = definition["WHEN"]
 
-        if condition is None:
-            condition = []
+        super().instance_of(graph, definition, params, existing=frame)
 
-        if set_status is None:
-            set_status = Goal.Status.SATISFIED
-
-        goal = graph.register("AGENDA-GOAL", generate_index=True)
-
-        for f in pcalc:
-            mp = graph.register("MEANING-PROCEDURE", generate_index=True)
-            mp["CALLS"] = Literal(f.__name__)
-            MPRegistry.register(f)
-            goal["PRIORITY-CALCULATION"] += mp
-
-        for f in aselect:
-            mp = graph.register("MEANING-PROCEDURE", generate_index=True)
-            mp["CALLS"] = Literal(f.__name__)
-            MPRegistry.register(f)
-            goal["ACTION-SELECTION"] += mp
-
-        if len(condition) > 0:
-            c = graph.register("GOAL-CONDITION", generate_index=True)
-            c["LOGIC"] = Literal(Condition.Logic.AND.name)
-            c["APPLY-STATUS"] = Literal(set_status.name)
-            goal["ON-CONDITION"] += c
-            for t in condition:
-                property = t[1]
-                if isinstance(t[1], Slot):
-                    property = t[1]._name
-
-                p = graph.register(property.upper(), generate_index=True)
-                p["DOMAIN"] = t[0]
-                p["RANGE"] = t[2]
-                c["WITH-CONDITION"] += p
-
-        return Goal(goal)
+        return Goal(frame)
 
     def __init__(self, frame: Frame):
-        self.frame = frame
+        super().__init__(frame)
 
     def name(self) -> str:
         if "NAME" in self.frame:
@@ -136,12 +103,12 @@ class Goal(object):
     def assess(self):
         conditions = sorted(self.conditions(), key=lambda condition: condition.order())
         for condition in conditions:
-            if condition.assess():
+            if condition.assess(self):
                 self.status(condition.status())
                 return
 
     def conditions(self) -> List['Condition']:
-        return list(map(lambda condition: Condition(condition.resolve()), self.frame["ON-CONDITION"]))
+        return list(map(lambda condition: Condition(condition.resolve()), self.frame["WHEN"]))
 
     def subgoals(self) -> List['Goal']:
         return list(map(lambda goal: Goal(goal.resolve()), self.frame["HAS-GOAL"]))
@@ -161,22 +128,12 @@ class Goal(object):
             return self.frame["_PRIORITY"][0].resolve().value
         return 0.0
 
-    def pursue(self, agent: 'Agent') -> 'Action':
-        if len(self.frame["ACTION-SELECTION"]) != 1:
-            raise Exception("No action selection MPs available.")
-
-        return Action(MeaningProcedure(self.frame["ACTION-SELECTION"][0].resolve()).run(agent))
-
-    def inherit(self):
-        # Grabs choice fields from the definition of this goal (from the immediate parent); in some cases it just
-        # links them locally, while in others it creates an instance (such as subgoals).  In all cases, this is
-        # non-destructive to fields that already exist.
-
-        parents = list(map(lambda isa: isa.resolve(), self.frame[self.frame._ISA_type()]))
-        for parent in parents:
-            self.frame["PRIORITY-CALCULATION"] = self.frame["PRIORITY-CALCULATION"] + parent["PRIORITY-CALCULATION"] # TODO: why doesn't += work the way it should?
-            self.frame["ACTION-SELECTION"] = self.frame["ACTION-SELECTION"] + parent["ACTION-SELECTION"]
-            self.frame["ON-CONDITION"] = self.frame["ON-CONDITION"] + parent["ON-CONDITION"]
+    def plan(self) -> 'Action':
+        for plan in self.frame["PLAN"]:
+            action = Action(plan.resolve())
+            if action.select(self):
+                return action
+        raise Exception("No action was selected in the plan.")
 
     def __eq__(self, other):
         if isinstance(other, Goal):
@@ -253,7 +210,11 @@ class Condition(object):
 
     def status(self) -> Goal.Status:
         if "STATUS" in self.frame:
-            return Goal.Status[self.frame["STATUS"][0].resolve().value]
+            status = self.frame["STATUS"][0].resolve().value
+            if isinstance(status, Goal.Status):
+                return status
+            if isinstance(status, str):
+                return Goal.Status[status]
 
     def assess(self, varmap: VariableMap) -> bool:
         if "IF" not in self.frame:

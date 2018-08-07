@@ -1,73 +1,72 @@
 from backend.models.agenda import Action, Agenda, Condition, Goal, Variable
 from backend.models.graph import Frame, Graph, Literal
-from backend.models.mps import MPRegistry
 from backend.models.statement import Statement, VariableMap
 
 import unittest
 
 
-# class AgendaTestCase(unittest.TestCase):
-#
-#     def test_goals(self):
-#         graph = Graph("TEST")
-#         f1 = graph.register("AGENDA.1")  # Typically the agent identity frame (so, e.g., ROBOT.1) is used, as there is no "AGENDA".
-#         g1 = graph.register("GOAL.1")
-#         g2 = graph.register("GOAL.2")
-#         g3 = graph.register("GOAL.3")
-#         g4 = graph.register("GOAL.4")
-#
-#         f1["GOAL"] = [g1, g2, g3, g4]
-#
-#         g1["STATUS"] = "pending"
-#         g2["STATUS"] = "active"
-#         g3["STATUS"] = "abandoned"
-#         g4["STATUS"] = "satisfied"
-#
-#         agenda = Agenda(f1)
-#         self.assertEqual(agenda.goals(), [Goal(g2)])
-#         self.assertEqual(agenda.goals(pending=True), [Goal(g1), Goal(g2)])
-#         self.assertEqual(agenda.goals(active=False), [])
-#         self.assertEqual(agenda.goals(abandoned=True, active=False), [Goal(g3)])
-#         self.assertEqual(agenda.goals(satisfied=True, active=False), [Goal(g4)])
-#
-#     def test_add_goal(self):
-#         graph = Graph("TEST")
-#         f1 = graph.register("AGENDA.1")
-#         g1 = graph.register("GOAL.1")
-#         g2 = graph.register("GOAL.2")
-#
-#         agenda = Agenda(f1)
-#         agenda.add_goal(g1)
-#         agenda.add_goal(Goal(g2))
-#
-#         self.assertEqual(agenda.goals(pending=True), [Goal(g1), Goal(g2)])
-#
-#     def test_prepare_action(self):
-#         graph = Graph("TEST")
-#         f1 = graph.register("AGENDA.1")
-#         a1 = graph.register("ACTION.1")
-#         a2 = graph.register("ACTION.2")
-#
-#         agenda = Agenda(f1)
-#
-#         agenda.prepare_action(a1)
-#         self.assertEqual(len(f1["ACTION-TO-TAKE"]), 1)
-#         self.assertEqual(f1["ACTION-TO-TAKE"][0].resolve(), a1)
-#
-#         agenda.prepare_action(Action(a2))
-#         self.assertEqual(len(f1["ACTION-TO-TAKE"]), 1)
-#         self.assertEqual(f1["ACTION-TO-TAKE"][0].resolve(), a2)
-#
-#     def test_action(self):
-#         graph = Graph("TEST")
-#         f1 = graph.register("AGENDA.1")
-#         a1 = graph.register("ACTION.1")
-#
-#         f1["ACTION-TO-TAKE"] = a1
-#
-#         agenda = Agenda(f1)
-#         self.assertEqual(a1, agenda.action())
-#         self.assertEqual(Action, agenda.action().__class__)
+class AgendaTestCase(unittest.TestCase):
+
+    def test_goals(self):
+        graph = Graph("TEST")
+        f1 = graph.register("AGENDA.1")  # Typically the agent identity frame (so, e.g., ROBOT.1) is used, as there is no "AGENDA".
+        g1 = graph.register("GOAL.1")
+        g2 = graph.register("GOAL.2")
+        g3 = graph.register("GOAL.3")
+        g4 = graph.register("GOAL.4")
+
+        f1["HAS-GOAL"] = [g1, g2, g3, g4]
+
+        g1["STATUS"] = "pending"
+        g2["STATUS"] = "active"
+        g3["STATUS"] = "abandoned"
+        g4["STATUS"] = "satisfied"
+
+        agenda = Agenda(f1)
+        self.assertEqual(agenda.goals(), [Goal(g2)])
+        self.assertEqual(agenda.goals(pending=True), [Goal(g1), Goal(g2)])
+        self.assertEqual(agenda.goals(active=False), [])
+        self.assertEqual(agenda.goals(abandoned=True, active=False), [Goal(g3)])
+        self.assertEqual(agenda.goals(satisfied=True, active=False), [Goal(g4)])
+
+    def test_add_goal(self):
+        graph = Graph("TEST")
+        f1 = graph.register("AGENDA.1")
+        g1 = graph.register("GOAL.1")
+        g2 = graph.register("GOAL.2")
+
+        agenda = Agenda(f1)
+        agenda.add_goal(g1)
+        agenda.add_goal(Goal(g2))
+
+        self.assertEqual(agenda.goals(pending=True), [Goal(g1), Goal(g2)])
+
+    def test_prepare_action(self):
+        graph = Graph("TEST")
+        f1 = graph.register("AGENDA.1")
+        a1 = graph.register("ACTION.1")
+        a2 = graph.register("ACTION.2")
+
+        agenda = Agenda(f1)
+
+        agenda.prepare_action(a1)
+        self.assertEqual(len(f1["ACTION-TO-TAKE"]), 1)
+        self.assertEqual(f1["ACTION-TO-TAKE"][0].resolve(), a1)
+
+        agenda.prepare_action(Action(a2))
+        self.assertEqual(len(f1["ACTION-TO-TAKE"]), 1)
+        self.assertEqual(f1["ACTION-TO-TAKE"][0].resolve(), a2)
+
+    def test_action(self):
+        graph = Graph("TEST")
+        f1 = graph.register("AGENDA.1")
+        a1 = graph.register("ACTION.1")
+
+        f1["ACTION-TO-TAKE"] = a1
+
+        agenda = Agenda(f1)
+        self.assertEqual(a1, agenda.action())
+        self.assertEqual(Action, agenda.action().__class__)
 
 
 class GoalTestCase(unittest.TestCase):
@@ -147,7 +146,6 @@ class GoalTestCase(unittest.TestCase):
 
     @unittest.skip("Skipping test prioritize with calculation until CALCULATE-STATEMENT is defined.")
     def test_prioritize_calculation(self):
-
         fail() # TODO: CALCULATE-STATEMENT
 
     def test_priority(self):
@@ -160,134 +158,68 @@ class GoalTestCase(unittest.TestCase):
         f1["_PRIORITY"] = 0.5
         self.assertEqual(0.5, goal.priority())
 
-    # def test_conditions(self):
-    #     graph = Graph("TEST")
-    #     g = graph.register("GOAL.1")
-    #     gc = graph.register("GOAL-CONDITION.1")
-    #
-    #     g["ON-CONDITION"] = gc
-    #
-    #     goal = Goal(g)
-    #     self.assertEqual(goal.conditions(), [Condition(gc)])
-    #     self.assertEqual(goal.conditions()[0].frame, gc)
-    #     self.assertIsInstance(goal.conditions()[0].frame, Frame)
-    #
-    # def test_assess(self):
-    #     graph = Graph("TEST")
-    #     g = graph.register("GOAL.1")
-    #     gc = graph.register("GOAL-CONDITION.1")
-    #     wc = graph.register("COLOR.1")
-    #     obj = graph.register("OBJECT.1")
-    #
-    #     g["ON-CONDITION"] = gc
-    #     g["STATUS"] = Literal(Goal.Status.ACTIVE.name)
-    #     gc["WITH-CONDITION"] = wc
-    #     gc["APPLY-STATUS"] = Literal(Goal.Status.SATISFIED.name)
-    #     wc["DOMAIN"] = obj
-    #     wc["RANGE"] = "yellow"
-    #
-    #     goal = Goal(g)
-    #     self.assertTrue(goal.is_active())
-    #
-    #     goal.assess()
-    #     self.assertTrue(goal.is_active())
-    #
-    #     obj["COLOR"] = "yellow"
-    #     goal.assess()
-    #     self.assertTrue(goal.is_satisfied())
-    #
-    # def test_assess_multiple_conditions(self):
-    #     graph = Graph("TEST")
-    #     g = graph.register("GOAL.1")
-    #     gc1 = graph.register("GOAL-CONDITION.1")
-    #     gc2 = graph.register("GOAL-CONDITION.2")
-    #     wc = graph.register("COLOR.1")
-    #     obj = graph.register("OBJECT.1")
-    #
-    #     g["ON-CONDITION"] = [gc1, gc2]
-    #     g["STATUS"] = Literal(Goal.Status.ACTIVE.name)
-    #     gc1["WITH-CONDITION"] = wc
-    #     gc1["APPLY-STATUS"] = Literal(Goal.Status.SATISFIED.name)
-    #     gc1["ORDER"] = 2
-    #     gc2["WITH-CONDITION"] = wc
-    #     gc2["APPLY-STATUS"] = Literal(Goal.Status.ABANDONED.name)
-    #     gc2["ORDER"] = 1
-    #     wc["DOMAIN"] = obj
-    #     wc["RANGE"] = "yellow"
-    #     obj["COLOR"] = "yellow"
-    #
-    #     goal = Goal(g)
-    #     goal.assess()
-    #     self.assertTrue(goal.is_abandoned())
-    #
-    # def test_subgoals(self):
-    #     graph = Graph("TEST")
-    #     f1 = graph.register("GOAL.1")
-    #     f2 = graph.register("GOAL.2")
-    #     f3 = graph.register("GOAL.3")
-    #
-    #     f1["HAS-GOAL"] = [f2, f3]
-    #
-    #     goal = Goal(f1)
-    #     subgoals = goal.subgoals()
-    #     subgoals = list(map(lambda subgoal: subgoal.frame, subgoals))
-    #     self.assertTrue(f2 in subgoals)
-    #     self.assertTrue(f3 in subgoals)
-    #     self.assertIsInstance(subgoals[0], Frame)
-    #
-    # def test_pursue(self):
-    #     def select_action(agent):
-    #         return Frame("IDLE.1")  # Properties can be added here
-    #
-    #     MPRegistry.register(select_action)
-    #
-    #     graph = Graph("TEST")
-    #     f1 = graph.register("GOAL.1")
-    #     f2 = graph.register("MEANING-PROCEDURE.1")
-    #
-    #     f1["ACTION-SELECTION"] = f2
-    #     f2["CALLS"] = Literal(select_action.__name__)
-    #
-    #     goal = Goal(f1)
-    #
-    #     action = goal.pursue(None)
-    #     self.assertEqual("IDLE.1", action.frame.name())
-    #
-    # def test_inherits_non_instanced_priority_calculation(self):
-    #     graph = Graph("TEST")
-    #     f1 = graph.register("GOAL-DEF.1")
-    #     f2 = graph.register("GOAL-INST.1", isa="TEST.GOAL-DEF.1")
-    #     f3 = graph.register("PRIORITY-CALC.1")
-    #
-    #     f1["PRIORITY-CALCULATION"] = f3
-    #
-    #     goal = Goal(f2)
-    #     goal.inherit()
-    #     self.assertEqual(f3, goal.frame["PRIORITY-CALCULATION"][0].resolve())
-    #
-    # def test_inherits_non_instanced_action_selection(self):
-    #     graph = Graph("TEST")
-    #     f1 = graph.register("GOAL-DEF.1")
-    #     f2 = graph.register("ACTION-SELECTION.1", isa="TEST.GOAL-DEF.1")
-    #     f3 = graph.register("ACTION-CALC.1")
-    #
-    #     f1["ACTION-SELECTION"] = f3
-    #
-    #     goal = Goal(f2)
-    #     goal.inherit()
-    #     self.assertEqual(f3, goal.frame["ACTION-SELECTION"][0].resolve())
-    #
-    # def test_inherits_non_instanced_conditions(self):
-    #     graph = Graph("TEST")
-    #     f1 = graph.register("GOAL-DEF.1")
-    #     f2 = graph.register("GOAL-INST.1", isa="TEST.GOAL-DEF.1")
-    #     f3 = graph.register("GOAL-CONDITION.1")
-    #
-    #     f1["ON-CONDITION"] = f3
-    #
-    #     goal = Goal(f2)
-    #     goal.inherit()
-    #     self.assertEqual(f3, goal.frame["ON-CONDITION"][0].resolve())
+    def test_plan(self):
+        graph = Graph("TEST")
+        goal = graph.register("GOAL.1")
+        action1 = graph.register("ACTION.1")
+        action2 = graph.register("ACTION.2")
+
+        goal["PLAN"] = [action1, action2]
+        action2["SELECT"] = Literal(Action.DEFAULT)
+
+        self.assertEqual(Goal(goal).plan(), action2)
+        self.assertIsInstance(Goal(goal).plan(), Action)
+
+    def test_assess(self):
+
+        class TestStatement(Statement):
+            def run(self, varmap: VariableMap):
+                return True
+
+        graph = Statement.hierarchy()
+        goal = graph.register("GOAL.1")
+        condition1 = graph.register("CONDITION.1")
+        condition2 = graph.register("CONDITION.2")
+        statement = graph.register("STATEMENT.1", isa="EXE.BOOLEAN-STATEMENT")
+
+        graph["BOOLEAN-STATEMENT"]["CLASSMAP"] = Literal(TestStatement)
+        goal["WHEN"] = [condition1, condition2]
+        condition1["ORDER"] = 2
+        condition2["ORDER"] = 1
+        condition1["STATUS"] = Goal.Status.ABANDONED
+        condition2["STATUS"] = Goal.Status.SATISFIED
+        condition1["IF"] = statement
+        condition2["IF"] = statement
+
+        Goal(goal).assess()
+        self.assertTrue(Goal(goal).is_satisfied())
+
+    def test_instance_of(self):
+        graph = Graph("TEST")
+        definition = graph.register("GOAL-DEF")
+        action = graph.register("ACTION.1")
+        condition = graph.register("CONDITION.1")
+
+        definition["NAME"] = Literal("Test Goal")
+        definition["PRIORITY"] = 0.5
+        definition["PLAN"] = action
+        definition["WHEN"] = condition
+        definition["WITH"] = Literal("VAR_X")
+
+        params = [123]
+        goal = Goal.instance_of(graph, definition, params)
+
+        self.assertEqual(goal.name(), "Test Goal")
+        self.assertTrue(goal.frame["PRIORITY"] == 0.5)
+        self.assertTrue(goal.frame["PLAN"] == action)
+        self.assertTrue(goal.frame["WHEN"] == condition)
+        self.assertTrue(goal.frame["WITH"] == "VAR_X")
+        self.assertEqual(1, len(goal.frame["_WITH"]))
+
+        var = goal.frame["_WITH"][0].resolve()
+        self.assertEqual(var["NAME"], "VAR_X")
+        self.assertEqual(var["FROM"], goal.frame)
+        self.assertEqual(var["VALUE"], 123)
 
 
 class ConditionTestCase(unittest.TestCase):
