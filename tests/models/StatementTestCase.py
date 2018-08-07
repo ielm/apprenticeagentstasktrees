@@ -1,4 +1,5 @@
-from backend.models.graph import Frame, Graph, Identifier, Literal
+from backend.models.graph import Frame, Graph, Identifier, Literal, Network
+from backend.models.query import Query
 from backend.models.statement import Statement, Variable, VariableMap
 
 import unittest
@@ -173,3 +174,17 @@ class StatementTestCase(unittest.TestCase):
         stmt = Statement.from_instance(frame)
 
         self.assertIsInstance(stmt, TestStatement)
+
+
+class ExistsStatementTestCase(unittest.TestCase):
+
+    def test_run(self):
+        network = Network()
+        graph = network.register(Statement.hierarchy())
+        stmt = graph.register("TEST", isa="EXE.EXISTS-STATEMENT")
+
+        stmt["FIND"] = Query.parse(graph._network, "WHERE @ ^ EXE.EXISTS-STATEMENT")
+        self.assertTrue(Statement.from_instance(stmt).run(None))
+
+        stmt["FIND"] = Query.parse(graph._network, "WHERE abc=123")
+        self.assertFalse(Statement.from_instance(stmt).run(None))

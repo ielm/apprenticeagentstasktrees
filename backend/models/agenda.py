@@ -59,6 +59,17 @@ class Goal(VariableMap):
         SATISFIED = 4
 
     @classmethod
+    def build(cls, graph: Graph, name: str, priority: Union[Statement, float], plan: List['Action'], conditions: List['Condition'], variables: List[str]):
+        frame = graph.register("GOAL", generate_index=True)
+        frame["NAME"] = name
+        frame["PRIORITY"] = priority
+        frame["PLAN"] = plan
+        frame["WHEN"] = conditions
+        frame["WITH"] = [variables]
+
+        return Goal(frame)
+
+    @classmethod
     def instance_of(cls, graph: Graph, definition: Frame, params: List[Any], existing: Union[str, Identifier, Frame]=None):
         if existing is not None:
             if isinstance(existing, str):
@@ -148,6 +159,15 @@ class Action(object):
     DEFAULT = "DEFAULT"
     IDLE = "IDLE"
 
+    @classmethod
+    def build(cls, graph: Graph, name: str, select: Union[Statement, str], perform: List[Union[Statement, str]]):
+        frame = graph.register("ACTION", generate_index=True)
+        frame["NAME"] = name
+        frame["SELECT"] = select
+        frame["PERFORM"] = [perform]
+
+        return Action(frame)
+
     def __init__(self, frame: Frame):
         self.frame = frame
 
@@ -189,6 +209,16 @@ class Action(object):
 
 
 class Condition(object):
+
+    @classmethod
+    def build(cls, graph: Graph, statements: List[Statement], status: Goal.Status, logic: 'Condition.Logic'=1, order: int=1):
+        frame = graph.register("CONDITION", generate_index=True)
+        frame["IF"] = list(map(lambda statement: statement.frame, statements))
+        frame["LOGIC"] = logic
+        frame["STATUS"] = status
+        frame["ORDER"] = order
+
+        return Condition(frame)
 
     class Logic(Enum):
         AND = 1
@@ -253,26 +283,3 @@ class Condition(object):
         if isinstance(other, Frame):
             return self.frame == other
         return super().__eq__(other)
-
-
-class Variable(object):
-
-    def __init__(self, name: str):
-        self.name = name
-
-    def resolve(self, mappings: Dict[str, Union[str, Identifier, Frame]]):
-        if mappings is None:
-            raise Exception("Cannot resolve variable with unknown mappings.")
-        if self.name not in mappings:
-            raise Exception("Variable '" + self.name + "' is not in target mappings.")
-
-        resolved = mappings[self.name]
-
-        if isinstance(resolved, str):
-            resolved = Identifier.parse(resolved)
-        if isinstance(resolved, Identifier):
-            resolved = resolved.resolve(None)
-        if not isinstance(resolved, Frame):
-            raise Exception("Cannot resolve variable '" + self.name + "' into a frame.")
-
-        return resolved

@@ -1,4 +1,5 @@
 from backend.models.graph import Frame, Graph, Identifier, Literal
+from backend.models.query import Query
 from typing import Any, List, Union
 
 
@@ -124,6 +125,7 @@ class StatementHierarchy(object):
         hierarchy.register("ASSIGNFILLER-STATEMENT", isa="EXE.NONRETURNING-STATEMENT")
 
         hierarchy["STATEMENT"]["CLASSMAP"] = Literal(Statement)
+        hierarchy["EXISTS-STATEMENT"]["CLASSMAP"] = Literal(ExistsStatement)
 
         return hierarchy
 
@@ -144,3 +146,22 @@ class Statement(object):
         raise Exception("Statement.run(varmap) must be implemented.")
 
 
+class ExistsStatement(Statement):
+
+    @classmethod
+    def instance(cls, graph: Graph, query: Query):
+        frame = graph.register("EXISTS-STATEMENT", isa="EXE.EXISTS-STATEMENT", generate_index=True)
+        frame["FIND"] = query
+
+        return ExistsStatement(frame)
+
+    def run(self, varmap: VariableMap) -> bool:
+        query = self.frame["FIND"][0].resolve().value
+        results = self.frame._graph.search(query)
+        return len(results) > 0
+
+
+class ForEachStatement(Statement):
+
+    def run(self, varmap: VariableMap):
+        pass #FROM query, ASSIGN variable name, DO statement
