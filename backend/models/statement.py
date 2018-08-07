@@ -134,7 +134,7 @@ class Statement(object):
 
     @classmethod
     def from_instance(cls, frame: Frame) -> 'Statement':
-        definition = frame.parents()[0].resolve(frame._graph)
+        definition = frame.parents()[0].resolve(frame._graph, network=frame._network)
         return definition["CLASSMAP"][0].resolve().value(frame)
 
     def __init__(self, frame: Frame):

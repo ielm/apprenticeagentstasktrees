@@ -3,6 +3,7 @@ from backend.models.agenda import Action, Agenda, Goal, Variable
 from backend.models.fr import FR
 from backend.models.graph import Literal, Network
 from backend.models.ontology import Ontology
+from backend.models.statement import Statement
 from backend.models.tmr import TMR
 from backend.utils.AgentLogger import AgentLogger
 from typing import Union
@@ -16,6 +17,7 @@ class Agent(Network):
         if ontology is None:
             raise Exception("NYI, Default Ontology Required")
 
+        self.register(Statement.hierarchy())
         self.ontology = self.register(ontology)
         self._augment_ontology()
 
@@ -92,16 +94,18 @@ class Agent(Network):
         priority = -1.0
         selected = None
         for goal in agenda.goals(pending=True, active=True):
+            goal.status(Goal.Status.PENDING)
             goal.prioritize(self)
             if goal.priority() > priority:
                 priority = goal.priority()
                 selected = goal
         if selected is not None:
             selected.status(Goal.Status.ACTIVE)
-            agenda.prepare_action(selected.pursue(self))
+            agenda.prepare_action(selected.plan())
 
     def _execute(self):
-        self.agenda().action().execute(self)
+        goal = self.agenda().goals(active=True)[0]
+        self.agenda().action().perform(goal)
         del self.agenda().frame["ACTION-TO-TAKE"]
 
     def _assess(self):
