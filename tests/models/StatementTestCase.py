@@ -158,3 +158,18 @@ class StatementTestCase(unittest.TestCase):
         statement = TestStatement(stmt)
 
         self.assertEqual(123, statement.run(vm))
+
+    def test_from_instance(self):
+
+        class TestStatement(Statement):
+            def run(self, varmap: VariableMap):
+                return 1
+
+        graph = Statement.hierarchy()
+        graph.register("TEST-STATEMENT", isa="EXE.STATEMENT")
+        graph["TEST-STATEMENT"]["CLASSMAP"] = Literal(TestStatement)
+
+        frame = graph.register("TEST.1", isa="TEST-STATEMENT")
+        stmt = Statement.from_instance(frame)
+
+        self.assertIsInstance(stmt, TestStatement)

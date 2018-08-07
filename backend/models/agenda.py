@@ -1,5 +1,6 @@
 from backend.models.graph import Frame, Graph, Identifier, Literal, Slot
 from backend.models.mps import Executable, MeaningProcedure, MPRegistry
+from backend.models.statement import Statement, VariableMap
 from enum import Enum
 from functools import reduce
 from typing import Any, Callable, Dict, List, Tuple, Union
@@ -112,6 +113,11 @@ class Goal(object):
     def __init__(self, frame: Frame):
         self.frame = frame
 
+    def name(self) -> str:
+        if "NAME" in self.frame:
+            return self.frame["NAME"][0].resolve().value
+        return "Unknown Goal"
+
     def is_pending(self) -> bool:
         return Goal.Status.PENDING.name.lower() in self.frame["STATUS"] or Goal.Status.PENDING.name in self.frame["STATUS"]
 
@@ -141,12 +147,18 @@ class Goal(object):
         return list(map(lambda goal: Goal(goal.resolve()), self.frame["HAS-GOAL"]))
 
     def prioritize(self, agent: 'Agent'):
-        priority = max(map(lambda mp: MeaningProcedure(mp.resolve()).run(agent), self.frame["PRIORITY-CALCULATION"]))
-        self.frame["PRIORITY"] = priority
+        if "PRIORITY" in self.frame:
+            priority = self.frame["PRIORITY"][0].resolve()
+            if isinstance(priority, Literal):
+                self.frame["_PRIORITY"] = priority.value
+            else:
+                self.frame["_PRIORITY"] = -1.0 # TODO: evaluate a CALCULATE-STATEMENT
+
+        return 0.0
 
     def priority(self):
-        if "PRIORITY" in self.frame:
-            return self.frame["PRIORITY"][0].resolve().value
+        if "_PRIORITY" in self.frame:
+            return self.frame["_PRIORITY"][0].resolve().value
         return 0.0
 
     def pursue(self, agent: 'Agent') -> 'Action':
@@ -195,49 +207,55 @@ class Condition(object):
     class Logic(Enum):
         AND = 1
         OR = 2
-        NOT = 3
+        NOR = 3
+        NAND = 4
+        NOT = 5
 
     def __init__(self, frame: Frame):
         self.frame = frame
+
+        for statement in self.frame["IF"]:
+            if not statement ^ "EXE.BOOLEAN-STATEMENT":
+                raise Exception("IF statement is not a BOOLEAN-STATEMENT.")
 
     def order(self) -> int:
         if "ORDER" in self.frame:
             return self.frame["ORDER"][0].resolve().value
 
     def status(self) -> Goal.Status:
-        if "APPLY-STATUS" in self.frame:
-            return Goal.Status[self.frame["APPLY-STATUS"][0].resolve().value]
+        if "STATUS" in self.frame:
+            return Goal.Status[self.frame["STATUS"][0].resolve().value]
 
-    def assess(self, mappings: Dict[str, Union[str, Identifier, Frame]]=None):
-        if "WITH-CONDITION" not in self.frame:
+    def assess(self, varmap: VariableMap) -> bool:
+        if "IF" not in self.frame:
             return True
 
-        results = map(lambda wc: self._assess_with(wc.resolve(), mappings=mappings), self.frame["WITH-CONDITION"])
+        results = map(lambda wc: self._assess_if(wc.resolve(), varmap), self.frame["IF"])
 
         if self.logic() == Condition.Logic.AND:
             return reduce(lambda x, y: x and y, results)
         if self.logic() == Condition.Logic.OR:
             return reduce(lambda x, y: x or y, results)
+        if self.logic() == Condition.Logic.NOR:
+            return not reduce(lambda x, y: x or y, results)
+        if self.logic() == Condition.Logic.NAND:
+            return not reduce(lambda x, y: x and y, results)
         if self.logic() == Condition.Logic.NOT:
-            return reduce(lambda x, y: x and y, map(lambda x: not x, results))
+            return not reduce(lambda x, y: x or y, results)
 
     def logic(self):
         if "LOGIC" in self.frame:
-            return Condition.Logic[self.frame["LOGIC"][0].resolve().value.upper()]
+            value = self.frame["LOGIC"][0].resolve().value
+            if isinstance(value, Condition.Logic):
+                return value
+            if isinstance(value, str):
+                return Condition.Logic[value.upper()]
         return Condition.Logic.AND
 
-    def _assess_with(self, condition: Frame, mappings: Dict[str, Union[str, Identifier, Frame]]=None):
-        domain = condition["DOMAIN"][0].resolve()
-
-        if isinstance(domain, Literal):
-            if isinstance(domain.value, Variable):
-                try:
-                    domain = domain.value.resolve(mappings)
-                except:
-                    return False
-
-        property = condition._identifier.name
-        return domain[property] == condition["RANGE"]
+    def _assess_if(self, frame: Frame, varmap: VariableMap) -> bool:
+        if not frame ^ "EXE.BOOLEAN-STATEMENT":
+            raise Exception("IF statement is not a BOOLEAN-STATEMENT.")
+        return Statement.from_instance(frame).run(varmap)
 
     def __eq__(self, other):
         if isinstance(other, Condition):

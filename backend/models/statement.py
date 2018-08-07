@@ -81,10 +81,66 @@ class VariableMap(object):
         return super().__eq__(other)
 
 
+class StatementHierarchy(object):
+
+    def __init__(self):
+        self._cache = None
+
+    def __call__(self, *args, **kwargs) -> Graph:
+        if self._cache is None:
+            self._cache = self.build()
+        return self._cache
+
+    def build(self) -> Graph:
+        '''
+        STATEMENT (hierarchy)
+            RETURNING-STATEMENT
+                BOOLEAN-STATEMENT
+                    EXISTS-STATEMENT
+                    IS-STATEMENT
+                MAKEINSTANCE-STATEMENT
+                QUERY-STATEMENT
+                SLOT-STATEMENT
+                MP-STATEMENT
+            NONRETURNING-STATEMENT
+                FOREACH-STATEMENT
+                ADDFILLER-STATEMENT
+                ASSIGNFILLER-STATEMENT
+        '''
+
+        hierarchy = Graph("EXE")
+        hierarchy.register("STATEMENT")
+        hierarchy.register("RETURNING-STATEMENT", isa="EXE.STATEMENT")
+        hierarchy.register("BOOLEAN-STATEMENT", isa="EXE.RETURNING-STATEMENT")
+        hierarchy.register("EXISTS-STATEMENT", isa="EXE.BOOLEAN-STATEMENT")
+        hierarchy.register("IS-STATEMENT", isa="EXE.BOOLEAN-STATEMENT")
+        hierarchy.register("MAKEINSTANCE-STATEMENT", isa="EXE.RETURNING-STATEMENT")
+        hierarchy.register("QUERY-STATEMENT", isa="EXE.RETURNING-STATEMENT")
+        hierarchy.register("SLOT-STATEMENT", isa="EXE.RETURNING-STATEMENT")
+        hierarchy.register("MP-STATEMENT", isa="EXE.RETURNING-STATEMENT")
+        hierarchy.register("NONRETURNING-STATEMENT", isa="EXE.STATEMENT")
+        hierarchy.register("FOREACH-STATEMENT", isa="EXE.NONRETURNING-STATEMENT")
+        hierarchy.register("ADDFILLER-STATEMENT", isa="EXE.NONRETURNING-STATEMENT")
+        hierarchy.register("ASSIGNFILLER-STATEMENT", isa="EXE.NONRETURNING-STATEMENT")
+
+        hierarchy["STATEMENT"]["CLASSMAP"] = Literal(Statement)
+
+        return hierarchy
+
+
 class Statement(object):
+
+    hierarchy = StatementHierarchy()
+
+    @classmethod
+    def from_instance(cls, frame: Frame) -> 'Statement':
+        definition = frame.parents()[0].resolve(frame._graph)
+        return definition["CLASSMAP"][0].resolve().value(frame)
 
     def __init__(self, frame: Frame):
         self.frame = frame
 
     def run(self, varmap: VariableMap) -> Any:
         raise Exception("Statement.run(varmap) must be implemented.")
+
+
