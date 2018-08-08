@@ -211,7 +211,24 @@ class AddFillerStatementTestCase(unittest.TestCase):
         Statement.from_instance(addfiller).run(None)
         self.assertTrue(target["X"] == [123, 123])
 
-    def test_run_add_variable_value(self):
+    def test_run_variable_to(self):
+        network = Network()
+        graph = network.register(Statement.hierarchy())
+        addfiller = graph.register("TEST", isa="EXE.ADDFILLER-STATEMENT")
+        target = graph.register("TARGET")
+        varmap = graph.register("VARMAP")
+
+        addfiller["TO"] = Literal("$VAR")
+        addfiller["SLOT"] = Literal("X")
+        addfiller["ADD"] = 123
+
+        varmap = VariableMap(varmap)
+        Variable.instance(graph, "$VAR", target, varmap)
+
+        Statement.from_instance(addfiller).run(varmap)
+        self.assertTrue(target["X"] == 123)
+
+    def test_run_variable_value(self):
         network = Network()
         graph = network.register(Statement.hierarchy())
         addfiller = graph.register("TEST", isa="EXE.ADDFILLER-STATEMENT")
@@ -226,7 +243,7 @@ class AddFillerStatementTestCase(unittest.TestCase):
         Statement.from_instance(addfiller).run(VariableMap(varmap))
         self.assertTrue(target["X"] == 123)
 
-    def test_run_add_returning_statement_results(self):
+    def test_run_returning_statement_results(self):
 
         class TestStatement(Statement):
             def run(self, varmap: VariableMap):
@@ -245,6 +262,80 @@ class AddFillerStatementTestCase(unittest.TestCase):
         addfiller["ADD"] = stmt
 
         Statement.from_instance(addfiller).run(None)
+        self.assertTrue(target["X"] == 123)
+
+
+class AssignFillerStatementTestCase(unittest.TestCase):
+
+    def test_run(self):
+        network = Network()
+        graph = network.register(Statement.hierarchy())
+        assignfiller = graph.register("TEST", isa="EXE.ASSIGNFILLER-STATEMENT")
+        target = graph.register("TARGET")
+
+        assignfiller["TO"] = target
+        assignfiller["SLOT"] = Literal("X")
+        assignfiller["ADD"] = 123
+
+        Statement.from_instance(assignfiller).run(None)
+        self.assertTrue(target["X"] == 123)
+
+        assignfiller["ADD"] = 345
+        Statement.from_instance(assignfiller).run(None)
+        self.assertTrue(target["X"] == 345)
+        self.assertTrue(target["X"] != 123)
+
+    def test_run_variable_to(self):
+        network = Network()
+        graph = network.register(Statement.hierarchy())
+        assignfiller = graph.register("TEST", isa="EXE.ASSIGNFILLER-STATEMENT")
+        target = graph.register("TARGET")
+        varmap = graph.register("VARMAP")
+
+        assignfiller["TO"] = Literal("$VAR")
+        assignfiller["SLOT"] = Literal("X")
+        assignfiller["ADD"] = 123
+
+        varmap = VariableMap(varmap)
+        Variable.instance(graph, "$VAR", target, varmap)
+
+        Statement.from_instance(assignfiller).run(varmap)
+        self.assertTrue(target["X"] == 123)
+
+    def test_run_variable_value(self):
+        network = Network()
+        graph = network.register(Statement.hierarchy())
+        assignfiller = graph.register("TEST", isa="EXE.ASSIGNFILLER-STATEMENT")
+        target = graph.register("TARGET")
+        varmap = graph.register("VARMAP")
+        Variable.instance(graph, "MYVAR", 123, VariableMap(varmap))
+
+        assignfiller["TO"] = target
+        assignfiller["SLOT"] = Literal("X")
+        assignfiller["ADD"] = Literal("MYVAR")
+
+        Statement.from_instance(assignfiller).run(VariableMap(varmap))
+        self.assertTrue(target["X"] == 123)
+
+    def test_run_returning_statement_results(self):
+
+        class TestStatement(Statement):
+            def run(self, varmap: VariableMap):
+                return 123
+
+        network = Network()
+        graph = network.register(Statement.hierarchy())
+        assignfiller = graph.register("TEST", isa="EXE.ASSIGNFILLER-STATEMENT")
+        target = graph.register("TARGET")
+        stmt = graph.register("TEST-STMT", isa="EXE.RETURNING-STATEMENT")
+
+        graph["RETURNING-STATEMENT"]["CLASSMAP"] = Literal(TestStatement)
+
+        assignfiller["TO"] = target
+        assignfiller["SLOT"] = Literal("X")
+        assignfiller["ADD"] = stmt
+
+        Statement.from_instance(assignfiller).run(None)
         self.assertTrue(target["X"] == 123)
 
 
@@ -327,3 +418,60 @@ class MakeInstanceStatementTestCase(unittest.TestCase):
 
         with self.assertRaises(Exception):
             Statement.from_instance(makeinstance).run(None)
+
+
+class MeaningProcedureStatementTestCase(unittest.TestCase):
+
+    def test_run(self):
+        result = 0
+
+        def TestMP(statement, a, b, c):
+            nonlocal result
+            result += a
+            result += b
+            result += c
+            result += statement.frame["X"][0].resolve().value
+
+        from backend.models.mps import MPRegistry
+        MPRegistry.register(TestMP)
+
+        network = Network()
+        graph = network.register(Statement.hierarchy())
+        mp = graph.register("TEST", isa="EXE.MP-STATEMENT")
+
+        mp["CALLS"] = Literal(TestMP.__name__)
+        mp["PARAMS"] = [1, 2, 3]
+        mp["X"] = 4
+
+        Statement.from_instance(mp).run(None)
+
+        self.assertEqual(result, 10)
+
+    def test_run_with_variables(self):
+        result = 0
+
+        def TestMP(statement, a, b, c):
+            nonlocal result
+            result += a
+            result += b
+            result += c
+            result += statement.frame["X"][0].resolve().value
+
+        from backend.models.mps import MPRegistry
+        MPRegistry.register(TestMP)
+
+        network = Network()
+        graph = network.register(Statement.hierarchy())
+        mp = graph.register("TEST", isa="EXE.MP-STATEMENT")
+        varmap = graph.register("VARMAP")
+
+        mp["CALLS"] = Literal(TestMP.__name__)
+        mp["PARAMS"] = [1, 2, Literal("$var")]
+        mp["X"] = 4
+
+        varmap = VariableMap(varmap)
+        Variable.instance(graph, "$var", 3, varmap)
+
+        Statement.from_instance(mp).run(varmap)
+
+        self.assertEqual(result, 10)

@@ -1,4 +1,5 @@
 from backend.models.graph import Frame, Graph, Identifier, Literal
+from backend.models.mps import MPRegistry
 from backend.models.query import Query
 from typing import Any, List, Union
 
@@ -152,9 +153,11 @@ class StatementHierarchy(object):
 
         hierarchy["STATEMENT"]["CLASSMAP"] = Literal(Statement)
         hierarchy["ADDFILLER-STATEMENT"]["CLASSMAP"] = Literal(AddFillerStatement)
+        hierarchy["ASSIGNFILLER-STATEMENT"]["CLASSMAP"] = Literal(AssignFillerStatement)
         hierarchy["EXISTS-STATEMENT"]["CLASSMAP"] = Literal(ExistsStatement)
         hierarchy["FOREACH-STATEMENT"]["CLASSMAP"] = Literal(ForEachStatement)
         hierarchy["MAKEINSTANCE-STATEMENT"]["CLASSMAP"] = Literal(MakeInstanceStatement)
+        hierarchy["MP-STATEMENT"]["CLASSMAP"] = Literal(MeaningProcedureStatement)
 
         return hierarchy
 
@@ -193,12 +196,16 @@ class AddFillerStatement(Statement):
 
         if isinstance(to, Identifier):
             to = to.resolve(self.frame._graph)
-        if isinstance(to, Frame):
-            to = [to]
         if isinstance(to, Literal):
             to = to.value
         if isinstance(to, Query):
             to = self.frame._graph.search(to)
+        if isinstance(to, str):
+            try:
+                to = varmap.resolve(to)
+            except: pass
+        if isinstance(to, Frame):
+            to = [to]
 
         if isinstance(value, Literal):
             value = value.value
@@ -212,6 +219,49 @@ class AddFillerStatement(Statement):
 
         for frame in to:
             frame[slot] += value
+
+
+class AssignFillerStatement(Statement):
+
+    @classmethod
+    def instance(cls, graph: Graph, to: Union[str, Identifier, Frame, Query], slot: str, value: Any):
+        frame = graph.register("ASSIGNFILLER-STATEMENT", isa="EXE.ASSIGNFILLER-STATEMENT", generate_index=True)
+        frame["TO"] = to
+        frame["SLOT"] = slot
+        frame["ADD"] = value
+
+        return AssignFillerStatement(frame)
+
+    def run(self, varmap: VariableMap):
+        to: Any = self.frame["TO"][0].resolve()
+        slot: str = self.frame["SLOT"][0].resolve().value
+        value: Any = self.frame["ADD"][0].resolve()
+
+        if isinstance(to, Identifier):
+            to = to.resolve(self.frame._graph)
+        if isinstance(to, Literal):
+            to = to.value
+        if isinstance(to, Query):
+            to = self.frame._graph.search(to)
+        if isinstance(to, str):
+            try:
+                to = varmap.resolve(to)
+            except: pass
+        if isinstance(to, Frame):
+            to = [to]
+
+        if isinstance(value, Literal):
+            value = value.value
+        if isinstance(value, str):
+            try:
+                value = varmap.resolve(value)
+            except: pass
+        if isinstance(value, Frame):
+            if value ^ "EXE.RETURNING-STATEMENT":
+                value = Statement.from_instance(value).run(varmap)
+
+        for frame in to:
+            frame[slot] = value
 
 
 class ExistsStatement(Statement):
@@ -282,3 +332,30 @@ class MakeInstanceStatement(Statement):
         VariableMap.instance_of(self.frame._graph, of, params, existing=instance)
 
         return instance
+
+
+class MeaningProcedureStatement(Statement):
+
+    @classmethod
+    def instance(cls, graph: Graph, calls: str, params: List[Any]):
+        frame = graph.register("MP-STATEMENT", isa="EXE.MP-STATEMENT", generate_index=True)
+        frame["CALLS"] = calls
+        frame["PARAMS"] = params
+
+        return MeaningProcedureStatement(frame)
+
+    def run(self, varmap: VariableMap):
+        mp: str = self.frame["CALLS"][0].resolve().value
+        params: List[Any] = list(map(lambda param: param.resolve().value, self.frame["PARAMS"]))
+
+        params = list(map(lambda param: self._resolve_param(param, varmap), params))
+        params.insert(0, self)
+
+        result = MPRegistry.run(mp, *params)
+        return result
+
+    def _resolve_param(self, param: Any, varmap: VariableMap):
+        try:
+            return varmap.resolve(param)
+        except:
+            return param
