@@ -160,7 +160,7 @@ class Action(object):
     IDLE = "IDLE"
 
     @classmethod
-    def build(cls, graph: Graph, name: str, select: Union[Statement, str], perform: List[Union[Statement, str]]):
+    def build(cls, graph: Graph, name: str, select: Union[Statement, str], perform: Union[Statement, str, List[Union[Statement, str]]]):
         frame = graph.register("ACTION", generate_index=True)
         frame["NAME"] = name
         frame["SELECT"] = select

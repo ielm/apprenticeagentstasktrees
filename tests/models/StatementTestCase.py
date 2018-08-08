@@ -140,6 +140,23 @@ class VariableMapTestCase(unittest.TestCase):
         self.assertEqual(vm.resolve("X"), 1)
         self.assertEqual(vm.resolve("Y"), 2)
 
+    def test_find(self):
+        g = Graph("TEST")
+        f = g.register("VARMAP.1")
+        v1 = g.register("VARIABLE.1")
+        v2 = g.register("VARIABLE.2")
+
+        v1["NAME"] = Literal("X")
+        v2["NAME"] = Literal("Y")
+
+        v1["VALUE"] = 1
+        v2["VALUE"] = 1
+
+        f["_WITH"] = [v1, v2]
+        vm = VariableMap(f)
+        self.assertEqual(vm.find("X"), v1)
+        self.assertEqual(vm.find("Y"), v2)
+
 
 class StatementTestCase(unittest.TestCase):
 
@@ -176,6 +193,61 @@ class StatementTestCase(unittest.TestCase):
         self.assertIsInstance(stmt, TestStatement)
 
 
+class AddFillerStatementTestCase(unittest.TestCase):
+
+    def test_run(self):
+        network = Network()
+        graph = network.register(Statement.hierarchy())
+        addfiller = graph.register("TEST", isa="EXE.ADDFILLER-STATEMENT")
+        target = graph.register("TARGET")
+
+        addfiller["TO"] = target
+        addfiller["SLOT"] = Literal("X")
+        addfiller["ADD"] = 123
+
+        Statement.from_instance(addfiller).run(None)
+        self.assertTrue(target["X"] == 123)
+
+        Statement.from_instance(addfiller).run(None)
+        self.assertTrue(target["X"] == [123, 123])
+
+    def test_run_add_variable_value(self):
+        network = Network()
+        graph = network.register(Statement.hierarchy())
+        addfiller = graph.register("TEST", isa="EXE.ADDFILLER-STATEMENT")
+        target = graph.register("TARGET")
+        varmap = graph.register("VARMAP")
+        Variable.instance(graph, "MYVAR", 123, VariableMap(varmap))
+
+        addfiller["TO"] = target
+        addfiller["SLOT"] = Literal("X")
+        addfiller["ADD"] = Literal("MYVAR")
+
+        Statement.from_instance(addfiller).run(VariableMap(varmap))
+        self.assertTrue(target["X"] == 123)
+
+    def test_run_add_returning_statement_results(self):
+
+        class TestStatement(Statement):
+            def run(self, varmap: VariableMap):
+                return 123
+
+        network = Network()
+        graph = network.register(Statement.hierarchy())
+        addfiller = graph.register("TEST", isa="EXE.ADDFILLER-STATEMENT")
+        target = graph.register("TARGET")
+        stmt = graph.register("TEST-STMT", isa="EXE.RETURNING-STATEMENT")
+
+        graph["RETURNING-STATEMENT"]["CLASSMAP"] = Literal(TestStatement)
+
+        addfiller["TO"] = target
+        addfiller["SLOT"] = Literal("X")
+        addfiller["ADD"] = stmt
+
+        Statement.from_instance(addfiller).run(None)
+        self.assertTrue(target["X"] == 123)
+
+
 class ExistsStatementTestCase(unittest.TestCase):
 
     def test_run(self):
@@ -188,3 +260,70 @@ class ExistsStatementTestCase(unittest.TestCase):
 
         stmt["FIND"] = Query.parse(graph._network, "WHERE abc=123")
         self.assertFalse(Statement.from_instance(stmt).run(None))
+
+
+class ForEachStatementTestCase(unittest.TestCase):
+
+    def test_run(self):
+
+        class TestStatement(Statement):
+            def run(self, varmap: VariableMap):
+                frame = varmap.resolve("$FOR")
+                frame["c"] = frame["a"][0].resolve().value + frame["b"][0].resolve().value
+
+        network = Network()
+        graph = network.register(Statement.hierarchy())
+        foreach = graph.register("TEST", isa="EXE.FOREACH-STATEMENT")
+        stmt = graph.register("TEST", isa="EXE.STATEMENT")
+        varmap = graph.register("VARMAP")
+
+        target1 = graph.register("TARGET", generate_index=True)
+        target2 = graph.register("TARGET", generate_index=True)
+
+        target1["a"] = 1
+        target2["a"] = 1
+        target1["b"] = 2
+        target2["b"] = 3
+
+        graph["STATEMENT"]["CLASSMAP"] = Literal(TestStatement)
+
+        foreach["FROM"] = Query.parse(graph._network, "WHERE a = 1")
+        foreach["ASSIGN"] = Literal("$FOR")
+        foreach["DO"] = stmt
+
+        Statement.from_instance(foreach).run(VariableMap(varmap))
+
+        self.assertTrue(target1["c"] == 3)
+        self.assertTrue(target2["c"] == 4)
+
+
+class MakeInstanceStatementTestCase(unittest.TestCase):
+
+    def test_run(self):
+        network = Network()
+        graph = network.register(Statement.hierarchy())
+        makeinstance = graph.register("TEST", isa="EXE.MAKEINSTANCE-STATEMENT")
+        target = graph.register("TARGET")
+
+        makeinstance["OF"] = target
+        makeinstance["PARAMS"] = [1, 2, 3]
+
+        target["WITH"] = [Literal("$A"), Literal("$B"), Literal("$C")]
+
+        instance = Statement.from_instance(makeinstance).run(None)
+        self.assertTrue(instance.name() in graph)
+        self.assertEqual(VariableMap(instance).resolve("$A"), 1)
+        self.assertEqual(VariableMap(instance).resolve("$B"), 2)
+        self.assertEqual(VariableMap(instance).resolve("$C"), 3)
+
+    def test_raises_exception_on_mismatched_params(self):
+        network = Network()
+        graph = network.register(Statement.hierarchy())
+        makeinstance = graph.register("TEST", isa="EXE.MAKEINSTANCE-STATEMENT")
+        target = graph.register("TARGET")
+
+        makeinstance["OF"] = target
+        makeinstance["PARAMS"] = [1, 2, 3]
+
+        with self.assertRaises(Exception):
+            Statement.from_instance(makeinstance).run(None)

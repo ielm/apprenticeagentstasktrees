@@ -1,4 +1,4 @@
-from backend.models.agenda import Action, Agenda, Condition, Goal, Variable
+from backend.models.agenda import Action, Agenda, Condition, Goal
 from backend.models.graph import Frame, Graph, Literal
 from backend.models.statement import Statement, VariableMap
 

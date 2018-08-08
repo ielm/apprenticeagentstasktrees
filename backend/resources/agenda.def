@@ -49,12 +49,12 @@ MAKEINSTANCE-STATEMENT
 ADDFILLER-STATEMENT
     TO          Identifier or QUERY; singleton
     SLOT        Str; singleton
-    ADD         Identifier or Literal; singleton
+    ADD         Identifier or Literal or Variable (resolved) or RETURNING-STATEMENT (results); singleton
 
 ASSIGNFILLER-STATEMENT
     TO          Identifier or QUERY; singleton
     SLOT        Str; singleton
-    ASSIGN      Identifier or Literal; singleton
+    ASSIGN      Identifier or Literal or Variable (resolved) or RETURNING-STATEMENT (results); singleton
 
 QUERY-STATEMENT
     FIND        Literal(Query); singleton
@@ -121,7 +121,7 @@ MAKEINSTANCE-1 isa MAKEINSTANCE-STATEMENT   // Make a new instance of the goal U
 
 UNDERSTAND-TMR isa GOAL                 // With priority 0.9, understand the input (using a meaning procedure).
   NAME value "Understand TMR"
-  VARIABLE value ["VAR.UNDERSTAND-TMR$TMR"]   // The first input parameter is mapped to the VALUE of this frame.
+  WITH value ["VAR.UNDERSTAND-TMR$TMR"]   // The first input parameter is mapped to the VALUE of this frame.
   PRIORITY value Literal(0.9)
   CONDITION value CONDITION-1
   PLAN value ACTION-3

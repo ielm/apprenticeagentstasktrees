@@ -5,6 +5,18 @@ from typing import Any, List, Union
 
 class Variable(object):
 
+    @classmethod
+    def instance(cls, graph: Graph, name: str, value: Any, varmap: 'VariableMap', assign: bool=True):
+        frame = graph.register("VARIABLE", generate_index=True)
+        frame["NAME"] = Literal(name)
+        frame["VALUE"] = value
+        frame["FROM"] = varmap.frame
+
+        if assign:
+            varmap.assign(name, frame)
+
+        return Variable(frame)
+
     def __init__(self, frame: Frame):
         self.frame = frame
 
@@ -21,10 +33,21 @@ class Variable(object):
             return value
         raise Exception("Variable '" + self.name() + "' has no value.")
 
+    def set_value(self, value: Any):
+        self.frame["VALUE"] = value
+
     def varmap(self) -> 'VariableMap':
         if "FROM" in self.frame:
             return VariableMap(self.frame["FROM"][0].resolve())
         raise Exception("Variable '" + self.name() + "' has no varmap.")
+
+    def __eq__(self, other):
+        if isinstance(other, Variable):
+            return self.frame == other.frame
+        if isinstance(other, Frame):
+            return self.frame == other
+
+        return super().__eq__(other)
 
 
 class VariableMap(object):
@@ -68,10 +91,13 @@ class VariableMap(object):
         self.frame["_WITH"] += variable
 
     def resolve(self, name: str) -> Any:
+        return self.find(name).value()
+
+    def find(self, name: str) -> Variable:
         for var in self.frame["_WITH"]:
             var = Variable(var.resolve())
             if var.name() == name:
-                return var.value()
+                return var
         raise Exception("Variable '" + name + "' is not defined in this mapping.")
 
     def __eq__(self, other):
@@ -125,7 +151,10 @@ class StatementHierarchy(object):
         hierarchy.register("ASSIGNFILLER-STATEMENT", isa="EXE.NONRETURNING-STATEMENT")
 
         hierarchy["STATEMENT"]["CLASSMAP"] = Literal(Statement)
+        hierarchy["ADDFILLER-STATEMENT"]["CLASSMAP"] = Literal(AddFillerStatement)
         hierarchy["EXISTS-STATEMENT"]["CLASSMAP"] = Literal(ExistsStatement)
+        hierarchy["FOREACH-STATEMENT"]["CLASSMAP"] = Literal(ForEachStatement)
+        hierarchy["MAKEINSTANCE-STATEMENT"]["CLASSMAP"] = Literal(MakeInstanceStatement)
 
         return hierarchy
 
@@ -146,6 +175,45 @@ class Statement(object):
         raise Exception("Statement.run(varmap) must be implemented.")
 
 
+class AddFillerStatement(Statement):
+
+    @classmethod
+    def instance(cls, graph: Graph, to: Union[Identifier, Frame, Query], slot: str, value: Any):
+        frame = graph.register("ADDFILLER-STATEMENT", isa="EXE.ADDFILLER-STATEMENT", generate_index=True)
+        frame["TO"] = to
+        frame["SLOT"] = slot
+        frame["ADD"] = value
+
+        return AddFillerStatement(frame)
+
+    def run(self, varmap: VariableMap):
+        to: Any = self.frame["TO"][0].resolve()
+        slot: str = self.frame["SLOT"][0].resolve().value
+        value: Any = self.frame["ADD"][0].resolve()
+
+        if isinstance(to, Identifier):
+            to = to.resolve(self.frame._graph)
+        if isinstance(to, Frame):
+            to = [to]
+        if isinstance(to, Literal):
+            to = to.value
+        if isinstance(to, Query):
+            to = self.frame._graph.search(to)
+
+        if isinstance(value, Literal):
+            value = value.value
+        if isinstance(value, str):
+            try:
+                value = varmap.resolve(value)
+            except: pass
+        if isinstance(value, Frame):
+            if value ^ "EXE.RETURNING-STATEMENT":
+                value = Statement.from_instance(value).run(varmap)
+
+        for frame in to:
+            frame[slot] += value
+
+
 class ExistsStatement(Statement):
 
     @classmethod
@@ -163,5 +231,54 @@ class ExistsStatement(Statement):
 
 class ForEachStatement(Statement):
 
+    @classmethod
+    def instance(cls, graph: Graph, query: Query, assign: str, do: List[Statement]):
+        frame = graph.register("FOREACH-STATEMENT", isa="EXE.FOREACH-STATEMENT", generate_index=True)
+        frame["FROM"] = query
+        frame["ASSIGN"] = Literal(assign)
+        frame["DO"] = list(map(lambda stmt: stmt.frame, do))
+
+        return ForEachStatement(frame)
+
     def run(self, varmap: VariableMap):
-        pass #FROM query, ASSIGN variable name, DO statement
+        query: Query = self.frame["FROM"][0].resolve().value
+        variable: str = self.frame["ASSIGN"][0].resolve().value
+        do: List[Statement] = list(map(lambda stmt: Statement.from_instance(stmt.resolve()), self.frame["DO"]))
+
+        var: Variable = None
+        try:
+            varmap.find(variable)
+        except:
+            var = Variable.instance(self.frame._graph, variable, None, varmap)
+
+        for frame in self.frame._graph.search(query):
+            var.set_value(frame)
+            for stmt in do:
+                stmt.run(varmap)
+
+
+class MakeInstanceStatement(Statement):
+
+    @classmethod
+    def instance(cls, graph: Graph, of: Union[str, Identifier, Frame], params: List[Any]):
+        frame = graph.register("MAKEINSTANCE-STATEMENT", isa="EXE.MAKEINSTANCE-STATEMENT", generate_index=True)
+        frame["OF"] = of
+        frame["PARAMS"] = params
+
+        return MakeInstanceStatement(frame)
+
+    def run(self, varmap: VariableMap):
+        of: Frame = self.frame["OF"][0].resolve()
+        params: List[Any] = list(map(lambda param: param.resolve().value, self.frame["PARAMS"]))
+
+        instance = self.frame._graph.register(of.name(), isa=of, generate_index=True)
+        for slot in of:
+            slot = of[slot]
+            instance[slot._name] = slot
+
+        if len(params) != len(instance["WITH"]):
+            raise Exception("Mismatched parameter count when making instance of '" + of.name() + "' with parameters '" + str(params) + "'.")
+
+        VariableMap.instance_of(self.frame._graph, of, params, existing=instance)
+
+        return instance
