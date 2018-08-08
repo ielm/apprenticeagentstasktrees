@@ -156,6 +156,7 @@ class StatementHierarchy(object):
         hierarchy["ASSIGNFILLER-STATEMENT"]["CLASSMAP"] = Literal(AssignFillerStatement)
         hierarchy["EXISTS-STATEMENT"]["CLASSMAP"] = Literal(ExistsStatement)
         hierarchy["FOREACH-STATEMENT"]["CLASSMAP"] = Literal(ForEachStatement)
+        hierarchy["IS-STATEMENT"]["CLASSMAP"] = Literal(IsStatement)
         hierarchy["MAKEINSTANCE-STATEMENT"]["CLASSMAP"] = Literal(MakeInstanceStatement)
         hierarchy["MP-STATEMENT"]["CLASSMAP"] = Literal(MeaningProcedureStatement)
 
@@ -305,6 +306,39 @@ class ForEachStatement(Statement):
             var.set_value(frame)
             for stmt in do:
                 stmt.run(varmap)
+
+
+class IsStatement(Statement):
+
+    @classmethod
+    def instance(clsg, graph: Graph, domain: Union[str, Identifier, Frame], slot: str, filler: Any):
+        frame = graph.register("IS-STATEMENT", isa="EXE.IS-STATEMENT", generate_index=True)
+        frame["DOMAIN"] = domain
+        frame["SLOT"] = slot
+        frame["FILLER"] = filler
+
+        return IsStatement(frame)
+
+    def run(self, varmap: VariableMap):
+        domain = self.frame["DOMAIN"][0].resolve()
+        slot: str = self.frame["SLOT"][0].resolve().value
+        filler = self.frame["FILLER"][0].resolve()
+
+        if isinstance(domain, Literal):
+            domain = domain.value
+        if isinstance(domain, str):
+            try:
+                domain = varmap.resolve(domain)
+            except: pass
+
+        if isinstance(filler, Literal):
+            filler = filler.value
+        if isinstance(filler, str):
+            try:
+                filler = varmap.resolve(filler)
+            except: pass
+
+        return domain[slot] == filler
 
 
 class MakeInstanceStatement(Statement):

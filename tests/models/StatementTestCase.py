@@ -388,6 +388,68 @@ class ForEachStatementTestCase(unittest.TestCase):
         self.assertTrue(target2["c"] == 4)
 
 
+class IsStatementTestCase(unittest.TestCase):
+
+    def test_run(self):
+        network = Network()
+        graph = network.register(Statement.hierarchy())
+        stmt = graph.register("TEST", isa="EXE.IS-STATEMENT")
+        target = graph.register("TARGET")
+
+        stmt["DOMAIN"] = target
+        stmt["SLOT"] = Literal("X")
+        stmt["FILLER"] = 123
+
+        stmt = Statement.from_instance(stmt)
+
+        self.assertFalse(stmt.run(None))
+
+        target["X"] = 123
+        self.assertTrue(stmt.run(None))
+
+    def test_variable_domain(self):
+        network = Network()
+        graph = network.register(Statement.hierarchy())
+        stmt = graph.register("TEST", isa="EXE.IS-STATEMENT")
+        target = graph.register("TARGET")
+        varmap = graph.register("VARMAP")
+
+        stmt["DOMAIN"] = Literal("$VAR")
+        stmt["SLOT"] = Literal("X")
+        stmt["FILLER"] = 123
+
+        varmap = VariableMap(varmap)
+        Variable.instance(graph, "$VAR", target, varmap)
+
+        stmt = Statement.from_instance(stmt)
+
+        self.assertFalse(stmt.run(varmap))
+
+        target["X"] = 123
+        self.assertTrue(stmt.run(varmap))
+
+    def test_variable_filler(self):
+        network = Network()
+        graph = network.register(Statement.hierarchy())
+        stmt = graph.register("TEST", isa="EXE.IS-STATEMENT")
+        target = graph.register("TARGET")
+        varmap = graph.register("VARMAP")
+
+        stmt["DOMAIN"] = target
+        stmt["SLOT"] = Literal("X")
+        stmt["FILLER"] = Literal("$VAR")
+
+        varmap = VariableMap(varmap)
+        Variable.instance(graph, "$VAR", 123, varmap)
+
+        stmt = Statement.from_instance(stmt)
+
+        self.assertFalse(stmt.run(varmap))
+
+        target["X"] = 123
+        self.assertTrue(stmt.run(varmap))
+
+
 class MakeInstanceStatementTestCase(unittest.TestCase):
 
     def test_run(self):
