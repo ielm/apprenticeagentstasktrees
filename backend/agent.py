@@ -1,5 +1,5 @@
 from backend.contexts.LCTContext import LCTContext
-from backend.models.agenda import Action, Agenda, Goal, Variable
+from backend.models.agenda import Action, Agenda, Goal
 from backend.models.fr import FR
 from backend.models.graph import Literal, Network
 from backend.models.ontology import Ontology
@@ -19,13 +19,13 @@ class Agent(Network):
 
         self.register(Statement.hierarchy())
         self.ontology = self.register(ontology)
-        self._augment_ontology()
 
         self.internal = self.register(FR("SELF", self.ontology))
         self.wo_memory = self.register(FR("WM", self.ontology))
         self.lt_memory = self.register(FR("LT", self.ontology))
 
         self.identity = self.internal.register("ROBOT")
+        self.internal.register("INPUT-TMR", generate_index=False)
         self._bootstrap()
 
         self.input_memory = []
@@ -79,9 +79,8 @@ class Agent(Network):
             input = TMR(input, ontology=self.ontology)
 
         tmr = self.register(input)
-        # self.input_memory.append(tmr)
 
-        frame = self.internal.register("INPUT-TMR")
+        frame = self.internal.register("INPUT-TMR", isa="SELF.INPUT-TMR", generate_index=True)
         frame["REFERS-TO-GRAPH"] = Literal(tmr._namespace)
         frame["ACKNOWLEDGED"] = False
         self.identity["HAS-INPUT"] = frame
@@ -122,139 +121,70 @@ class Agent(Network):
         inputs = map(lambda input: self[input], inputs)
         return list(inputs)
 
-    def _augment_ontology(self):
-        # This is a temporary means of modifying the starting condition of the test agent; these changes should
-        # be moved into an instance of the ontology (database), in the long-term.
-
-        # Define the agenda (it is not a unique concept, but rather, a series of properties used on anything that
-        # can have an agenda).  It uses the existing GOAL relation to point to AGENDA-GOAL instances (below).
-        self.ontology.register("ACTION-TO-TAKE", isa="ONT.RELATION")  # range = ACTION
-
-        # Define goals on the agenda, and their properties
-        self.ontology.register("AGENDA-GOAL", isa="ONT.ABSTRACT-IDEA")
-        self.ontology.register("GOAL-RELATION", isa="ONT.RELATION")
-        self.ontology.register("ON-CONDITION", isa="ONT.GOAL-RELATION")  # range = GOAL-CONDITION
-        self.ontology.register("PRIORITY-CALCULATION", isa="ONT.GOAL-RELATION")  # range = MEANING-PROCEDURE
-        self.ontology.register("ACTION-SELECTION", isa="ONT.GOAL-RELATION")      # range = MEANING-PROCEDURE
-        self.ontology.register("GOAL-ATTRIBUTE", isa="ONT.LITERAL-ATTRIBUTE")
-        self.ontology.register("STATUS", isa="ONT.GOAL-ATTRIBUTE")  # pending, active, abandoned, satisfied
-        self.ontology.register("PRIORITY", isa="ONT.GOAL-ATTRIBUTE")  # 0 - 1
-
-        # Define actions an agent can take, and their properties
-        self.ontology.register("ACTION", isa="ONT.EVENT")
-        self.ontology.register("RUN", isa="ONT.RELATION")  # range = MEANING-PROCEDURE
-
-        # Define status changing conditions a goal can have
-        self.ontology.register("GOAL-CONDITION", isa="ONT.ALGORITHM")
-        self.ontology.register("WITH-CONDITION", isa="ONT.RELATION")  # range = PROPERTY
-        self.ontology.register("LOGIC", isa="ONT.LITERAL-ATTRIBUTE")  # and, or, not
-        self.ontology.register("APPLY-STATUS", isa="ONT.STATUS")  # (from above: pending, active, abandoned, satisfied)
-        # (also uses ORDER) from above
-
-        # Define meaning procedures, and their properties
-        self.ontology.register("MEANING-PROCEDURE", isa="ONT.ALGORITHM")
-        self.ontology.register("CALLS", isa="ONT.LITERAL-OBJECT-ATTRIBUTE")  # method name
-        self.ontology.register("ORDER", isa="ONT.LITERAL-ATTRIBUTE")   # 1+; optional; domain includes SIGNAL too
-        self.ontology.register("ON-SIGNAL", isa="ONT.RELATION")   # range = SIGNAL
-
-        # Define signals, and their properties
-        self.ontology.register("SIGNAL", isa="ONT.ALGORITHM")
-        self.ontology.register("CODE", isa="ONT.LITERAL-ATTRIBUTE")  # ok, match, fail, error
-        self.ontology.register("ACTION", isa="ONT.LITERAL-ATTRIBUTE")  # halt_all, halt_specific, add_next, add_last
-        self.ontology.register("TARGET", isa="ONT.RELATION")  # range = MEANING-PROCEDURE; optional
-        # (also uses ORDER) from above
-
-        # Define inputs, and their properties
-        self.ontology.register("INPUT-TMR", isa="ONT.ABSTRACT-OBJECT")
-        self.ontology.register("REFERS-TO-GRAPH", isa="ONT.LITERAL-ATTRIBUTE")  # The namespace of a graph in the network
-        self.ontology.register("ACKNOWLEDGED", isa="ONT.LITERAL-ATTRIBUTE")  # True / False
-        self.ontology.register("HAS-INPUT", isa="ONT.RELATION")  # range = INPUT-TMR; applied to self.identity to track inputs
-
-        # Define a base goal and actions (FIND-SOMETHING-TO-DO, IDLE, and ACKNOWLEDGE-INPUT)
-        self.ontology.register("FIND-SOMETHING-TO-DO", isa="ONT.AGENDA-GOAL")
-        self.ontology["FIND-SOMETHING-TO-DO"]["PRIORITY-CALCULATION"] = "ONT.FIND-SOMETHING-TO-DO-PRIORITY"
-        self.ontology["FIND-SOMETHING-TO-DO"]["ACTION-SELECTION"] = "ONT.FIND-SOMETHING-TO-DO-ACTION"
-        self.ontology["FIND-SOMETHING-TO-DO"]["ON-CONDITION"] = "ONT.FIND-SOMETHING-TO-DO-CONDITION"
-
-        self.ontology.register("FIND-SOMETHING-TO-DO-PRIORITY", isa="ONT.MEANING-PROCEDURE")
-        self.ontology["FIND-SOMETHING-TO-DO-PRIORITY"]["CALLS"] = Literal("find_something_to_do_priority")
-
-        self.ontology.register("FIND-SOMETHING-TO-DO-ACTION", isa="ONT.MEANING-PROCEDURE")
-        self.ontology["FIND-SOMETHING-TO-DO-ACTION"]["CALLS"] = Literal("find_something_to_do_action")
-
-        self.ontology.register("ONT.FIND-SOMETHING-TO-DO-CONDITION", isa="ONT.GOAL-CONDITION")
-        self.ontology["ONT.FIND-SOMETHING-TO-DO-CONDITION"]["APPLY-STATUS"] = Literal(Goal.Status.PENDING.name)
-
-        self.ontology.register("IDLE", isa="ONT.ACTION")
-        self.ontology["IDLE"]["RUN"] = "IDLE-MP"
-
-        self.ontology.register("IDLE-MP", isa="ONT.MEANING-PROCEDURE")
-        self.ontology["IDLE-MP"]["CALLS"] = Literal("idle")
-        self.ontology["IDLE-MP"]["ORDER"] = 1
-
-        self.ontology.register("ACKNOWLEDGE-INPUT", isa="ONT.ACTION")
-        self.ontology["ACKNOWLEDGE-INPUT"]["RUN"] = "ACKNOWLEDGE-INPUT-MP"
-
-        self.ontology.register("ACKNOWLEDGE-INPUT-MP", isa="ONT.MEANING-PROCEDURE")
-        self.ontology["ACKNOWLEDGE-INPUT-MP"]["CALLS"] = Literal("acknowledge-input")
-        self.ontology["ACKNOWLEDGE-INPUT-MP"]["ORDER"] = 1
-
-        # Define a goal and action for understanding input
-        self.ontology.register("UNDERSTAND-INPUT", isa="ONT.AGENDA-GOAL")
-        self.ontology["UNDERSTAND-INPUT"]["PRIORITY-CALCULATION"] = "ONT.UNDERSTAND-INPUT-PRIORITY"
-        self.ontology["UNDERSTAND-INPUT"]["ACTION-SELECTION"] = "ONT.UNDERSTAND-INPUT-ACTION"
-        self.ontology["UNDERSTAND-INPUT"]["ON-CONDITION"] = "ONT.UNDERSTAND-INPUT-CONDITION"
-
-        self.ontology.register("UNDERSTAND-INPUT-PRIORITY", isa="ONT.MEANING-PROCEDURE")
-        self.ontology["UNDERSTAND-INPUT-PRIORITY"]["CALLS"] = Literal("understand_input_priority")
-
-        self.ontology.register("UNDERSTAND-INPUT-ACTION", isa="ONT.MEANING-PROCEDURE")
-        self.ontology["UNDERSTAND-INPUT-ACTION"]["CALLS"] = Literal("understand_input_action")
-
-        self.ontology.register("ONT.UNDERSTAND-INPUT-CONDITION", isa="ONT.GOAL-CONDITION")
-        self.ontology["ONT.UNDERSTAND-INPUT-CONDITION"]["WITH-CONDITION"] = "ONT.UNDERSTAND-INPUT-WITH-CONDITION"
-        self.ontology["ONT.UNDERSTAND-INPUT-CONDITION"]["APPLY-STATUS"] = Literal(Goal.Status.SATISFIED.name)
-
-        self.ontology.register("UNDERSTAND", isa="ONT.ACTION")
-        self.ontology["UNDERSTAND"]["RUN"] = "UNDERSTAND-MP"
-
-        self.ontology.register("UNDERSTAND-MP", isa="ONT.MEANING-PROCEDURE")
-        self.ontology["UNDERSTAND-MP"]["CALLS"] = Literal("understand_input_action")
-        self.ontology["UNDERSTAND-MP"]["ORDER"] = 1
-
-        self.ontology.register("ONT.UNDERSTAND-INPUT-WITH-CONDITION", isa="ONT.ACKNOWLEDGED")
-        self.ontology.register("DOMAIN", Variable("X"))
-        self.ontology.register("RANGE", True)
-
-
     def _bootstrap(self):
-        # Initializes the agent's current memory and environment, if any.
 
-        goal = self.internal.register("FIND-SOMETHING-TO-DO", isa="ONT.FIND-SOMETHING-TO-DO")
-        Goal(goal).inherit()
+        '''
+            FIND-SOMETHING-TO-DO()
+              PRIORITY
+                0.1
+              ACTION (acknowledge input)
+                SELECT IF exists SELF-[HAS-INPUT]->@TMR-INPUT[status=pending]
+                DO for each $tmr in SELF-[HAS-INPUT]->(@TMR-INPUT[status == pending])
+                |SELF-[HAS-GOAL]-> += #UNDERSTAND-TMR($tmr)
+              ACTION (idle)
+                SELECT DEFAULT
+                DO null
 
-        self.identity["GOAL"] += goal
+            UNDERSTAND-TMR($tmr)
+              PRIORITY
+                0.9
+              ACTION (understand)
+                SELECT DEFAULT
+                DO SELF.understand($tmr)
+                DO $tmr-[status]-> = understood
+              WHEN $tmr-[status] == understood THEN satisfied
+        '''
 
-        def acknowledge_input(agent):
-            inputs = agent.pending_inputs()
-            if len(inputs) == 0:
-                return
-            # TODO: here is where we need to note that inputs[0] is a variable (specifically, it is "X" in the condition, and also needed for the action)
-            goal = agent.internal.register("UNDERSTAND-INPUT", isa="ONT.UNDERSTAND-INPUT")
-            Goal(goal).inherit()
-            agent.identity["GOAL"] += goal
-
-        def understand_input(agent):
-            print("WE NEED VARIABLES HERE TOO")
-            # TODO: HACK, use variables to select just one
-            for i in agent.pending_inputs():
-                i["ACKNOWLEDGED"] = True
-
+        from backend.models.agenda import Condition
         from backend.models.mps import MPRegistry
-        MPRegistry.register(lambda agent: 0.1, name="find_something_to_do_priority")
-        MPRegistry.register(lambda agent: self.ontology["IDLE"] if len(self.pending_inputs()) == 0 else self.ontology["ACKNOWLEDGE-INPUT"], "find_something_to_do_action")
-        MPRegistry.register(lambda agent: print("ZZZZ"), "idle")
-        MPRegistry.register(acknowledge_input, name="acknowledge-input")
-        MPRegistry.register(lambda agent: 0.9, name="understand_input_priority")
-        MPRegistry.register(lambda agent: self.ontology["UNDERSTAND"], name="understand_input_action")
-        MPRegistry.register(understand_input, name="understand_input_action")
+        from backend.models.query import Query
+        from backend.models.statement import AddFillerStatement, AssignFillerStatement, ExistsStatement, ForEachStatement, IsStatement, MakeInstanceStatement, MeaningProcedureStatement
+
+        graph = self["EXE"]
+
+        goal1 = Goal.define(graph, "FIND-SOMETHING-TO-DO", 0.1, [
+            Action.build(graph,
+                         "acknowledge input",
+                         ExistsStatement.instance(graph, Query.parse(self, "WHERE (@^ SELF.INPUT-TMR AND ACKNOWLEDGED = False)")),
+                         ForEachStatement.instance(graph, Query.parse(self, "WHERE (@^ SELF.INPUT-TMR AND ACKNOWLEDGED = False)"), "$tmr",
+                                                   AddFillerStatement.instance(graph, self.identity, "HAS-GOAL",
+                                                                               MakeInstanceStatement.instance(graph, "SELF", "EXE.UNDERSTAND-TMR", ["$tmr"])))
+                         ),
+            Action.build(graph, "idle", Action.DEFAULT, Action.IDLE)
+        ], [], [])
+
+        goal2 = Goal.define(graph, "UNDERSTAND-TMR", 0.9, [
+            Action.build(graph,
+                         "understand",
+                         Action.DEFAULT,
+                         [
+                             MeaningProcedureStatement.instance(graph, "understand_input", ["$tmr"]),
+                             AssignFillerStatement.instance(graph, "$tmr", "STATUS", Literal("UNDERSTOOD"))
+                         ])
+        ], [
+            Condition.build(graph,
+                            [IsStatement.instance(graph, "$tmr", "STATUS", Literal("UNDERSTOOD"))],
+                            Goal.Status.SATISFIED)
+        ], ["$tmr"])
+
+        def understand_input(statement, tmr_frame):
+            tmr = self[tmr_frame["REFERS-TO-GRAPH"][0].resolve().value]
+
+            agenda = self.context.default_agenda()
+            agenda.logger(self._logger)
+            agenda.process(self, tmr)
+
+        MPRegistry.register(understand_input)
+
+        self.agenda().add_goal(Goal.instance_of(self.internal, goal1.frame, []))
+

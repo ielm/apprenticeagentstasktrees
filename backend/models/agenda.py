@@ -59,13 +59,13 @@ class Goal(VariableMap):
         SATISFIED = 4
 
     @classmethod
-    def build(cls, graph: Graph, name: str, priority: Union[Statement, float], plan: List['Action'], conditions: List['Condition'], variables: List[str]):
-        frame = graph.register("GOAL", generate_index=True)
+    def define(cls, graph: Graph, name: str, priority: Union[Statement, float], plan: List['Action'], conditions: List['Condition'], variables: List[str]):
+        frame = graph.register(name, generate_index=False)
         frame["NAME"] = name
         frame["PRIORITY"] = priority
-        frame["PLAN"] = plan
-        frame["WHEN"] = conditions
-        frame["WITH"] = [variables]
+        frame["PLAN"] = list(map(lambda p: p.frame, plan))
+        frame["WHEN"] = list(map(lambda c: c.frame, conditions))
+        frame["WITH"] = list(map(lambda var: Literal(var), variables))
 
         return Goal(frame)
 
@@ -161,10 +161,18 @@ class Action(object):
 
     @classmethod
     def build(cls, graph: Graph, name: str, select: Union[Statement, str], perform: Union[Statement, str, List[Union[Statement, str]]]):
+
+        if isinstance(select, Statement):
+            select = select.frame
+
+        if not isinstance(perform, List):
+            perform = [perform]
+        perform = list(map(lambda p: Literal(Action.IDLE) if p == Action.IDLE else p.frame, perform))
+
         frame = graph.register("ACTION", generate_index=True)
         frame["NAME"] = name
-        frame["SELECT"] = select
-        frame["PERFORM"] = [perform]
+        frame["SELECT"] = Literal(Action.DEFAULT) if select == Action.DEFAULT else select
+        frame["PERFORM"] = perform
 
         return Action(frame)
 

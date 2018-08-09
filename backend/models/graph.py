@@ -137,6 +137,15 @@ class Network(object):
 
         return self[identifier.graph][identifier]
 
+    def search(self, query: 'FrameQuery', exclude_knowledge=True) -> List['Frame']:
+        graphs = self._storage.values()
+        if exclude_knowledge:
+            from backend.models.ontology import Ontology
+            graphs = list(filter(lambda graph: not isinstance(graph, Ontology), graphs))
+
+        results = list(map(lambda graph: graph.search(query), graphs))
+        return list(reduce(lambda x, y: x + y, results))
+
     def __setitem__(self, key, value):
         if not isinstance(value, Graph):
             raise TypeError()

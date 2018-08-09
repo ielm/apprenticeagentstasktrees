@@ -162,8 +162,23 @@ class AgentTestCase(unittest.TestCase):
         self.assertTrue(goal.is_satisfied())
 
     def test_idea(self):
-        agent = Agent(ontology=self.ontology)
+        agent = Agent(ontology=Ontology.init_default("ONT"))
         agent.logger().enable()
 
+        import json
+        import os
+
+        def resource(fp):
+            r = None
+            with open(fp) as f:
+                r = json.load(f)
+            return r
+
+        file = os.path.abspath(__package__) + "/resources/DemoMay2018_Analyses.json"
+        demo = resource(file)
+        tmr = demo[0]  # We will build a chair.
+        print(tmr)
+
         agent.idea(None)
-        agent.idea(self.tmr())
+        agent.idea(tmr)
+        agent.idea(None)

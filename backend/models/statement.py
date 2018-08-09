@@ -1,4 +1,4 @@
-from backend.models.graph import Frame, Graph, Identifier, Literal
+from backend.models.graph import Filler, Frame, Graph, Identifier, Literal
 from backend.models.mps import MPRegistry
 from backend.models.query import Query
 from typing import Any, List, Union
@@ -162,6 +162,13 @@ class StatementHierarchy(object):
 
         return hierarchy
 
+    def concept_for_statement(self, statement: 'Statement'):
+        root: Frame = self()["STATEMENT"]
+        for frame in self():
+            if frame ^ root and frame["CLASSMAP"] == statement.__class__:
+                return frame
+        raise Exception("Unknown statement type: '" + str(statement.__class__) + "'.")
+
 
 class Statement(object):
 
@@ -178,14 +185,39 @@ class Statement(object):
     def run(self, varmap: VariableMap) -> Any:
         raise Exception("Statement.run(varmap) must be implemented.")
 
+    def _resolve_param(self, param: Any, varmap: VariableMap):
+        if isinstance(param, Filler):
+            param = param._value
+        if isinstance(param, Frame):
+            return param
+        if isinstance(param, Identifier):
+            try:
+                return param.resolve(self.frame._graph)
+            except: param = param.render()
+        if isinstance(param, Literal):
+            param = param.value
+        if isinstance(param, str):
+            try:
+                return varmap.resolve(param)
+            except: pass
+
+            try:
+                return Identifier.parse(param).resolve(self.frame._graph)
+            except: pass
+
+        return param
+
 
 class AddFillerStatement(Statement):
 
     @classmethod
     def instance(cls, graph: Graph, to: Union[Identifier, Frame, Query], slot: str, value: Any):
+        if isinstance(value, Statement):
+            value = value.frame
+
         frame = graph.register("ADDFILLER-STATEMENT", isa="EXE.ADDFILLER-STATEMENT", generate_index=True)
         frame["TO"] = to
-        frame["SLOT"] = slot
+        frame["SLOT"] = Literal(slot)
         frame["ADD"] = value
 
         return AddFillerStatement(frame)
@@ -227,8 +259,8 @@ class AssignFillerStatement(Statement):
     @classmethod
     def instance(cls, graph: Graph, to: Union[str, Identifier, Frame, Query], slot: str, value: Any):
         frame = graph.register("ASSIGNFILLER-STATEMENT", isa="EXE.ASSIGNFILLER-STATEMENT", generate_index=True)
-        frame["TO"] = to
-        frame["SLOT"] = slot
+        frame["TO"] = to if not isinstance(to, str) else Literal(to)
+        frame["SLOT"] = Literal(slot)
         frame["ADD"] = value
 
         return AssignFillerStatement(frame)
@@ -276,18 +308,22 @@ class ExistsStatement(Statement):
 
     def run(self, varmap: VariableMap) -> bool:
         query = self.frame["FIND"][0].resolve().value
-        results = self.frame._graph.search(query)
+        results = self.frame._graph._network.search(query)
         return len(results) > 0
 
 
 class ForEachStatement(Statement):
 
     @classmethod
-    def instance(cls, graph: Graph, query: Query, assign: str, do: List[Statement]):
+    def instance(cls, graph: Graph, query: Query, assign: str, do: Union[Statement, List[Statement]]):
+        if isinstance(do, Statement):
+            do = [do]
+        do = list(map(lambda do: do.frame, do))
+
         frame = graph.register("FOREACH-STATEMENT", isa="EXE.FOREACH-STATEMENT", generate_index=True)
         frame["FROM"] = query
         frame["ASSIGN"] = Literal(assign)
-        frame["DO"] = list(map(lambda stmt: stmt.frame, do))
+        frame["DO"] = do
 
         return ForEachStatement(frame)
 
@@ -302,7 +338,7 @@ class ForEachStatement(Statement):
         except:
             var = Variable.instance(self.frame._graph, variable, None, varmap)
 
-        for frame in self.frame._graph.search(query):
+        for frame in self.frame._graph._network.search(query):
             var.set_value(frame)
             for stmt in do:
                 stmt.run(varmap)
@@ -313,8 +349,8 @@ class IsStatement(Statement):
     @classmethod
     def instance(clsg, graph: Graph, domain: Union[str, Identifier, Frame], slot: str, filler: Any):
         frame = graph.register("IS-STATEMENT", isa="EXE.IS-STATEMENT", generate_index=True)
-        frame["DOMAIN"] = domain
-        frame["SLOT"] = slot
+        frame["DOMAIN"] = domain if not isinstance(domain, str) else Literal(domain)
+        frame["SLOT"] = Literal(slot)
         frame["FILLER"] = filler
 
         return IsStatement(frame)
@@ -330,6 +366,8 @@ class IsStatement(Statement):
             try:
                 domain = varmap.resolve(domain)
             except: pass
+        if not isinstance(domain, Frame):
+            return False  # Typically this means a variable could not be resolved, so it cannot possibly match yet
 
         if isinstance(filler, Literal):
             filler = filler.value
@@ -344,24 +382,28 @@ class IsStatement(Statement):
 class MakeInstanceStatement(Statement):
 
     @classmethod
-    def instance(cls, graph: Graph, of: Union[str, Identifier, Frame], params: List[Any]):
+    def instance(cls, graph: Graph, in_graph: str, of: Union[str, Identifier, Frame], params: List[Any]):
         frame = graph.register("MAKEINSTANCE-STATEMENT", isa="EXE.MAKEINSTANCE-STATEMENT", generate_index=True)
+        frame["IN"] = Literal(in_graph)
         frame["OF"] = of
-        frame["PARAMS"] = params
+        frame["PARAMS"] = list(map(lambda param: Literal(param) if isinstance(param, str) else param, params))
 
         return MakeInstanceStatement(frame)
 
     def run(self, varmap: VariableMap):
+        graph: str = self.frame["IN"][0].resolve().value
         of: Frame = self.frame["OF"][0].resolve()
         params: List[Any] = list(map(lambda param: param.resolve().value, self.frame["PARAMS"]))
 
-        instance = self.frame._graph.register(of.name(), isa=of, generate_index=True)
+        instance = self.frame._network[graph].register(of._identifier.name, isa=of, generate_index=True)
         for slot in of:
             slot = of[slot]
             instance[slot._name] = slot
 
         if len(params) != len(instance["WITH"]):
             raise Exception("Mismatched parameter count when making instance of '" + of.name() + "' with parameters '" + str(params) + "'.")
+
+        params = list(map(lambda param: self._resolve_param(param, varmap), params))
 
         VariableMap.instance_of(self.frame._graph, of, params, existing=instance)
 
@@ -373,23 +415,16 @@ class MeaningProcedureStatement(Statement):
     @classmethod
     def instance(cls, graph: Graph, calls: str, params: List[Any]):
         frame = graph.register("MP-STATEMENT", isa="EXE.MP-STATEMENT", generate_index=True)
-        frame["CALLS"] = calls
+        frame["CALLS"] = Literal(calls)
         frame["PARAMS"] = params
 
         return MeaningProcedureStatement(frame)
 
     def run(self, varmap: VariableMap):
         mp: str = self.frame["CALLS"][0].resolve().value
-        params: List[Any] = list(map(lambda param: param.resolve().value, self.frame["PARAMS"]))
 
-        params = list(map(lambda param: self._resolve_param(param, varmap), params))
+        params = list(map(lambda param: self._resolve_param(param, varmap), self.frame["PARAMS"]))
         params.insert(0, self)
 
         result = MPRegistry.run(mp, *params)
         return result
-
-    def _resolve_param(self, param: Any, varmap: VariableMap):
-        try:
-            return varmap.resolve(param)
-        except:
-            return param

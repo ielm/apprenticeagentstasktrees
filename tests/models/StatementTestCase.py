@@ -458,6 +458,7 @@ class MakeInstanceStatementTestCase(unittest.TestCase):
         makeinstance = graph.register("TEST", isa="EXE.MAKEINSTANCE-STATEMENT")
         target = graph.register("TARGET")
 
+        makeinstance["IN"] = Literal("EXE")
         makeinstance["OF"] = target
         makeinstance["PARAMS"] = [1, 2, 3]
 
@@ -468,6 +469,11 @@ class MakeInstanceStatementTestCase(unittest.TestCase):
         self.assertEqual(VariableMap(instance).resolve("$A"), 1)
         self.assertEqual(VariableMap(instance).resolve("$B"), 2)
         self.assertEqual(VariableMap(instance).resolve("$C"), 3)
+
+        other = network.register("OTHER")
+        makeinstance["IN"] = Literal("OTHER")
+        instance = Statement.from_instance(makeinstance).run(None)
+        self.assertTrue(instance.name() in other)
 
     def test_raises_exception_on_mismatched_params(self):
         network = Network()
