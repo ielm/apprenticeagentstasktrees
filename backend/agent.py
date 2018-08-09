@@ -17,7 +17,7 @@ class Agent(Network):
         if ontology is None:
             raise Exception("NYI, Default Ontology Required")
 
-        self.register(Statement.hierarchy())
+        self.exe = self.register(Statement.hierarchy())
         self.ontology = self.register(ontology)
 
         self.internal = self.register(FR("SELF", self.ontology))
@@ -25,7 +25,7 @@ class Agent(Network):
         self.lt_memory = self.register(FR("LT", self.ontology))
 
         self.identity = self.internal.register("ROBOT")
-        self.internal.register("INPUT-TMR", generate_index=False)
+        self.exe.register("INPUT-TMR", generate_index=False)
         self._bootstrap()
 
         self.input_memory = []
@@ -80,7 +80,7 @@ class Agent(Network):
 
         tmr = self.register(input)
 
-        frame = self.internal.register("INPUT-TMR", isa="SELF.INPUT-TMR", generate_index=True)
+        frame = self.internal.register("INPUT-TMR", isa="EXE.INPUT-TMR", generate_index=True)
         frame["REFERS-TO-GRAPH"] = Literal(tmr._namespace)
         frame["ACKNOWLEDGED"] = False
         self.identity["HAS-INPUT"] = frame
@@ -155,10 +155,12 @@ class Agent(Network):
         goal1 = Goal.define(graph, "FIND-SOMETHING-TO-DO", 0.1, [
             Action.build(graph,
                          "acknowledge input",
-                         ExistsStatement.instance(graph, Query.parse(self, "WHERE (@^ SELF.INPUT-TMR AND ACKNOWLEDGED = False)")),
-                         ForEachStatement.instance(graph, Query.parse(self, "WHERE (@^ SELF.INPUT-TMR AND ACKNOWLEDGED = False)"), "$tmr",
-                                                   AddFillerStatement.instance(graph, self.identity, "HAS-GOAL",
-                                                                               MakeInstanceStatement.instance(graph, "SELF", "EXE.UNDERSTAND-TMR", ["$tmr"])))
+                         ExistsStatement.instance(graph, Query.parse(self, "WHERE (@^ EXE.INPUT-TMR AND ACKNOWLEDGED = False)")),
+                         ForEachStatement.instance(graph, Query.parse(self, "WHERE (@^ EXE.INPUT-TMR AND ACKNOWLEDGED = False)"), "$tmr",  [
+                             AddFillerStatement.instance(graph, self.identity, "HAS-GOAL",
+                                                         MakeInstanceStatement.instance(graph, "SELF", "EXE.UNDERSTAND-TMR", ["$tmr"])),
+                             AssignFillerStatement.instance(graph, "$tmr", "ACKNOWLEDGED", True)
+                             ])
                          ),
             Action.build(graph, "idle", Action.DEFAULT, Action.IDLE)
         ], [], [])

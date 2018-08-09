@@ -275,12 +275,12 @@ class AssignFillerStatementTestCase(unittest.TestCase):
 
         assignfiller["TO"] = target
         assignfiller["SLOT"] = Literal("X")
-        assignfiller["ADD"] = 123
+        assignfiller["ASSIGN"] = 123
 
         Statement.from_instance(assignfiller).run(None)
         self.assertTrue(target["X"] == 123)
 
-        assignfiller["ADD"] = 345
+        assignfiller["ASSIGN"] = 345
         Statement.from_instance(assignfiller).run(None)
         self.assertTrue(target["X"] == 345)
         self.assertTrue(target["X"] != 123)
@@ -294,7 +294,7 @@ class AssignFillerStatementTestCase(unittest.TestCase):
 
         assignfiller["TO"] = Literal("$VAR")
         assignfiller["SLOT"] = Literal("X")
-        assignfiller["ADD"] = 123
+        assignfiller["ASSIGN"] = 123
 
         varmap = VariableMap(varmap)
         Variable.instance(graph, "$VAR", target, varmap)
@@ -312,7 +312,7 @@ class AssignFillerStatementTestCase(unittest.TestCase):
 
         assignfiller["TO"] = target
         assignfiller["SLOT"] = Literal("X")
-        assignfiller["ADD"] = Literal("MYVAR")
+        assignfiller["ASSIGN"] = Literal("MYVAR")
 
         Statement.from_instance(assignfiller).run(VariableMap(varmap))
         self.assertTrue(target["X"] == 123)
@@ -333,7 +333,7 @@ class AssignFillerStatementTestCase(unittest.TestCase):
 
         assignfiller["TO"] = target
         assignfiller["SLOT"] = Literal("X")
-        assignfiller["ADD"] = stmt
+        assignfiller["ASSIGN"] = stmt
 
         Statement.from_instance(assignfiller).run(None)
         self.assertTrue(target["X"] == 123)

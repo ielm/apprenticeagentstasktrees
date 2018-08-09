@@ -261,14 +261,14 @@ class AssignFillerStatement(Statement):
         frame = graph.register("ASSIGNFILLER-STATEMENT", isa="EXE.ASSIGNFILLER-STATEMENT", generate_index=True)
         frame["TO"] = to if not isinstance(to, str) else Literal(to)
         frame["SLOT"] = Literal(slot)
-        frame["ADD"] = value
+        frame["ASSIGN"] = value
 
         return AssignFillerStatement(frame)
 
     def run(self, varmap: VariableMap):
         to: Any = self.frame["TO"][0].resolve()
         slot: str = self.frame["SLOT"][0].resolve().value
-        value: Any = self.frame["ADD"][0].resolve()
+        value: Any = self.frame["ASSIGN"][0].resolve()
 
         if isinstance(to, Identifier):
             to = to.resolve(self.frame._graph)
