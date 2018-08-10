@@ -47,6 +47,9 @@ class Agenda(object):
         self.frame["ACTION-TO-TAKE"] = action
 
     def action(self):
+        if "ACTION-TO-TAKE" not in self.frame:
+            return None
+
         return Action(self.frame["ACTION-TO-TAKE"][0].resolve())
 
 
@@ -61,7 +64,7 @@ class Goal(VariableMap):
     @classmethod
     def define(cls, graph: Graph, name: str, priority: Union[Statement, float], plan: List['Action'], conditions: List['Condition'], variables: List[str]):
         frame = graph.register(name, generate_index=False)
-        frame["NAME"] = name
+        frame["NAME"] = Literal(name)
         frame["PRIORITY"] = priority
         frame["PLAN"] = list(map(lambda p: p.frame, plan))
         frame["WHEN"] = list(map(lambda c: c.frame, conditions))
@@ -97,16 +100,16 @@ class Goal(VariableMap):
         return "Unknown Goal"
 
     def is_pending(self) -> bool:
-        return Goal.Status.PENDING.name.lower() in self.frame["STATUS"] or Goal.Status.PENDING.name in self.frame["STATUS"]
+        return Goal.Status.PENDING.name.lower() in self.frame["STATUS"] or Goal.Status.PENDING.name in self.frame["STATUS"] or Goal.Status.PENDING in self.frame["STATUS"]
 
     def is_active(self) -> bool:
-        return Goal.Status.ACTIVE.name.lower() in self.frame["STATUS"] or Goal.Status.ACTIVE.name in self.frame["STATUS"]
+        return Goal.Status.ACTIVE.name.lower() in self.frame["STATUS"] or Goal.Status.ACTIVE.name in self.frame["STATUS"] or Goal.Status.ACTIVE in self.frame["STATUS"]
 
     def is_abandoned(self) -> bool:
-        return Goal.Status.ABANDONED.name.lower() in self.frame["STATUS"] or Goal.Status.ABANDONED.name in self.frame["STATUS"]
+        return Goal.Status.ABANDONED.name.lower() in self.frame["STATUS"] or Goal.Status.ABANDONED.name in self.frame["STATUS"] or Goal.Status.ABANDONED in self.frame["STATUS"]
 
     def is_satisfied(self) -> bool:
-        return Goal.Status.SATISFIED.name.lower() in self.frame["STATUS"] or Goal.Status.SATISFIED.name in self.frame["STATUS"]
+        return Goal.Status.SATISFIED.name.lower() in self.frame["STATUS"] or Goal.Status.SATISFIED.name in self.frame["STATUS"] or Goal.Status.SATISFIED in self.frame["STATUS"]
 
     def status(self, status: 'Goal.Status'):
         self.frame["STATUS"] = status.name.lower()
@@ -170,7 +173,7 @@ class Action(object):
         perform = list(map(lambda p: Literal(Action.IDLE) if p == Action.IDLE else p.frame, perform))
 
         frame = graph.register("ACTION", generate_index=True)
-        frame["NAME"] = name
+        frame["NAME"] = Literal(name)
         frame["SELECT"] = Literal(Action.DEFAULT) if select == Action.DEFAULT else select
         frame["PERFORM"] = perform
 

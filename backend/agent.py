@@ -141,7 +141,7 @@ class Agent(Network):
         frame = self.internal.register("INPUT-TMR", isa="EXE.INPUT-TMR", generate_index=True)
         frame["REFERS-TO-GRAPH"] = Literal(tmr._namespace)
         frame["ACKNOWLEDGED"] = False
-        self.identity["HAS-INPUT"] = frame
+        self.identity["HAS-INPUT"] += frame
 
         self._logger.log("Input: '" + tmr.sentence + "'")
 

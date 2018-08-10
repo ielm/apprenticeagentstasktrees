@@ -6,6 +6,7 @@ from flask_cors import CORS
 
 from backend.agent import Agent
 from backend.contexts.LCTContext import LCTContext
+from backend.models.agenda import Action, Goal
 from backend.models.grammar import Grammar
 from backend.models.graph import Frame, Identifier, Network
 from backend.models.ontology import Ontology
@@ -15,9 +16,24 @@ app = Flask(__name__, template_folder="../frontend/templates/")
 CORS(app)
 
 
-n = Network()
-ontology = n.register(Ontology.init_default())
-agent = Agent(ontology=ontology)
+# n = Network()
+# ontology = n.register(Ontology.init_default())
+agent = Agent(ontology=Ontology.init_default())
+
+# TEST HACK
+from pkgutil import get_data
+# agent.input(json.loads(get_data("tests.resources", "DemoMay2018_Analyses.json"))[0])
+# agent.input(json.loads(get_data("tests.resources", "DemoMay2018_Analyses.json"))[1])
+# agent.input(json.loads(get_data("tests.resources", "DemoMay2018_Analyses.json"))[2])
+# agent.input(json.loads(get_data("tests.resources", "DemoMay2018_Analyses.json"))[3])
+# agent.input(json.loads(get_data("tests.resources", "DemoMay2018_Analyses.json"))[4])
+# agent.input(json.loads(get_data("tests.resources", "DemoMay2018_Analyses.json"))[5])
+# agent.input(json.loads(get_data("tests.resources", "DemoMay2018_Analyses.json"))[6])
+# agent.input(json.loads(get_data("tests.resources", "DemoMay2018_Analyses.json"))[7])
+# agent.input(json.loads(get_data("tests.resources", "DemoMay2018_Analyses.json"))[8])
+# agent.input(json.loads(get_data("tests.resources", "DemoMay2018_Analyses.json"))[9])
+# agent.input(json.loads(get_data("tests.resources", "DemoMay2018_Analyses.json"))[10])
+# agent.input(json.loads(get_data("tests.resources", "DemoMay2018_Analyses.json"))[11])
 
 def graph_to_json(graph):
     frames = []
@@ -48,9 +64,15 @@ def graph_to_json(graph):
                         "value": modified.render(graph=False),
                     })
                 else:
+                    value = filler._value.value
+                    if isinstance(value, type):
+                        value = value.__module__ + '.' + value.__name__
+                    else:
+                        value = str(value)
+
                     converted["attributes"].append({
                         "slot": s,
-                        "value": filler._value.value
+                        "value": value
                     })
 
         frames.append(converted)
@@ -72,7 +94,7 @@ def servefile(filename):
 
 @app.route("/", methods=["GET"])
 def index():
-    return render_template("index.html", network=n._storage.keys())
+    return render_template("index.html", network=agent._storage.keys())
 
 
 @app.route("/grammar", methods=["GET"])
@@ -82,26 +104,26 @@ def grammar():
 
 @app.route("/reset", methods=["DELETE"])
 def reset():
-    global n
-    global ontology
+    # global n
+    # global ontology
     global agent
 
-    n = Network()
-    ontology = n.register(Ontology.init_default())
-    agent = Agent(ontology)
+    # n = Network()
+    # ontology = n.register(Ontology.init_default())
+    agent = Agent(Ontology.init_default())
 
     return "OK"
 
 
 @app.route("/network", methods=["GET"])
 def network():
-    return json.dumps(list(n._storage.keys()))
+    return json.dumps(list(agent._storage.keys()))
 
 
 @app.route("/view", methods=["POST"])
 def view():
     data = request.data.decode("utf-8")
-    view = Grammar.parse(n, data)
+    view = Grammar.parse(agent, data)
     view_graph = view.view()
     return graph_to_json(view_graph)
 
@@ -113,7 +135,115 @@ def graph():
 
     id = request.args["id"]
 
-    return graph_to_json(n[id])
+    return graph_to_json(agent[id])
+
+
+class IIDEAConverter(object):
+
+    @classmethod
+    def inputs(cls):
+        return list(map(lambda input: IIDEAConverter.convert_input(input.resolve()), agent.identity["HAS-INPUT"]))
+
+    @classmethod
+    def convert_input(cls, input):
+        status = "received"
+        if input["ACKNOWLEDGED"] == True:
+            status = "acknowledged"
+        if input["STATUS"] == "UNDERSTOOD":
+            status = "understood"
+        if input["STATUS"] == "IGNORED":
+            status = "ignored"
+
+        return {
+            "name": input["REFERS-TO-GRAPH"][0].resolve().value,
+            "status": status
+        }
+
+    @classmethod
+    def agenda(cls):
+        return list(map(lambda goal: IIDEAConverter.convert_goal(goal.resolve()), agent.identity["HAS-GOAL"]))
+
+    @classmethod
+    def convert_goal(cls, goal):
+        goal = Goal(goal)
+
+        return {
+            "name": goal.name(),
+            "id": goal.frame.name(),
+            "priority": goal.priority(),
+            "pending": goal.is_pending(),
+            "active": goal.is_active(),
+            "satisfied": goal.is_satisfied(),
+            "abandoned": goal.is_abandoned(),
+            "plan": list(map(lambda action: IIDEAConverter.convert_action(action.resolve()), goal.frame["PLAN"]))
+        }
+
+    @classmethod
+    def convert_action(cls, action):
+        action = Action(action)
+
+        return {
+            "name": action.name(),
+            "selected": agent.agenda().action() == action
+        }
+
+
+@app.route("/iidea", methods=["GET"])
+def iidea():
+    time = agent.IDEA.time()
+    stage = agent.IDEA.stage()
+    inputs = IIDEAConverter.inputs()
+    agenda = IIDEAConverter.agenda()
+
+    return render_template("iidea.html", time=time, stage=stage, inputs=inputs, agenda=agenda, aj=json.dumps(agenda))
+
+
+@app.route("/iidea/advance", methods=["GET"])
+def iidea_advance():
+    agent.iidea()
+    return json.dumps({
+        "time": agent.IDEA.time(),
+        "stage": agent.IDEA.stage(),
+        "inputs": IIDEAConverter.inputs(),
+        "agenda": IIDEAConverter.agenda()
+    })
+
+@app.route("/iidea/input", methods=["POST"])
+def iidea_input():
+    data = request.data.decode("utf-8")
+
+    # from backend.utils.YaleUtils import analyze
+    # tmr = analyze(data)
+
+    print("WARNING: hack for now, loading pre-analyzed results")
+
+    def hack_analyze(input):
+        import json
+        import os
+
+        def resource(fp):
+            r = None
+            with open(fp) as f:
+                r = json.load(f)
+            return r
+
+        file = os.getcwd() + "/../tests/resources/DemoMay2018_Analyses.json"
+        demo = resource(file)
+
+        for tmr in demo:
+            if tmr["sentence"] == input:
+                return tmr
+
+    tmr = hack_analyze(data)
+
+    agent.iidea(input=tmr)
+
+    return json.dumps({
+        "time": agent.IDEA.time(),
+        "stage": agent.IDEA.stage(),
+        "inputs": IIDEAConverter.inputs(),
+        "agenda": IIDEAConverter.agenda()
+    })
 
 
 @app.route("/input", methods=["POST"])
@@ -144,7 +274,7 @@ def htn():
     instance = request.args["instance"]
     instance = agent.wo_memory[instance]
 
-    return json.dumps(format_learned_event_yale(instance, ontology), indent=4)
+    return json.dumps(format_learned_event_yale(instance, agent.ontology), indent=4)
 
 
 if __name__ == '__main__':
