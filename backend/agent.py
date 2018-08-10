@@ -6,6 +6,7 @@ from backend.models.ontology import Ontology
 from backend.models.statement import Statement
 from backend.models.tmr import TMR
 from backend.utils.AgentLogger import AgentLogger
+from enum import Enum
 from typing import Union
 
 
@@ -69,6 +70,63 @@ class Agent(Network):
 
         self._assess()
         print("A:")
+        print(self.internal)
+
+    class IDEA(object):
+        D = 1
+        E = 2
+        A = 3
+
+        _stage = D
+        _time = 1
+
+        @classmethod
+        def get_method(cls):
+            if Agent.IDEA._stage == Agent.IDEA.D:
+                return Agent._decision
+            if Agent.IDEA._stage == Agent.IDEA.E:
+                return Agent._execute
+            if Agent.IDEA._stage == Agent.IDEA.A:
+                return Agent._assess
+
+        @classmethod
+        def advance(cls):
+            if Agent.IDEA._stage == Agent.IDEA.D:
+                Agent.IDEA._stage = Agent.IDEA.E
+                return
+
+            if Agent.IDEA._stage == Agent.IDEA.E:
+                Agent.IDEA._stage = Agent.IDEA.A
+                return
+
+            if Agent.IDEA._stage == Agent.IDEA.A:
+                Agent.IDEA._stage = Agent.IDEA.D
+                Agent.IDEA._time += 1
+                return
+
+        @classmethod
+        def stage(cls) -> str:
+            if Agent.IDEA._stage == Agent.IDEA.D:
+                return "Decide"
+            if Agent.IDEA._stage == Agent.IDEA.E:
+                return "Execute"
+            if Agent.IDEA._stage == Agent.IDEA.A:
+                return "Assess"
+
+        @classmethod
+        def time(cls) -> int:
+            return Agent.IDEA._time
+
+    def iidea(self, input=None): # (I)ndependent (I)nput, (D)ecide + (E)xecute + (A)ssess
+        global iidea_stage
+
+        if input is not None:
+            self._input(input)
+
+        Agent.IDEA.get_method()(self)
+        Agent.IDEA.advance()
+
+        print("T" + str(Agent.IDEA.time()) + " " + Agent.IDEA.stage())
         print(self.internal)
 
     def _input(self, input: Union[dict, TMR]=None):

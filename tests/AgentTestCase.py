@@ -177,8 +177,45 @@ class AgentTestCase(unittest.TestCase):
         file = os.path.abspath(__package__) + "/resources/DemoMay2018_Analyses.json"
         demo = resource(file)
         tmr = demo[0]  # We will build a chair.
-        print(tmr)
 
         agent.idea(None)
         agent.idea(tmr)
         agent.idea(None)
+
+    def test_iidea(self):
+        agent = Agent(ontology=Ontology.init_default("ONT"))
+        agent.logger().enable()
+
+        import json
+        import os
+
+        def resource(fp):
+            r = None
+            with open(fp) as f:
+                r = json.load(f)
+            return r
+
+        file = os.path.abspath(__package__) + "/resources/DemoMay2018_Analyses.json"
+        demo = resource(file)
+        tmr = demo[0]  # We will build a chair.
+
+        agent.iidea()
+        agent.iidea()
+        agent.iidea()
+        agent.iidea(input=tmr)
+        agent.iidea()
+        agent.iidea()
+        agent.iidea()
+        agent.iidea()
+        agent.iidea()
+        agent.iidea()
+        agent.iidea()
+        agent.iidea()
+        agent.iidea()
+        agent.iidea()
+        agent.iidea()
+        agent.iidea()
+        agent.iidea()
+        agent.iidea()
+        agent.iidea()
+        agent.iidea()
