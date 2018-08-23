@@ -68,7 +68,7 @@ def server_error(error):
 
 @app.route('/assets/<path:filename>', methods=['GET'])
 def servefile(filename):
-  return send_from_directory("../frontend/assets/", filename)
+    return send_from_directory("../frontend/assets/", filename)
 
 
 @app.route("/", methods=["GET"])

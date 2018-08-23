@@ -2,7 +2,13 @@ version: '3.3'
 
 services:
 
+
+  ontology:
+    image: leia/ontology:latest  
+
+
   ontosem:
+    image: leia/ontosem:1.1.1
     environment:
       - SMALLSEM_LEXICON_LOCATION=SmallSem/data/robot_lexicon.py
       - SMALLSEM_RESOURCES_LOCATION=SmallSem/data/nn_static_resources_robot.json

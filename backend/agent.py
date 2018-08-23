@@ -27,7 +27,7 @@ class Agent(object):
         self.lt_memory.logger(self._logger)
 
     def logger(self, logger=None):
-        if not logger is None:
+        if logger is not None:
             self._logger = logger
         return self._logger
 
