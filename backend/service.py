@@ -238,7 +238,7 @@ def iidea_input():
 
     tmr = hack_analyze(data)
 
-    agent.iidea(input=tmr)
+    agent._input(input=tmr)
 
     return json.dumps({
         "time": agent.IDEA.time(),
