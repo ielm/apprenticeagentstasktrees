@@ -67,6 +67,8 @@ def graph_to_json(graph):
                     value = filler._value.value
                     if isinstance(value, type):
                         value = value.__module__ + '.' + value.__name__
+                    elif isinstance(value, int):
+                        value = value
                     else:
                         value = str(value)
 

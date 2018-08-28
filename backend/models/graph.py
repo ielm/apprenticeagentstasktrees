@@ -430,6 +430,21 @@ class Slot(object):
 
         return results
 
+    def singleton(self) -> Any:
+        if len(self) == 0:
+            raise Exception("Singleton failed on slot '" + self._name + "'; there are no fillers.")
+        if len(self) > 1:
+            raise Exception("Singleton failed on slot '" + self._name + "'; there are too many fillers.")
+        filler = self._storage[0]
+        filler = filler.resolve()
+
+        if isinstance(filler, Literal):
+            return filler.value
+        if isinstance(filler, Frame):
+            return filler
+
+        raise Exception("Unknown type in slot '" + self._name + "': " + filler)
+
     def __add__(self, other):
         if not isinstance(other, Slot):
             return self + other
