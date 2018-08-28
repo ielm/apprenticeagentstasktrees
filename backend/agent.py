@@ -175,7 +175,7 @@ class Agent(Network):
     def pending_inputs(self):
         inputs = map(lambda input: input.resolve(), self.identity["HAS-INPUT"])
         inputs = filter(lambda input: input["ACKNOWLEDGED"] == False, inputs)
-        inputs = map(lambda input: input["REFERS-TO-GRAPH"][0].resolve().value, inputs)
+        inputs = map(lambda input: input["REFERS-TO-GRAPH"].singleton(), inputs)
         inputs = map(lambda input: self[input], inputs)
         return list(inputs)
 
@@ -238,7 +238,7 @@ class Agent(Network):
         ], ["$tmr"])
 
         def understand_input(statement, tmr_frame):
-            tmr = self[tmr_frame["REFERS-TO-GRAPH"][0].resolve().value]
+            tmr = self[tmr_frame["REFERS-TO-GRAPH"].singleton()]
 
             agenda = self.context.default_agenda()
             agenda.logger(self._logger)

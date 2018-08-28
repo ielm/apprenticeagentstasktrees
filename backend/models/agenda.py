@@ -50,7 +50,7 @@ class Agenda(object):
         if "ACTION-TO-TAKE" not in self.frame:
             return None
 
-        return Action(self.frame["ACTION-TO-TAKE"][0].resolve())
+        return Action(self.frame["ACTION-TO-TAKE"].singleton())
 
 
 class Goal(VariableMap):
@@ -96,7 +96,7 @@ class Goal(VariableMap):
 
     def name(self) -> str:
         if "NAME" in self.frame:
-            return self.frame["NAME"][0].resolve().value
+            return self.frame["NAME"].singleton()
         return "Unknown Goal"
 
     def is_pending(self) -> bool:
@@ -128,18 +128,14 @@ class Goal(VariableMap):
         return list(map(lambda goal: Goal(goal.resolve()), self.frame["HAS-GOAL"]))
 
     def prioritize(self, agent: 'Agent'):
-        if "PRIORITY" in self.frame:
-            priority = self.frame["PRIORITY"][0].resolve()
-            if isinstance(priority, Literal):
-                self.frame["_PRIORITY"] = priority.value
-            else:
-                self.frame["_PRIORITY"] = -1.0 # TODO: evaluate a CALCULATE-STATEMENT
-
-        return 0.0
+        try:
+            self.frame["_PRIORITY"] = self.frame["PRIORITY"].singleton()
+        except:
+            self.frame["_PRIORITY"] = -1.0 # TODO: evaluate a CALCULATE-STATEMENT
 
     def priority(self):
         if "_PRIORITY" in self.frame:
-            return self.frame["_PRIORITY"][0].resolve().value
+            return self.frame["_PRIORITY"].singleton()
         return 0.0
 
     def plan(self) -> 'Action':
@@ -184,21 +180,21 @@ class Action(object):
 
     def name(self) -> str:
         if "NAME" in self.frame:
-            return self.frame["NAME"][0].resolve().value
+            return self.frame["NAME"].singleton()
 
     def select(self, varmap: VariableMap) -> bool:
         if self.is_default():
             return True
 
         if "SELECT" in self.frame:
-            select = self.frame["SELECT"][0].resolve()
+            select = self.frame["SELECT"].singleton()
             if isinstance(select, Frame) and select ^ "EXE.BOOLEAN-STATEMENT":
                 return Statement.from_instance(select).run(varmap)
         return False
 
     def is_default(self):
         if "SELECT" in self.frame:
-            select = self.frame["SELECT"][0].resolve()
+            select = self.frame["SELECT"].singleton()
             if select == Action.DEFAULT:
                 return True
         return False
@@ -247,11 +243,11 @@ class Condition(object):
 
     def order(self) -> int:
         if "ORDER" in self.frame:
-            return self.frame["ORDER"][0].resolve().value
+            return self.frame["ORDER"].singleton()
 
     def status(self) -> Goal.Status:
         if "STATUS" in self.frame:
-            status = self.frame["STATUS"][0].resolve().value
+            status = self.frame["STATUS"].singleton()
             if isinstance(status, Goal.Status):
                 return status
             if isinstance(status, str):
@@ -276,7 +272,7 @@ class Condition(object):
 
     def logic(self):
         if "LOGIC" in self.frame:
-            value = self.frame["LOGIC"][0].resolve().value
+            value = self.frame["LOGIC"].singleton()
             if isinstance(value, Condition.Logic):
                 return value
             if isinstance(value, str):
