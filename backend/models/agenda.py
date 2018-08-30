@@ -1,3 +1,4 @@
+from backend.models.grammar import Grammar
 from backend.models.graph import Frame, Graph, Identifier, Literal
 from backend.models.statement import Statement, VariableMap
 from enum import Enum
@@ -91,6 +92,15 @@ class Goal(VariableMap):
 
         return Goal(frame)
 
+    @classmethod
+    def parse(cls, agent: 'Agent', input: str) -> 'Goal':
+        result = Grammar.parse(agent, input, start="define", agent=agent)
+
+        if not isinstance(result, Goal):
+            raise Exception("Parsed value for \"" + input + "\" is not a Goal.")
+
+        return result
+
     def __init__(self, frame: Frame):
         super().__init__(frame)
 
@@ -147,10 +157,34 @@ class Goal(VariableMap):
 
     def __eq__(self, other):
         if isinstance(other, Goal):
-            return self.frame == other.frame
+            return self.frame == other.frame or (
+                self.frame["NAME"] == other.frame["NAME"] and
+                self.frame["PRIORITY"] == other.frame["PRIORITY"] and
+                self.frame["STATUS"] == other.frame["STATUS"] and
+                self.__eqPLAN(other) and
+                self.__eqWHEN(other)
+            )
         if isinstance(other, Frame):
             return self.frame == other
         return super().__eq__(other)
+
+    def __eqPLAN(self, other: 'Goal'):
+        if self.frame["PLAN"] == other.frame["PLAN"]:
+            return True
+
+        s1 = list(map(lambda frame: Action(frame.resolve()), self.frame["PLAN"]))
+        s2 = list(map(lambda frame: Action(frame.resolve()), other.frame["PLAN"]))
+
+        return s1 == s2
+
+    def __eqWHEN(self, other: 'Goal'):
+        if self.frame["WHEN"] == other.frame["WHEN"]:
+            return True
+
+        s1 = list(map(lambda frame: Condition(frame.resolve()), self.frame["WHEN"]))
+        s2 = list(map(lambda frame: Condition(frame.resolve()), other.frame["WHEN"]))
+
+        return s1 == s2
 
 
 class Action(object):
@@ -209,10 +243,36 @@ class Action(object):
 
     def __eq__(self, other):
         if isinstance(other, Action):
-            return self.frame == other.frame
+            return (self.frame == other.frame) or (
+                self.frame["NAME"] == other.frame["NAME"] and
+                self.__eqSELECT(other) and
+                self.__eqPERFORM(other)
+            )
         if isinstance(other, Frame):
             return self.frame == other
         return super().__eq__(other)
+
+    def __eqSELECT(self, other: 'Action'):
+        if self.frame["SELECT"] == other.frame["SELECT"]:
+            return True
+        if self.frame["SELECT"] == Action.DEFAULT or other.frame["SELECT"] == Action.DEFAULT:
+            return False
+
+        s1 = list(map(lambda frame: Statement.from_instance(frame.resolve()), self.frame["SELECT"]))
+        s2 = list(map(lambda frame: Statement.from_instance(frame.resolve()), other.frame["SELECT"]))
+
+        return s1 == s2
+
+    def __eqPERFORM(self, other: 'Action'):
+        if self.frame["PERFORM"] == other.frame["PERFORM"]:
+            return True
+        if self.frame["PERFORM"] == Action.IDLE or other.frame["PERFORM"] == Action.IDLE:
+            return False
+
+        s1 = list(map(lambda frame: Statement.from_instance(frame.resolve()), self.frame["PERFORM"]))
+        s2 = list(map(lambda frame: Statement.from_instance(frame.resolve()), other.frame["PERFORM"]))
+
+        return s1 == s2
 
 
 class Condition(object):
@@ -286,7 +346,21 @@ class Condition(object):
 
     def __eq__(self, other):
         if isinstance(other, Condition):
-            return self.frame == other.frame
+            return self.frame == other.frame or (
+                self.__eqIF(other) and
+                self.frame["LOGIC"] == other.frame["LOGIC"] and
+                self.frame["STATUS"] == other.frame["STATUS"] and
+                self.frame["ORDER"] == other.frame["ORDER"]
+            )
         if isinstance(other, Frame):
             return self.frame == other
         return super().__eq__(other)
+
+    def __eqIF(self, other: 'Condition'):
+        if self.frame["IF"] == other.frame["IF"]:
+            return True
+
+        s1 = list(map(lambda frame: Statement.from_instance(frame.resolve()), self.frame["IF"]))
+        s2 = list(map(lambda frame: Statement.from_instance(frame.resolve()), other.frame["IF"]))
+
+        return s1 == s2

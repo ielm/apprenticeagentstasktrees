@@ -181,61 +181,13 @@ class Agent(Network):
 
     def _bootstrap(self):
 
-        '''
-            FIND-SOMETHING-TO-DO()
-              PRIORITY
-                0.1
-              ACTION (acknowledge input)
-                SELECT IF exists SELF-[HAS-INPUT]->@TMR-INPUT[status=pending]
-                DO for each $tmr in SELF-[HAS-INPUT]->(@TMR-INPUT[status == pending])
-                |SELF-[HAS-GOAL]-> += #UNDERSTAND-TMR($tmr)
-              ACTION (idle)
-                SELECT DEFAULT
-                DO null
-
-            UNDERSTAND-TMR($tmr)
-              PRIORITY
-                0.9
-              ACTION (understand)
-                SELECT DEFAULT
-                DO SELF.understand($tmr)
-                DO $tmr-[status]-> = understood
-              WHEN $tmr-[status] == understood THEN satisfied
-        '''
-
-        from backend.models.agenda import Condition
         from backend.models.mps import MPRegistry
-        from backend.models.query import Query
-        from backend.models.statement import AddFillerStatement, AssignFillerStatement, ExistsStatement, ForEachStatement, IsStatement, MakeInstanceStatement, MeaningProcedureStatement
 
-        graph = self["EXE"]
-
-        goal1 = Goal.define(graph, "FIND-SOMETHING-TO-DO", 0.1, [
-            Action.build(graph,
-                         "acknowledge input",
-                         ExistsStatement.instance(graph, Query.parse(self, "WHERE (@^ EXE.INPUT-TMR AND ACKNOWLEDGED = False)")),
-                         ForEachStatement.instance(graph, Query.parse(self, "WHERE (@^ EXE.INPUT-TMR AND ACKNOWLEDGED = False)"), "$tmr",  [
-                             AddFillerStatement.instance(graph, self.identity, "HAS-GOAL",
-                                                         MakeInstanceStatement.instance(graph, "SELF", "EXE.UNDERSTAND-TMR", ["$tmr"])),
-                             AssignFillerStatement.instance(graph, "$tmr", "ACKNOWLEDGED", True)
-                             ])
-                         ),
-            Action.build(graph, "idle", Action.DEFAULT, Action.IDLE)
-        ], [], [])
-
-        goal2 = Goal.define(graph, "UNDERSTAND-TMR", 0.9, [
-            Action.build(graph,
-                         "understand",
-                         Action.DEFAULT,
-                         [
-                             MeaningProcedureStatement.instance(graph, "understand_input", ["$tmr"]),
-                             AssignFillerStatement.instance(graph, "$tmr", "STATUS", Literal("UNDERSTOOD"))
-                         ])
-        ], [
-            Condition.build(graph,
-                            [IsStatement.instance(graph, "$tmr", "STATUS", Literal("UNDERSTOOD"))],
-                            Goal.Status.SATISFIED)
-        ], ["$tmr"])
+        from pkgutil import get_data
+        goals: str = get_data("backend.resources", "goals.aa").decode('ascii')
+        goals = goals.split("\n\n")
+        for goal in goals:
+            Goal.parse(self, goal)
 
         def understand_input(statement, tmr_frame):
             tmr = self[tmr_frame["REFERS-TO-GRAPH"].singleton()]
@@ -246,5 +198,36 @@ class Agent(Network):
 
         MPRegistry.register(understand_input)
 
-        self.agenda().add_goal(Goal.instance_of(self.internal, goal1.frame, []))
+        self.agenda().add_goal(Goal.instance_of(self.internal, self.exe["FIND-SOMETHING-TO-DO"], []))
+
+        # API declared versions of the two goal definitions
+
+        # graph = self["EXE"]
+
+        # goal1 = Goal.define(graph, "FIND-SOMETHING-TO-DO", 0.1, [
+        #     Action.build(graph,
+        #                  "acknowledge input",
+        #                  ExistsStatement.instance(graph, Query.parse(self, "WHERE (@^ EXE.INPUT-TMR AND ACKNOWLEDGED = False)")),
+        #                  ForEachStatement.instance(graph, Query.parse(self, "WHERE (@^ EXE.INPUT-TMR AND ACKNOWLEDGED = False)"), "$tmr",  [
+        #                      AddFillerStatement.instance(graph, self.identity, "HAS-GOAL",
+        #                                                  MakeInstanceStatement.instance(graph, "SELF", "EXE.UNDERSTAND-TMR", ["$tmr"])),
+        #                      AssignFillerStatement.instance(graph, "$tmr", "ACKNOWLEDGED", True)
+        #                      ])
+        #                  ),
+        #     Action.build(graph, "idle", Action.DEFAULT, Action.IDLE)
+        # ], [], [])
+
+        # goal2 = Goal.define(graph, "UNDERSTAND-TMR", 0.9, [
+        #     Action.build(graph,
+        #                  "understand",
+        #                  Action.DEFAULT,
+        #                  [
+        #                      MeaningProcedureStatement.instance(graph, "understand_input", ["$tmr"]),
+        #                      AssignFillerStatement.instance(graph, "$tmr", "STATUS", Literal("UNDERSTOOD"))
+        #                  ])
+        # ], [
+        #     Condition.build(graph,
+        #                     [IsStatement.instance(graph, "$tmr", "STATUS", Literal("UNDERSTOOD"))],
+        #                     Goal.Status.SATISFIED)
+        # ], ["$tmr"])
 

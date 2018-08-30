@@ -595,6 +595,8 @@ class Filler(object):
         # Convert the results into a single comparator (if intersection is requested, then any single True is
         # sufficient, otherwise all must be true).
         results = list(map(lambda value: _compare(value), other))
+        if len(results) == 0:
+            return False
         if intersection:
             results = reduce(lambda x, y: x or y, results)
         else:

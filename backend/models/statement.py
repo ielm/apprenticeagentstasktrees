@@ -211,7 +211,7 @@ class Statement(object):
 class AddFillerStatement(Statement):
 
     @classmethod
-    def instance(cls, graph: Graph, to: Union[Identifier, Frame, Query], slot: str, value: Any):
+    def instance(cls, graph: Graph, to: Union[str, Identifier, Frame, Query], slot: str, value: Any):
         if isinstance(value, Statement):
             value = value.frame
 
@@ -252,6 +252,25 @@ class AddFillerStatement(Statement):
 
         for frame in to:
             frame[slot] += value
+
+    def __eq__(self, other):
+        if isinstance(other, AddFillerStatement):
+            return other.frame["TO"] == self.frame["TO"] and \
+                   other.frame["SLOT"] == self.frame["SLOT"] and \
+                   self.__eqADD(other)
+        return super().__eq__(other)
+
+    def __eqADD(self, other: 'AddFillerStatement') -> bool:
+        if other.frame["ADD"] == self.frame["ADD"]:
+            return True
+
+        try:
+            s1 = list(map(lambda frame: Statement.from_instance(frame.resolve()), self.frame["ADD"]))
+            s2 = list(map(lambda frame: Statement.from_instance(frame.resolve()), other.frame["ADD"]))
+            return s1 == s2
+        except: pass
+
+        return False
 
 
 class AssignFillerStatement(Statement):
@@ -296,6 +315,13 @@ class AssignFillerStatement(Statement):
         for frame in to:
             frame[slot] = value
 
+    def __eq__(self, other):
+        if isinstance(other, AssignFillerStatement):
+            return other.frame["TO"] == self.frame["TO"] and \
+                   other.frame["SLOT"] == self.frame["SLOT"] and \
+                   other.frame["ASSIGN"] == self.frame["ASSIGN"]
+        return super().__eq__(other)
+
 
 class ExistsStatement(Statement):
 
@@ -310,6 +336,12 @@ class ExistsStatement(Statement):
         query = self.frame["FIND"][0].resolve().value
         results = self.frame._graph._network.search(query)
         return len(results) > 0
+
+    def __eq__(self, other):
+        if isinstance(other, ExistsStatement):
+            return other.frame["FIND"] == self.frame["FIND"]
+
+        return super().__eq__(other)
 
 
 class ForEachStatement(Statement):
@@ -342,6 +374,14 @@ class ForEachStatement(Statement):
             var.set_value(frame)
             for stmt in do:
                 stmt.run(varmap)
+
+    def __eq__(self, other):
+        if isinstance(other, ForEachStatement):
+            return other.frame["FROM"] == self.frame["FROM"] and \
+                   other.frame["ASSIGN"] == self.frame["ASSIGN"] and \
+                   list(map(lambda frame: Statement.from_instance(frame.resolve()), other.frame["DO"])) == list(map(lambda frame: Statement.from_instance(frame.resolve()), self.frame["DO"]))
+
+        return super().__eq__(other)
 
 
 class IsStatement(Statement):
@@ -378,6 +418,13 @@ class IsStatement(Statement):
 
         return domain[slot] == filler
 
+    def __eq__(self, other):
+        if isinstance(other, IsStatement):
+            return other.frame["DOMAIN"] == self.frame["DOMAIN"] and \
+                   other.frame["SLOT"] == self.frame["SLOT"] and \
+                   other.frame["FILLER"] == self.frame["FILLER"]
+        return super().__eq__(other)
+
 
 class MakeInstanceStatement(Statement):
 
@@ -409,6 +456,13 @@ class MakeInstanceStatement(Statement):
 
         return instance
 
+    def __eq__(self, other):
+        if isinstance(other, MakeInstanceStatement):
+            return other.frame["IN"] == self.frame["IN"] and \
+                   other.frame["OF"] == self.frame["OF"] and \
+                   other.frame["PARAMS"] == self.frame["PARAMS"]
+        return super().__eq__(other)
+
 
 class MeaningProcedureStatement(Statement):
 
@@ -428,3 +482,9 @@ class MeaningProcedureStatement(Statement):
 
         result = MPRegistry.run(mp, *params)
         return result
+
+    def __eq__(self, other):
+        if isinstance(other, MeaningProcedureStatement):
+            return other.frame["CALLS"] == self.frame["CALLS"] and \
+                   other.frame["PARAMS"] == self.frame["PARAMS"]
+        return super().__eq__(other)
