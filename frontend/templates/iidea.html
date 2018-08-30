@@ -52,9 +52,16 @@
                 render_time(output);
                 render_inputs(output["inputs"]);
                 render_agenda(output["agenda"]);
+                $("#inputText").attr("placeholder", "Input Text");
+                $("#inputTextButton").prop("disabled", false);
             }).fail(function(error) {
                 console.log(error);
+                $("#inputText").attr("placeholder", "Input Text");
+                $("#inputTextButton").prop("disabled", false);
             });
+            $("#inputTextButton").prop("disabled", true);
+            $("#inputText").attr("placeholder", "Analyzing...");
+            $("#inputText").val("");
         }
     </script>
 

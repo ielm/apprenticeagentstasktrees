@@ -275,3 +275,14 @@ if __name__ == '__main__':
                 port = int(v)
 
     app.run(host=host, port=port, debug=False)
+
+
+'''
+IIDEA How To Run:
+
+1) From LEAIServices/composite:
+docker-compose -f static-knowledge.yml -f ontosem-analyzer.yml up
+
+2) Run service.py
+
+'''
