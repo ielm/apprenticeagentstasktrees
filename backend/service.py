@@ -177,16 +177,16 @@ class IIDEAConverter(object):
             "active": goal.is_active(),
             "satisfied": goal.is_satisfied(),
             "abandoned": goal.is_abandoned(),
-            "plan": list(map(lambda action: IIDEAConverter.convert_action(action.resolve()), goal.frame["PLAN"]))
+            "plan": list(map(lambda action: IIDEAConverter.convert_action(action.resolve(), goal), goal.frame["PLAN"]))
         }
 
     @classmethod
-    def convert_action(cls, action):
+    def convert_action(cls, action, goal):
         action = Action(action)
 
         return {
             "name": action.name(),
-            "selected": agent.agenda().action() == action
+            "selected": agent.agenda().action() == action and goal.is_active()
         }
 
 
@@ -214,29 +214,8 @@ def iidea_advance():
 def iidea_input():
     data = request.data.decode("utf-8")
 
-    # from backend.utils.YaleUtils import analyze
-    # tmr = analyze(data)
-
-    print("WARNING: hack for now, loading pre-analyzed results")
-
-    def hack_analyze(input):
-        import json
-        import os
-
-        def resource(fp):
-            r = None
-            with open(fp) as f:
-                r = json.load(f)
-            return r
-
-        file = os.getcwd() + "/../tests/resources/DemoMay2018_Analyses.json"
-        demo = resource(file)
-
-        for tmr in demo:
-            if tmr["sentence"] == input:
-                return tmr
-
-    tmr = hack_analyze(data)
+    from backend.utils.YaleUtils import analyze
+    tmr = analyze(data)
 
     agent._input(input=tmr)
 

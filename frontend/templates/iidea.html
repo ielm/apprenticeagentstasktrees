@@ -176,7 +176,11 @@
                     </div>
                     <div class="card-body">
                         <div class="input-group mb-3">
-                            <input id="inputText" type="text" class="form-control form-control-sm" placeholder="Input Text" value="We will build a chair.">
+                            <input id="inputText" type="text" class="form-control form-control-sm" placeholder="Input Text" list="demoTexts">
+                            <datalist id="demoTexts">
+                                <option value="We will build a chair."></option>
+                                <option value="I need a screwdriver to assemble a chair."></option>
+                            </datalist>
                             <div class="input-group-append">
                                 <button id="inputTextButton" class="btn btn-sm btn-primary" type="button">Input</button>
                             </div>
