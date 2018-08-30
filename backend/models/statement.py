@@ -360,13 +360,13 @@ class ForEachStatement(Statement):
         return ForEachStatement(frame)
 
     def run(self, varmap: VariableMap):
-        query: Query = self.frame["FROM"][0].resolve().value
-        variable: str = self.frame["ASSIGN"][0].resolve().value
+        query: Query = self.frame["FROM"].singleton()
+        variable: str = self.frame["ASSIGN"].singleton()
         do: List[Statement] = list(map(lambda stmt: Statement.from_instance(stmt.resolve()), self.frame["DO"]))
 
         var: Variable = None
         try:
-            varmap.find(variable)
+            var = varmap.find(variable)
         except:
             var = Variable.instance(self.frame._graph, variable, None, varmap)
 

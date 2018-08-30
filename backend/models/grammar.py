@@ -162,7 +162,7 @@ class GrammarTransformer(Transformer):
     def foreach_statement(self, matches):
         from backend.models.statement import ForEachStatement
 
-        return ForEachStatement.instance(self.agent.exe, matches[4], matches[2], matches[5:])
+        return ForEachStatement.instance(self.agent.exe, matches[4], str(matches[2]), matches[5:])
 
     def is_statement(self, matches):
         from backend.models.statement import IsStatement
