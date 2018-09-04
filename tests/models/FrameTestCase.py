@@ -428,6 +428,34 @@ class SlotTestCase(unittest.TestCase):
         self.assertEqual(slot2, 234)
         self.assertEqual(slot2, 345)
 
+    def test_singleton_throws_exception(self):
+        slot = Slot("SLOT")
+
+        with self.assertRaises(Exception):
+            slot.singleton()
+
+        slot += 1
+        slot += 2
+
+        with self.assertRaises(Exception):
+            slot.singleton()
+
+    def test_singleton_resolved_literal_value(self):
+        slot = Slot("SLOT")
+        slot += 1
+
+        self.assertEqual(1, slot.singleton())
+
+    def test_singleton_resolved_identifier_value(self):
+        g = Graph("TEST")
+        f1 = g.register("F", generate_index=True)
+        f2 = g.register("F", generate_index=True)
+
+        f2["SLOT"] = f1
+
+        self.assertEqual(f1, f2["SLOT"].singleton())
+        self.assertEqual(Frame, f2["SLOT"].singleton().__class__)
+
 
 class FrameTestCase(unittest.TestCase):
 

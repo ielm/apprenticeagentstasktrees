@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>IIDEA</title>
+
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis.min.css">
+
+    <script src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mustache.js/2.3.0/mustache.min.js"></script>
+
+    <style>
+        .input-link {
+            margin-right: 5px;
+        }
+        .goal-id {
+            color: grey;
+            font-size: small;
+        }
+        .goal-contents {
+            padding-left: 25px;
+        }
+    </style>
+
+    <script>
+        function advance() {
+            $.ajax({
+                url: "/iidea/advance",
+                method: "GET",
+            }).done(function(data) {
+                var output = JSON.parse(data);
+                render_time(output);
+                render_inputs(output["inputs"]);
+                render_agenda(output["agenda"]);
+            }).fail(function(error) {
+                console.log(error);
+            });
+        }
+
+        function input() {
+            $.ajax({
+                url: "/iidea/input",
+                method: "POST",
+                data: $("#inputText").val(),
+                contentType: "text/plain"
+            }).done(function(data) {
+                var output = JSON.parse(data);
+                render_time(output);
+                render_inputs(output["inputs"]);
+                render_agenda(output["agenda"]);
+                $("#inputText").attr("placeholder", "Input Text");
+                $("#inputTextButton").prop("disabled", false);
+            }).fail(function(error) {
+                console.log(error);
+                $("#inputText").attr("placeholder", "Input Text");
+                $("#inputTextButton").prop("disabled", false);
+            });
+            $("#inputTextButton").prop("disabled", true);
+            $("#inputText").attr("placeholder", "Analyzing...");
+            $("#inputText").val("");
+        }
+    </script>
+
+    <script>
+        function render_time(time) {
+            $("#time").text(time["time"]);
+            $("#stage").text(time["stage"]);
+        }
+
+        function render_inputs(inputs) {
+            $("#inputList").empty();
+            for (var i in inputs) {
+                var input = inputs[i];
+
+                var status = {
+                    received: "secondary",
+                    acknowledged: "info",
+                    understood: "success",
+                    ignored: "warning"
+                }[input["status"]];
+
+                var link = $('<a href="#" class="input-link badge badge-' + status + '">' + input["name"] + '</a>');
+                $("#inputList").append(link);
+            }
+        }
+
+        function render_agenda(agenda) {
+            $("#agenda").empty();
+
+            for (var i in agenda) {
+                var goal = agenda[i];
+
+                if (goal.pending) {
+                    goal["badge"] = "badge-secondary";
+                    goal["status"] = "pending";
+                } else if (goal.active) {
+                    goal["badge"] = "badge-success";
+                    goal["status"] = "active";
+                } else if (goal.satisfied) {
+                    goal["badge"] = "badge-secondary";
+                    goal["status"] = "satisfied";
+                } else if (goal.abandoned) {
+                    goal["badge"] = "badge-secondary";
+                    goal["status"] = "abandoned";
+                }
+
+                var template = document.getElementById('goal-template').innerHTML;
+                Mustache.parse(template, ["{|", "|}"]);
+                var rendered = Mustache.render(template, goal);
+                $($(document).find("#agenda")[0]).prepend($(rendered));
+            }
+        }
+    </script>
+
+    <script>
+        $(document).ready(function() {
+            $("#advance-button").on("click", function() {
+                advance();
+            });
+            $("#inputTextButton").on("click", function() {
+                input();
+            });
+
+
+
+
+
+            var agenda = JSON.parse('{{ aj|safe }}');
+            render_agenda(agenda);
+        });
+    </script>
+
+    <script id="goal-template" type="x-tmpl-mustache">
+        <div>{| name |} <span class="goal-id">({| id |})</span></div>
+        <div class="goal-contents">
+            <div><strong>Priority:</strong> {| priority |}</div>
+            <div>
+                <strong>Status:</strong>
+                <span class="badge badge-pill {| badge |}">{| status |}</span>
+            </div>
+            {|#plan|}
+                <div>
+                    <strong>Plan:</strong> {| name |}
+                    {| #selected |}
+                        <span class="badge badge-pill badge-info">selected</span>
+                    {| /selected |}
+                </div>
+            {|/plan|}
+        </div>
+    </script>
+
+</head>
+<body>
+
+    <div class="container">
+        <div class="row" style="margin-top: 25px;">
+            <div class="col-sm-8">
+                <div class="card">
+                    <div class="card-header">
+                        Agenda
+                    </div>
+                    <div class="card-body">
+                        <div id="agenda"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-sm-4">
+                <div class="card" style="margin-bottom: 25px;">
+                    <div class="card-header">
+                        Time: <span>T<span id="time">{{ time }}</span> - <span id="stage">{{ stage }}</span></span> (pending)
+                    </div>
+                    <div class="card-body">
+                        <button id="advance-button" type="button" class="btn btn-sm btn-secondary">Advance</button>
+                    </div>
+                </div>
+                <div class="card" style="margin-bottom: 25px;">
+                    <div class="card-header">
+                        Input
+                    </div>
+                    <div class="card-body">
+                        <div class="input-group mb-3">
+                            <input id="inputText" type="text" class="form-control form-control-sm" placeholder="Input Text" list="demoTexts">
+                            <datalist id="demoTexts">
+                                <option value="We will build a chair."></option>
+                                <option value="I need a screwdriver to assemble a chair."></option>
+                            </datalist>
+                            <div class="input-group-append">
+                                <button id="inputTextButton" class="btn btn-sm btn-primary" type="button">Input</button>
+                            </div>
+                        </div>
+                        <hr>
+                        <div>
+                            <span class="badge badge-pill badge-secondary">Received</span>
+                            <span class="badge badge-pill badge-info">Acknowledged</span>
+                            <span class="badge badge-pill badge-success">Understood</span>
+                            <span class="badge badge-pill badge-warning">Ignored</span>
+                        </div>
+                        <div id="inputList" style="padding-top: 10px;">
+                            {% for i in inputs %}
+                                {% if i.status == "received" %}
+                                    <a href="#" class="input-link badge badge-secondary">{{i.name}}</a>
+                                {% elif i.status == "acknowledged" %}
+                                    <a href="#" class="input-link badge badge-info">{{i.name}}</a>
+                                {% elif i.status == "understood" %}
+                                    <a href="#" class="input-link badge badge-success">{{i.name}}</a>
+                                {% elif i.status == "ignored" %}
+                                    <a href="#" class="input-link badge badge-warning">{{i.name}}</a>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>

@@ -2,25 +2,217 @@ from backend.models.graph import Identifier, Literal, Network
 from lark import Lark, Transformer
 from pkgutil import get_data
 
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from backend.agent import Agent
+
 
 class Grammar(object):
 
     @classmethod
-    def parse(cls, network: Network, input: str, resource: str="backend.resources", peg: str="grammar.lark", start: str="start"):
+    def parse(cls, network: Network, input: str, resource: str="backend.resources", peg: str="grammar.lark", start: str="start", agent: 'Agent'=None):
         grammar = get_data(resource, peg).decode('ascii')
         lark = Lark(grammar, start=start)
         tree = lark.parse(input)
-        return GrammarTransformer(network).transform(tree)
+        return GrammarTransformer(network, agent=agent).transform(tree)
 
 
 class GrammarTransformer(Transformer):
 
-    def __init__(self, network: Network):
+    def __init__(self, network: Network, agent: 'Agent'=None):
         super().__init__()
         self.network = network
+        self.agent = agent
 
     def start(self, matches):
         return matches[0]
+
+    # Statements and executables
+
+    def define(self, matches):
+        return matches[1]
+
+    def goal(self, matches):
+        from backend.models.agenda import Action, Condition, Goal
+
+        name = str(matches[0])
+        variables = matches[1]
+        graph = matches[5]
+
+        priority = matches[6]
+        plan = list(filter(lambda match: isinstance(match, Action), matches))
+        conditions = list(filter(lambda match: isinstance(match, Condition), matches))
+
+        condition_order = 1
+        for c in conditions:
+            c.frame["ORDER"] = condition_order
+            condition_order += 1
+
+        return Goal.define(self.agent[graph], name, priority, plan, conditions, variables)
+
+    def priority(self, matches):
+        if len(matches) == 2:
+            return matches[1]
+        return 0.5
+
+    def goal_status(self, matches):
+        from backend.models.agenda import Goal
+        if str(matches[0]).upper() == "PENDING":
+            return Goal.Status.PENDING
+        if str(matches[0]).upper() == "ACTIVE":
+            return Goal.Status.ACTIVE
+        if str(matches[0]).upper() == "ABANDONED":
+            return Goal.Status.ABANDONED
+        if str(matches[0]).upper() == "SATISFIED":
+            return Goal.Status.SATISFIED
+
+    def action(self, matches):
+        from backend.models.agenda import Action
+        name = matches[1]
+        select = matches[2]
+        perform = matches[3:]
+
+        return Action.build(self.agent.exe, name, select, perform)
+
+    def action_selection(self, matches):
+        from backend.models.agenda import Action
+        select = matches[1]
+        if str(select) == "DEFAULT":
+            select = Action.DEFAULT
+        elif str(select) == "IF":
+            select = matches[2]
+
+        return select
+
+    def action_do(self, matches):
+        from backend.models.agenda import Action
+        perform = matches[1]
+
+        if str(perform) == "IDLE":
+            perform = Action.IDLE
+
+        return perform
+
+    def condition(self, matches):
+        from backend.models.agenda import Condition, Goal
+
+        statements = matches[1][1]
+        status = matches[3]
+        logic = matches[1][0]
+
+        return Condition.build(self.agent.exe, statements, status, logic=logic)
+
+    def condition_and(self, matches):
+        from backend.models.agenda import Condition
+        from backend.models.agenda import Statement
+
+        return Condition.Logic.AND, list(filter(lambda match: isinstance(match, Statement), matches))
+
+    def condition_or(self, matches):
+        from backend.models.agenda import Condition
+        from backend.models.agenda import Statement
+
+        return Condition.Logic.OR, list(filter(lambda match: isinstance(match, Statement), matches))
+
+    def condition_nand(self, matches):
+        from backend.models.agenda import Condition
+        from backend.models.agenda import Statement
+
+        return Condition.Logic.NAND, list(filter(lambda match: isinstance(match, Statement), matches))
+
+    def condition_nor(self, matches):
+        from backend.models.agenda import Condition
+        from backend.models.agenda import Statement
+
+        return Condition.Logic.NOR, list(filter(lambda match: isinstance(match, Statement), matches))
+
+    def condition_not(self, matches):
+        from backend.models.agenda import Condition
+        from backend.models.agenda import Statement
+
+        return Condition.Logic.NOT, list(filter(lambda match: isinstance(match, Statement), matches))
+
+    def statement(self, matches):
+        return matches[0]
+
+    def boolean_statement(self, matches):
+        return matches[0]
+
+    def add_filler_statement(self, matches):
+        from backend.models.statement import AddFillerStatement
+        domain = matches[0]
+        slot = str(matches[1])
+        filler = matches[2]
+
+        return AddFillerStatement.instance(self.agent.exe, domain, slot, filler)
+
+    def assign_filler_statement(self, matches):
+        from backend.models.statement import AssignFillerStatement
+        domain = matches[0]
+        slot = str(matches[1])
+        filler = matches[3]
+
+        return AssignFillerStatement.instance(self.agent.exe, domain, slot, filler)
+
+    def exists_statement(self, matches):
+        from backend.models.statement import ExistsStatement
+
+        return ExistsStatement.instance(self.agent.exe, matches[1])
+
+    def foreach_statement(self, matches):
+        from backend.models.statement import ForEachStatement
+
+        return ForEachStatement.instance(self.agent.exe, matches[4], str(matches[2]), matches[5:])
+
+    def is_statement(self, matches):
+        from backend.models.statement import IsStatement
+        domain = matches[0]
+        slot = str(matches[1])
+        filler = matches[4]
+
+        return IsStatement.instance(self.agent.exe, domain, slot, filler)
+
+    def mp_statement(self, matches):
+        from backend.models.statement import MeaningProcedureStatement
+
+        return MeaningProcedureStatement.instance(self.agent.exe, matches[1], matches[2])
+
+    def statement_instance(self, matches):
+        if isinstance(matches[0], Identifier):
+            if matches[0].render() == "SELF":
+                return self.agent.identity
+            return matches[0].resolve(None, network=self.network)
+        if str(matches[0]) == "SELF":
+            return self.agent.identity
+
+        return matches[0]
+
+    def make_instance_statement(self, matches):
+        from backend.models.statement import MakeInstanceStatement
+        in_graph = matches[0]
+        of = matches[1]
+        params = matches[2]
+
+        return MakeInstanceStatement.instance(self.agent.exe, in_graph, of, params)
+
+    def arguments(self, matches):
+        return matches
+
+    def argument(self, matches):
+        return str(matches[0])
+
+    def special_agent_graph(self, matches):
+        name = str(matches[0]).upper()
+
+        return {
+            "INTERNAL": self.agent.internal._namespace,
+            "EXE": self.agent.exe._namespace,
+            "ONTOLOGY": self.agent.ontology._namespace,
+            "WM": self.agent.wo_memory._namespace,
+            "LT": self.agent.lt_memory._namespace
+        }[name]
+
+    # Views and querying
 
     def view(self, matches):
         from backend.models.path import Path

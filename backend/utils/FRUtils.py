@@ -2,12 +2,12 @@ from backend.models.graph import Filler
 
 
 def comparator(fr, instance1, instance2, slot, compare_concepts=False, match_full=False):
-    fillers1 = list(map(lambda filler: filler.value, instance1[slot]))
-    fillers2 = list(map(lambda filler: filler.value, instance2[slot]))
+    fillers1 = list(map(lambda filler: filler._value, instance1[slot]))
+    fillers2 = list(map(lambda filler: filler._value, instance2[slot]))
 
     if compare_concepts:
-        fillers1 = list(map(lambda filler: fr[filler].concept, fillers1))
-        fillers2 = list(map(lambda filler: fr[filler].concept, fillers2))
+        fillers1 = list(map(lambda filler: fr[filler].concept(), fillers1))
+        fillers2 = list(map(lambda filler: fr[filler].concept(), fillers2))
 
     if match_full:
         return set(fillers1) == set(fillers2)

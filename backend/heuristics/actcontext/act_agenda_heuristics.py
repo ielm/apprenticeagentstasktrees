@@ -30,7 +30,7 @@ class RecallTaskFromLongTermMemoryAgendaProcessor(AgendaProcessor):
         event = tmr.find_main_event()
         themes = _fillers_to_concepts(tmr, event["THEME"])
 
-        results = agent.lt_memory.search(Frame.q(agent.network).isa(event.concept()))
+        results = agent.lt_memory.search(Frame.q(agent).isa(event.concept()))
         results = list(filter(lambda result: len(_fillers_to_concepts(agent.lt_memory, result["THEME"]).intersection(themes)) > 0, results))
 
         if len(results) == 0:
@@ -38,7 +38,7 @@ class RecallTaskFromLongTermMemoryAgendaProcessor(AgendaProcessor):
 
         for result in results:
             temp = FR("TEMP", agent.ontology)
-            for instance in agent.lt_memory.search(Frame.q(agent.network).f(LCTContext.FROM_CONTEXT, result[LCTContext.FROM_CONTEXT][0])):
+            for instance in agent.lt_memory.search(Frame.q(agent).f(LCTContext.FROM_CONTEXT, result[LCTContext.FROM_CONTEXT][0])):
                 temp[Identifier(None, instance._identifier.name, instance=instance._identifier.instance)] = instance
             id_map = agent.wo_memory.import_fr(temp)
 
@@ -56,7 +56,7 @@ class QueuePreconditionActionsAgendaProcessor(AgendaProcessor):
         self.context = context
 
     def _logic(self, agent, tmr):
-        doing = agent.wo_memory.search(Frame.q(agent.network).f(self.context.DOING, True))
+        doing = agent.wo_memory.search(Frame.q(agent).f(self.context.DOING, True))
 
         if len(doing) == 0:
             raise HeuristicException()

@@ -1,7 +1,7 @@
 import json
 
 from backend.models.tmr import TMR
-from backend.service import app, graph_to_json, n, ontology
+from backend.service import agent, app, graph_to_json
 
 import unittest
 
@@ -12,17 +12,17 @@ class ServiceTestCase(unittest.TestCase):
         self.app = app.test_client()
 
     def test_list_network(self):
-        n.register(TMR.new(ontology, namespace="TMR1"))
-        n.register(TMR.new(ontology, namespace="TMR2"))
+        # n.register(TMR.new(ontology, namespace="TMR1"))
+        # n.register(TMR.new(ontology, namespace="TMR2"))
 
         response = self.app.get("/network")
 
-        expected = n._storage.keys()
+        expected = agent._storage.keys()
 
         self.assertEqual(set(json.loads(response.data)), expected)
 
     def test_view(self):
-        g = n.register("TEST")
+        g = agent.register("TEST")
 
         f1 = g.register("TEST.FRAME.1")
         f2 = g.register("TEST.FRAME.2")
@@ -59,7 +59,7 @@ class ServiceTestCase(unittest.TestCase):
         self.assertEqual(json.loads(graph_to_json(g5)), [{"type": "FRInstance", "graph": "FR#1", "name": "TEST.4", "relations": [], "attributes": []}])
 
     def test_graph_to_json_relations(self):
-        g = n.register("TEST")
+        g = agent.register("TEST")
 
         f1 = g.register("TEST.FRAME.1")
         f2 = g.register("TEST.FRAME.2")
@@ -87,7 +87,7 @@ class ServiceTestCase(unittest.TestCase):
         self.assertEqual(json.loads(graph_to_json(g)), expected)
 
     def test_graph_to_json_attributes(self):
-        g = n.register("TEST")
+        g = agent.register("TEST")
 
         f = g.register("TEST.FRAME.1")
         f["ATTR"] = 123
