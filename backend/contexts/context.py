@@ -54,6 +54,8 @@ class AgendaProcessor(object):
 
         return self
 
+
+#
     def process(self, agent, tmr):
         try:
             self._logic(agent, tmr)
