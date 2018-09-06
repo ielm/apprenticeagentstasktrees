@@ -48,7 +48,7 @@ def format_learned_event_yale(event: FRInstance, ontology: Ontology) -> dict:
         if action == "GET" and set(lemmas) == {"FOOT_BRACKET"}:
             return "bracket-foot"
 
-        return " and ".join(lemmas)
+        return " and ".join(set(lemmas))
 
     def _name(event: FRInstance) -> str:
         if len(event["HAS-EVENT-AS-PART"]) == 0:
