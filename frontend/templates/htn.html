@@ -17,11 +17,34 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-jsonview/1.2.3/jquery.jsonview.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-treeview/1.2.0/bootstrap-treeview.min.js"></script>
 
+    <style>
+        .robot {
+            color: red;
+        }
+        .human {
+            color: blue;
+        }
+    </style>
+
     <script>
 
         function format_htn(raw) {
+            var actor = "";
+            if (raw["attributes"].indexOf("robot") != -1) {
+                actor = "<span class='robot'>ROBOT</span>.";
+            } else if (raw["attributes"].indexOf("human") != -1) {
+                actor = "<span class='human'>HUMAN</span>.";
+            }
+
+            var ordering = "";
+            if (raw["combination"] == "Sequential") {
+                ordering = "<img src='/assets/svg/arrow-thick-right.svg' alt='arrow-thick-right' style='height: 16px'>";
+            } else if (raw["combination"] != "") {
+                ordering = raw["combination"];
+            }
+
             return {
-                text: raw["name"] + " (" + raw["combination"] + ")",
+                text: actor + raw["name"] + " " + ordering,
                 nodes: raw["children"].map(child => format_htn(child))
             }
         }
