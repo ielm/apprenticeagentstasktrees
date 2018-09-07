@@ -1,4 +1,4 @@
-from backend.contexts.context import AgendaProcessor, HeuristicException
+from backend.contexts.context import HeuristicException, UnderstandingProcessor
 from backend.models.fr import FRInstance
 from backend.models.graph import Frame
 from backend.utils import FRUtils
@@ -10,7 +10,7 @@ from backend.utils import FRUtils
 # Example: I need a screwdriver to assemble a chair.
 # If the main event of the TMR has a PURPOSE, find any LCT.learning frames with matching important
 # case-roles to the PURPOSE, and add the main event as a PRECONDITION to those results.
-class IdentifyPreconditionsAgendaProcessor(AgendaProcessor):
+class IdentifyPreconditionsUnderstandingProcessor(UnderstandingProcessor):
 
     def __init__(self, context):
         super().__init__()
@@ -50,7 +50,7 @@ class IdentifyPreconditionsAgendaProcessor(AgendaProcessor):
 # Example: Get a screwdriver.
 # If the main event of the TMR is a REQUEST-ACTION, and the ROBOT is the BENEFICIARY, then add the event's THEMEs
 # to the HAS-EVENT-AS-PART slot of the LCT.learning / LCT.current event (but do not change LCT.current).
-class HandleRequestedActionsAgendaProcessor(AgendaProcessor):
+class HandleRequestedActionsUnderstandingProcessor(UnderstandingProcessor):
     def __init__(self, context):
         super().__init__()
         self.context = context
@@ -77,10 +77,10 @@ class HandleRequestedActionsAgendaProcessor(AgendaProcessor):
 
 
 # Identifies actions that are happening "now" (not pre- or postfix), and adds them as children of the current
-# learning context.  This is similar to HandleRequestedActionsAgendaProcessor, without the mapping to the
+# learning context.  This is similar to HandleRequestedActionsUnderstandingProcessor, without the mapping to the
 # the THEME of the main event (the main event itself is assumed to be the learned event).
 # Example: I am using the screwdriver to affix the brackets on the dowel with screws.
-class HandleCurrentActionAgendaProcessor(AgendaProcessor):
+class HandleCurrentActionUnderstandingProcessor(UnderstandingProcessor):
 
     def __init__(self, context):
         super().__init__()
@@ -109,7 +109,7 @@ class HandleCurrentActionAgendaProcessor(AgendaProcessor):
 #   Find the LCT.learning / LCT.current fr event, and add this main event to the HAS-EVENT-AS-PART slot.  Then,
 #   set the LCT.current to False, the LCT.waiting_on to this main event, assign LCT.current and LCT.learning to
 #   this main event.
-class RecognizeSubEventsAgendaProcessor(AgendaProcessor):
+class RecognizeSubEventsUnderstandingProcessor(UnderstandingProcessor):
 
     def __init__(self, context):
         super().__init__()
@@ -147,7 +147,7 @@ class RecognizeSubEventsAgendaProcessor(AgendaProcessor):
 #    (concept match only).
 # If the criteria match, the main event will be added as a child of the LCT.current; any children of the LCT.current
 # that are not complex events (do not have HAS-EVENT-AS-PART) will be moved to be children of the main event.
-class IdentifyClosingOfUnknownTaskAgendaProcessor(AgendaProcessor):
+class IdentifyClosingOfUnknownTaskUnderstandingProcessor(UnderstandingProcessor):
 
     def __init__(self, context):
         super().__init__()
@@ -204,7 +204,7 @@ class IdentifyClosingOfUnknownTaskAgendaProcessor(AgendaProcessor):
 # 5) The candidate event is a BUILD event
 # 6) The candidate event has exactly one THEME
 # If the above match, add all parts as HAS-OBJECT-AS-PART to the candidate THEME
-class RecognizePartsOfObjectAgendaProcessor(AgendaProcessor):
+class RecognizePartsOfObjectUnderstandingProcessor(UnderstandingProcessor):
 
     def __init__(self, context):
         super().__init__()

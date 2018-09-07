@@ -29,7 +29,7 @@ class LCTPreHeuristicsTestCase(ApprenticeAgentsTestCase):
         self.ontology.register("BUILD", isa="ONT.EVENT")
         self.ontology.register("FASTEN", isa="ONT.EVENT")
 
-    def test_IdentifyClosingOfKnownTaskAgendaProcessor(self):
+    def test_IdentifyClosingOfKnownTaskUnderstandingProcessor(self):
         agent = Agent(ontology=self.ontology)
         context = LCTContext(agent)
 
@@ -41,13 +41,13 @@ class LCTPreHeuristicsTestCase(ApprenticeAgentsTestCase):
         event1 = tmr.register("EVENT.1", isa="ONT.EVENT")
         event1["TIME"] = [["<", "FIND-ANCHOR-TIME"]]
 
-        IdentifyClosingOfKnownTaskAgendaProcessor(context).process(agent, tmr)
+        IdentifyClosingOfKnownTaskUnderstandingProcessor(context).process(agent, tmr)
 
         self.assertTrue(LCTContext.LEARNING not in event)
         self.assertTrue(LCTContext.CURRENT not in event)
         self.assertEqual(event[LCTContext.LEARNED], True)
 
-    def test_IdentifyCompletedTaskAgendaProcessor(self):
+    def test_IdentifyCompletedTaskUnderstandingProcessor(self):
 
         def setup():
             agent = Agent(ontology=self.ontology)
@@ -64,7 +64,7 @@ class LCTPreHeuristicsTestCase(ApprenticeAgentsTestCase):
 
         # If matched, the heuristic affects LT and WO memory.
         agent, context, tmr = setup()
-        IdentifyCompletedTaskAgendaProcessor(context).process(agent, tmr)
+        IdentifyCompletedTaskUnderstandingProcessor(context).process(agent, tmr)
         self.assertEqual(0, len(agent.wo_memory))
         self.assertTrue(len(agent.lt_memory) > 0)
 
@@ -72,22 +72,22 @@ class LCTPreHeuristicsTestCase(ApprenticeAgentsTestCase):
         agent, context, tmr = setup()
         tmr["EVENT.1"]["TIME"] = [[">", "FIND-ANCHOR-TIME"]]
         with self.assertRaises(HeuristicException):
-            IdentifyCompletedTaskAgendaProcessor(context)._logic(agent, tmr)
+            IdentifyCompletedTaskUnderstandingProcessor(context)._logic(agent, tmr)
 
         # Fail if there is no LEARNED event.
         agent, context, tmr = setup()
         agent.wo_memory["EVENT.1"][LCTContext.LEARNED] = False
         with self.assertRaises(HeuristicException):
-            IdentifyCompletedTaskAgendaProcessor(context)._logic(agent, tmr)
+            IdentifyCompletedTaskUnderstandingProcessor(context)._logic(agent, tmr)
 
         # Fail if there is any LEARNING event.
         agent, context, tmr = setup()
         learning = agent.wo_memory.register("EVENT", isa="ONT.EVENT")
         learning[LCTContext.LEARNING] = True
         with self.assertRaises(HeuristicException):
-            IdentifyCompletedTaskAgendaProcessor(context)._logic(agent, tmr)
+            IdentifyCompletedTaskUnderstandingProcessor(context)._logic(agent, tmr)
 
-    def test_IdentifyPreconditionSatisfyingActionsAgendaProcessor(self):
+    def test_IdentifyPreconditionSatisfyingActionsUnderstandingProcessor(self):
         self.ontology.register("REQUEST-ACTION", isa="ONT.EVENT")
         self.ontology.register("BIRD", isa="ONT.OBJECT")
         self.ontology.register("HUMAN", isa="ONT.OBJECT")
@@ -119,9 +119,9 @@ class LCTPreHeuristicsTestCase(ApprenticeAgentsTestCase):
             return agent, context, tmr, previous
 
         effect = False
-        class MockedHeuristic(IdentifyPreconditionSatisfyingActionsAgendaProcessor):
+        class MockedHeuristic(IdentifyPreconditionSatisfyingActionsUnderstandingProcessor):
             def reassign_siblings(self, siblings):
-                if len(siblings) == 1 and isinstance(siblings[0], FRResolutionAgendaProcessor):
+                if len(siblings) == 1 and isinstance(siblings[0], FRResolutionUnderstandingProcessor):
                     nonlocal effect
                     effect = True
 

@@ -1,4 +1,4 @@
-from backend.contexts.context import AgendaProcessor, HeuristicException
+from backend.contexts.context import HeuristicException, UnderstandingProcessor
 from backend.contexts.LCTContext import LCTContext
 from backend.models.fr import FR
 from backend.models.graph import Frame, Identifier
@@ -13,7 +13,7 @@ import operator
 # 2) There are matching events in LT memory that have the same concept as the main TMR event, and share at least
 #    THEME (by concept).
 # For each match found, load the entire of that event (by LCT.from_context ID) into working memory.
-class RecallTaskFromLongTermMemoryAgendaProcessor(AgendaProcessor):
+class RecallTaskFromLongTermMemoryUnderstandingProcessor(UnderstandingProcessor):
 
     def __init__(self, context):
         super().__init__()
@@ -49,7 +49,7 @@ class RecallTaskFromLongTermMemoryAgendaProcessor(AgendaProcessor):
 # 1) There are events marked as ACT.doing
 # 2) Those events have PRECONDITIONs
 # For each matching precondition, map it to an action to take (if applicable) and add those actions to the agent queue.
-class QueuePreconditionActionsAgendaProcessor(AgendaProcessor):
+class QueuePreconditionActionsUnderstandingProcessor(UnderstandingProcessor):
 
     def __init__(self, context):
         super().__init__()

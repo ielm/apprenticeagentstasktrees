@@ -1,4 +1,4 @@
-from backend.contexts.context import AgentContext, RootAgendaProcessor
+from backend.contexts.context import AgentContext, FRResolutionUnderstandingProcessor, RootUnderstandingProcessor
 
 from backend.heuristics.lctcontex.lct_fr_resolution_heuristics import *
 from backend.heuristics.lctcontex.lct_post_heuristics import *
@@ -25,20 +25,20 @@ class LCTContext(AgentContext):
         self.agent.ontology.register("BRACKET", isa="ARTIFACT-PART")
         self.agent.ontology.register("DOWEL", isa="ARTIFACT-PART")
 
-    def default_agenda(self):
+    def default_understanding(self):
 
-        agenda = RootAgendaProcessor()
+        understanding = RootUnderstandingProcessor()
 
-        agenda.add_subprocess(IdentifyClosingOfKnownTaskAgendaProcessor(self).add_subprocess(IdentifyCompletedTaskAgendaProcessor(self)))
-        agenda.add_subprocess(IdentifyPreconditionSatisfyingActionsAgendaProcessor(self))
-        agenda.add_subprocess(FRResolutionAgendaProcessor())
-        agenda.add_subprocess(IdentifyPreconditionsAgendaProcessor(self))
-        agenda.add_subprocess(HandleRequestedActionsAgendaProcessor(self))
-        agenda.add_subprocess(HandleCurrentActionAgendaProcessor(self))
-        agenda.add_subprocess(RecognizeSubEventsAgendaProcessor(self).add_subprocess(RecognizePartsOfObjectAgendaProcessor(self)))
-        agenda.add_subprocess(IdentifyClosingOfUnknownTaskAgendaProcessor(self))
+        understanding.add_subprocess(IdentifyClosingOfKnownTaskUnderstandingProcessor(self).add_subprocess(IdentifyCompletedTaskUnderstandingProcessor(self)))
+        understanding.add_subprocess(IdentifyPreconditionSatisfyingActionsUnderstandingProcessor(self))
+        understanding.add_subprocess(FRResolutionUnderstandingProcessor())
+        understanding.add_subprocess(IdentifyPreconditionsUnderstandingProcessor(self))
+        understanding.add_subprocess(HandleRequestedActionsUnderstandingProcessor(self))
+        understanding.add_subprocess(HandleCurrentActionUnderstandingProcessor(self))
+        understanding.add_subprocess(RecognizeSubEventsUnderstandingProcessor(self).add_subprocess(RecognizePartsOfObjectUnderstandingProcessor(self)))
+        understanding.add_subprocess(IdentifyClosingOfUnknownTaskUnderstandingProcessor(self))
 
-        return agenda
+        return understanding
 
     # ------ Meta-contextual Properties -------
 
