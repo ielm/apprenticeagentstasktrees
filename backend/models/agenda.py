@@ -122,7 +122,7 @@ class Goal(VariableMap):
         return Goal.Status.SATISFIED.name.lower() in self.frame["STATUS"] or Goal.Status.SATISFIED.name in self.frame["STATUS"] or Goal.Status.SATISFIED in self.frame["STATUS"]
 
     def status(self, status: 'Goal.Status'):
-        self.frame["STATUS"] = status.name.lower()
+        self.frame["STATUS"] = status
 
     def assess(self):
         conditions = sorted(self.conditions(), key=lambda condition: condition.order())
