@@ -59,6 +59,11 @@
             $("#htn-button").on("click", function() {
                 load();
             });
+            $("#htnIdentifier").on("keyup", function(e) {
+                if (e.key == "Enter") {
+                    load();
+                }
+            });
         });
     </script>
 
