@@ -250,10 +250,12 @@ def input():
 @app.route("/htn", methods=["GET"])
 def htn():
     if "instance" not in request.args:
-        abort(400)
+        return render_template("htn.html")
 
     instance = request.args["instance"]
-    instance = agent.wo_memory[instance]
+
+    from backend.models.fr import FRInstance
+    instance: FRInstance = agent.search(Frame.q(agent).id(instance))[0]
 
     return json.dumps(format_learned_event_yale(instance, agent.ontology), indent=4)
 

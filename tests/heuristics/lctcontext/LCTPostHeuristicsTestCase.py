@@ -31,7 +31,7 @@ class LCTPostHeuristicsTestCase(ApprenticeAgentsTestCase):
         self.ontology.register("BUILD", isa="ONT.EVENT")
         self.ontology.register("FASTEN", isa="ONT.EVENT")
 
-    def test_IdentifyPreconditionsAgendaProcessor(self):
+    def test_IdentifyPreconditionsUnderstandingProcessor(self):
 
         self.ontology.register("RELATION", isa="ONT.PROPERTY")
         self.ontology.register("AGENT", isa="ONT.RELATION")
@@ -58,7 +58,7 @@ class LCTPostHeuristicsTestCase(ApprenticeAgentsTestCase):
             return agent, context, tmr
 
         effect = False
-        class MockedHeuristic(IdentifyPreconditionsAgendaProcessor):
+        class MockedHeuristic(IdentifyPreconditionsUnderstandingProcessor):
             def halt_siblings(self):
                 nonlocal effect
                 effect = True
@@ -100,7 +100,7 @@ class LCTPostHeuristicsTestCase(ApprenticeAgentsTestCase):
         with self.assertRaises(HeuristicException):
             MockedHeuristic(context)._logic(agent, tmr)
 
-    def test_HandleRequestedActionsAgendaProcessor(self):
+    def test_HandleRequestedActionsUnderstandingProcessor(self):
 
         self.ontology.register("REQUEST-ACTION", isa="ONT.EVENT")
 
@@ -125,7 +125,7 @@ class LCTPostHeuristicsTestCase(ApprenticeAgentsTestCase):
             return agent, context, tmr
 
         effect = False
-        class MockedHeuristic(HandleRequestedActionsAgendaProcessor):
+        class MockedHeuristic(HandleRequestedActionsUnderstandingProcessor):
             def halt_siblings(self):
                 nonlocal effect
                 effect = True
@@ -160,7 +160,7 @@ class LCTPostHeuristicsTestCase(ApprenticeAgentsTestCase):
         with self.assertRaises(HeuristicException):
             MockedHeuristic(context)._logic(agent, tmr)
 
-    def test_HandleCurrentActionAgendaProcessor(self):
+    def test_HandleCurrentActionUnderstandingProcessor(self):
 
         def setup():
             agent = Agent(ontology=self.ontology)
@@ -181,7 +181,7 @@ class LCTPostHeuristicsTestCase(ApprenticeAgentsTestCase):
 
         effect = False
 
-        class MockedHeuristic(HandleCurrentActionAgendaProcessor):
+        class MockedHeuristic(HandleCurrentActionUnderstandingProcessor):
             def halt_siblings(self):
                 nonlocal effect
                 effect = True
@@ -204,7 +204,7 @@ class LCTPostHeuristicsTestCase(ApprenticeAgentsTestCase):
         with self.assertRaises(HeuristicException):
             MockedHeuristic(context)._logic(agent, tmr)
 
-    def test_RecognizeSubEventsAgendaProcessor(self):
+    def test_RecognizeSubEventsUnderstandingProcessor(self):
 
         def setup():
             agent = Agent(ontology=self.ontology)
@@ -226,7 +226,7 @@ class LCTPostHeuristicsTestCase(ApprenticeAgentsTestCase):
 
         effect = False
 
-        class MockedHeuristic(RecognizeSubEventsAgendaProcessor):
+        class MockedHeuristic(RecognizeSubEventsUnderstandingProcessor):
             def halt_siblings(self):
                 nonlocal effect
                 effect = True
@@ -253,7 +253,7 @@ class LCTPostHeuristicsTestCase(ApprenticeAgentsTestCase):
         with self.assertRaises(HeuristicException):
             MockedHeuristic(context)._logic(agent, tmr)
 
-    def test_IdentifyClosingOfUnknownTaskAgendaProcessor(self):
+    def test_IdentifyClosingOfUnknownTaskUnderstandingProcessor(self):
 
         self.ontology.register("EVENT-A", isa="ONT.EVENT")
         self.ontology.register("EVENT-B", isa="ONT.EVENT")
@@ -286,7 +286,7 @@ class LCTPostHeuristicsTestCase(ApprenticeAgentsTestCase):
 
             return agent, context, tmr
 
-        class MockedHeuristic(IdentifyClosingOfUnknownTaskAgendaProcessor):
+        class MockedHeuristic(IdentifyClosingOfUnknownTaskUnderstandingProcessor):
             pass
 
         # If matched, the heuristic adds the input event as a HAS-EVENT-AS-PART, and moves existing non-complex events
@@ -324,7 +324,7 @@ class LCTPostHeuristicsTestCase(ApprenticeAgentsTestCase):
         with self.assertRaises(HeuristicException):
             MockedHeuristic(context)._logic(agent, tmr)
 
-    def test_RecognizePartsOfObjectAgendaProcessor(self):
+    def test_RecognizePartsOfObjectUnderstandingProcessor(self):
 
         def setup():
             agent = Agent(ontology=self.ontology)
@@ -349,7 +349,7 @@ class LCTPostHeuristicsTestCase(ApprenticeAgentsTestCase):
 
             return agent, context, tmr
 
-        class MockedHeuristic(RecognizePartsOfObjectAgendaProcessor):
+        class MockedHeuristic(RecognizePartsOfObjectUnderstandingProcessor):
             pass
 
         # If matched, the heuristic adds the input event's THEMEs (objects) as a HAS-OBJECT-AS-PART to the currently

@@ -1,4 +1,4 @@
-from backend.contexts.context import AgendaProcessor, HeuristicException, FRResolutionAgendaProcessor
+from backend.contexts.context import HeuristicException, FRResolutionUnderstandingProcessor, UnderstandingProcessor
 from backend.heuristics.fr_heuristics import FRResolveHumanAndRobotAsSingletonsHeuristic, FRResolveSetsWithIdenticalMembersHeuristic
 from backend.heuristics.lctcontex.lct_fr_import_heuristics import FRImportDoNotImportRequestActions
 from backend.models.graph import Frame
@@ -14,7 +14,7 @@ import random
 # it is now complete (and all subtasks below it are also completed; any parent task it has is considered current).
 # Finding a match necessarily removes the LEARN_ST_MEMORY and POST_PROCESS agent events as this TMR has been
 # consumed.
-class IdentifyClosingOfKnownTaskAgendaProcessor(AgendaProcessor):
+class IdentifyClosingOfKnownTaskUnderstandingProcessor(UnderstandingProcessor):
 
     def __init__(self, context):
         super().__init__()
@@ -57,7 +57,7 @@ class IdentifyClosingOfKnownTaskAgendaProcessor(AgendaProcessor):
 # 3) There are no LCT.learning events in working memory
 # If this heuristic matches, it will import working memory into long term memory, using the FR import heuristics
 # defined in this context, and then will clear working memory.
-class IdentifyCompletedTaskAgendaProcessor(AgendaProcessor):
+class IdentifyCompletedTaskUnderstandingProcessor(UnderstandingProcessor):
 
     def __init__(self, context):
         super().__init__()
@@ -95,7 +95,7 @@ class IdentifyCompletedTaskAgendaProcessor(AgendaProcessor):
 # 5) The previous TMR's main event must have a PURPOSE (this is currently the identifier of a precondition utterance).
 # 6) The theme of this TMR's REQUEST-ACTION.THEME must match the THEME of the previous TMR's main event (concept match only).
 # If the above hold, the input is skipped and all other heuristics are disabled.
-class IdentifyPreconditionSatisfyingActionsAgendaProcessor(AgendaProcessor):
+class IdentifyPreconditionSatisfyingActionsUnderstandingProcessor(UnderstandingProcessor):
 
     def __init__(self, context):
         super().__init__()
@@ -132,7 +132,7 @@ class IdentifyPreconditionSatisfyingActionsAgendaProcessor(AgendaProcessor):
         previous_themes = list(map(lambda theme: theme.resolve().concept(), previous_themes))
 
         if len(set(themes).intersection(set(previous_themes))) > 0:
-            self.reassign_siblings([FRResolutionAgendaProcessor()])
+            self.reassign_siblings([FRResolutionUnderstandingProcessor()])
             return
 
         raise HeuristicException()

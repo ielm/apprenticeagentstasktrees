@@ -48,14 +48,16 @@ def format_learned_event_yale(event: FRInstance, ontology: Ontology) -> dict:
         if action == "GET" and set(lemmas) == {"FOOT_BRACKET"}:
             return "bracket-foot"
 
-        return " and ".join(lemmas)
+        return " and ".join(set(lemmas))
 
     def _name(event: FRInstance) -> str:
         if len(event["HAS-EVENT-AS-PART"]) == 0:
-            agent = " and ".join(map(lambda agent: agent.resolve().concept(full_path=False), event["AGENT"]))
-            action = actions[event.concept(full_path=False)]
-            theme = " and ".join(map(lambda theme: _pretty_lemma(theme.resolve().lemmas(), action), event["THEME"])).lower()
-            return agent + " " + action + "(" + theme + ")"
+            try:
+                agent = " and ".join(map(lambda agent: agent.resolve().concept(full_path=False), event["AGENT"]))
+                action = actions[event.concept(full_path=False)]
+                theme = " and ".join(map(lambda theme: _pretty_lemma(theme.resolve().lemmas(), action), event["THEME"])).lower()
+                return agent + " " + action + "(" + theme + ")"
+            except: pass
         return event.concept(full_path=False) + " " + " and ".join(map(lambda theme: theme.resolve().concept(full_path=False), event["THEME"]))
 
     def _format(event: FRInstance, parent: FRInstance=None) -> dict:

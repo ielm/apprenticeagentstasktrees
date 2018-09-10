@@ -48,7 +48,7 @@ class Agent(Network):
 
         self._logger.log("Input: '" + tmr.sentence + "'")
 
-        agenda = self.context.default_agenda()
+        agenda = self.context.default_understanding()
         agenda.logger(self._logger)
         agenda.process(self, tmr)
 
@@ -192,7 +192,7 @@ class Agent(Network):
         def understand_input(statement, tmr_frame):
             tmr = self[tmr_frame["REFERS-TO-GRAPH"].singleton()]
 
-            agenda = self.context.default_agenda()
+            agenda = self.context.default_understanding()
             agenda.logger(self._logger)
             agenda.process(self, tmr)
 

@@ -27,7 +27,7 @@
     </style>
 
     <script>
-        function advance() {
+        function advance(callback) {
             $.ajax({
                 url: "/iidea/advance",
                 method: "GET",
@@ -36,6 +36,9 @@
                 render_time(output);
                 render_inputs(output["inputs"]);
                 render_agenda(output["agenda"]);
+                if (callback != null) {
+                    callback();
+                }
             }).fail(function(error) {
                 console.log(error);
             });
@@ -62,6 +65,40 @@
             $("#inputTextButton").prop("disabled", true);
             $("#inputText").attr("placeholder", "Analyzing...");
             $("#inputText").val("");
+        }
+
+        function start() {
+            $("#start-button").hide();
+            $("#pause-button").show();
+            $("#advance-button").prop("disabled", true);
+
+            running = true;
+            run();
+        }
+
+        function pause() {
+            $("#start-button").show();
+            $("#pause-button").hide();
+            $("#advance-button").prop("disabled", false);
+
+            running = false;
+        }
+
+    </script>
+
+    <script>
+        var running = false;
+
+        function run() {
+            advance(keepRunning);
+        }
+
+        function keepRunning() {
+            setTimeout(function() {
+                if (running) {
+                    run();
+                }
+            }, 1000);
         }
     </script>
 
@@ -124,6 +161,12 @@
             $("#inputTextButton").on("click", function() {
                 input();
             });
+            $("#start-button").on("click", function() {
+                start();
+            });
+            $("#pause-button").on("click", function() {
+                pause();
+            });
 
 
 
@@ -175,6 +218,8 @@
                     </div>
                     <div class="card-body">
                         <button id="advance-button" type="button" class="btn btn-sm btn-secondary">Advance</button>
+                        <button id="start-button" type="button" class="btn btn-sm btn-success">Start</button>
+                        <button id="pause-button" type="button" class="btn btn-sm btn-warning" style="display: none;">Pause</button>
                     </div>
                 </div>
                 <div class="card" style="margin-bottom: 25px;">
@@ -187,6 +232,16 @@
                             <datalist id="demoTexts">
                                 <option value="We will build a chair."></option>
                                 <option value="I need a screwdriver to assemble a chair."></option>
+                                <option value="Get a screwdriver."></option>
+                                <option value="First, we will build a front leg of the chair."></option>
+                                <option value="Get a foot bracket."></option>
+                                <option value="Get a front bracket."></option>
+                                <option value="Get a dowel."></option>
+                                <option value="Hold the dowel."></option>
+                                <option value="I am using the screwdriver to affix the brackets on the dowel with screws."></option>
+                                <option value="Release the dowel."></option>
+                                <option value="We have assembled a front leg."></option>
+                                <option value="We finished assembling the chair."></option>
                             </datalist>
                             <div class="input-group-append">
                                 <button id="inputTextButton" class="btn btn-sm btn-primary" type="button">Input</button>
