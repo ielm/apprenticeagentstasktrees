@@ -133,7 +133,7 @@
                     }
                 });
 
-            var relations = graph
+            var relations = frames.length == 0 ? [] : graph
                 .map(function(frame) {
                     return Array.from(frame["relations"])
                         .filter(r => ["AGENT-OF", "THEME-OF", "INSTRUMENT-OF", "SCOPE-OF", "DESTINATION-OF"].indexOf(r.slot) == -1)
@@ -246,7 +246,7 @@
             <tr>
                 <td>{|slot|}
                 <td class="property-icon"><img src="/assets/svg/list.svg" alt="list" style="height: 12px"></td>
-                <td>{|value|}</td>
+                <td style="word-break: break-all;">{|value|}</td>
             </tr>
             {|/frame.attributes|}
         </table>

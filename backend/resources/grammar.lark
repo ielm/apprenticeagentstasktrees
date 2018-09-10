@@ -1,5 +1,73 @@
 start: (view)
 
+// Statements and executables
+
+define: DEFINE goal
+goal: NAME arguments AS GOAL IN GRAPH priority (action)* (condition)*
+priority: (PRIORITY double)?
+goal_status: (PENDING | ACTIVE | ABANDONED | SATISFIED)
+
+action: ACTION "(" ACTION_NAME ")" action_selection action_do+
+action_selection: SELECT (DEFAULT | IF boolean_statement)
+action_do: DO (statement | IDLE)
+
+condition: WHEN (condition_and | condition_or | condition_nand | condition_nor | condition_not) THEN goal_status
+condition_and: boolean_statement (AND boolean_statement)*
+condition_or: boolean_statement (OR boolean_statement)+
+condition_nand: boolean_statement (NAND boolean_statement)+
+condition_nor: boolean_statement (NOR boolean_statement)+
+condition_not: boolean_statement (NOT boolean_statement)+
+
+statement: (add_filler_statement | assign_filler_statement | exists_statement | foreach_statement | is_statement | make_instance_statement | mp_statement)
+boolean_statement: (exists_statement | is_statement)
+
+add_filler_statement: statement_instance "[" NAME "]" "+=" (statement_instance | literal)
+assign_filler_statement: statement_instance "[" NAME "]" "=" (statement_instance | literal)
+exists_statement: EXISTS logical_slot_query
+foreach_statement: FOR EACH ARGUMENT IN logical_slot_query ("|" statement)*
+is_statement: statement_instance "[" NAME "]" EQUALS EQUALS literal
+make_instance_statement: "@" (graph | special_agent_graph) ":" identifier arguments
+mp_statement: SELF "." MP arguments
+
+statement_instance: (SELF | "#" identifier | make_instance_statement | argument)
+special_agent_graph: "AGENT." (INTERNAL | EXE | ONTOLOGY | WM | LT) "!"
+arguments: "(" (argument ("," argument)*)? ")"
+argument: ARGUMENT
+
+ABANDONED: "abandoned"i
+ACTION: "action"i
+ACTIVE: "active"i
+AS: "as"i
+DEFAULT: "default"i
+DEFINE: "define"i
+DO: "DO"i
+EACH: "each"i
+EXE: "exe"i
+EXISTS: "exists"i
+FOR: "for"i
+GOAL: "goal"i
+IDLE: "idle"i
+IF: "if"i
+IN: "in"i
+INTERNAL: "internal"i
+LT: "lt"i
+NAND: "nand"i
+NOR: "nor"i
+ONTOLOGY: "ontology"i
+PENDING: "pending"i
+PRIORITY: "priority"i
+SATISFIED: "satisfied"i
+SELECT: "select"i
+SELF: "self"i
+WHEN: "when"i
+WM: "wm"i
+
+ACTION_NAME: /(?!True|False)[a-zA-Z\.\*\_\- ]+/i
+ARGUMENT: /\$[a-zA-Z0-9]+/
+MP: /[a-zA-Z0-9\_]+/
+
+// Views and querying
+
 view: VIEW graph (view_all | view_query) (FOLLOW path (AND FOLLOW path)*)?
 view_all: SHOW ALL
 view_query: frame_query
@@ -76,5 +144,5 @@ WILDCARD: "*"
 INTEGER: /[0-9]+/
 ALPHA: /[a-zA-Z]+/
 
-WHITESPACE: (" " | /\t/ )+
+WHITESPACE: (" " | /\t/ | /\n/)+
 %ignore WHITESPACE

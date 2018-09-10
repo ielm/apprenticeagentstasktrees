@@ -1,7 +1,10 @@
+from backend.agent import Agent
+from backend.models.agenda import Action, Condition, Goal
 from backend.models.grammar import Grammar
 from backend.models.graph import Identifier, Literal, Network
 from backend.models.path import Path
 from backend.models.query import AndQuery, ExactQuery, FillerQuery, FrameQuery, IdentifierQuery, LiteralQuery, NameQuery, NotQuery, OrQuery, SlotQuery
+from backend.models.statement import AddFillerStatement, AssignFillerStatement, ExistsStatement, ForEachStatement, IsStatement, MakeInstanceStatement, MeaningProcedureStatement
 from backend.models.view import View
 
 import unittest
@@ -163,3 +166,233 @@ class GrammarTestCase(unittest.TestCase):
         self.assertEqual(View(self.n, g, follow=Path().to("REL")), Grammar.parse(self.n, "VIEW TEST SHOW ALL FOLLOW [REL]->"))
         self.assertEqual(View(self.n, g, follow=Path().to("REL").to("OTHER")), Grammar.parse(self.n, "view TEST SHOW ALL FOLLOW [REL]->[OTHER]->"))
         self.assertEqual(View(self.n, g, follow=[Path().to("REL1"), Path().to("REL2")]), Grammar.parse(self.n, "view TEST SHOW ALL FOLLOW [REL1]-> AND FOLLOW [REL2]->"))
+
+
+class AgendaGrammarTestCase(unittest.TestCase):
+
+    class TestAgent(Agent):
+        def __init__(self, g, agent):
+            from backend.models.statement import StatementHierarchy
+            Network.__init__(self)
+            self.register(g)
+            self.register(StatementHierarchy().build())
+
+            self.exe = g
+            self.internal = g
+            self.ontology = g
+            self.wo_memory = g
+            self.lt_memory = g
+            self.identity = agent
+
+    def setUp(self):
+        from backend.models.graph import Graph
+        self.g = Graph("SELF")
+        self.agentFrame = self.g.register("AGENT")
+
+        self.agent = AgendaGrammarTestCase.TestAgent(self.g, self.agentFrame)
+
+    def test_statement_instance(self):
+        concept = self.g.register("MYCONCEPT")
+        instance = self.g.register("FRAME", generate_index=True)
+
+        # SELF refers to the agent's identity
+        self.assertEqual(self.agentFrame, Grammar.parse(self.agent, "SELF", start="statement_instance", agent=self.agent))
+
+        # An instance can be created on a specified graph (by name); here "SELF" is the graph name, and TEST.MYCONCEPT is an identifier to make an instance of
+        self.assertEqual(MakeInstanceStatement.instance(self.g, self.g._namespace, concept, []), Grammar.parse(self.agent, "@SELF:SELF.MYCONCEPT()", start="statement_instance", agent=self.agent))
+
+        # Graph names don't need to be known; a few have unique identifiers, but must be followed by the "!" to be
+        # registered as such;  AGENT.INTERNAL, AGENT.EXE, AGENT.ONTOLOGY, AGENT.WM, and AGENT.LT are valid
+        self.assertEqual(MakeInstanceStatement.instance(self.g, self.g._namespace, concept, []), Grammar.parse(self.agent, "@AGENT.INTERNAL!:SELF.MYCONCEPT()", start="statement_instance", agent=self.agent))
+
+        # If a fully qualified identifier is not provided, the agent's EXE graph will be assumed
+        self.assertEqual(MakeInstanceStatement.instance(self.g, self.g._namespace, concept, []), Grammar.parse(self.agent, "@SELF:MYCONCEPT()", start="statement_instance", agent=self.agent))
+
+        # New instances can include arguments
+        self.assertEqual(MakeInstanceStatement.instance(self.g, self.g._namespace, concept, ["$arg1", "$arg2"]), Grammar.parse(self.agent, "@SELF:SELF.MYCONCEPT($arg1, $arg2)", start="statement_instance", agent=self.agent))
+
+        # A simple identifier is also a valid statement instance
+        self.assertEqual(instance, Grammar.parse(self.agent, "#SELF.FRAME.1", start="statement_instance", agent=self.agent))
+
+        # Any variable can also be used
+        self.assertEqual("$var1", Grammar.parse(self.agent, "$var1", start="statement_instance", agent=self.agent))
+
+    def test_is_statement(self):
+        f = self.g.register("FRAME")
+
+        self.assertEqual(IsStatement.instance(self.g, f, "SLOT", 123), Grammar.parse(self.agent, "#SELF.FRAME[SLOT] == 123", start="is_statement", agent=self.agent))
+
+    def test_make_instance_statement(self):
+        concept = self.g.register("MYCONCEPT")
+        self.assertEqual(MakeInstanceStatement.instance(self.g, self.g._namespace, concept, []), Grammar.parse(self.agent, "@SELF:SELF.MYCONCEPT()", start="make_instance_statement", agent=self.agent))
+        self.assertEqual(MakeInstanceStatement.instance(self.g, self.g._namespace, concept, []), Grammar.parse(self.agent, "@AGENT.INTERNAL!:SELF.MYCONCEPT()", start="make_instance_statement", agent=self.agent))
+        self.assertEqual(MakeInstanceStatement.instance(self.g, self.g._namespace, concept, []), Grammar.parse(self.agent, "@SELF:MYCONCEPT()", start="make_instance_statement", agent=self.agent))
+        self.assertEqual(MakeInstanceStatement.instance(self.g, self.g._namespace, concept, ["$arg1", "$arg2"]), Grammar.parse(self.agent, "@SELF:SELF.MYCONCEPT($arg1, $arg2)", start="make_instance_statement", agent=self.agent))
+
+    def test_add_filler_statement(self):
+        f = self.g.register("FRAME")
+
+        statement = AddFillerStatement.instance(self.g, self.agentFrame, "SLOT", 123)
+        parsed = Grammar.parse(self.agent, "SELF[SLOT] += 123", start="add_filler_statement", agent=self.agent)
+        self.assertEqual(statement, parsed)
+
+        statement = AddFillerStatement.instance(self.g, self.agentFrame, "SLOT", f)
+        parsed = Grammar.parse(self.agent, "SELF[SLOT] += #SELF.FRAME", start="add_filler_statement", agent=self.agent)
+        self.assertEqual(statement, parsed)
+
+        statement = AddFillerStatement.instance(self.g, f, "SLOT", 123)
+        parsed = Grammar.parse(self.agent, "#SELF.FRAME[SLOT] += 123", start="add_filler_statement", agent=self.agent)
+        self.assertEqual(statement, parsed)
+
+    def test_assign_filler_statement(self):
+        f = self.g.register("FRAME")
+
+        statement = AssignFillerStatement.instance(self.g, self.agentFrame, "SLOT", 123)
+        parsed = Grammar.parse(self.agent, "SELF[SLOT] = 123", start="assign_filler_statement", agent=self.agent)
+        self.assertEqual(statement, parsed)
+
+        statement = AssignFillerStatement.instance(self.g, self.agentFrame, "SLOT", f)
+        parsed = Grammar.parse(self.agent, "SELF[SLOT] = #SELF.FRAME", start="assign_filler_statement", agent=self.agent)
+        self.assertEqual(statement, parsed)
+
+        statement = AssignFillerStatement.instance(self.g, f, "SLOT", 123)
+        parsed = Grammar.parse(self.agent, "#SELF.FRAME[SLOT] = 123", start="assign_filler_statement", agent=self.agent)
+        self.assertEqual(statement, parsed)
+
+    def test_exists_statement(self):
+        statement = ExistsStatement.instance(self.g, SlotQuery(self.agent, AndQuery(self.agent, [NameQuery(self.agent, "THEME"), FillerQuery(self.agent, LiteralQuery(self.agent, 123))])))
+        parsed = Grammar.parse(self.agent, "EXISTS THEME = 123", start="exists_statement", agent=self.agent)
+        self.assertEqual(statement, parsed)
+
+    def test_foreach_statement(self):
+        query = SlotQuery(self.agent, AndQuery(self.agent, [NameQuery(self.agent, "THEME"), FillerQuery(self.agent, LiteralQuery(self.agent, 123))]))
+        statement = ForEachStatement.instance(self.g, query, "$var", AddFillerStatement.instance(self.g, "$var", "SLOT", 456))
+        parsed = Grammar.parse(self.agent, "FOR EACH $var IN THEME = 123 | $var[SLOT] += 456", start="foreach_statement", agent=self.agent)
+        self.assertEqual(statement, parsed)
+
+        query = SlotQuery(self.agent, AndQuery(self.agent, [NameQuery(self.agent, "THEME"), FillerQuery(self.agent, LiteralQuery(self.agent, 123))]))
+        statement = ForEachStatement.instance(self.g, query, "$var", [AddFillerStatement.instance(self.g, "$var", "SLOT", 456), AddFillerStatement.instance(self.g, "$var", "SLOT", 456)])
+        parsed = Grammar.parse(self.agent, "FOR EACH $var IN THEME = 123 | $var[SLOT] += 456 | $var[SLOT] += 456", start="foreach_statement", agent=self.agent)
+        self.assertEqual(statement, parsed)
+
+    def test_mp_statement(self):
+        statement = MeaningProcedureStatement.instance(self.g, "mp1", [])
+        parsed = Grammar.parse(self.agent, "SELF.mp1()", start="mp_statement", agent=self.agent)
+        self.assertEqual(statement, parsed)
+
+        statement = MeaningProcedureStatement.instance(self.g, "mp1", ["$var1", "$var2"])
+        parsed = Grammar.parse(self.agent, "SELF.mp1($var1, $var2)", start="mp_statement", agent=self.agent)
+        self.assertEqual(statement, parsed)
+
+    def test_action(self):
+
+        action = Action.build(self.g, "testaction", Action.DEFAULT, Action.IDLE)
+        parsed = Grammar.parse(self.agent, "ACTION (testaction) SELECT DEFAULT DO IDLE", start="action", agent=self.agent)
+        self.assertEqual(action, parsed)
+
+        query = SlotQuery(self.agent, AndQuery(self.agent, [NameQuery(self.agent, "THEME"), FillerQuery(self.agent, LiteralQuery(self.agent, 123))]))
+        action = Action.build(self.g, "testaction", ExistsStatement.instance(self.g, query), Action.IDLE)
+        parsed = Grammar.parse(self.agent, "ACTION (testaction) SELECT IF EXISTS THEME = 123 DO IDLE", start="action", agent=self.agent)
+        self.assertEqual(action, parsed)
+
+        statement = MeaningProcedureStatement.instance(self.g, "mp1", [])
+        action = Action.build(self.g, "testaction", Action.DEFAULT, [statement, statement])
+        parsed = Grammar.parse(self.agent, "ACTION (testaction) SELECT DEFAULT DO SELF.mp1() DO SELF.mp1()", start="action", agent=self.agent)
+        self.assertEqual(action, parsed)
+
+    def test_condition(self):
+        query = SlotQuery(self.agent, AndQuery(self.agent, [NameQuery(self.agent, "THEME"), FillerQuery(self.agent, LiteralQuery(self.agent, 123))]))
+
+        condition = Condition.build(self.g, [ExistsStatement.instance(self.g, query)], Goal.Status.SATISFIED, logic=Condition.Logic.AND, order=1)
+        parsed = Grammar.parse(self.agent, "WHEN EXISTS THEME = 123 THEN satisfied", start="condition", agent=self.agent)
+        self.assertEqual(condition, parsed)
+
+        condition = Condition.build(self.g, [ExistsStatement.instance(self.g, query), ExistsStatement.instance(self.g, query)], Goal.Status.SATISFIED, logic=Condition.Logic.AND, order=1)
+        parsed = Grammar.parse(self.agent, "WHEN EXISTS THEME = 123 AND EXISTS THEME = 123 THEN satisfied", start="condition", agent=self.agent)
+        self.assertEqual(condition, parsed)
+
+        condition = Condition.build(self.g, [ExistsStatement.instance(self.g, query), ExistsStatement.instance(self.g, query)], Goal.Status.SATISFIED, logic=Condition.Logic.OR, order=1)
+        parsed = Grammar.parse(self.agent, "WHEN EXISTS THEME = 123 OR EXISTS THEME = 123 THEN satisfied", start="condition", agent=self.agent)
+        self.assertEqual(condition, parsed)
+
+    def test_define_goal(self):
+        # A goal has a name and a destination graph, and a default priority
+        goal: Goal = Grammar.parse(self.agent, "DEFINE XYZ() AS GOAL IN SELF", start="define", agent=self.agent)
+        self.assertTrue(goal.frame.name() in self.g)
+        self.assertEqual(goal.name(), "XYZ")
+        goal.prioritize(self.agent)
+        self.assertEqual(goal.priority(), 0.5)
+
+        # A goal can be overwritten
+        goal: Goal = Grammar.parse(self.agent, "DEFINE XYZ() AS GOAL IN SELF", start="define", agent=self.agent)
+        self.assertTrue(goal.frame.name() in self.g)
+        self.assertEqual(goal.name(), "XYZ")
+        self.assertEqual(2, len(self.g)) # One is the agent, the other is the overwritten goal
+
+        # A goal can have parameters
+        goal: Goal = Goal.define(self.g, "XYZ", 0.5, [], [], ["$var1", "$var2"])
+        parsed: Goal = Grammar.parse(self.agent, "DEFINE XYZ($var1, $var2) AS GOAL IN SELF", start="define", agent=self.agent)
+        self.assertEqual(goal, parsed)
+
+        # A goal can have a numeric priority
+        goal: Goal = Goal.define(self.g, "XYZ", 0.9, [], [], [])
+        parsed: Goal = Grammar.parse(self.agent, "DEFINE XYZ() AS GOAL IN SELF PRIORITY 0.9", start="define", agent=self.agent)
+        self.assertEqual(goal, parsed)
+
+        # A goal can have plans (actions)
+        a1: Action = Action.build(self.g, "action_a", Action.DEFAULT, Action.IDLE)
+        a2: Action = Action.build(self.g, "action_b", Action.DEFAULT, Action.IDLE)
+        goal: Goal = Goal.define(self.g, "XYZ", 0.5, [a1, a2], [], [])
+        parsed: Goal = Grammar.parse(self.agent, "DEFINE XYZ() AS GOAL IN SELF ACTION (action_a) SELECT DEFAULT DO IDLE ACTION (action_b) SELECT DEFAULT DO IDLE", start="define", agent=self.agent)
+        self.assertEqual(goal, parsed)
+
+        # A goal can have conditions (which are ordered as written)
+        q1 = SlotQuery(self.agent, AndQuery(self.agent, [NameQuery(self.agent, "THEME"), FillerQuery(self.agent, LiteralQuery(self.agent, 123))]))
+        q2 = SlotQuery(self.agent, AndQuery(self.agent, [NameQuery(self.agent, "THEME"), FillerQuery(self.agent, LiteralQuery(self.agent, 456))]))
+        c1: Condition = Condition.build(self.g, [ExistsStatement.instance(self.g, q1)], Goal.Status.SATISFIED, Condition.Logic.AND, 1)
+        c2: Condition = Condition.build(self.g, [ExistsStatement.instance(self.g, q2)], Goal.Status.ABANDONED, Condition.Logic.AND, 2)
+        goal: Goal = Goal.define(self.g, "XYZ", 0.5, [], [c1, c2], [])
+        parsed: Goal = Grammar.parse(self.agent, "DEFINE XYZ() AS GOAL IN SELF WHEN EXISTS THEME = 123 THEN satisfied WHEN EXISTS THEME = 456 THEN abandoned", start="define", agent=self.agent)
+        self.assertEqual(goal, parsed)
+
+    def test_find_something_to_do(self):
+        graph = self.g
+        goal1 = Goal.define(graph, "FIND-SOMETHING-TO-DO", 0.1, [
+            Action.build(graph,
+                         "acknowledge input",
+                         ExistsStatement.instance(graph, Grammar.parse(self.agent,
+                                                                     "(@^ SELF.INPUT-TMR AND ACKNOWLEDGED = False)", start="logical_slot_query")),
+                         ForEachStatement.instance(graph, Grammar.parse(self.agent,
+                                                                      "(@^ SELF.INPUT-TMR AND ACKNOWLEDGED = False)", start="logical_slot_query"),
+                                                   "$tmr", [
+                                                       AddFillerStatement.instance(graph, self.agent.identity, "HAS-GOAL",
+                                                                                   MakeInstanceStatement.instance(graph,
+                                                                                                                  "SELF",
+                                                                                                                  "SELF.UNDERSTAND-TMR",
+                                                                                                                  [
+                                                                                                                      "$tmr"])),
+                                                       AssignFillerStatement.instance(graph, "$tmr", "ACKNOWLEDGED",
+                                                                                      True)
+                                                   ])
+                         ),
+            Action.build(graph, "idle", Action.DEFAULT, Action.IDLE)
+        ], [], [])
+
+        script = '''
+        DEFINE FIND-SOMETHING-TO-DO()
+            AS GOAL
+            IN SELF
+            PRIORITY 0.1
+            ACTION (acknowledge input)
+                SELECT IF EXISTS (@^ SELF.INPUT-TMR AND ACKNOWLEDGED = FALSE)
+                DO FOR EACH $tmr IN (@^ SELF.INPUT-TMR AND ACKNOWLEDGED = FALSE)
+                | SELF[HAS-GOAL] += @SELF:SELF.UNDERSTAND-TMR($tmr)
+                | $tmr[ACKNOWLEDGED] = True
+            ACTION (idle)
+                SELECT DEFAULT
+                DO IDLE
+        '''
+
+        parsed: Goal = Grammar.parse(self.agent, script, start="define", agent=self.agent)
+        self.assertEqual(goal1, parsed)
+

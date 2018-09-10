@@ -24,7 +24,7 @@ class LCTContextTestCase(ApprenticeAgentsTestCase):
         self.ontology.register("FASTEN", isa="ONT.EVENT")
 
     def test_learning_hierarchy(self):
-        agent = Agent(self.n, ontology=self.ontology)
+        agent = Agent(ontology=self.ontology)
         context = LCTContext(agent)
 
         event1 = agent.wo_memory.register("EVENT", isa="ONT.EVENT")
@@ -46,7 +46,7 @@ class LCTContextTestCase(ApprenticeAgentsTestCase):
         self.assertEqual(context.learning_hierarchy(), [event3.name(), event2.name(), event1.name()])
 
     def test_learning_hierarchy_no_current(self):
-        agent = Agent(self.n, ontology=self.ontology)
+        agent = Agent(ontology=self.ontology)
         context = LCTContext(agent)
 
         event1 = agent.wo_memory.register("EVENT", isa="ONT.EVENT")
@@ -56,7 +56,7 @@ class LCTContextTestCase(ApprenticeAgentsTestCase):
         self.assertEqual(context.learning_hierarchy(), [])
 
     def test_finish_learning(self):
-        agent = Agent(self.n, ontology=self.ontology)
+        agent = Agent(ontology=self.ontology)
         context = LCTContext(agent)
 
         event1 = agent.wo_memory.register("EVENT", isa="ONT.EVENT")

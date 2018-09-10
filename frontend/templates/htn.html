@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>HTN</title>
+
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jquery-jsonview/1.2.3/jquery.jsonview.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-treeview/1.2.0/bootstrap-treeview.min.css" />
+
+    <script src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mustache.js/2.3.0/mustache.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-jsonview/1.2.3/jquery.jsonview.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-treeview/1.2.0/bootstrap-treeview.min.js"></script>
+
+    <style>
+        .robot {
+            color: red;
+        }
+        .human {
+            color: blue;
+        }
+    </style>
+
+    <script>
+
+        function format_htn(raw) {
+            var actor = "";
+            if (raw["attributes"].indexOf("robot") != -1) {
+                actor = "<span class='robot'>ROBOT</span>.";
+            } else if (raw["attributes"].indexOf("human") != -1) {
+                actor = "<span class='human'>HUMAN</span>.";
+            }
+
+            var ordering = "";
+            if (raw["combination"] == "Sequential") {
+                ordering = "<img src='/assets/svg/arrow-thick-right.svg' alt='arrow-thick-right' style='height: 16px'>";
+            } else if (raw["combination"] != "") {
+                ordering = raw["combination"];
+            }
+
+            return {
+                text: actor + raw["name"] + " " + ordering,
+                nodes: raw["children"].map(child => format_htn(child))
+            }
+        }
+
+        function htn_depth(raw, current) {
+            if (raw["children"].length == 0) return current;
+            return Math.max(...raw["children"].map(child => htn_depth(child, current + 1)))
+        }
+
+    </script>
+
+    <script>
+
+        function load() {
+            var identifier = $("#htnIdentifier").val();
+            $.ajax({
+                url: "/htn?instance=" + identifier,
+                method: "GET",
+            }).done(function(data) {
+                var output = JSON.parse(data);
+
+                $("#raw-htn").JSONView(output, { collapsed: true });
+
+                var htn = format_htn(output["nodes"]);
+                $("#pretty-htn").treeview({data: [htn], levels: htn_depth(output["nodes"], 1)});
+            }).fail(function(error) {
+                console.log(error);
+            });
+        }
+
+    </script>
+
+    <script>
+        $(document).ready(function() {
+            $("#htn-button").on("click", function() {
+                load();
+            });
+            $("#htnIdentifier").on("keyup", function(e) {
+                if (e.key == "Enter") {
+                    load();
+                }
+            });
+        });
+    </script>
+
+</head>
+<body>
+
+    <div class="container">
+        <div class="row" style="margin-top: 25px;">
+            <div class="col-sm-12">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="input-group mb-3">
+                            <div class="input-group-prepend">
+                                <span class="input-group-text" id="basic-addon1">@</span>
+                            </div>
+                            <input id="htnIdentifier" type="text" class="form-control form-control-sm" placeholder="HTN Root ID">
+                            <div class="input-group-append">
+                                <button id="htn-button" class="btn btn-sm btn-primary" type="button">HTN</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div id="pretty-htn" class="col-sm-6"></div>
+                            <div id="raw-htn" class="col-sm-6"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>

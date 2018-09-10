@@ -1,4 +1,4 @@
-from backend.contexts.context import AgentContext, RootAgendaProcessor
+from backend.contexts.context import AgentContext, FRResolutionUnderstandingProcessor, RootUnderstandingProcessor
 
 from backend.heuristics.lctcontex.lct_fr_resolution_heuristics import *
 from backend.heuristics.lctcontex.lct_post_heuristics import *
@@ -25,20 +25,20 @@ class LCTContext(AgentContext):
         self.agent.ontology.register("BRACKET", isa="ARTIFACT-PART")
         self.agent.ontology.register("DOWEL", isa="ARTIFACT-PART")
 
-    def default_agenda(self):
+    def default_understanding(self):
 
-        agenda = RootAgendaProcessor()
+        understanding = RootUnderstandingProcessor()
 
-        agenda.add_subprocess(IdentifyClosingOfKnownTaskAgendaProcessor(self).add_subprocess(IdentifyCompletedTaskAgendaProcessor(self)))
-        agenda.add_subprocess(IdentifyPreconditionSatisfyingActionsAgendaProcessor(self))
-        agenda.add_subprocess(FRResolutionAgendaProcessor())
-        agenda.add_subprocess(IdentifyPreconditionsAgendaProcessor(self))
-        agenda.add_subprocess(HandleRequestedActionsAgendaProcessor(self))
-        agenda.add_subprocess(HandleCurrentActionAgendaProcessor(self))
-        agenda.add_subprocess(RecognizeSubEventsAgendaProcessor(self).add_subprocess(RecognizePartsOfObjectAgendaProcessor(self)))
-        agenda.add_subprocess(IdentifyClosingOfUnknownTaskAgendaProcessor(self))
+        understanding.add_subprocess(IdentifyClosingOfKnownTaskUnderstandingProcessor(self).add_subprocess(IdentifyCompletedTaskUnderstandingProcessor(self)))
+        understanding.add_subprocess(IdentifyPreconditionSatisfyingActionsUnderstandingProcessor(self))
+        understanding.add_subprocess(FRResolutionUnderstandingProcessor())
+        understanding.add_subprocess(IdentifyPreconditionsUnderstandingProcessor(self))
+        understanding.add_subprocess(HandleRequestedActionsUnderstandingProcessor(self))
+        understanding.add_subprocess(HandleCurrentActionUnderstandingProcessor(self))
+        understanding.add_subprocess(RecognizeSubEventsUnderstandingProcessor(self).add_subprocess(RecognizePartsOfObjectUnderstandingProcessor(self)))
+        understanding.add_subprocess(IdentifyClosingOfUnknownTaskUnderstandingProcessor(self))
 
-        return agenda
+        return understanding
 
     # ------ Meta-contextual Properties -------
 
@@ -54,16 +54,16 @@ class LCTContext(AgentContext):
     # Helper function for returning the learning hierarchy; starting with LTC.current, and finding each "parent"
     # via the LCT.waiting_on property; the names are returned in that order (element 0 is current).
     def learning_hierarchy(self):
-        results = self.agent.wo_memory.search(Frame.q(self.agent.network).f(self.LEARNING, True).f(self.CURRENT, True))
+        results = self.agent.wo_memory.search(Frame.q(self.agent).f(self.LEARNING, True).f(self.CURRENT, True))
         if len(results) != 1:
             return []
 
         hierarchy = [results[0].name()]
 
-        results = self.agent.wo_memory.search(Frame.q(self.agent.network).f(self.LEARNING, True).f(self.CURRENT, False).f(self.WAITING_ON, hierarchy[-1]))
+        results = self.agent.wo_memory.search(Frame.q(self.agent).f(self.LEARNING, True).f(self.CURRENT, False).f(self.WAITING_ON, hierarchy[-1]))
         while len(results) == 1:
             hierarchy.append(results[0].name())
-            results = self.agent.wo_memory.search(Frame.q(self.agent.network).f(self.LEARNING, True).f(self.CURRENT, False).f(self.WAITING_ON, hierarchy[-1]))
+            results = self.agent.wo_memory.search(Frame.q(self.agent).f(self.LEARNING, True).f(self.CURRENT, False).f(self.WAITING_ON, hierarchy[-1]))
         return hierarchy
 
     # Helper function for marking a single instance that is currently LTC.learning as finished learning.  This means
@@ -80,7 +80,7 @@ class LCTContext(AgentContext):
 
         instance[self.LEARNED] = True
 
-        for parent in self.agent.wo_memory.search(Frame.q(self.agent.network).f(self.WAITING_ON, instance.name())):
+        for parent in self.agent.wo_memory.search(Frame.q(self.agent).f(self.WAITING_ON, instance.name())):
             if roll_up_current:
                 parent[self.CURRENT] = True
             if self.WAITING_ON in parent:

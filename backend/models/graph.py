@@ -137,6 +137,15 @@ class Network(object):
 
         return self[identifier.graph][identifier]
 
+    def search(self, query: 'FrameQuery', exclude_knowledge=True) -> List['Frame']:
+        graphs = self._storage.values()
+        if exclude_knowledge:
+            from backend.models.ontology import Ontology
+            graphs = list(filter(lambda graph: not isinstance(graph, Ontology), graphs))
+
+        results = list(map(lambda graph: graph.search(query), graphs))
+        return list(reduce(lambda x, y: x + y, results))
+
     def __setitem__(self, key, value):
         if not isinstance(value, Graph):
             raise TypeError()
@@ -317,6 +326,9 @@ class Frame(object):
                 result.append(parent)
         return result
 
+    def parents(self) -> List[Identifier]:
+        return list(map(lambda isa: isa._value, self[self._ISA_type()]))
+
     def concept(self, full_path: bool=True) -> str:
         identifiers = list(map(lambda filler: filler._value, filter(lambda filler: isinstance(filler._value, Identifier), self[self._ISA_type()])))
         identifiers = list(map(lambda identifier: identifier if identifier.graph is not None else Identifier(self._graph._namespace, identifier.name, instance=identifier.instance), identifiers))
@@ -417,6 +429,21 @@ class Slot(object):
             results = reduce(lambda x, y: x and y, results)
 
         return results
+
+    def singleton(self) -> Any:
+        if len(self) == 0:
+            raise Exception("Singleton failed on slot '" + self._name + "'; there are no fillers.")
+        if len(self) > 1:
+            raise Exception("Singleton failed on slot '" + self._name + "'; there are too many fillers.")
+        filler = self._storage[0]
+        filler = filler.resolve()
+
+        if isinstance(filler, Literal):
+            return filler.value
+        if isinstance(filler, Frame):
+            return filler
+
+        raise Exception("Unknown type in slot '" + self._name + "': " + filler)
 
     def __add__(self, other):
         if not isinstance(other, Slot):
@@ -568,6 +595,8 @@ class Filler(object):
         # Convert the results into a single comparator (if intersection is requested, then any single True is
         # sufficient, otherwise all must be true).
         results = list(map(lambda value: _compare(value), other))
+        if len(results) == 0:
+            return False
         if intersection:
             results = reduce(lambda x, y: x or y, results)
         else:

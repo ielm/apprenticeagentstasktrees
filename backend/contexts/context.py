@@ -15,15 +15,15 @@ class AgentContext(object):
     def prepare_static_knowledge(self):
         pass
 
-    def default_agenda(self):
-        raise Exception("Context.default_agenda must be implemented in subclasses.")
+    def default_understanding(self):
+        raise Exception("Context.default_understanding must be implemented in subclasses.")
 
 
 class HeuristicException(Exception):
     pass
 
 
-class AgendaProcessor(object):
+class UnderstandingProcessor(object):
 
     def __init__(self, parent=None):
         self.parent = parent
@@ -46,7 +46,7 @@ class AgendaProcessor(object):
         return self._logger
 
     def _logic(self, agent, tmr):
-        raise Exception("AgentProcessor._logic must be implemented in subclasses.")
+        raise Exception("UnderstandingProcessor._logic must be implemented in subclasses.")
 
     def add_subprocess(self, subprocess):
         subprocess.parent = self
@@ -89,12 +89,12 @@ class AgendaProcessor(object):
             p.logger(logger=self.parent.logger())
 
 
-class RootAgendaProcessor(AgendaProcessor):
+class RootUnderstandingProcessor(UnderstandingProcessor):
     def _logic(self, agent, tmr):
         pass
 
 
-class FRResolutionAgendaProcessor(AgendaProcessor):
+class FRResolutionUnderstandingProcessor(UnderstandingProcessor):
     def _logic(self, agent, tmr):
         backup_logger = agent.wo_memory.logger()
 

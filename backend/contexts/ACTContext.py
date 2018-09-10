@@ -1,4 +1,4 @@
-from backend.contexts.context import AgentContext, RootAgendaProcessor
+from backend.contexts.context import AgentContext, RootUnderstandingProcessor
 from backend.heuristics.actcontext.act_agenda_heuristics import *
 from backend.models.ontology import OntologyFiller
 
@@ -16,13 +16,13 @@ class ACTContext(AgentContext):
         self.agent.ontology.register("BRACKET", isa="ARTIFACT-PART")
         self.agent.ontology.register("DOWEL", isa="ARTIFACT-PART")
 
-    def default_agenda(self):
+    def default_understanding(self):
 
-        agenda = RootAgendaProcessor()
+        understanding = RootUnderstandingProcessor()
 
-        agenda.add_subprocess(RecallTaskFromLongTermMemoryAgendaProcessor(self).add_subprocess(QueuePreconditionActionsAgendaProcessor(self)))
+        understanding.add_subprocess(RecallTaskFromLongTermMemoryUnderstandingProcessor(self).add_subprocess(QueuePreconditionActionsUnderstandingProcessor(self)))
 
-        return agenda
+        return understanding
 
         # ------ Meta-contextual Properties -------
 
