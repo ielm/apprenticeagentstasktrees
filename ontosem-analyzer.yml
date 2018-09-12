@@ -1,0 +1,58 @@
+# This compose file is designed to run the all of the analyzer services and supporting services.
+# It will set up a private network, attach the following:
+  # 1) A CoreNLP service on port 5000
+  # 2) A SmallSem (OntoSem) service on port 5001
+# The SmallSem service is marked as dependent on CoreNLP, but also on the Ontology and Lexicon services, which
+# are found in the static-knowledge.yml compose file.  In order for SmallSem to work correctly, those services
+# must be available on the same network (leia).
+# It is recommended to run both the static-knowledge.yml compose file, and this compose file, in one command, to set
+# the entire system up:
+# docker-compose -f static-knowledge.yml -f ontosem-analyzer.yml up
+# This is currently set to run the "robot" demo (using the robot lexicon and other resources); to change this,
+# change the SMALLSEM_LEXICON_LOCATION and SMALLSEM_RESOURCES_LOCATION environment variables below.
+
+version: '3.3'
+
+services:
+  corenlp:
+    image: leia/ontosem:1.1.2
+    container_name: corenlp
+    ports:
+      - 5000:5000
+    networks:
+      - leia
+    command:
+      - "python3.6"
+      - "SmallSem/corenlp_server.py"
+      - "host=0.0.0.0"
+      - "port=5000"
+
+  ontosem:
+    image: leia/ontosem:1.1.1
+    container_name: ontosem
+    ports:
+      - 5001:5001
+    networks:
+      - leia
+    command:
+      - "python3.6"
+      - "ontosem_server.py"
+      - "host=0.0.0.0"
+      - "port=5001"
+    environment:
+      - CORENLP_HOST=corenlp
+      - CORENLP_PORT=5000
+      - ONTOLOGY_HOST=ontology
+      - ONTOLOGY_PORT=8080
+      - SMALLSEM_LEXICON_LOCATION=SmallSem/data/robot_lexicon.py
+      - SMALLSEM_RESOURCES_LOCATION=SmallSem/data/nn_static_resources_robot.json
+      - SMALLSEM_ONTOLOGY_ACCESS=service
+      - SMALLSEM_ONTOLOGY_LOCATION=SmallSem/data/ontology.p
+    depends_on:
+      - corenlp
+      - lexicon
+      - ontology
+
+networks:
+  leia:
+    driver: bridge

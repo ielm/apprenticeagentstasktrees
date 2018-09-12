@@ -9,7 +9,6 @@ from backend.utils.AgentLogger import AgentLogger
 from enum import Enum
 from typing import Union
 
-
 class Agent(Network):
 
     def __init__(self, ontology: Ontology=None):
@@ -51,8 +50,6 @@ class Agent(Network):
         agenda = self.context.default_understanding()
         agenda.logger(self._logger)
         agenda.process(self, tmr)
-<<<<<<< HEAD
-=======
 
     def idea(self, input):
         print("PRE:")
@@ -233,4 +230,4 @@ class Agent(Network):
         #                     Goal.Status.SATISFIED)
         # ], ["$tmr"])
 
->>>>>>> upstream/master
+

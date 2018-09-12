@@ -27,6 +27,8 @@ class LCTContext(AgentContext):
 
     def default_understanding(self):
 
+
+        # Adds Processors to the agents Agenda to order heeuristic processing. See UnderstandingProcessor.process() in context.py
         understanding = RootUnderstandingProcessor()
 
         understanding.add_subprocess(IdentifyClosingOfKnownTaskUnderstandingProcessor(self).add_subprocess(IdentifyCompletedTaskUnderstandingProcessor(self)))

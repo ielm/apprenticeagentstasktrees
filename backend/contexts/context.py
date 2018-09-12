@@ -54,8 +54,6 @@ class UnderstandingProcessor(object):
 
         return self
 
-
-#
     def process(self, agent, tmr):
         try:
             self._logic(agent, tmr)

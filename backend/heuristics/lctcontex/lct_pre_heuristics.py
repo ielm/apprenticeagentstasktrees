@@ -102,13 +102,45 @@ class IdentifyPreconditionSatisfyingActionsUnderstandingProcessor(UnderstandingP
         self.context = context
 
     def _logic(self, agent, tmr):
+        # print("\nTMR: \n", tmr.sentence)
+
         if tmr.is_prefix() or tmr.is_postfix():
             raise HeuristicException()
 
         if len(agent.input_memory) < 2:
             raise HeuristicException()
 
+
+        # print("\n\n" + "="*50 + "\nAGENT MEMORY: ")
+        # for i in agent.input_memory:
+        #     print(" ", i)
+        # print("="*50)
+
+
+
+        # Event is None; cannot find main event.
         event = tmr.find_main_event()
+
+        # ======================================= #
+        # ================ HACK ================= #
+        # ======================================= #
+
+        # print("\nTMR: \n", tmr.sentence)
+
+        # print("\nEVENT:\n", event, "\n")
+        # print("\nONTOLOGY:\n", agent.ontology["REQUEST-ACTION"])
+
+        # if not event:
+            # print("\n\n\n NOT EVENT \n\n\n")
+            # raise HeuristicException()
+
+        # ======================================= #
+        # ============== END HACK =============== #
+        # ======================================= #
+
+        # print("\n\nAGENT ONTOLOGY: ")
+
+
         if not event ^ agent.ontology["REQUEST-ACTION"] or "ROBOT" not in event["BENEFICIARY"]:
             raise HeuristicException()
 
