@@ -35,7 +35,7 @@ class AnotherLegTestCase(unittest.TestCase):
             demo[8],  # I am using the screwdriver to affix the brackets on the dowel with screws.
             demo[9],  # Release the dowel.
             demo[10], # We have assembled a front leg.
-            # demo[11], # Now, another front leg.
+            demo[11], # Now, we will build another front leg.
             demo[12], # Get another foot bracket.
             demo[13], # Get another front bracket.
             demo[14], # Get another dowel.
@@ -45,17 +45,18 @@ class AnotherLegTestCase(unittest.TestCase):
             demo[18] # I have assembled another front chair leg
         ]
 
-        # print(demo[18]["sentence"])
+        # print(demo[11]["sentence"])
 
 
         agent = Agent(ontology=self.ontology)
-        # agent.logger().enable()
-        agent.logger().disable()
+        agent.logger().enable()
+
+        # agent.logger().disable()
 
         print("\n========================================\n")
         for i in input:
             agent.input(i)
-            print("\n========================================\n")
+            print("\n\n")
             print("HTN (simplified):")
             print(format_pretty_htn(agent.wo_memory, agent.wo_memory["WM.BUILD.1"], indent=1))
             print("")
@@ -69,8 +70,8 @@ class AnotherLegTestCase(unittest.TestCase):
         demo = self.resource(file)
 
         agent = Agent(ontology=self.ontology)
-        agent.logger().disable()
-        # agent.logger().enable()
+        # agent.logger().disable()
+        agent.logger().enable()
 
         input = [
             demo[0],  # We will build a chair.
@@ -86,7 +87,7 @@ class AnotherLegTestCase(unittest.TestCase):
             demo[8],  # I am using the screwdriver to affix the brackets on the dowel with screws.
             demo[9],  # Release the dowel.
             demo[10], # We have assembled a front leg.
-            # demo[11], # Now, another front leg.
+            demo[11], # Now, another front leg.
             demo[12], # Get another foot bracket.
             demo[13], # Get another front bracket.
             demo[14], # Get another dowel.
@@ -98,8 +99,9 @@ class AnotherLegTestCase(unittest.TestCase):
         ]
         for i in input:
             agent.input(i)
+            print("\n\n")
 
-        print("Long Term Memory BUILD-LT1")
+        print("\nLong Term Memory BUILD-LT1\n")
         print(format_pretty_htn(agent.lt_memory, agent.lt_memory["BUILD.1"], indent=1))
         print("========")
 
