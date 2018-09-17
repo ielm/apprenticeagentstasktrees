@@ -45,7 +45,7 @@ class Ontology(Graph):
 
         original = self._wrapped[item]
 
-        frame = OntologyFrame(Identifier(self._namespace, item))
+        frame = self._frame_type()(Identifier(self._namespace, item))
         frame._graph = self
 
         for slot in original:
@@ -126,3 +126,109 @@ class OntologyFiller(Filler):
     def __init__(self, value, facet):
         super().__init__(value)
         self._facet = facet
+
+
+class ServiceOntology(Ontology):
+
+    @classmethod
+    def init_service(cls, host, port, namespace="ONT"):
+        import sys
+        sys.path.append("/Users/jesse/Documents/RPI/LEIAServices/ontology/")
+        import ontology as ONT
+        wrap = ONT.Ontology(host=host, port=port)
+
+        return ServiceOntology(namespace, wrapped=wrap)
+
+    def __init__(self, namespace, wrapped=None):
+        super().__init__(namespace, wrapped=wrapped)
+
+        self._cache = dict()
+        self._relscache = self._wrapped.descendants("relation")
+
+    def __getitem__(self, item):
+        try:
+            if isinstance(item, str):
+                return self._cache[item.upper()]
+            if isinstance(item, Identifier):
+                return self._cache[item.render().upper()]
+        except: pass
+
+        try:
+            result: ServiceOntologyFrame = super().__getitem__(item)
+            result = self._fix_case(result)
+
+            self._cache[result._identifier.render()] = result
+            return result
+        except KeyError: pass
+
+        if isinstance(item, str):
+            item = item.lower()
+        if isinstance(item, Identifier):
+            item.name = item.name.lower()
+
+        result: ServiceOntologyFrame = super().__getitem__(item)
+        result = self._fix_case(result)
+
+        self._cache[result._identifier.render()] = result
+        return result
+
+    def __len__(self):
+        length = len(self._storage)
+
+        if self._wrapped is not None:
+            length += len(self._wrapped.descendants("all"))
+
+        return length
+
+    def __iter__(self):
+        iters = [iter(self._storage)]
+
+        if self._wrapped is not None:
+            iters += iter(self._wrapped.descendants("all"))
+
+        return itertools.chain(*iters)
+
+    def __delitem__(self, key):
+        try:
+            super().__delitem__(key)
+        except TypeError:
+            pass
+
+    def _frame_type(self):
+        return ServiceOntologyFrame
+
+    def _is_relation(self, slot):
+        return slot in self._relscache or slot.upper() == "IS-A"
+
+    def _fix_case(self, result):
+        result._identifier.name = result._identifier.name.upper()
+        slots = dict()
+
+        for slot in result:
+            slot = result[slot]
+            slot._name = slot._name.upper()
+
+            for filler in slot:
+                if isinstance(filler._value, Identifier):
+                    filler._value.name = filler._value.name.upper()
+
+            slots[slot._name] = slot
+        result._storage = slots
+
+        return result
+
+
+class ServiceOntologyFrame(OntologyFrame):
+
+    def _ISA_type(self):
+        return "IS-A"
+
+    def isa(self, parent: Union['Frame', Identifier, str]):
+        if isinstance(parent, Frame):
+            parent = parent._identifier
+        if isinstance(parent, str):
+            parent = Identifier.parse(parent)
+        if isinstance(parent, Identifier):
+            parent = parent.name
+
+        return self._graph._wrapped.is_parent(self._identifier.name.lower(), parent.lower())
