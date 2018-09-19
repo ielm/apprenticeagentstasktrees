@@ -1,0 +1,70 @@
+{
+	"info": {
+		"name": "OntoSem",
+		"_postman_id": "f7c1e01d-cd7d-865a-a602-e3b05f416fbc",
+		"description": "",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Analyze",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "text",
+							"value": "The man hit the building.",
+							"description": "",
+							"type": "text"
+						}
+					]
+				},
+				"url": {
+					"raw": "localhost:5001/analyze",
+					"host": [
+						"localhost"
+					],
+					"port": "5001",
+					"path": [
+						"analyze"
+					]
+				},
+				"description": "Analyze a single text."
+			},
+			"response": []
+		},
+		{
+			"name": "CoreNLP",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "s",
+							"value": "The man hit the building.",
+							"description": "",
+							"type": "text"
+						}
+					]
+				},
+				"url": {
+					"raw": "localhost:5000/parse",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"parse"
+					]
+				},
+				"description": "Send a basic text to CoreNLP."
+			},
+			"response": []
+		}
+	]
+}
