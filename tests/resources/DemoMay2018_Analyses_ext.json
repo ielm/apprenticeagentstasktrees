@@ -6692,6 +6692,432 @@
     ]
   },
   {
+    "sentence": "We have assembled another front chair leg.",
+    "tmr": [
+        {
+            "sentence": "We have assembled another front LEG.",
+            "sent-num": 1,
+            "results": [
+                {
+                    "words": {
+                        "0": [
+                            "WE",
+                            "WE-N1"
+                        ],
+                        "1": [
+                            "HAVE",
+                            "HAVE-V1"
+                        ],
+                        "2": [
+                            "ASSEMBLE",
+                            "ASSEMBLE-V1"
+                        ],
+                        "4": [
+                            "FRONT",
+                            "FRONT-ADJ800"
+                        ],
+                        "5": [
+                            "LEG",
+                            "LEG-N800"
+                        ],
+                        "6": [
+                            ".",
+                            ".-PUNCT1"
+                        ]
+                    },
+                    "concept_counts": {
+                        "SET": {
+                            "count": 1,
+                            "word-info": [
+                                [
+                                    0,
+                                    "top"
+                                ]
+                            ]
+                        },
+                        "ASPECT": {
+                            "count": 1,
+                            "word-info": [
+                                [
+                                    1,
+                                    "top"
+                                ]
+                            ]
+                        },
+                        "ASSEMBLE": {
+                            "count": 1,
+                            "word-info": [
+                                [
+                                    2,
+                                    "top"
+                                ]
+                            ]
+                        },
+                        "ARTIFACT-LEG": {
+                            "count": 1,
+                            "word-info": [
+                                [
+                                    5,
+                                    "top"
+                                ]
+                            ]
+                        }
+                    },
+                    "TMR": {
+                        "SET-1": {
+                            "from-sense": "WE-N1",
+                            "concept": "SET",
+                            "sent-word-ind": [
+                                1,
+                                [
+                                    0
+                                ]
+                            ],
+                            "token": "We",
+                            "MEMBER-TYPE": "HUMAN",
+                            "CARDINALITY": [
+                                ">",
+                                1
+                            ],
+                            "is-in-subtree": "PROPERTY",
+                            "preference": 0,
+                            "AGENT-OF": "ASSEMBLE-1",
+                            "sem-preference": 0
+                        },
+                        "ASPECT-1": {
+                            "from-sense": "HAVE-V1",
+                            "concept": "ASPECT",
+                            "sent-word-ind": [
+                                1,
+                                [
+                                    1
+                                ]
+                            ],
+                            "token": "have",
+                            "PHASE": "BEGIN-CONTINUE-END",
+                            "SCOPE": "ASSEMBLE-1"
+                        },
+                        "ASSEMBLE-1": {
+                            "from-sense": "ASSEMBLE-V1",
+                            "concept": "ASSEMBLE",
+                            "sent-word-ind": [
+                                1,
+                                [
+                                    2
+                                ]
+                            ],
+                            "token": "assembled",
+                            "AGENT": "SET-1",
+                            "THEME": "ARTIFACT-LEG-1",
+                            "TIME": [
+                                "<",
+                                "FIND-ANCHOR-TIME"
+                            ],
+                            "is-in-subtree": "EVENT",
+                            "preference": 5,
+                            "sem-preference": 1,
+                            "SCOPE-OF": "ASPECT-1"
+                        },
+                        "ARTIFACT-LEG-1": {
+                            "from-sense": "LEG-N800",
+                            "concept": "ARTIFACT-LEG",
+                            "sent-word-ind": [
+                                1,
+                                [
+                                    5,
+                                    4
+                                ]
+                            ],
+                            "token": "LEG",
+                            "is-in-subtree": "OBJECT",
+                            "preference": 7,
+                            "THEME-OF": "ASSEMBLE-1",
+                            "sem-preference": -10,
+                            "SIDE-FB": "FRONT"
+                        },
+                        "syntactic-score": 16,
+                        "semantic-score": -9,
+                        "baseline-semantic-score": 2,
+                        "combined-score": 7
+                    }
+                }
+            ],
+            "timestamp": "2018-Sep-20 14:59:57",
+            "candidatesBeforePrunning": 1,
+            "OriginalSentence": "We have assembled another front chair leg."
+        }
+    ],
+    "syntax": [
+        {
+            "0": {
+                "coref": [],
+                "lemma": "WE",
+                "ner": "O",
+                "offset": [
+                    0,
+                    2
+                ],
+                "pos": [
+                    "PRO"
+                ],
+                "token": "We"
+            },
+            "1": {
+                "coref": [],
+                "lemma": "HAVE",
+                "ner": "O",
+                "offset": [
+                    3,
+                    7
+                ],
+                "pos": [
+                    "V",
+                    "PRESENT"
+                ],
+                "token": "have"
+            },
+            "2": {
+                "coref": [],
+                "lemma": "ASSEMBLE",
+                "ner": "O",
+                "offset": [
+                    8,
+                    17
+                ],
+                "pos": [
+                    "V",
+                    "PAST-PARTICIPLE"
+                ],
+                "token": "assembled"
+            },
+            "3": {
+                "coref": [],
+                "lemma": "ANOTHER",
+                "ner": "O",
+                "offset": [
+                    18,
+                    25
+                ],
+                "pos": [
+                    "ART"
+                ],
+                "token": "another"
+            },
+            "4": {
+                "coref": [],
+                "lemma": "FRONT",
+                "ner": "O",
+                "offset": [
+                    26,
+                    31
+                ],
+                "pos": [
+                    "ADJ"
+                ],
+                "token": "front"
+            },
+            "5": {
+                "coref": [],
+                "lemma": "LEG",
+                "ner": "O",
+                "offset": [
+                    32,
+                    35
+                ],
+                "pos": [
+                    "N",
+                    "SINGULAR"
+                ],
+                "token": "LEG",
+                "treatment-algorithm": "NN-underscore-entry",
+                "use-sense": "LEG-N800"
+            },
+            "6": {
+                "coref": [],
+                "lemma": ".",
+                "ner": "O",
+                "offset": [
+                    35,
+                    36
+                ],
+                "pos": [
+                    "."
+                ],
+                "token": "."
+            },
+            "basicDeps": [
+                [
+                    "ROOT",
+                    -1,
+                    2
+                ],
+                [
+                    "SUBJECT",
+                    2,
+                    0
+                ],
+                [
+                    "AUX",
+                    2,
+                    1
+                ],
+                [
+                    "DIRECTOBJECT",
+                    2,
+                    5
+                ],
+                [
+                    "ART",
+                    5,
+                    3
+                ],
+                [
+                    "ADJ",
+                    5,
+                    4
+                ]
+            ],
+            "originalSentence": "We have assembled another front chair leg.",
+            "parse": "(ROOT (S (NP (PRO WE-0)) (VP (V HAVE-1) (VP (V ASSEMBLE-2) (NP (ART ANOTHER-3) (ADJ FRONT-4) (N LEG-5)))) (. .-6)))",
+            "sentence": "We have assembled another front LEG.",
+            "syn-map": [
+                [
+                    [
+                        "WE-N1",
+                        {
+                            "$VAR0": [
+                                0
+                            ],
+                            "preference": 0
+                        }
+                    ]
+                ],
+                [
+                    [
+                        "HAVE-V1",
+                        {
+                            "$VAR1": [
+                                2
+                            ],
+                            "$VAR0": [
+                                1
+                            ],
+                            "preference": 4
+                        }
+                    ]
+                ],
+                [
+                    [
+                        "ASSEMBLE-V1",
+                        {
+                            "$VAR2": [
+                                5,
+                                3,
+                                5
+                            ],
+                            "$VAR1": [
+                                0,
+                                0,
+                                0
+                            ],
+                            "$VAR3": null,
+                            "$VAR4": [
+                                1
+                            ],
+                            "$VAR5": null,
+                            "$VAR0": [
+                                2
+                            ],
+                            "preference": 5
+                        }
+                    ],
+                    [
+                        "ASSEMBLE-V808",
+                        {
+                            "$VAR1": null,
+                            "$VAR2": null,
+                            "$VAR3": null,
+                            "$VAR4": null,
+                            "$VAR0": [
+                                2
+                            ],
+                            "preference": -3
+                        }
+                    ],
+                    [
+                        "ASSEMBLE-V809",
+                        {
+                            "$VAR1": null,
+                            "$VAR2": null,
+                            "$VAR3": null,
+                            "$VAR4": null,
+                            "$VAR5": null,
+                            "$VAR6": null,
+                            "$VAR0": [
+                                2
+                            ],
+                            "preference": -5
+                        }
+                    ]
+                ],
+                [
+                    [
+                        "A-ART800",
+                        {
+                            "$VAR1": [
+                                5,
+                                4,
+                                5
+                            ],
+                            "$VAR0": [
+                                3
+                            ],
+                            "preference": 4
+                        }
+                    ]
+                ],
+                [
+                    [
+                        "FRONT-ADJ800",
+                        {
+                            "$VAR1": [
+                                5
+                            ],
+                            "$VAR0": [
+                                4
+                            ],
+                            "preference": 4
+                        }
+                    ]
+                ],
+                [
+                    [
+                        "LEG-N800",
+                        {
+                            "$VAR0": [
+                                5
+                            ],
+                            "preference": 3
+                        }
+                    ]
+                ],
+                [
+                    [
+                        ".-PUNCT1",
+                        {
+                            "$VAR0": [
+                                6
+                            ],
+                            "preference": 0
+                        }
+                    ]
+                ]
+            ],
+            "syn-map_generator": "CSynmap"
+        }
+    ]
+  },
+  {
     "sentence": "We have built another front chair leg.",
     "tmr": [
         {

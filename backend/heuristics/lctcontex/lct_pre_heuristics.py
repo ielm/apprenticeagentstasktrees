@@ -24,7 +24,14 @@ class IdentifyClosingOfKnownTaskUnderstandingProcessor(UnderstandingProcessor):
         if tmr.is_postfix():
 
             agent.wo_memory.logger().pause()
-            resolved = agent.wo_memory.resolve_tmr(tmr)
+            if tmr.sentence == "We have assembled a front leg.":
+                print("DEBUG.1 : We have assembled a front leg.")
+                resolved = agent.wo_memory.resolve_tmr(tmr)
+            elif tmr.sentence == "I have assembled another front chair leg.":
+                print("DEBUG.2 : I have assembled another front chair leg.")
+                resolved = agent.wo_memory.resolve_tmr(tmr)
+            else:
+                resolved = agent.wo_memory.resolve_tmr(tmr)
             agent.wo_memory.logger().unpause()
 
             event = tmr.find_main_event()
