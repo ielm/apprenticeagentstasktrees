@@ -51,13 +51,8 @@ class OntologyTestCase(unittest.TestCase):
             self.assertEqual(f, all.name())
 
     def test_wrapped_service(self):
-        import sys
-        sys.path.append("/Users/jesse/Documents/RPI/LEIAServices/ontology/")
-        import ontology as ONT
-        wrap = ONT.Ontology(port=5003)
-
         from backend.models.ontology import ServiceOntology
-        o = ServiceOntology("ONT", wrapped=wrap)
+        o = ServiceOntology.init_service("localhost", 8080)
         print(o["human"])
 
         self.assertTrue("human" in o)
@@ -78,10 +73,14 @@ class OntologyTestCase(unittest.TestCase):
         self.assertTrue(9494, len(o))
         self.assertTrue(9494, sum(1 for _ in iter(o)))
 
+        self.assertTrue(o._is_relation("theme"))
+        self.assertTrue(o._is_relation("theme-of"))
+
         with self.assertRaises(KeyError):
             f = o["XYZ"]
         o.register("XYZ", isa="HUMAN")
         self.assertTrue(o["XYZ"]["IS-A"] ^ "HUMAN")
+        self.assertTrue(o["ONT.XYZ"]["IS-A"] ^ "HUMAN")
 
         del o["HUMAN"] # No support for remote deletion of concepts
         self.assertIn("HUMAN", o)

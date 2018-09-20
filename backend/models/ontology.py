@@ -143,31 +143,44 @@ class ServiceOntology(Ontology):
         super().__init__(namespace, wrapped=wrapped)
 
         self._cache = dict()
-        self._relscache = self._wrapped.descendants("relation")
+        self._relscache = self._wrapped.all_relations(inverses=True)
 
     def __getitem__(self, item):
+        if isinstance(item, str):
+            item = Identifier.parse(item)
+        if isinstance(item, Identifier):
+            item.graph = self._namespace
+
         try:
-            if isinstance(item, str):
-                return self._cache[item.upper()]
-            if isinstance(item, Identifier):
-                return self._cache[item.render().upper()]
+            return self._cache[item.render().upper()]
         except: pass
 
         try:
-            result: ServiceOntologyFrame = super().__getitem__(item)
-            result = self._fix_case(result)
+            return self._storage[item.render().upper()]
+        except: pass
 
-            self._cache[result._identifier.render()] = result
-            return result
-        except KeyError: pass
+        item = item.name.lower()
 
-        if isinstance(item, str):
-            item = item.lower()
-        if isinstance(item, Identifier):
-            item.name = item.name.lower()
+        try:
+            original: ServiceOntologyFrame = self._wrapped[item]
+        except:
+            raise KeyError()
 
-        result: ServiceOntologyFrame = super().__getitem__(item)
-        result = self._fix_case(result)
+        frame = self._frame_type()(Identifier(self._namespace, item))
+        frame._graph = self
+
+        for slot in original:
+            relation = self._is_relation(slot)
+            for facet in original[slot]:
+                fillers = original[slot][facet]
+                if fillers is None:
+                    continue
+
+                if not isinstance(fillers, list):
+                    fillers = [fillers]
+                fillers = list(map(lambda f: OntologyFiller(Identifier(self._namespace, f) if relation else Literal(f), facet), fillers))
+                frame[slot] = Slot(slot, values=fillers, frame=frame)
+        result = self._fix_case(frame)
 
         self._cache[result._identifier.render()] = result
         return result
@@ -231,4 +244,5 @@ class ServiceOntologyFrame(OntologyFrame):
         if isinstance(parent, Identifier):
             parent = parent.name
 
-        return self._graph._wrapped.is_parent(self._identifier.name.lower(), parent.lower())
+        result = self._graph._wrapped.is_parent(self._identifier.name.lower(), parent.lower())
+        return result
