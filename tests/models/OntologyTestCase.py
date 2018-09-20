@@ -52,7 +52,7 @@ class OntologyTestCase(unittest.TestCase):
 
     def test_wrapped_service(self):
         from backend.models.ontology import ServiceOntology
-        o = ServiceOntology.init_service("localhost", 8080)
+        o = ServiceOntology.init_service(port=8080)
         print(o["human"])
 
         self.assertTrue("human" in o)

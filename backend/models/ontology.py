@@ -131,11 +131,16 @@ class OntologyFiller(Filler):
 class ServiceOntology(Ontology):
 
     @classmethod
-    def init_service(cls, host, port, namespace="ONT"):
-        import sys
-        sys.path.append("/Users/jesse/Documents/RPI/LEIAServices/ontology/")
-        import ontology as ONT
-        wrap = ONT.Ontology(host=host, port=port)
+    def init_service(cls, host=None, port=None, namespace="ONT"):
+        from backend.services.environment import ONTOLOGY_HOST
+        from backend.services.environment import ONTOLOGY_PORT
+        if host is None:
+            host = ONTOLOGY_HOST
+        if port is None:
+            port = ONTOLOGY_PORT
+
+        from backend.services.ontology import Ontology as ONT
+        wrap = ONT(host=host, port=port)
 
         return ServiceOntology(namespace, wrapped=wrap)
 
@@ -211,7 +216,7 @@ class ServiceOntology(Ontology):
         return ServiceOntologyFrame
 
     def _is_relation(self, slot):
-        return slot in self._relscache or slot.upper() == "IS-A"
+        return slot.lower() in self._relscache or slot.upper() == "IS-A"
 
     def _fix_case(self, result):
         result._identifier.name = result._identifier.name.upper()
