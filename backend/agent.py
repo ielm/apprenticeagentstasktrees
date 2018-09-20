@@ -51,8 +51,6 @@ class Agent(Network):
         agenda = self.context.default_understanding()
         agenda.logger(self._logger)
         agenda.process(self, tmr)
-<<<<<<< HEAD
-=======
 
     def idea(self, input):
         print("PRE:")
@@ -232,5 +230,3 @@ class Agent(Network):
         #                     [IsStatement.instance(graph, "$tmr", "STATUS", Literal("UNDERSTOOD"))],
         #                     Goal.Status.SATISFIED)
         # ], ["$tmr"])
-
->>>>>>> upstream/master
