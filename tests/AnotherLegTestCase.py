@@ -5,6 +5,7 @@ from backend.utils.FRUtils import format_pretty_htn
 
 import json, os, unittest
 
+
 class AnotherLegTestCase(unittest.TestCase):
 
     def setUp(self):
@@ -18,8 +19,8 @@ class AnotherLegTestCase(unittest.TestCase):
         return r
 
     def test_input(self):
-        # file = os.path.abspath(__package__) + "/resources/DemoMay2018_Analyses_ext.json"
-        file = os.path.abspath(__package__) + "/resources/DemoMay2018_Analyses_I-ASSEMBLED.json"
+        file = os.path.abspath(__package__) + "/resources/DemoMay2018_Analyses_ext.json"
+        # file = os.path.abspath(__package__) + "/resources/DemoMay2018_Analyses_I-ASSEMBLED.json"
         # file = os.path.abspath(__package__) + "/resources/DemoMay2018_Analyses_WE-BUILT.json"
         demo = self.resource(file)
 

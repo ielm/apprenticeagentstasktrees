@@ -642,7 +642,9 @@ class Filler(object):
         return copy
 
 
-class UnknownFrameError(Exception): pass
+class UnknownFrameError(Exception):
+    pass
 
 
-class FrameParseError(Exception): pass
+class FrameParseError(Exception):
+    pass

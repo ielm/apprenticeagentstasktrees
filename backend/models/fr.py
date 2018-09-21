@@ -142,6 +142,11 @@ class FR(Graph):
     # where more than one implies ambiguity.
     def resolve_instance(self, frame, resolves, tmr=None):
         # TODO: currently this resolves everything to None unless found in the input resolves object
+
+        if tmr.sentence == "We have assembled a front leg.":
+            print("Resolve_Instance 1 : We have assembled a front leg.")
+        elif tmr.sentence == "We have assembled another front chair leg.":
+            print("Resolve_Instance 2 : We have assembled another front chair leg.")
         results = dict()
         results[frame._identifier.render(graph=False)] = None
         for slot in frame:

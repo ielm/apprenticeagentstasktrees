@@ -27,8 +27,8 @@ class IdentifyClosingOfKnownTaskUnderstandingProcessor(UnderstandingProcessor):
             if tmr.sentence == "We have assembled a front leg.":
                 print("DEBUG.1 : We have assembled a front leg.")
                 resolved = agent.wo_memory.resolve_tmr(tmr)
-            elif tmr.sentence == "I have assembled another front chair leg.":
-                print("DEBUG.2 : I have assembled another front chair leg.")
+            elif tmr.sentence == "We have assembled another front chair leg.":
+                print("DEBUG.2 : We have assembled another front chair leg.")
                 resolved = agent.wo_memory.resolve_tmr(tmr)
             else:
                 resolved = agent.wo_memory.resolve_tmr(tmr)
