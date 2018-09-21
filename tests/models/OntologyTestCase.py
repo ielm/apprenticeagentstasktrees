@@ -222,9 +222,7 @@ class OntologyServiceWrapperTestCase(unittest.TestCase):
         expected = {
             "IS-A": {"VALUE": "REL-PARENT"},
             "SUBCLASSES": {"VALUE": None},
-            "INVERSE": {"VALUE": "REL-OF"},
-            "DOMAIN": {"SEM": None},
-            "RANGE": {"SEM": None}
+            "INVERSE": {"VALUE": "REL-OF"}
         }
 
         self.assertEqual(expected, relation)
@@ -233,13 +231,61 @@ class OntologyServiceWrapperTestCase(unittest.TestCase):
         expected = {
             "IS-A": {"VALUE": "REL-PARENT"},
             "SUBCLASSES": {"VALUE": None},
-            "INVERSE": {"VALUE": "REL"},
-            "DOMAIN": {"SEM": None},
-            "RANGE": {"SEM": None}
+            "INVERSE": {"VALUE": "REL"}
         }
 
         self.assertEqual(expected, inverse)
 
-    @skip("NYI")
     def test_calculate_domain_and_range(self):
-        fail()
+        w = OntologyServiceWrapperTestCase.TestableOntologyServiceWrapper()
+        w._cache["obj"] = {
+            "localProperties": [
+                {
+                    "slot": "rel",
+                    "facet": "sem",
+                    "filler": "evt"
+                }
+            ],
+            "parents": [],
+            "name": "obj",
+            "overriddenFillers": [],
+            "totallyRemovedProperties": []
+        }
+
+        w._cache["evt"] = {
+            "localProperties": [],
+            "parents": [],
+            "name": "evt",
+            "overriddenFillers": [],
+            "totallyRemovedProperties": []
+        }
+
+        w._cache["rel"] = {
+            "localProperties": [
+                {
+                    "slot": "inverse",
+                    "facet": "sem",
+                    "filler": "rel-of"
+                }
+            ],
+            "parents": [],
+            "name": "rel",
+            "overriddenFillers": [],
+            "totallyRemovedProperties": []
+        }
+
+        w._index()
+
+        relation = w["rel"]
+        expected = {
+            "IS-A": {"VALUE": None},
+            "SUBCLASSES": {"VALUE": None},
+            "INVERSE": {"SEM": "REL-OF"},
+            "DOMAIN": {"SEM": "OBJ"},
+            "RANGE": {"SEM": "EVT"}
+        }
+        self.assertEqual(expected, relation)
+
+        relation = w["rel-of"]
+        self.assertEqual(relation["DOMAIN"], {"SEM": "EVT"})
+        self.assertEqual(relation["RANGE"], {"SEM": "OBJ"})

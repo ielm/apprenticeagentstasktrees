@@ -168,6 +168,19 @@ class OntologyServiceWrapper(object):
         return db[collection]
 
     def _index(self):
+        self._domains = {}
+        self._ranges = {}
+        for r in self._cache:
+            record = self._cache[r]
+            for slot in record["localProperties"]:
+                s = slot["slot"]
+                if s not in self._domains:
+                    self._domains[s] = []
+                if s not in self._ranges:
+                    self._ranges[s] = []
+                self._domains[s].append(record["name"])
+                self._ranges[s].append(slot["filler"])
+
         self._subclasses = {}
         for r in self._cache:
             self._subclasses[r] = []
@@ -186,16 +199,20 @@ class OntologyServiceWrapper(object):
             self._subclasses[inverse["name"]] = []
 
     def _calculate_domain_and_range(self, property):
-        property["localProperties"].append({
-            "slot": "domain",
-            "facet": "sem",
-            "filler": None
-        })
-        property["localProperties"].append({
-            "slot": "range",
-            "facet": "sem",
-            "filler": None
-        })
+        if property["name"] in self._domains:
+            for domain in self._domains[property["name"]]:
+                property["localProperties"].append({
+                    "slot": "domain",
+                    "facet": "sem",
+                    "filler": domain
+                })
+        if property["name"] in self._ranges:
+            for range in self._ranges[property["name"]]:
+                property["localProperties"].append({
+                    "slot": "range",
+                    "facet": "sem",
+                    "filler": range
+                })
 
     def _make_inverse(self, relation):
         localProperties = [
