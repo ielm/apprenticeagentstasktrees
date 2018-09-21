@@ -29,6 +29,10 @@ services:
     environment:
       - ONTOSEM_HOST=ontosem
       - ONTOSEM_PORT=5001
+      - MONGO_PORT=27017
+      - ONTOLOGY_HOST=ontology
+      - ONTOLOGY_DATABASE=leia-ontology
+      - ONTOLOGY_COLLECTION=robot-v.1.0.0
 
 networks:
   leia:
