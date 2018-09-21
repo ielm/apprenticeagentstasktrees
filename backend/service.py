@@ -9,7 +9,7 @@ from backend.contexts.LCTContext import LCTContext
 from backend.models.agenda import Action, Goal
 from backend.models.grammar import Grammar
 from backend.models.graph import Frame, Identifier, Network
-from backend.models.ontology import Ontology, ServiceOntology
+from backend.models.ontology import Ontology
 from backend.utils.YaleUtils import format_learned_event_yale, input_to_tmrs
 
 app = Flask(__name__, template_folder="../frontend/templates/")
@@ -18,7 +18,7 @@ CORS(app)
 
 # n = Network()
 # ontology = n.register(Ontology.init_default())
-agent = Agent(ontology=ServiceOntology.init_service("localhost", 5003))
+agent = Agent(ontology=Ontology.init_default())
 
 # TEST HACK
 from pkgutil import get_data

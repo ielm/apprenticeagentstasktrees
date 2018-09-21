@@ -1,13 +1,16 @@
 from backend.models.graph import Literal
 from backend.models.ontology import Ontology
+from backend.models.ontology import OntologyServiceWrapper
 
 import unittest
+from unittest import skip
 
 
 class OntologyTestCase(unittest.TestCase):
 
     def test_init_default_wrapped(self):
-        o = Ontology.init_default()
+        from pkgutil import get_data
+        o = Ontology.init_from_binary(get_data("backend.resources", "ontology_May_2017.p"), "ONT")
 
         self.assertEqual("ONT", o._namespace)
         self.assertTrue("OBJECT" in o)
@@ -50,14 +53,20 @@ class OntologyTestCase(unittest.TestCase):
         for f in o:
             self.assertEqual(f, all.name())
 
-    def test_wrapped_service(self):
-        from backend.models.ontology import ServiceOntology
-        o = ServiceOntology.init_service(port=8080)
-        print(o["human"])
 
-        self.assertTrue("human" in o)
-        self.assertTrue(o["human"] ^ o["object"])
-        self.assertFalse(o["human"] ^ o["event"])
+class OntologyServiceWrapperTestCase(unittest.TestCase):
+
+    class TestableOntologyServiceWrapper(OntologyServiceWrapper):
+        def __init__(self):
+            self._cache = {}
+
+    def test_service_wrapper(self):
+        w = OntologyServiceWrapper(host="localhost", port=27017, database="leia-ontology", collection="robot-v.1.0.0")
+        self.assertEqual(9175, len(w._cache))
+
+        o = Ontology("ONT", wrapped=w)
+        all = o["ALL"]
+        self.assertTrue(all["SUBCLASSES"] == "ONT.EVENT")
 
         self.assertEqual("ONT", o._namespace)
         self.assertTrue("OBJECT" in o)
@@ -73,17 +82,164 @@ class OntologyTestCase(unittest.TestCase):
         self.assertTrue(9494, len(o))
         self.assertTrue(9494, sum(1 for _ in iter(o)))
 
-        self.assertTrue(o._is_relation("theme"))
-        self.assertTrue(o._is_relation("theme-of"))
-
         with self.assertRaises(KeyError):
             f = o["XYZ"]
         o.register("XYZ", isa="HUMAN")
         self.assertTrue(o["XYZ"]["IS-A"] ^ "HUMAN")
-        self.assertTrue(o["ONT.XYZ"]["IS-A"] ^ "HUMAN")
 
-        del o["HUMAN"] # No support for remote deletion of concepts
-        self.assertIn("HUMAN", o)
+        del o["HUMAN"]
+        self.assertNotIn("HUMAN", o)
 
-        del o["XYZ"]
-        self.assertNotIn("XYZ", o)
+    def test_service_wrapper_get_converts(self):
+        w = OntologyServiceWrapperTestCase.TestableOntologyServiceWrapper()
+
+        w._cache["parent"] = {
+            "localProperties": [
+                {
+                    "slot": "x",
+                    "facet": "sem",
+                    "filler": 1
+                }, {
+                    "slot": "y",
+                    "facet": "sem",
+                    "filler": 2
+                }
+            ],
+            "parents": [],
+            "name": "parent",
+            "overriddenFillers": [],
+            "totallyRemovedProperties": []
+        }
+
+        w._cache["child"] = {
+            "localProperties": [
+                {
+                    "slot": "x",
+                    "facet": "sem",
+                    "filler": 3
+                },
+                {
+                    "slot": "x",
+                    "facet": "relaxable-to",
+                    "filler": 3.5
+                },
+                {
+                    "slot": "y",
+                    "facet": "sem",
+                    "filler": 4
+                },
+                {
+                    "slot": "z",
+                    "facet": "sem",
+                    "filler": 5
+                },
+                {
+                    "slot": "a",
+                    "facet": "sem",
+                    "filler": "abc"
+                },
+                {
+                    "slot": "b",
+                    "facet": "sem",
+                    "filler": "parent"
+                },
+            ],
+            "parents": ["parent"],
+            "name": "child",
+            "overriddenFillers": [
+                {
+                    "slot": "y",
+                    "facet": "sem",
+                    "filler": 2
+                }
+            ],
+            "totallyRemovedProperties": []
+        }
+
+        w._index()
+
+        parent = w["parent"]
+        expected = {
+            "IS-A": {"VALUE": None},
+            "SUBCLASSES": {"VALUE": "CHILD"},
+            "X": {"SEM": 1},
+            "Y": {"SEM": 2}
+        }
+
+        self.assertEqual(expected, parent)
+
+        child = w["child"]
+        # 2 possible values; where the "X" has a list but the order doesn't matter (functionally, this is a set)
+        expected1 = {
+            "IS-A": {"VALUE": "PARENT"},
+            "SUBCLASSES": {"VALUE": None},
+            "X": {"SEM": [1, 3], "RELAXABLE-TO": 3.5},
+            "Y": {"SEM": 4},
+            "Z": {"SEM": 5},
+            "A": {"SEM": "abc"},
+            "B": {"SEM": "PARENT"}
+        }
+        expected2 = {
+            "IS-A": {"VALUE": "PARENT"},
+            "SUBCLASSES": {"VALUE": None},
+            "X": {"SEM": [3, 1], "RELAXABLE-TO": 3.5},
+            "Y": {"SEM": 4},
+            "Z": {"SEM": 5},
+            "A": {"SEM": "abc"},
+            "B": {"SEM": "PARENT"}
+        }
+
+        self.assertTrue(expected1 == child or expected2 == child)
+
+    def test_service_wrapper_relations_and_inverses(self):
+        w = OntologyServiceWrapperTestCase.TestableOntologyServiceWrapper()
+
+        w._cache["rel-parent"] = {
+            "localProperties": [],
+            "parents": [],
+            "name": "rel-parent",
+            "overriddenFillers": [],
+            "totallyRemovedProperties": []
+        }
+
+        w._cache["rel"] = {
+            "localProperties": [
+                {
+                    "slot": "inverse",
+                    "facet": "value",
+                    "filler": "rel-of"
+                }
+            ],
+            "parents": ["rel-parent"],
+            "name": "rel",
+            "overriddenFillers": [],
+            "totallyRemovedProperties": []
+        }
+
+        w._index()
+
+        relation = w["rel"]
+        expected = {
+            "IS-A": {"VALUE": "REL-PARENT"},
+            "SUBCLASSES": {"VALUE": None},
+            "INVERSE": {"VALUE": "REL-OF"},
+            "DOMAIN": {"SEM": None},
+            "RANGE": {"SEM": None}
+        }
+
+        self.assertEqual(expected, relation)
+
+        inverse = w["rel-of"]
+        expected = {
+            "IS-A": {"VALUE": "REL-PARENT"},
+            "SUBCLASSES": {"VALUE": None},
+            "INVERSE": {"VALUE": "REL"},
+            "DOMAIN": {"SEM": None},
+            "RANGE": {"SEM": None}
+        }
+
+        self.assertEqual(expected, inverse)
+
+    @skip("NYI")
+    def test_calculate_domain_and_range(self):
+        fail()

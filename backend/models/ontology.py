@@ -10,8 +10,17 @@ class Ontology(Graph):
 
     @classmethod
     def init_default(cls, namespace="ONT"):
-        binary = get_data("backend.resources", "ontology_May_2017.p")
-        return cls.init_from_binary(binary, namespace=namespace)
+        try:
+            return cls.init_from_service(namespace=namespace)
+        except:
+            print("WARNING: failed to init default ontology service, using binary data instead.")
+            binary = get_data("backend.resources", "ontology_May_2017.p")
+            return cls.init_from_binary(binary, namespace=namespace)
+
+    @classmethod
+    def init_from_service(cls, host: str=None, port: int=None, database: str=None, collection: str=None, namespace: str="ONT"):
+        wrapper = OntologyServiceWrapper(host=host, port=port, database=database, collection=collection)
+        return Ontology(namespace, wrapped=wrapper)
 
     @classmethod
     def init_from_file(cls, path, namespace):
@@ -128,126 +137,182 @@ class OntologyFiller(Filler):
         self._facet = facet
 
 
-class ServiceOntology(Ontology):
+class OntologyServiceWrapper(object):
 
-    @classmethod
-    def init_service(cls, host=None, port=None, namespace="ONT"):
-        from backend.services.environment import ONTOLOGY_HOST
-        from backend.services.environment import ONTOLOGY_PORT
-        if host is None:
-            host = ONTOLOGY_HOST
-        if port is None:
-            port = ONTOLOGY_PORT
+    def __init__(self, host: str=None, port: int=None, database: str=None, collection: str=None):
+        from backend.services.environment import ONTOLOGY_HOST, MONGO_PORT, ONTOLOGY_DATABASE, ONTOLOGY_COLLECTION
 
-        from backend.services.ontology import Ontology as ONT
-        wrap = ONT(host=host, port=port)
+        host = host if host is not None else ONTOLOGY_HOST
+        port = port if port is not None else MONGO_PORT
+        database = database if database is not None else ONTOLOGY_DATABASE
+        collection = collection if collection is not None else ONTOLOGY_COLLECTION
 
-        return ServiceOntology(namespace, wrapped=wrap)
+        self._cache = {}
 
-    def __init__(self, namespace, wrapped=None):
-        super().__init__(namespace, wrapped=wrapped)
+        handle = self._handle(host, port, database, collection)
+        for record in handle.find({}):
+            self._cache[record["name"]] = record
 
-        self._cache = dict()
-        self._relscache = self._wrapped.all_relations(inverses=True)
+        self._index()
 
-    def __getitem__(self, item):
-        if isinstance(item, str):
-            item = Identifier.parse(item)
-        if isinstance(item, Identifier):
-            item.graph = self._namespace
+    def _get_client(self, host: str, port: int):
+        from pymongo import MongoClient
 
-        try:
-            return self._cache[item.render().upper()]
-        except: pass
+        client = MongoClient(host, port)
+        with client:
+            return client
 
-        try:
-            return self._storage[item.render().upper()]
-        except: pass
+    def _handle(self, host: str, port: int, database: str, collection: str):
+        client = self._get_client(host, port)
+        db = client[database]
+        return db[collection]
 
-        item = item.name.lower()
+    def _index(self):
+        self._subclasses = {}
+        for r in self._cache:
+            self._subclasses[r] = []
 
-        try:
-            original: ServiceOntologyFrame = self._wrapped[item]
-        except:
-            raise KeyError()
+        inverses = []
+        for r in self._cache:
+            record = self._cache[r]
+            for parent in record["parents"]:
+                self._subclasses[parent].append(r)
+            if "inverse" in map(lambda property: property["slot"], record["localProperties"]):
+                self._calculate_domain_and_range(record)
+                inverses.append(self._make_inverse(record))
 
-        frame = self._frame_type()(Identifier(self._namespace, item))
-        frame._graph = self
+        for inverse in inverses:
+            self._cache[inverse["name"]] = inverse
+            self._subclasses[inverse["name"]] = []
 
-        for slot in original:
-            relation = self._is_relation(slot)
-            for facet in original[slot]:
-                fillers = original[slot][facet]
-                if fillers is None:
-                    continue
+    def _calculate_domain_and_range(self, property):
+        property["localProperties"].append({
+            "slot": "domain",
+            "facet": "sem",
+            "filler": None
+        })
+        property["localProperties"].append({
+            "slot": "range",
+            "facet": "sem",
+            "filler": None
+        })
 
-                if not isinstance(fillers, list):
-                    fillers = [fillers]
-                fillers = list(map(lambda f: OntologyFiller(Identifier(self._namespace, f) if relation else Literal(f), facet), fillers))
-                frame[slot] = Slot(slot, values=fillers, frame=frame)
-        result = self._fix_case(frame)
+    def _make_inverse(self, relation):
+        localProperties = [
+            {
+                "slot": "inverse",
+                "facet": "value",
+                "filler": relation["name"]
+            }
+        ]
 
-        self._cache[result._identifier.render()] = result
-        return result
+        for lp in relation["localProperties"]:
+            if lp["slot"] == "domain":
+                localProperties.append({
+                    "slot": "range",
+                    "facet": "sem",
+                    "filler": lp["filler"]
+                })
+            elif lp["slot"] == "range":
+                localProperties.append({
+                    "slot": "domain",
+                    "facet": "sem",
+                    "filler": lp["filler"]
+                })
 
-    def __len__(self):
-        length = len(self._storage)
+        inverse = list(filter(lambda property: property["slot"] == "inverse", relation["localProperties"]))[0]["filler"]
 
-        if self._wrapped is not None:
-            length += len(self._wrapped.descendants("all"))
-
-        return length
-
-    def __iter__(self):
-        iters = [iter(self._storage)]
-
-        if self._wrapped is not None:
-            iters += iter(self._wrapped.descendants("all"))
-
-        return itertools.chain(*iters)
+        return {
+            "localProperties": localProperties,
+            "parents": relation["parents"],
+            "name": inverse,
+            "overriddenFillers": [],
+            "totallyRemovedProperties": []
+        }
 
     def __delitem__(self, key):
-        try:
-            super().__delitem__(key)
-        except TypeError:
-            pass
+        del self._cache[key.lower()]
 
-    def _frame_type(self):
-        return ServiceOntologyFrame
+    def __len__(self):
+        return len(self._cache)
 
-    def _is_relation(self, slot):
-        return slot.lower() in self._relscache or slot.upper() == "IS-A"
+    def __contains__(self, item):
+        return item.lower() in self._cache
 
-    def _fix_case(self, result):
-        result._identifier.name = result._identifier.name.upper()
-        slots = dict()
+    def __iter__(self):
+        return iter(self._cache)
 
-        for slot in result:
-            slot = result[slot]
-            slot._name = slot._name.upper()
+    def __getitem__(self, item):
+        item = item.lower()
 
-            for filler in slot:
-                if isinstance(filler._value, Identifier):
-                    filler._value.name = filler._value.name.upper()
+        original = self._cache[item]
 
-            slots[slot._name] = slot
-        result._storage = slots
+        isa = list(map(lambda parent: parent.upper(), original["parents"]))
+        if len(isa) == 0:
+            isa = None
+        elif len(isa) == 1:
+            isa = isa[0]
 
-        return result
+        subclasses = list(map(lambda sc: sc.upper(), self._subclasses[item]))
+        if len(subclasses) == 1:
+            subclasses = subclasses[0]
 
+        output = {
+            "IS-A": {"VALUE": isa},
+            "SUBCLASSES": {"VALUE": subclasses}
+        }
 
-class ServiceOntologyFrame(OntologyFrame):
+        for property in self._inherit(original):
+            self._add_property(output, property)
 
-    def _ISA_type(self):
-        return "IS-A"
+        for property in output:
+            for slot in output[property]:
+                value = output[property][slot]
+                if isinstance(value, list):
+                    if len(value) == 0:
+                        output[property][slot] = None
+                    elif len(value) == 1:
+                        output[property][slot] = value[0]
 
-    def isa(self, parent: Union['Frame', Identifier, str]):
-        if isinstance(parent, Frame):
-            parent = parent._identifier
-        if isinstance(parent, str):
-            parent = Identifier.parse(parent)
-        if isinstance(parent, Identifier):
-            parent = parent.name
+        return output
 
-        result = self._graph._wrapped.is_parent(self._identifier.name.lower(), parent.lower())
-        return result
+    def _add_property(self, output, property):
+        slot = property["slot"].upper()
+        facet = property["facet"].upper()
+        filler = property["filler"] if property["filler"] not in self._cache else property["filler"].upper()
+
+        if slot not in output:
+            output[slot] = {}
+        if facet not in output[slot]:
+            output[slot][facet] = [filler]
+        elif type(output[slot][facet]) != list:
+            output[slot][facet] = [output[slot][facet], filler]
+        else:
+            output[slot][facet].append(filler)
+
+    def _inherit(self, concept):
+        properties = concept["localProperties"]
+
+        for parent_name in concept["parents"]:
+            parent = self._cache[parent_name]
+
+            inherited = self._inherit(parent)
+            inherited = self._remove_overridden_fillers(inherited, concept["overriddenFillers"])
+            inherited = self._remove_deleted_fillers(inherited, concept["totallyRemovedProperties"])
+            inherited = self._prune_list(inherited, properties) # Clean up any duplicates, retaining local copies
+
+            properties = properties + inherited
+
+        return properties
+
+    def _remove_overridden_fillers(self, properties, overridden_fillers):
+        properties = self._prune_list(properties, overridden_fillers)
+        return properties
+
+    def _remove_deleted_fillers(self, properties, deleted_fillers):
+        return self._prune_list(properties, deleted_fillers)
+
+    def _prune_list(self, enclosing_list, to_remove):
+        pruned = [e for e in enclosing_list if e not in to_remove]
+        return pruned
+
