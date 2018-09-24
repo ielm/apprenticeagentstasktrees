@@ -339,6 +339,11 @@ class AgendaGrammarTestCase(unittest.TestCase):
         parsed: Goal = Grammar.parse(self.agent, "DEFINE XYZ() AS GOAL IN SELF PRIORITY 0.9", start="define", agent=self.agent)
         self.assertEqual(goal, parsed)
 
+        # A goal can have a statement priority
+        goal: Goal = Goal.define(self.g, "XYZ", MeaningProcedureStatement.instance(self.g, "mp1", []).frame, [], [], [])
+        parsed: Goal = Grammar.parse(self.agent, "DEFINE XYZ() AS GOAL IN SELF PRIORITY SELF.mp1()", start="define", agent=self.agent)
+        self.assertEqual(goal.frame["PRIORITY"].singleton()["CALLS"].singleton(), parsed.frame["PRIORITY"].singleton()["CALLS"].singleton())
+
         # A goal can have plans (actions)
         a1: Action = Action.build(self.g, "action_a", Action.DEFAULT, Action.IDLE)
         a2: Action = Action.build(self.g, "action_b", Action.DEFAULT, Action.IDLE)
