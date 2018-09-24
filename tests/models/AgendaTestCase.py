@@ -144,9 +144,21 @@ class GoalTestCase(unittest.TestCase):
         goal.prioritize(None)
         self.assertTrue(f["_PRIORITY"] == 0.5)
 
-    @unittest.skip("Skipping test prioritize with calculation until CALCULATE-STATEMENT is defined.")
     def test_prioritize_calculation(self):
-        fail() # TODO: CALCULATE-STATEMENT
+        class TestStatement(Statement):
+            def run(self, varmap: VariableMap):
+                return 0.5
+
+        graph = Statement.hierarchy()
+        graph["RETURNING-STATEMENT"]["CLASSMAP"] = Literal(TestStatement)
+        statement = graph.register("STATEMENT.1", isa="EXE.RETURNING-STATEMENT")
+
+        f1 = graph.register("GOAL.1")
+        f1["PRIORITY"] = statement
+
+        goal = Goal(f1)
+        goal.prioritize(None)
+        self.assertEqual(0.5, goal.priority())
 
     def test_priority(self):
         graph = Graph("TEST")

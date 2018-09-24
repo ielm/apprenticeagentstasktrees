@@ -139,9 +139,15 @@ class Goal(VariableMap):
 
     def prioritize(self, agent: 'Agent'):
         try:
+            stmt: Statement = Statement.from_instance(self.frame["PRIORITY"].singleton())
+            self.frame["_PRIORITY"] = stmt.run(self)
+            return
+        except: pass # Not a Statement
+
+        try:
             self.frame["_PRIORITY"] = self.frame["PRIORITY"].singleton()
         except:
-            self.frame["_PRIORITY"] = -1.0 # TODO: evaluate a CALCULATE-STATEMENT
+            self.frame["_PRIORITY"] = -1.0
 
     def priority(self):
         if "_PRIORITY" in self.frame:
