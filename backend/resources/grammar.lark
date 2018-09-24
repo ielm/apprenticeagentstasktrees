@@ -4,7 +4,7 @@ start: (view)
 
 define: DEFINE goal
 goal: NAME arguments AS GOAL IN GRAPH priority (action)* (condition)*
-priority: (PRIORITY double)?
+priority: (PRIORITY (double | mp_statement))?
 goal_status: (PENDING | ACTIVE | ABANDONED | SATISFIED)
 
 action: ACTION "(" ACTION_NAME ")" action_selection action_do+

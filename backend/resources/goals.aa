@@ -14,7 +14,7 @@ DEFINE FIND-SOMETHING-TO-DO()
 DEFINE UNDERSTAND-TMR($tmr)
     AS GOAL
     IN EXE
-    PRIORITY 0.9
+    PRIORITY SELF.prioritize_learning($tmr)
     ACTION (understand)
         SELECT DEFAULT
         DO SELF.understand_input($tmr)
