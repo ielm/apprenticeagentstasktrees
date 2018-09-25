@@ -152,9 +152,9 @@ class Agent(Network):
         selected = None
         for goal in agenda.goals(pending=True, active=True):
             goal.status(Goal.Status.PENDING)
-            goal.prioritize(self)
-            if goal.priority() > priority:
-                priority = goal.priority()
+            _priority = goal.priority(self)
+            if _priority > priority:
+                priority = _priority
                 selected = goal
         if selected is not None:
             selected.status(Goal.Status.ACTIVE)

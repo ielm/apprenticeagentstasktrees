@@ -320,8 +320,7 @@ class AgendaGrammarTestCase(unittest.TestCase):
         goal: Goal = Grammar.parse(self.agent, "DEFINE XYZ() AS GOAL IN SELF", start="define", agent=self.agent)
         self.assertTrue(goal.frame.name() in self.g)
         self.assertEqual(goal.name(), "XYZ")
-        goal.prioritize(self.agent)
-        self.assertEqual(goal.priority(), 0.5)
+        self.assertEqual(goal.priority(self.agent), 0.5)
 
         # A goal can be overwritten
         goal: Goal = Grammar.parse(self.agent, "DEFINE XYZ() AS GOAL IN SELF", start="define", agent=self.agent)

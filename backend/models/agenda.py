@@ -137,19 +137,27 @@ class Goal(VariableMap):
     def subgoals(self) -> List['Goal']:
         return list(map(lambda goal: Goal(goal.resolve()), self.frame["HAS-GOAL"]))
 
-    def prioritize(self, agent: 'Agent'):
+    def priority(self, agent: 'Agent'):
         try:
             stmt: Statement = Statement.from_instance(self.frame["PRIORITY"].singleton())
-            self.frame["_PRIORITY"] = stmt.run(self)
-            return
+            priority = stmt.run(self)
+
+            self.frame["_PRIORITY"] = priority
+            return priority
         except: pass # Not a Statement
 
         try:
-            self.frame["_PRIORITY"] = self.frame["PRIORITY"].singleton()
-        except:
-            self.frame["_PRIORITY"] = -1.0
+            priority = self.frame["PRIORITY"].singleton()
 
-    def priority(self):
+            self.frame["_PRIORITY"] = priority
+            return priority
+        except:
+            priority = -1.0
+
+            self.frame["_PRIORITY"] = priority
+            return priority
+
+    def _cached_priority(self):
         if "_PRIORITY" in self.frame:
             return self.frame["_PRIORITY"].singleton()
         return 0.0

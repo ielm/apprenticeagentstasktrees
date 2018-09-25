@@ -172,7 +172,7 @@ class IIDEAConverter(object):
         return {
             "name": goal.name(),
             "id": goal.frame.name(),
-            "priority": goal.priority(),
+            "priority": goal._cached_priority(),
             "pending": goal.is_pending(),
             "active": goal.is_active(),
             "satisfied": goal.is_satisfied(),
