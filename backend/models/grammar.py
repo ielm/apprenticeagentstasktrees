@@ -40,6 +40,7 @@ class GrammarTransformer(Transformer):
         graph = matches[5]
 
         priority = matches[6]
+        resources = matches[7]
         plan = list(filter(lambda match: isinstance(match, Action), matches))
         conditions = list(filter(lambda match: isinstance(match, Condition), matches))
 
@@ -48,9 +49,19 @@ class GrammarTransformer(Transformer):
             c.frame["ORDER"] = condition_order
             condition_order += 1
 
-        return Goal.define(self.agent[graph], name, priority, plan, conditions, variables)
+        return Goal.define(self.agent[graph], name, priority, resources, plan, conditions, variables)
 
     def priority(self, matches):
+        from backend.models.statement import Statement
+
+        if len(matches) == 2:
+            if isinstance(matches[1], Statement):
+                return matches[1].frame
+            return matches[1]
+
+        return 0.5
+
+    def resources(self, matches):
         from backend.models.statement import Statement
 
         if len(matches) == 2:

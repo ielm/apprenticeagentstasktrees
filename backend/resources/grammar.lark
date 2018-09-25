@@ -3,8 +3,9 @@ start: (view)
 // Statements and executables
 
 define: DEFINE goal
-goal: NAME arguments AS GOAL IN GRAPH priority (action)* (condition)*
+goal: NAME arguments AS GOAL IN GRAPH priority resources (action)* (condition)*
 priority: (PRIORITY (double | mp_statement))?
+resources: (RESOURCES (double | mp_statement))?
 goal_status: (PENDING | ACTIVE | ABANDONED | SATISFIED)
 
 action: ACTION "(" ACTION_NAME ")" action_selection action_do+
@@ -56,6 +57,7 @@ NOR: "nor"i
 ONTOLOGY: "ontology"i
 PENDING: "pending"i
 PRIORITY: "priority"i
+RESOURCES: "resources"i
 SATISFIED: "satisfied"i
 SELECT: "select"i
 SELF: "self"i

@@ -63,10 +63,11 @@ class Goal(VariableMap):
         SATISFIED = 4
 
     @classmethod
-    def define(cls, graph: Graph, name: str, priority: Union[Statement, float], plan: List['Action'], conditions: List['Condition'], variables: List[str]):
+    def define(cls, graph: Graph, name: str, priority: Union[Statement, float], resources: Union[Statement, float], plan: List['Action'], conditions: List['Condition'], variables: List[str]):
         frame = graph.register(name, generate_index=False)
         frame["NAME"] = Literal(name)
         frame["PRIORITY"] = priority
+        frame["RESOURCES"] = resources
         frame["PLAN"] = list(map(lambda p: p.frame, plan))
         frame["WHEN"] = list(map(lambda c: c.frame, conditions))
         frame["WITH"] = list(map(lambda var: Literal(var), variables))
@@ -84,6 +85,7 @@ class Goal(VariableMap):
         frame = existing if existing is not None else graph.register("GOAL", isa=definition._identifier, generate_index=True)
         frame["NAME"] = definition["NAME"]
         frame["PRIORITY"] = definition["PRIORITY"]
+        frame["RESOURCES"] = definition["RESOURCES"]
         frame["STATUS"] = Goal.Status.PENDING
         frame["PLAN"] = definition["PLAN"]
         frame["WHEN"] = definition["WHEN"]
@@ -152,7 +154,7 @@ class Goal(VariableMap):
             self.frame["_PRIORITY"] = priority
             return priority
         except:
-            priority = -1.0
+            priority = 0.0
 
             self.frame["_PRIORITY"] = priority
             return priority
@@ -161,6 +163,31 @@ class Goal(VariableMap):
         if "_PRIORITY" in self.frame:
             return self.frame["_PRIORITY"].singleton()
         return 0.0
+
+    def resources(self, agent: 'Agent'):
+        try:
+            stmt: Statement = Statement.from_instance(self.frame["RESOURCES"].singleton())
+            resources = stmt.run(self)
+
+            self.frame["_RESOURCES"] = resources
+            return resources
+        except: pass # Not a Statement
+
+        try:
+            resources = self.frame["RESOURCES"].singleton()
+
+            self.frame["_RESOURCES"] = resources
+            return resources
+        except:
+            resources = 1.0
+
+            self.frame["_RESOURCES"] = resources
+            return resources
+
+    def _cached_resources(self):
+        if "_RESOURCES" in self.frame:
+            return self.frame["_RESOURCES"].singleton()
+        return 1.0
 
     def plan(self) -> 'Action':
         for plan in self.frame["PLAN"]:

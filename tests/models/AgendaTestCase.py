@@ -165,8 +165,8 @@ class GoalTestCase(unittest.TestCase):
         f = graph.register("GOAL.1")
 
         goal = Goal(f)
-        self.assertEqual(-1.0, goal.priority(None))
-        self.assertTrue(f["_PRIORITY"] == -1.0)
+        self.assertEqual(0.0, goal.priority(None))
+        self.assertTrue(f["_PRIORITY"] == 0.0)
 
     def test_cached_priority(self):
         graph = Graph("TEST")
@@ -174,8 +174,51 @@ class GoalTestCase(unittest.TestCase):
 
         goal = Goal(f)
         self.assertEqual(0.0, goal._cached_priority())
-        self.assertEqual(-1.0, goal.priority(None))
-        self.assertEqual(-1.0, goal._cached_priority())
+        self.assertEqual(0.0, goal.priority(None))
+        self.assertEqual(0.0, goal._cached_priority())
+
+    def test_resources_numeric(self):
+
+        graph = Graph("TEST")
+        f = graph.register("GOAL.1")
+        f["RESOURCES"] = 0.5
+
+        goal = Goal(f)
+        self.assertEqual(goal.resources(None), 0.5)
+        self.assertTrue(f["_RESOURCES"] == 0.5)
+
+    def test_resources_calculation(self):
+        class TestStatement(Statement):
+            def run(self, varmap: VariableMap):
+                return 0.5
+
+        graph = Statement.hierarchy()
+        graph["RETURNING-STATEMENT"]["CLASSMAP"] = Literal(TestStatement)
+        statement = graph.register("STATEMENT.1", isa="EXE.RETURNING-STATEMENT")
+
+        f = graph.register("GOAL.1")
+        f["RESOURCES"] = statement
+
+        goal = Goal(f)
+        self.assertEqual(goal.resources(None), 0.5)
+        self.assertTrue(f["_RESOURCES"] == 0.5)
+
+    def test_resources(self):
+        graph = Graph("TEST")
+        f = graph.register("GOAL.1")
+
+        goal = Goal(f)
+        self.assertEqual(1.0, goal.resources(None))
+        self.assertTrue(f["_RESOURCES"] == 1.0)
+
+    def test_cached_resources(self):
+        graph = Graph("TEST")
+        f = graph.register("GOAL.1")
+
+        goal = Goal(f)
+        self.assertEqual(1.0, goal._cached_resources())
+        self.assertEqual(1.0, goal.resources(None))
+        self.assertEqual(1.0, goal._cached_resources())
 
     def test_plan(self):
         graph = Graph("TEST")
