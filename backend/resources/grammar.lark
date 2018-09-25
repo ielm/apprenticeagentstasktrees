@@ -1,5 +1,11 @@
 start: (view)
 
+// Knowledge Bootstrap
+
+knowledge: "@" identifier slot filler
+slot: NAME
+filler: ("@" identifier | literal)
+
 // Statements and executables
 
 define: DEFINE goal

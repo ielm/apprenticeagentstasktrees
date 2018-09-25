@@ -410,3 +410,37 @@ class AgendaGrammarTestCase(unittest.TestCase):
         parsed: Goal = Grammar.parse(self.agent, script, start="define", agent=self.agent)
         self.assertEqual(goal1, parsed)
 
+
+class BootstrapGrammarTestCase(unittest.TestCase):
+
+    class TestAgent(Agent):
+        def __init__(self, g, agent):
+            from backend.models.statement import StatementHierarchy
+            Network.__init__(self)
+            self.register(g)
+            self.register(StatementHierarchy().build())
+
+            self.exe = g
+            self.internal = g
+            self.ontology = g
+            self.wo_memory = g
+            self.lt_memory = g
+            self.identity = agent
+
+    def setUp(self):
+        from backend.models.graph import Graph
+        self.g = Graph("SELF")
+        self.agentFrame = self.g.register("AGENT")
+
+        self.agent = AgendaGrammarTestCase.TestAgent(self.g, self.agentFrame)
+
+    def test_knowledge(self):
+        f = self.g.register("FRAME")
+
+        exe = Grammar.parse(self.agent, "@SELF.AGENT myslot 123", start="knowledge", agent=self.agent)
+        exe()
+        self.assertTrue(123 in self.agentFrame["myslot"])
+
+        exe = Grammar.parse(self.agent, "@SELF.AGENT myrel @SELF.FRAME", start="knowledge", agent=self.agent)
+        exe()
+        self.assertTrue(f in self.agentFrame["myrel"])

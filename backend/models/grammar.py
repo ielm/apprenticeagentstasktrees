@@ -27,6 +27,27 @@ class GrammarTransformer(Transformer):
     def start(self, matches):
         return matches[0]
 
+    # Knowledge bootstrap
+
+    def knowledge(self, matches):
+        class _bootsrap_knowledge(object):
+            def __init__(self, network, frame, slot, filler):
+                self.network = network
+                self.frame = frame
+                self.slot = slot
+                self.filler = filler
+
+            def __call__(self, *args, **kwargs):
+                self.network.lookup(self.frame)[self.slot] += self.filler
+
+        return _bootsrap_knowledge(self.network, matches[0], matches[1], matches[2])
+
+    def slot(self, matches):
+        return str(matches[0])
+
+    def filler(self, matches):
+        return matches[0]
+
     # Statements and executables
 
     def define(self, matches):

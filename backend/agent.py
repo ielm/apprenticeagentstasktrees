@@ -150,8 +150,8 @@ class Agent(Network):
     def _decision(self):
         agenda = self.agenda()
 
-        priority_weight = 1.5
-        resources_weight = 0.25
+        priority_weight = self.identity["PRIORITY_WEIGHT"].singleton()
+        resources_weight = self.identity["RESOURCES_WEIGHT"].singleton()
 
         decision = -sys.maxsize
         selected = None
@@ -199,6 +199,12 @@ class Agent(Network):
         goals = goals.split("\n\n")
         for goal in goals:
             Goal.parse(self, goal)
+
+        from backend.models.grammar import Grammar
+        knowledge: str = get_data("backend.resources", "bootstrap.knowledge").decode("ascii")
+        knowledge = knowledge.split("\n")
+        for k in knowledge:
+            Grammar.parse(self, k, start="knowledge", agent=self)()
 
         def understand_input(statement, tmr_frame):
             tmr = self[tmr_frame["REFERS-TO-GRAPH"].singleton()]

@@ -28,6 +28,9 @@ class AgentTestCase(unittest.TestCase):
 
         self.agent = TestableAgent(ontology=self.ontology)
 
+        self.agent.identity["PRIORITY_WEIGHT"] = 1.5
+        self.agent.identity["RESOURCES_WEIGHT"] = 0.25
+
         from backend.utils.AtomicCounter import AtomicCounter
         TMR.counter = AtomicCounter()
 
