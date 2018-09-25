@@ -189,6 +189,14 @@ class Goal(VariableMap):
             return self.frame["_RESOURCES"].singleton()
         return 1.0
 
+    def decision(self, decide: float=None):
+        if decide is not None:
+            self.frame["_DECISION"] = decide
+
+        if "_DECISION" in self.frame:
+            return self.frame["_DECISION"].singleton()
+        return 0.0
+
     def plan(self) -> 'Action':
         for plan in self.frame["PLAN"]:
             action = Action(plan.resolve())

@@ -9,6 +9,8 @@ from backend.utils.AgentLogger import AgentLogger
 from enum import Enum
 from typing import Union
 
+import sys
+
 
 class Agent(Network):
 
@@ -148,14 +150,23 @@ class Agent(Network):
     def _decision(self):
         agenda = self.agenda()
 
-        priority = -1.0
+        priority_weight = 1.5
+        resources_weight = 0.25
+
+        decision = -sys.maxsize
         selected = None
+
         for goal in agenda.goals(pending=True, active=True):
             goal.status(Goal.Status.PENDING)
             _priority = goal.priority(self)
-            if _priority > priority:
-                priority = _priority
+            _resources = goal.resources(self)
+            _decision = (_priority * priority_weight) - (_resources * resources_weight)
+            goal.decision(decide=_decision)
+
+            if _decision > decision:
+                decision = _decision
                 selected = goal
+
         if selected is not None:
             selected.status(Goal.Status.ACTIVE)
             agenda.prepare_action(selected.plan())

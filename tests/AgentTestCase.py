@@ -68,6 +68,7 @@ class AgentTestCase(unittest.TestCase):
         action = graph.register("ACTION")
 
         definition["PRIORITY"] = 0.5
+        definition["RESOURCES"] = 0.5
         definition["PLAN"] = action
         action["SELECT"] = Literal(Action.DEFAULT)
 
@@ -77,6 +78,8 @@ class AgentTestCase(unittest.TestCase):
 
         self.assertTrue(goal.is_active())
         self.assertEqual(0.5, goal.priority(None))
+        self.assertEqual(0.5, goal.resources(None))
+        self.assertEqual(0.625, goal.decision(None))
         self.assertTrue(self.agent.identity["ACTION-TO-TAKE"] == action)
 
     def test_idea_decision_deactivates_other_goals(self):

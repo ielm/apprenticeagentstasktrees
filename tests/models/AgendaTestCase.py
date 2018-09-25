@@ -220,6 +220,23 @@ class GoalTestCase(unittest.TestCase):
         self.assertEqual(1.0, goal.resources(None))
         self.assertEqual(1.0, goal._cached_resources())
 
+    def test_assign_decision(self):
+        graph = Graph("TEST")
+        f = graph.register("GOAL.1")
+        goal = Goal(f)
+        goal.decision(decide=0.5)
+        self.assertTrue(0.5 in f["_DECISION"])
+
+    def test_cached_decision(self):
+        graph = Graph("TEST")
+        f = graph.register("GOAL.1")
+
+        goal = Goal(f)
+        self.assertEqual(0.0, goal.decision())
+
+        f["_DECISION"] = 0.5
+        self.assertEqual(0.5, goal.decision())
+
     def test_plan(self):
         graph = Graph("TEST")
         goal = graph.register("GOAL.1")
