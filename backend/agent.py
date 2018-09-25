@@ -200,6 +200,11 @@ class Agent(Network):
 
         self.agenda().add_goal(Goal.instance_of(self.internal, self.exe["FIND-SOMETHING-TO-DO"], []))
 
+        def prioritize_learning(statement, tmr_frame):
+            return 0.75
+
+        MPRegistry.register(prioritize_learning)
+
         # API declared versions of the two goal definitions
 
         # graph = self["EXE"]
