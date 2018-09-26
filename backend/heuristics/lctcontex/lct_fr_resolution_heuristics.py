@@ -92,7 +92,8 @@ class FRResolveUndeterminedThemesOfLearningInPostfix(ContextBasedFRResolutionHeu
 
         for theme_of in theme_ofs:
             # ATTN - searching for theme_ofs?
-            results = self.fr.search(Frame.q(self.fr._network).sub(theme_of.concept(), from_concept=True).f(LCTContext.LEARNING, True))
+            results = self.fr.search(
+                Frame.q(self.fr._network).sub(theme_of.concept(), from_concept=True).f(LCTContext.LEARNING, True))
             for result in results:
                 for theme in result["THEME"]:
                     if theme ^ self.fr.ontology[instance.concept()]:
@@ -128,7 +129,8 @@ class FRResolveLearningEvents(ContextBasedFRResolutionHeuristic):
 
         from backend.contexts.LCTContext import LCTContext
 
-        for candidate in self.fr.search(Frame.q(self.fr._network).sub(instance.concept(), from_concept=True).f(LCTContext.LEARNING, True)):
+        for candidate in self.fr.search(
+                Frame.q(self.fr._network).sub(instance.concept(), from_concept=True).f(LCTContext.LEARNING, True)):
             case_roles = ["AGENT", "THEME"]
 
             passed = True
@@ -139,10 +141,9 @@ class FRResolveLearningEvents(ContextBasedFRResolutionHeuristic):
                             passed = False
                             break
 
-                                                                                    # what are all the AGENTS in the
-                                                                                    # candidate
-                            #
-                        if len(resolves[filler._value.render()].intersection(set(map(lambda f: f._value.render(), candidate[case_role])))) == 0:
+                        # what are all the case_roles in the candidate. i f there are no matches, fail pass
+                        if len(resolves[filler._value.render()].intersection(
+                                set(map(lambda f: f._value.render(), candidate[case_role])))) == 0:
                             passed = False
                             break
 
