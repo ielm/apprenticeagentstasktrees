@@ -51,6 +51,7 @@ class GrammarTransformer(Transformer):
 
     def goal(self, matches):
         from backend.models.agenda import Action, Condition, Goal
+        from backend.models.bootstrap import BoostrapGoal
 
         name = str(matches[0])
         variables = matches[1]
@@ -66,7 +67,7 @@ class GrammarTransformer(Transformer):
             c.frame["ORDER"] = condition_order
             condition_order += 1
 
-        return Goal.define(self.agent[graph], name, priority, resources, plan, conditions, variables)
+        return BoostrapGoal(Goal.define(self.agent[graph], name, priority, resources, plan, conditions, variables))
 
     def priority(self, matches):
         from backend.models.statement import Statement

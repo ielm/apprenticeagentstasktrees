@@ -2,7 +2,7 @@ start: (view)
 
 // Bootstrap
 
-bootstrap: (knowledge BOOTSTRAPDELIMITER)*
+bootstrap: ((knowledge | define) BOOTSTRAPDELIMITER)*
 knowledge: "@" identifier slot filler
 slot: NAME
 filler: ("@" identifier | literal)

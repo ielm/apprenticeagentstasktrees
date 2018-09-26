@@ -11,7 +11,7 @@ DEFINE FIND-SOMETHING-TO-DO()
     ACTION (idle)
         SELECT DEFAULT
         DO IDLE
-
+;
 DEFINE UNDERSTAND-TMR($tmr)
     AS GOAL
     IN EXE
@@ -22,3 +22,4 @@ DEFINE UNDERSTAND-TMR($tmr)
         DO SELF.understand_input($tmr)
         DO $tmr[STATUS] = "UNDERSTOOD"
     WHEN $tmr[STATUS] == "UNDERSTOOD" THEN satisfied
+;

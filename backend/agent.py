@@ -192,32 +192,25 @@ class Agent(Network):
 
     def _bootstrap(self):
 
-        from backend.models.mps import MPRegistry
-
-        from pkgutil import get_data
-        goals: str = get_data("backend.resources", "goals.aa").decode('ascii')
-        goals = goals.split("\n\n")
-        for goal in goals:
-            Goal.parse(self, goal)
-
         from backend.models.bootstrap import Bootstrap
+        Bootstrap.bootstrap_resource(self, "backend.resources", "goals.aa")
         Bootstrap.bootstrap_resource(self, "backend.resources", "bootstrap.knowledge")
-
-        def understand_input(statement, tmr_frame):
-            tmr = self[tmr_frame["REFERS-TO-GRAPH"].singleton()]
-
-            agenda = self.context.default_understanding()
-            agenda.logger(self._logger)
-            agenda.process(self, tmr)
-
-        MPRegistry.register(understand_input)
 
         self.agenda().add_goal(Goal.instance_of(self.internal, self.exe["FIND-SOMETHING-TO-DO"], []))
 
+        from backend.models.mps import MPRegistry
+
+        def understand_input(statement, tmr_frame):
+            tmr = self[tmr_frame["REFERS-TO-GRAPH"].singleton()]
+            agenda = self.context.default_understanding()
+            agenda.logger(self._logger)
+            agenda.process(self, tmr)
+        MPRegistry.register(understand_input)
+
         def prioritize_learning(statement, tmr_frame):
             return 0.75
-
         MPRegistry.register(prioritize_learning)
+
 
         # API declared versions of the two goal definitions
 

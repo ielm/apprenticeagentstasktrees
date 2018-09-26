@@ -1,4 +1,5 @@
 from backend.agent import Agent
+from backend.models.agenda import Goal
 from backend.models.grammar import Grammar
 from backend.models.graph import Filler, Frame, Identifier, Literal, Network
 from pkgutil import get_data
@@ -44,3 +45,12 @@ class BootstrapKnowledge(Bootstrap):
                 self.slot == other.slot and \
                 self.filler == other.filler
         return super().__eq__(other)
+
+
+class BoostrapGoal(Bootstrap):
+
+    def __init__(self, goal: Goal):
+        self.goal = goal
+
+    def __call__(self, *args, **kwargs):
+        return self.goal
