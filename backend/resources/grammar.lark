@@ -1,10 +1,13 @@
 start: (view)
 
-// Knowledge Bootstrap
+// Bootstrap
 
+bootstrap: (knowledge BOOTSTRAPDELIMITER)*
 knowledge: "@" identifier slot filler
 slot: NAME
 filler: ("@" identifier | literal)
+
+BOOTSTRAPDELIMITER: ";"
 
 // Statements and executables
 

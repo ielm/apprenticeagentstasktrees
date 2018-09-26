@@ -200,11 +200,8 @@ class Agent(Network):
         for goal in goals:
             Goal.parse(self, goal)
 
-        from backend.models.grammar import Grammar
-        knowledge: str = get_data("backend.resources", "bootstrap.knowledge").decode("ascii")
-        knowledge = knowledge.split("\n")
-        for k in knowledge:
-            Grammar.parse(self, k, start="knowledge", agent=self)()
+        from backend.models.bootstrap import Bootstrap
+        Bootstrap.bootstrap_resource(self, "backend.resources", "bootstrap.knowledge")
 
         def understand_input(statement, tmr_frame):
             tmr = self[tmr_frame["REFERS-TO-GRAPH"].singleton()]

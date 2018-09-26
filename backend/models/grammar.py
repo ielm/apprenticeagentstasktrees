@@ -27,20 +27,16 @@ class GrammarTransformer(Transformer):
     def start(self, matches):
         return matches[0]
 
-    # Knowledge bootstrap
+    # Bootstrap
+
+    def bootstrap(self, matches):
+        from backend.models.bootstrap import Bootstrap
+        return list(filter(lambda match: isinstance(match, Bootstrap), matches))
 
     def knowledge(self, matches):
-        class _bootsrap_knowledge(object):
-            def __init__(self, network, frame, slot, filler):
-                self.network = network
-                self.frame = frame
-                self.slot = slot
-                self.filler = filler
+        from backend.models.bootstrap import BootstrapKnowledge
 
-            def __call__(self, *args, **kwargs):
-                self.network.lookup(self.frame)[self.slot] += self.filler
-
-        return _bootsrap_knowledge(self.network, matches[0], matches[1], matches[2])
+        return BootstrapKnowledge(self.network, matches[0], matches[1], matches[2])
 
     def slot(self, matches):
         return str(matches[0])

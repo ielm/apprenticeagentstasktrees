@@ -434,13 +434,31 @@ class BootstrapGrammarTestCase(unittest.TestCase):
 
         self.agent = AgendaGrammarTestCase.TestAgent(self.g, self.agentFrame)
 
+    def test_bootstrap_multiple(self):
+        from backend.models.bootstrap import Bootstrap
+
+        input = '''
+        @SELF.AGENT myslot 123;
+        
+        @SELF.AGENT myslot 123
+        ;
+        
+        
+        @SELF.AGENT myslot 123;
+        '''
+
+        bootstrap = Grammar.parse(self.agent, input, start="bootstrap", agent=self.agent)
+        self.assertEqual(3, len(bootstrap))
+        for b in bootstrap:
+            self.assertIsInstance(b, Bootstrap)
+
     def test_knowledge(self):
+        from backend.models.bootstrap import BootstrapKnowledge
+
         f = self.g.register("FRAME")
 
-        exe = Grammar.parse(self.agent, "@SELF.AGENT myslot 123", start="knowledge", agent=self.agent)
-        exe()
-        self.assertTrue(123 in self.agentFrame["myslot"])
+        bootstrap = Grammar.parse(self.agent, "@SELF.AGENT myslot 123", start="knowledge", agent=self.agent)
+        self.assertEqual(bootstrap, BootstrapKnowledge(self.agent, "SELF.AGENT", "myslot", Literal(123)))
 
-        exe = Grammar.parse(self.agent, "@SELF.AGENT myrel @SELF.FRAME", start="knowledge", agent=self.agent)
-        exe()
-        self.assertTrue(f in self.agentFrame["myrel"])
+        bootstrap = Grammar.parse(self.agent, "@SELF.AGENT myrel @SELF.FRAME", start="knowledge", agent=self.agent)
+        self.assertEqual(bootstrap, BootstrapKnowledge(self.agent, "SELF.AGENT", "myrel", Identifier.parse("SELF.FRAME")))
