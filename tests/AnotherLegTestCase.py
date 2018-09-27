@@ -7,6 +7,9 @@ import json, os, unittest
 
 
 class AnotherLegTestCase(unittest.TestCase):
+    """
+    Test demo input sequence for all another leg.
+    """
 
     def setUp(self):
         self.n = Network()
@@ -25,27 +28,27 @@ class AnotherLegTestCase(unittest.TestCase):
         demo = self.resource(file)
 
         input = [
-            demo[0],    # We will build a chair.
+            demo[0],  # We will build a chair.
 
-            demo[1],    # I need a screwdriver to assemble a chair.
-            demo[2],    # Get a screwdriver.
+            demo[1],  # I need a screwdriver to assemble a chair.
+            demo[2],  # Get a screwdriver.
 
-            demo[3],    # First, we will build a front leg of the chair.
-            demo[4],    # Get a foot bracket.
-            demo[5],    # Get a front bracket.
-            demo[6],    # Get a dowel.
-            demo[7],    # Hold the dowel.
-            demo[8],    # I am using the screwdriver to affix the brackets on the dowel with screws.
-            demo[9],    # Release the dowel.
-            demo[10],   # We have assembled a front leg.
-            demo[11],   # Now, we will build another front leg.
-            demo[12],   # Get another foot bracket.
-            demo[13],   # Get another front bracket.
-            demo[14],   # Get another dowel.
-            demo[15],   # Hold the dowel.
-            demo[16],   # I am putting another set of brackets of the dowel.
-            demo[17],   # Release the dowel.
-            demo[18]    # I have assembled another front chair leg
+            demo[3],  # First, we will build a front leg of the chair.
+            demo[4],  # Get a foot bracket.
+            demo[5],  # Get a front bracket.
+            demo[6],  # Get a dowel.
+            demo[7],  # Hold the dowel.
+            demo[8],  # I am using the screwdriver to affix the brackets on the dowel with screws.
+            demo[9],  # Release the dowel.
+            demo[10],  # We have assembled a front leg.
+            demo[11],  # Now, we will build another front leg.
+            demo[12],  # Get another foot bracket.
+            demo[13],  # Get another front bracket.
+            demo[14],  # Get another dowel.
+            demo[15],  # Hold the dowel.
+            demo[16],  # I am putting another set of brackets of the dowel.
+            demo[17],  # Release the dowel.
+            demo[18]  # I have assembled another front chair leg
             # demo[19], # Now, we will build the back leg on the right side.
             # demo[20], # Get another foot bracket.
             # demo[21], # Get the back bracket on the right side.
@@ -58,7 +61,6 @@ class AnotherLegTestCase(unittest.TestCase):
         ]
 
         # print(demo[11]["sentence"])
-
 
         agent = Agent(ontology=self.ontology)
         agent.logger().enable()
@@ -75,7 +77,7 @@ class AnotherLegTestCase(unittest.TestCase):
             print("============================================")
             print("")
         print(agent.wo_memory)
-        print("="*80)
+        print("=" * 80)
 
     # def test_ltm(self):
     #     file = os.path.abspath(__package__) + "/resources/DemoMay2018_Analyses_ext.json"
@@ -117,32 +119,22 @@ class AnotherLegTestCase(unittest.TestCase):
     #     print(format_pretty_htn(agent.lt_memory, agent.lt_memory["BUILD.1"], indent=1))
     #     print("========")
 
-        # print("")
-        # print("Action Queue")
-        # print(agent.action_queue)
+    # print("")
+    # print("Action Queue")
+    # print(agent.action_queue)
 
-        # from backend.contexts.ACTContext import ACTContext
-        # agent.context = ACTContext(agent)
+    # from backend.contexts.ACTContext import ACTContext
+    # agent.context = ACTContext(agent)
 
-        # print("")
-        # agent.logger().enable()
+    # print("")
+    # agent.logger().enable()
 
+    # agent.input(demo[0])
+    # print("")
+    # print("Action Queue")
+    # print(agent.action_queue)
 
-        # agent.input(demo[0])
-        # print("")
-        # print("Action Queue")
-        # print(agent.action_queue)
-
-
-        # print("Action Queue")
-        # for i in input:
-        #     agent.input(i)
-        #     print(agent.action_queue)
-
-
-
-
-
-
-
-
+    # print("Action Queue")
+    # for i in input:
+    #     agent.input(i)
+    #     print(agent.action_queue)
