@@ -1,6 +1,9 @@
 
 
 class AgentLogger(object):
+    """
+    Agent Logger
+    """
 
     INDENT = "   "
 

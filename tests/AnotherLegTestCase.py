@@ -60,8 +60,6 @@ class AnotherLegTestCase(unittest.TestCase):
             # # demo[27]  # We finished assembling the chair.
         ]
 
-        # print(demo[11]["sentence"])
-
         agent = Agent(ontology=self.ontology)
         agent.logger().enable()
 

@@ -13,8 +13,8 @@ class FR(Graph):
 
     def __init__(self, namespace, ontology):
         """
-        :param namespace: Identifier for the FR in the Network
-        :param ontology: Inherited agent ontology
+        :param namespace: Identifier for the FR
+        :param ontology: Inherited ontology
         """
         super().__init__(namespace)
 

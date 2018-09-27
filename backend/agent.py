@@ -17,6 +17,8 @@ class Agent(Network):
 
     def __init__(self, ontology: Ontology = None):
         """
+        Initialize Agent
+
         :param ontology: agent ontology
         """
         super().__init__()
@@ -45,15 +47,21 @@ class Agent(Network):
 
     def logger(self, logger=None):
         """
+        Sets agent's logger if specified, and returns _logger
 
-        :param logger:
-        :returns:
+        :param logger: logger to set as agent's logger
+        :returns: agent's logger, if available and enabled.
         """
         if logger is not None:
             self._logger = logger
         return self._logger
 
     def input(self, input):
+        """
+        Helper to process and log TMR
+
+        :param input: raw TMR to process
+        """
         tmr = self.register(TMR(input, ontology=self.ontology))
         self.input_memory.append(tmr)
 

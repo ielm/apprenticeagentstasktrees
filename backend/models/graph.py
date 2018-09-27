@@ -8,11 +8,15 @@ import re
 # Use the below block of code to avoid cyclic imports,
 # while still allowing top-level imports for type hints.
 from typing import TYPE_CHECKING
+
 if TYPE_CHECKING:
     from backend.models.query import FrameQuery, SimpleFrameQuery
 
 
 class Identifier(object):
+    """
+    Identifier
+    """
 
     @classmethod
     def parse(cls, path: str) -> 'Identifier':
@@ -34,12 +38,26 @@ class Identifier(object):
 
         return Identifier(graph, name, instance=instance)
 
-    def __init__(self, graph: str, name: str, instance: int=None):
+    def __init__(self, graph: str, name: str, instance: int = None):
+        """
+        Initialize Identifier
+
+        :param graph:
+        :param name:
+        :param instance:
+        """
         self.graph = graph
         self.name = name
         self.instance = instance
 
-    def resolve(self, graph: Union['Graph', str], network: Union['Network']=None) -> 'Frame':
+    def resolve(self, graph: Union['Graph', str], network: Union['Network'] = None) -> 'Frame':
+        """
+
+
+        :param graph:
+        :param network:
+        :return:
+        """
         if graph is not None and isinstance(graph, Graph):
             if self in graph:
                 return graph[self]
@@ -49,11 +67,22 @@ class Identifier(object):
 
         raise UnknownFrameError()
 
-    def render(self, graph: bool=True, name: bool=True, instance: bool=True) -> str:
+    def render(self, graph: bool = True, name: bool = True, instance: bool = True) -> str:
+        """
+        Returns the constructed identifier, based on the arguments set.
+
+        :param graph: Render name of graph
+        :param name: Render identifier name
+        :param instance: Render instance number
+        :return: Constructed identifier
+        """
         values = []
-        if graph: values.append(self.graph)
-        if name: values.append(self.name)
-        if instance: values.append(self.instance)
+        if graph:
+            values.append(self.graph)
+        if name:
+            values.append(self.name)
+        if instance:
+            values.append(self.instance)
 
         return ".".join(map(lambda x: str(x), filter(lambda x: x is not None, values)))
 
@@ -81,8 +110,16 @@ class Identifier(object):
 
 
 class Literal(object):
+    """
+    Literal
+    """
 
     def __init__(self, value):
+        """
+        Initialize Literal
+
+        :param value:
+        """
         if isinstance(value, Literal):
             value = value.value
         self.value = value
@@ -103,13 +140,23 @@ class Literal(object):
 
 
 class Network(object):
+    """
+    Network
+    """
 
     G = TypeVar('G', bound='Graph')
 
     def __init__(self):
+        """
+        Initialize Network
+        """
         self._storage = dict()
 
     def register(self, graph: Union[G, str]) -> G:
+        """
+        :param graph:
+        :return:
+        """
         if isinstance(graph, Graph):
             self[graph._namespace] = graph
         elif isinstance(graph, str):
@@ -120,7 +167,13 @@ class Network(object):
 
         return self[graph._namespace]
 
-    def lookup(self, identifier: Union[Identifier, str], graph: Union['Graph', str]=None) -> 'Frame':
+    def lookup(self, identifier: Union[Identifier, str], graph: Union['Graph', str] = None) -> 'Frame':
+        """
+
+        :param identifier:
+        :param graph:
+        :return:
+        """
         if graph is not None and isinstance(graph, Graph):
             graph = graph._namespace
 
@@ -138,6 +191,12 @@ class Network(object):
         return self[identifier.graph][identifier]
 
     def search(self, query: 'FrameQuery', exclude_knowledge=True) -> List['Frame']:
+        """
+
+        :param query:
+        :param exclude_knowledge:
+        :return:
+        """
         graphs = self._storage.values()
         if exclude_knowledge:
             from backend.models.ontology import Ontology
@@ -182,8 +241,16 @@ class Network(object):
 
 
 class Graph(Mapping):
+    """
+    Graph
+    """
 
     def __init__(self, namespace: str):
+        """
+        Initialize Graph
+
+        :param namespace:
+        """
         self._namespace = namespace
         self._storage = dict()
         self._network = None
@@ -241,7 +308,9 @@ class Graph(Mapping):
         self._indexes[concept] = 1
         return 1
 
-    def register(self, id: str, isa: Union['Slot', 'Filler', List['Filler'], Identifier, List['Identifier'], str, List[str]]=None, generate_index: bool=False) -> 'Frame':
+    def register(self, id: str,
+                 isa: Union['Slot', 'Filler', List['Filler'], Identifier, List['Identifier'], str, List[str]] = None,
+                 generate_index: bool = False) -> 'Frame':
         if type(id) != str:
             raise TypeError()
 
@@ -261,8 +330,18 @@ class Graph(Mapping):
 
 
 class Frame(object):
+    """
+    Frame
+    """
 
-    def __init__(self, identifier: Union[Identifier, str], isa: Union['Slot', 'Filler', List['Filler'], Identifier, List['Identifier'], str, List[str]]=None):
+    def __init__(self, identifier: Union[Identifier, str],
+                 isa: Union['Slot', 'Filler', List['Filler'], Identifier, List['Identifier'], str, List[str]] = None):
+        """
+        Initialize Frame
+
+        :param identifier:
+        :param isa:
+        """
         if isinstance(identifier, Identifier):
             self._identifier = identifier
         else:
@@ -293,7 +372,8 @@ class Frame(object):
         try:
             if parent in self.ancestors():
                 return True
-        except UnknownFrameError: pass
+        except UnknownFrameError:
+            pass
 
         if parent == self.name():
             return True
@@ -303,7 +383,8 @@ class Frame(object):
             try:
                 if self._graph._namespace + "." + parent in self.ancestors():
                     return True
-            except UnknownFrameError: pass
+            except UnknownFrameError:
+                pass
 
             if self._graph._namespace + "." + parent == self.name():
                 return True
@@ -329,9 +410,14 @@ class Frame(object):
     def parents(self) -> List[Identifier]:
         return list(map(lambda isa: isa._value, self[self._ISA_type()]))
 
-    def concept(self, full_path: bool=True) -> str:
-        identifiers = list(map(lambda filler: filler._value, filter(lambda filler: isinstance(filler._value, Identifier), self[self._ISA_type()])))
-        identifiers = list(map(lambda identifier: identifier if identifier.graph is not None else Identifier(self._graph._namespace, identifier.name, instance=identifier.instance), identifiers))
+    def concept(self, full_path: bool = True) -> str:
+        identifiers = list(map(lambda filler: filler._value,
+                               filter(lambda filler: isinstance(filler._value, Identifier), self[self._ISA_type()])))
+        identifiers = list(map(
+            lambda identifier: identifier if identifier.graph is not None else Identifier(self._graph._namespace,
+                                                                                          identifier.name,
+                                                                                          instance=identifier.instance),
+            identifiers))
 
         concepts = list(map(lambda identifier: identifier.render(graph=full_path, instance=False), identifiers))
 
@@ -370,7 +456,7 @@ class Frame(object):
         return self.isa(other)
 
     def __str__(self):
-        return str(self._identifier) + " = " +str(self._storage)
+        return str(self._identifier) + " = " + str(self._storage)
 
     def __repr__(self):
         return str(self)
@@ -388,14 +474,17 @@ class Frame(object):
         return copy
 
     @classmethod
-    def q(cls, n: Network, comparator: str="and") -> 'SimpleFrameQuery':
+    def q(cls, n: Network, comparator: str = "and") -> 'SimpleFrameQuery':
         from backend.models.query import SimpleFrameQuery
         return SimpleFrameQuery(n, comparator=comparator)
 
 
 class Slot(object):
+    """
+    Slot
+    """
 
-    def __init__(self, name: str, values=None, frame: Frame=None):
+    def __init__(self, name: str, values=None, frame: Frame = None):
         self._name = name
         self._storage = list()
         self._frame = frame
@@ -408,7 +497,7 @@ class Slot(object):
 
             self._storage.extend(values)
 
-    def compare(self, other, isa: bool=True, intersection: bool=True) -> bool:
+    def compare(self, other, isa: bool = True, intersection: bool = True) -> bool:
         if isinstance(other, Slot):
             other = other._storage
 
@@ -509,8 +598,11 @@ class Slot(object):
 
 
 class Filler(object):
+    """
+    Filler
+    """
 
-    def __init__(self, value: Union[Identifier, Literal, Any], metadata: dict=None):
+    def __init__(self, value: Union[Identifier, Literal, Any], metadata: dict = None):
         if isinstance(value, Identifier) or isinstance(value, Literal):
             self._value = value
         elif isinstance(value, str):
@@ -547,15 +639,18 @@ class Filler(object):
                 if self._frame._graph is not None:
                     try:
                         return self._frame._graph[self._value]
-                    except KeyError: pass
+                    except KeyError:
+                        pass
                     if self._frame._graph._network is not None:
                         try:
                             return self._frame._graph._network.lookup(self._value, graph=self._frame._graph._namespace)
-                        except KeyError: pass
-                        except Exception: pass
+                        except KeyError:
+                            pass
+                        except Exception:
+                            pass
         return self._value
 
-    def compare(self, other, isa: bool=True, intersection: bool=True) -> bool:
+    def compare(self, other, isa: bool = True, intersection: bool = True) -> bool:
         if not isinstance(other, list):
             other = [other]
 
@@ -576,19 +671,22 @@ class Filler(object):
                 try:
                     if self.resolve().isa(to):
                         return True
-                except UnknownFrameError: pass
+                except UnknownFrameError:
+                    pass
 
             if isinstance(to, Identifier) and isa:
                 try:
                     if to.resolve(self._graph(), self._network()).isa(local):
                         return True
-                except UnknownFrameError: pass
+                except UnknownFrameError:
+                    pass
 
             if isinstance(to, Frame) and isa:
                 try:
                     if to.isa(local):
                         return True
-                except UnknownFrameError: pass
+                except UnknownFrameError:
+                    pass
 
             return False
 
