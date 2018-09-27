@@ -9,9 +9,16 @@ from backend.utils.AgentLogger import AgentLogger
 from enum import Enum
 from typing import Union
 
-class Agent(Network):
 
-    def __init__(self, ontology: Ontology=None):
+class Agent(Network):
+    """
+    Agent
+    """
+
+    def __init__(self, ontology: Ontology = None):
+        """
+        :param ontology: agent ontology
+        """
         super().__init__()
 
         if ontology is None:
@@ -37,6 +44,11 @@ class Agent(Network):
         self.lt_memory.logger(self._logger)
 
     def logger(self, logger=None):
+        """
+
+        :param logger:
+        :returns:
+        """
         if logger is not None:
             self._logger = logger
         return self._logger
@@ -116,7 +128,7 @@ class Agent(Network):
         def time(cls) -> int:
             return Agent.IDEA._time
 
-    def iidea(self, input=None): # (I)ndependent (I)nput, (D)ecide + (E)xecute + (A)ssess
+    def iidea(self, input=None):  # (I)ndependent (I)nput, (D)ecide + (E)xecute + (A)ssess
         global iidea_stage
 
         if input is not None:
@@ -128,7 +140,7 @@ class Agent(Network):
         print("T" + str(Agent.IDEA.time()) + " " + Agent.IDEA.stage())
         print(self.internal)
 
-    def _input(self, input: Union[dict, TMR]=None):
+    def _input(self, input: Union[dict, TMR] = None):
         if input is None:
             return
 
@@ -229,5 +241,3 @@ class Agent(Network):
         #                     [IsStatement.instance(graph, "$tmr", "STATUS", Literal("UNDERSTOOD"))],
         #                     Goal.Status.SATISFIED)
         # ], ["$tmr"])
-
-

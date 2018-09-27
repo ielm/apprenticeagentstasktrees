@@ -7,8 +7,15 @@ import copy
 
 
 class FR(Graph):
+    """
+    Fact Repository
+    """
 
     def __init__(self, namespace, ontology):
+        """
+        :param namespace: Identifier for the FR in the Network
+        :param ontology: Inherited agent ontology
+        """
         super().__init__(namespace)
 
         self.ontology = ontology

@@ -116,6 +116,12 @@ class FRResolveUndeterminedThemesOfLearningInPostfix(ContextBasedFRResolutionHeu
 class FRResolveLearningEvents(ContextBasedFRResolutionHeuristic):
 
     def resolve(self, instance, resolves, tmr=None):
+        """
+        :param instance:
+        :param resolves:
+        :param tmr:
+        :return:
+        """
         if not instance ^ self.fr.ontology["EVENT"]:
             return
 

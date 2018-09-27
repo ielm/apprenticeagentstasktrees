@@ -7,6 +7,9 @@ from typing import List, Union
 
 
 class Ontology(Graph):
+    """
+    Ontology
+    """
 
     @classmethod
     def init_default(cls, namespace="ONT"):
