@@ -317,38 +317,47 @@ class AgendaGrammarTestCase(unittest.TestCase):
 
     def test_define_goal(self):
         # A goal has a name and a destination graph, and a default priority
-        goal: Goal = Grammar.parse(self.agent, "DEFINE XYZ() AS GOAL IN SELF", start="define", agent=self.agent)
+        goal: Goal = Grammar.parse(self.agent, "DEFINE XYZ() AS GOAL IN SELF", start="define", agent=self.agent).goal
         self.assertTrue(goal.frame.name() in self.g)
         self.assertEqual(goal.name(), "XYZ")
-        goal.prioritize(self.agent)
-        self.assertEqual(goal.priority(), 0.5)
+        self.assertEqual(goal.priority(self.agent), 0.5)
 
         # A goal can be overwritten
-        goal: Goal = Grammar.parse(self.agent, "DEFINE XYZ() AS GOAL IN SELF", start="define", agent=self.agent)
+        goal: Goal = Grammar.parse(self.agent, "DEFINE XYZ() AS GOAL IN SELF", start="define", agent=self.agent).goal
         self.assertTrue(goal.frame.name() in self.g)
         self.assertEqual(goal.name(), "XYZ")
         self.assertEqual(2, len(self.g)) # One is the agent, the other is the overwritten goal
 
         # A goal can have parameters
-        goal: Goal = Goal.define(self.g, "XYZ", 0.5, [], [], ["$var1", "$var2"])
-        parsed: Goal = Grammar.parse(self.agent, "DEFINE XYZ($var1, $var2) AS GOAL IN SELF", start="define", agent=self.agent)
+        goal: Goal = Goal.define(self.g, "XYZ", 0.5, 0.5, [], [], ["$var1", "$var2"])
+        parsed: Goal = Grammar.parse(self.agent, "DEFINE XYZ($var1, $var2) AS GOAL IN SELF", start="define", agent=self.agent).goal
         self.assertEqual(goal, parsed)
 
         # A goal can have a numeric priority
-        goal: Goal = Goal.define(self.g, "XYZ", 0.9, [], [], [])
-        parsed: Goal = Grammar.parse(self.agent, "DEFINE XYZ() AS GOAL IN SELF PRIORITY 0.9", start="define", agent=self.agent)
+        goal: Goal = Goal.define(self.g, "XYZ", 0.9, 0.5, [], [], [])
+        parsed: Goal = Grammar.parse(self.agent, "DEFINE XYZ() AS GOAL IN SELF PRIORITY 0.9", start="define", agent=self.agent).goal
         self.assertEqual(goal, parsed)
 
         # A goal can have a statement priority
-        goal: Goal = Goal.define(self.g, "XYZ", MeaningProcedureStatement.instance(self.g, "mp1", []).frame, [], [], [])
-        parsed: Goal = Grammar.parse(self.agent, "DEFINE XYZ() AS GOAL IN SELF PRIORITY SELF.mp1()", start="define", agent=self.agent)
+        goal: Goal = Goal.define(self.g, "XYZ", MeaningProcedureStatement.instance(self.g, "mp1", []).frame, 0.5, [], [], [])
+        parsed: Goal = Grammar.parse(self.agent, "DEFINE XYZ() AS GOAL IN SELF PRIORITY SELF.mp1()", start="define", agent=self.agent).goal
         self.assertEqual(goal.frame["PRIORITY"].singleton()["CALLS"].singleton(), parsed.frame["PRIORITY"].singleton()["CALLS"].singleton())
+
+        # A goal can have a numeric resources
+        goal: Goal = Goal.define(self.g, "XYZ", 0.5, 0.9, [], [], [])
+        parsed: Goal = Grammar.parse(self.agent, "DEFINE XYZ() AS GOAL IN SELF RESOURCES 0.9", start="define", agent=self.agent).goal
+        self.assertEqual(goal, parsed)
+
+        # A goal can have a statement resources
+        goal: Goal = Goal.define(self.g, "XYZ", 0.5, MeaningProcedureStatement.instance(self.g, "mp1", []).frame, [], [], [])
+        parsed: Goal = Grammar.parse(self.agent, "DEFINE XYZ() AS GOAL IN SELF RESOURCES SELF.mp1()", start="define", agent=self.agent).goal
+        self.assertEqual(goal.frame["RESOURCES"].singleton()["CALLS"].singleton(), parsed.frame["RESOURCES"].singleton()["CALLS"].singleton())
 
         # A goal can have plans (actions)
         a1: Action = Action.build(self.g, "action_a", Action.DEFAULT, Action.IDLE)
         a2: Action = Action.build(self.g, "action_b", Action.DEFAULT, Action.IDLE)
-        goal: Goal = Goal.define(self.g, "XYZ", 0.5, [a1, a2], [], [])
-        parsed: Goal = Grammar.parse(self.agent, "DEFINE XYZ() AS GOAL IN SELF ACTION (action_a) SELECT DEFAULT DO IDLE ACTION (action_b) SELECT DEFAULT DO IDLE", start="define", agent=self.agent)
+        goal: Goal = Goal.define(self.g, "XYZ", 0.5, 0.5, [a1, a2], [], [])
+        parsed: Goal = Grammar.parse(self.agent, "DEFINE XYZ() AS GOAL IN SELF ACTION (action_a) SELECT DEFAULT DO IDLE ACTION (action_b) SELECT DEFAULT DO IDLE", start="define", agent=self.agent).goal
         self.assertEqual(goal, parsed)
 
         # A goal can have conditions (which are ordered as written)
@@ -356,13 +365,13 @@ class AgendaGrammarTestCase(unittest.TestCase):
         q2 = SlotQuery(self.agent, AndQuery(self.agent, [NameQuery(self.agent, "THEME"), FillerQuery(self.agent, LiteralQuery(self.agent, 456))]))
         c1: Condition = Condition.build(self.g, [ExistsStatement.instance(self.g, q1)], Goal.Status.SATISFIED, Condition.Logic.AND, 1)
         c2: Condition = Condition.build(self.g, [ExistsStatement.instance(self.g, q2)], Goal.Status.ABANDONED, Condition.Logic.AND, 2)
-        goal: Goal = Goal.define(self.g, "XYZ", 0.5, [], [c1, c2], [])
-        parsed: Goal = Grammar.parse(self.agent, "DEFINE XYZ() AS GOAL IN SELF WHEN EXISTS THEME = 123 THEN satisfied WHEN EXISTS THEME = 456 THEN abandoned", start="define", agent=self.agent)
+        goal: Goal = Goal.define(self.g, "XYZ", 0.5, 0.5, [], [c1, c2], [])
+        parsed: Goal = Grammar.parse(self.agent, "DEFINE XYZ() AS GOAL IN SELF WHEN EXISTS THEME = 123 THEN satisfied WHEN EXISTS THEME = 456 THEN abandoned", start="define", agent=self.agent).goal
         self.assertEqual(goal, parsed)
 
     def test_find_something_to_do(self):
         graph = self.g
-        goal1 = Goal.define(graph, "FIND-SOMETHING-TO-DO", 0.1, [
+        goal1 = Goal.define(graph, "FIND-SOMETHING-TO-DO", 0.1, 0.5, [
             Action.build(graph,
                          "acknowledge input",
                          ExistsStatement.instance(graph, Grammar.parse(self.agent,
@@ -398,6 +407,58 @@ class AgendaGrammarTestCase(unittest.TestCase):
                 DO IDLE
         '''
 
-        parsed: Goal = Grammar.parse(self.agent, script, start="define", agent=self.agent)
+        parsed: Goal = Grammar.parse(self.agent, script, start="define", agent=self.agent).goal
         self.assertEqual(goal1, parsed)
 
+
+class BootstrapGrammarTestCase(unittest.TestCase):
+
+    class TestAgent(Agent):
+        def __init__(self, g, agent):
+            from backend.models.statement import StatementHierarchy
+            Network.__init__(self)
+            self.register(g)
+            self.register(StatementHierarchy().build())
+
+            self.exe = g
+            self.internal = g
+            self.ontology = g
+            self.wo_memory = g
+            self.lt_memory = g
+            self.identity = agent
+
+    def setUp(self):
+        from backend.models.graph import Graph
+        self.g = Graph("SELF")
+        self.agentFrame = self.g.register("AGENT")
+
+        self.agent = AgendaGrammarTestCase.TestAgent(self.g, self.agentFrame)
+
+    def test_bootstrap_multiple(self):
+        from backend.models.bootstrap import Bootstrap
+
+        input = '''
+        @SELF.AGENT myslot 123;
+        
+        @SELF.AGENT myslot 123
+        ;
+        
+        
+        @SELF.AGENT myslot 123;
+        '''
+
+        bootstrap = Grammar.parse(self.agent, input, start="bootstrap", agent=self.agent)
+        self.assertEqual(3, len(bootstrap))
+        for b in bootstrap:
+            self.assertIsInstance(b, Bootstrap)
+
+    def test_knowledge(self):
+        from backend.models.bootstrap import BootstrapKnowledge
+
+        f = self.g.register("FRAME")
+
+        bootstrap = Grammar.parse(self.agent, "@SELF.AGENT myslot 123", start="knowledge", agent=self.agent)
+        self.assertEqual(bootstrap, BootstrapKnowledge(self.agent, "SELF.AGENT", "myslot", Literal(123)))
+
+        bootstrap = Grammar.parse(self.agent, "@SELF.AGENT myrel @SELF.FRAME", start="knowledge", agent=self.agent)
+        self.assertEqual(bootstrap, BootstrapKnowledge(self.agent, "SELF.AGENT", "myrel", Identifier.parse("SELF.FRAME")))

@@ -9,6 +9,8 @@ from backend.utils.AgentLogger import AgentLogger
 from enum import Enum
 from typing import Union
 
+import sys
+
 
 class Agent(Network):
 
@@ -148,14 +150,23 @@ class Agent(Network):
     def _decision(self):
         agenda = self.agenda()
 
-        priority = -1.0
+        priority_weight = self.identity["PRIORITY_WEIGHT"].singleton()
+        resources_weight = self.identity["RESOURCES_WEIGHT"].singleton()
+
+        decision = -sys.maxsize
         selected = None
+
         for goal in agenda.goals(pending=True, active=True):
             goal.status(Goal.Status.PENDING)
-            goal.prioritize(self)
-            if goal.priority() > priority:
-                priority = goal.priority()
+            _priority = goal.priority(self)
+            _resources = goal.resources(self)
+            _decision = (_priority * priority_weight) - (_resources * resources_weight)
+            goal.decision(decide=_decision)
+
+            if _decision > decision:
+                decision = _decision
                 selected = goal
+
         if selected is not None:
             selected.status(Goal.Status.ACTIVE)
             agenda.prepare_action(selected.plan())
@@ -181,29 +192,25 @@ class Agent(Network):
 
     def _bootstrap(self):
 
-        from backend.models.mps import MPRegistry
-
-        from pkgutil import get_data
-        goals: str = get_data("backend.resources", "goals.aa").decode('ascii')
-        goals = goals.split("\n\n")
-        for goal in goals:
-            Goal.parse(self, goal)
-
-        def understand_input(statement, tmr_frame):
-            tmr = self[tmr_frame["REFERS-TO-GRAPH"].singleton()]
-
-            agenda = self.context.default_understanding()
-            agenda.logger(self._logger)
-            agenda.process(self, tmr)
-
-        MPRegistry.register(understand_input)
+        from backend.models.bootstrap import Bootstrap
+        Bootstrap.bootstrap_resource(self, "backend.resources", "goals.aa")
+        Bootstrap.bootstrap_resource(self, "backend.resources", "bootstrap.knowledge")
 
         self.agenda().add_goal(Goal.instance_of(self.internal, self.exe["FIND-SOMETHING-TO-DO"], []))
 
+        from backend.models.mps import MPRegistry
+
+        def understand_input(statement, tmr_frame):
+            tmr = self[tmr_frame["REFERS-TO-GRAPH"].singleton()]
+            agenda = self.context.default_understanding()
+            agenda.logger(self._logger)
+            agenda.process(self, tmr)
+        MPRegistry.register(understand_input)
+
         def prioritize_learning(statement, tmr_frame):
             return 0.75
-
         MPRegistry.register(prioritize_learning)
+
 
         # API declared versions of the two goal definitions
 

@@ -134,17 +134,17 @@ class GoalTestCase(unittest.TestCase):
         self.assertFalse(Goal.Status.ABANDONED in f["STATUS"])
         self.assertTrue(Goal.Status.SATISFIED in f["STATUS"])
 
-    def test_prioritize_numeric(self):
+    def test_priority_numeric(self):
 
         graph = Graph("TEST")
         f = graph.register("GOAL.1")
         f["PRIORITY"] = 0.5
 
         goal = Goal(f)
-        goal.prioritize(None)
+        self.assertEqual(goal.priority(None), 0.5)
         self.assertTrue(f["_PRIORITY"] == 0.5)
 
-    def test_prioritize_calculation(self):
+    def test_priority_calculation(self):
         class TestStatement(Statement):
             def run(self, varmap: VariableMap):
                 return 0.5
@@ -153,22 +153,89 @@ class GoalTestCase(unittest.TestCase):
         graph["RETURNING-STATEMENT"]["CLASSMAP"] = Literal(TestStatement)
         statement = graph.register("STATEMENT.1", isa="EXE.RETURNING-STATEMENT")
 
-        f1 = graph.register("GOAL.1")
-        f1["PRIORITY"] = statement
+        f = graph.register("GOAL.1")
+        f["PRIORITY"] = statement
 
-        goal = Goal(f1)
-        goal.prioritize(None)
-        self.assertEqual(0.5, goal.priority())
+        goal = Goal(f)
+        self.assertEqual(goal.priority(None), 0.5)
+        self.assertTrue(f["_PRIORITY"] == 0.5)
 
     def test_priority(self):
         graph = Graph("TEST")
-        f1 = graph.register("GOAL.1")
+        f = graph.register("GOAL.1")
 
-        goal = Goal(f1)
-        self.assertEqual(0.0, goal.priority())
+        goal = Goal(f)
+        self.assertEqual(0.0, goal.priority(None))
+        self.assertTrue(f["_PRIORITY"] == 0.0)
 
-        f1["_PRIORITY"] = 0.5
-        self.assertEqual(0.5, goal.priority())
+    def test_cached_priority(self):
+        graph = Graph("TEST")
+        f = graph.register("GOAL.1")
+
+        goal = Goal(f)
+        self.assertEqual(0.0, goal._cached_priority())
+        self.assertEqual(0.0, goal.priority(None))
+        self.assertEqual(0.0, goal._cached_priority())
+
+    def test_resources_numeric(self):
+
+        graph = Graph("TEST")
+        f = graph.register("GOAL.1")
+        f["RESOURCES"] = 0.5
+
+        goal = Goal(f)
+        self.assertEqual(goal.resources(None), 0.5)
+        self.assertTrue(f["_RESOURCES"] == 0.5)
+
+    def test_resources_calculation(self):
+        class TestStatement(Statement):
+            def run(self, varmap: VariableMap):
+                return 0.5
+
+        graph = Statement.hierarchy()
+        graph["RETURNING-STATEMENT"]["CLASSMAP"] = Literal(TestStatement)
+        statement = graph.register("STATEMENT.1", isa="EXE.RETURNING-STATEMENT")
+
+        f = graph.register("GOAL.1")
+        f["RESOURCES"] = statement
+
+        goal = Goal(f)
+        self.assertEqual(goal.resources(None), 0.5)
+        self.assertTrue(f["_RESOURCES"] == 0.5)
+
+    def test_resources(self):
+        graph = Graph("TEST")
+        f = graph.register("GOAL.1")
+
+        goal = Goal(f)
+        self.assertEqual(1.0, goal.resources(None))
+        self.assertTrue(f["_RESOURCES"] == 1.0)
+
+    def test_cached_resources(self):
+        graph = Graph("TEST")
+        f = graph.register("GOAL.1")
+
+        goal = Goal(f)
+        self.assertEqual(1.0, goal._cached_resources())
+        self.assertEqual(1.0, goal.resources(None))
+        self.assertEqual(1.0, goal._cached_resources())
+
+    def test_assign_decision(self):
+        graph = Graph("TEST")
+        f = graph.register("GOAL.1")
+        goal = Goal(f)
+        goal.decision(decide=0.5)
+        self.assertTrue(0.5 in f["_DECISION"])
+
+    def test_cached_decision(self):
+        graph = Graph("TEST")
+        f = graph.register("GOAL.1")
+
+        goal = Goal(f)
+        self.assertEqual(0.0, goal.decision())
+
+        f["_DECISION"] = 0.5
+        self.assertEqual(0.5, goal.decision())
 
     def test_plan(self):
         graph = Graph("TEST")

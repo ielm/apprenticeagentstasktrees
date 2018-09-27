@@ -28,6 +28,9 @@ class AgentTestCase(unittest.TestCase):
 
         self.agent = TestableAgent(ontology=self.ontology)
 
+        self.agent.identity["PRIORITY_WEIGHT"] = 1.5
+        self.agent.identity["RESOURCES_WEIGHT"] = 0.25
+
         from backend.utils.AtomicCounter import AtomicCounter
         TMR.counter = AtomicCounter()
 
@@ -68,6 +71,7 @@ class AgentTestCase(unittest.TestCase):
         action = graph.register("ACTION")
 
         definition["PRIORITY"] = 0.5
+        definition["RESOURCES"] = 0.5
         definition["PLAN"] = action
         action["SELECT"] = Literal(Action.DEFAULT)
 
@@ -76,7 +80,9 @@ class AgentTestCase(unittest.TestCase):
         self.agent._decision()
 
         self.assertTrue(goal.is_active())
-        self.assertEqual(0.5, goal.priority())
+        self.assertEqual(0.5, goal.priority(None))
+        self.assertEqual(0.5, goal.resources(None))
+        self.assertEqual(0.625, goal.decision(None))
         self.assertTrue(self.agent.identity["ACTION-TO-TAKE"] == action)
 
     def test_idea_decision_deactivates_other_goals(self):
