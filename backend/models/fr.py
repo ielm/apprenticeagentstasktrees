@@ -13,6 +13,8 @@ class FR(Graph):
 
     def __init__(self, namespace, ontology):
         """
+        Initialize Fact Repository
+
         :param namespace: Identifier for the FR
         :param ontology: Inherited ontology
         """
