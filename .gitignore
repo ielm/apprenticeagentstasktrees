@@ -3,7 +3,7 @@
 *.pyc
 .DS_Store
 
-
 OntoSem.postman_collection.json
 
 venv/
+_*/
