@@ -8,3 +8,5 @@ _*/
 OntoSem.postman_collection.json
 
 venv/
+
+*.uml
