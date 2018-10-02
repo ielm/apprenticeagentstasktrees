@@ -60,7 +60,8 @@ class FRResolveUndeterminedThemesOfLearning(ContextBasedFRResolutionHeuristic):
 #   4) The instance must be a THEME-OF an EVENT in the TMR
 #   5) That EVENT must be found (roughly resolved) in the FR by concept match, AND as LCT.learning
 #   6) For each THEME of the matching FR EVENT, any that are the same concept as the instance are resolved matches
-class FRResolveUnderterminedThemesOfLearningInPostfix(ContextBasedFRResolutionHeuristic):
+# ATTN - Resolve undetermined THEMES of learning and similar THEMES
+class FRResolveUndeterminedThemesOfLearningInPostfix(ContextBasedFRResolutionHeuristic):
 
     def resolve(self, instance, resolves, tmr=None):
         if not instance ^ self.fr.ontology["OBJECT"]:
@@ -76,7 +77,7 @@ class FRResolveUnderterminedThemesOfLearningInPostfix(ContextBasedFRResolutionHe
         articles = list(map(lambda dependency: tmr.syntax.index[str(dependency[2])], dependencies))
         tokens = list(map(lambda article: article["lemma"], articles))
 
-        if "A" not in tokens:
+        if "A" not in tokens and "ANOTHER" not in tokens:
             return
 
         if "THEME-OF" not in instance:
@@ -89,7 +90,8 @@ class FRResolveUnderterminedThemesOfLearningInPostfix(ContextBasedFRResolutionHe
         from backend.contexts.LCTContext import LCTContext
 
         for theme_of in theme_ofs:
-            results = self.fr.search(Frame.q(self.fr._network).sub(theme_of.concept(), from_concept=True).f(LCTContext.LEARNING, True))
+            results = self.fr.search(
+                Frame.q(self.fr._network).sub(theme_of.concept(), from_concept=True).f(LCTContext.LEARNING, True))
             for result in results:
                 for theme in result["THEME"]:
                     if theme ^ self.fr.ontology[instance.concept()]:
@@ -122,7 +124,8 @@ class FRResolveLearningEvents(ContextBasedFRResolutionHeuristic):
 
         from backend.contexts.LCTContext import LCTContext
 
-        for candidate in self.fr.search(Frame.q(self.fr._network).sub(instance.concept(), from_concept=True).f(LCTContext.LEARNING, True)):
+        for candidate in self.fr.search(
+                Frame.q(self.fr._network).sub(instance.concept(), from_concept=True).f(LCTContext.LEARNING, True)):
             case_roles = ["AGENT", "THEME"]
 
             passed = True
@@ -133,9 +136,15 @@ class FRResolveLearningEvents(ContextBasedFRResolutionHeuristic):
                             passed = False
                             break
 
-                        if len(resolves[filler._value.render()].intersection(set(map(lambda f: f._value.render(), candidate[case_role])))) == 0:
+                        # what are all the case_roles in the candidate. if there are no matches, fail pass
+                        if len(resolves[filler._value.render()].intersection(
+                                set(map(lambda f: f._value.render(), candidate[case_role])))) == 0:
                             passed = False
                             break
+
+                        # Looks in candidate at AGENT and THEME;
+                        #    if the candidate[AGENT] == resolves[SET.1] & candidate[THEME] == resolves[ARTIFACT-LEG.1]
+                        #       continue on
 
             if passed:
                 matches.add(candidate.name())

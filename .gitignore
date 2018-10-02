@@ -3,4 +3,10 @@
 *.pyc
 .DS_Store
 
-OntoSem.postman_collections.json
+_*/
+
+OntoSem.postman_collection.json
+
+venv/
+
+*.uml

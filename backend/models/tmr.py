@@ -80,10 +80,24 @@ class TMR(Graph):
 
     def find_main_event(self):
         event = None
+
+        # print("\nEvent value:")
+        # print("v"*50, "\n")
+        index = 0
         for instance in self.values():
+            # print("[0] inst: ", instance)
             if instance.is_event():
+                # print("inst:", instance)
                 event = instance
                 break
+        # print("^"*50, "\n")
+
+        # if not event:
+            # event_candidates = find_event_candidates()
+            # if len(event_candidates) == 1:
+                # event = event_candidates[0]
+            # else:
+                #
 
         while event is not None and "PURPOSE-OF" in event:
             event = event["PURPOSE-OF"][0].resolve()
@@ -118,6 +132,11 @@ class TMR(Graph):
     def find_by_concept(self, concept):
         instances = list(filter(lambda instance: instance.isa(concept), self.values()))
         return instances
+
+    def __str__(self):
+        return self.sentence
+
+
 
 
 class TMRInstance(Frame):

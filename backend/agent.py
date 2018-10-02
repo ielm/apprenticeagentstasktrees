@@ -9,7 +9,6 @@ from backend.utils.AgentLogger import AgentLogger
 from enum import Enum
 from typing import Union
 
-
 class Agent(Network):
 
     def __init__(self, ontology: Ontology=None):
@@ -200,11 +199,6 @@ class Agent(Network):
 
         self.agenda().add_goal(Goal.instance_of(self.internal, self.exe["FIND-SOMETHING-TO-DO"], []))
 
-        def prioritize_learning(statement, tmr_frame):
-            return 0.75
-
-        MPRegistry.register(prioritize_learning)
-
         # API declared versions of the two goal definitions
 
         # graph = self["EXE"]
@@ -235,3 +229,5 @@ class Agent(Network):
         #                     [IsStatement.instance(graph, "$tmr", "STATUS", Literal("UNDERSTOOD"))],
         #                     Goal.Status.SATISFIED)
         # ], ["$tmr"])
+
+

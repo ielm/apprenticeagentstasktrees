@@ -87,6 +87,9 @@ class FR(Graph):
                     for f in ambiguous_fillers: f._metadata = {"ambiguities": ids}
 
     def _resolve_log_wrapper(self, heuristic, instance, results, tmr=None):
+        # print(instance._identifier.render(graph=False))
+        if instance._identifier == "TMR#11.ASSEMBLE.1":
+            print(instance._identifier.render(graph=False))
         input_results = copy.deepcopy(results)
         heuristic(self).resolve(instance, results, tmr=tmr)
 
@@ -142,8 +145,12 @@ class FR(Graph):
     # where more than one implies ambiguity.
     def resolve_instance(self, frame, resolves, tmr=None):
         # TODO: currently this resolves everything to None unless found in the input resolves object
+
         results = dict()
         results[frame._identifier.render(graph=False)] = None
+
+        # For every slot in the current frame, try looking up the slot in the ontology
+        # If the slot is found in the ontology, create a results[x] entry for it and set it to NONE
         for slot in frame:
             if slot == frame._ISA_type():
                 continue
@@ -155,6 +162,8 @@ class FR(Graph):
                         results[filler._value.render()] = None
             except Exception: pass
 
+        # If we've already figured out the results of a slot (resolves argument), copy the known
+        # results into the currently being processed results
         for id in results:
             if id in resolves:
                 results[id] = resolves[id]

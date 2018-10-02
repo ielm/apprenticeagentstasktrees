@@ -14,8 +14,9 @@ class LCTContext(AgentContext):
     def __init__(self, agent):
         super().__init__(agent)
 
+        # agent.prepare_static_knowledge()
         agent.wo_memory.heuristics.insert(0, FRResolveUndeterminedThemesOfLearning)
-        agent.wo_memory.heuristics.append(FRResolveUnderterminedThemesOfLearningInPostfix)
+        agent.wo_memory.heuristics.append(FRResolveUndeterminedThemesOfLearningInPostfix)
         agent.wo_memory.heuristics.append(FRResolveLearningEvents)
 
     def prepare_static_knowledge(self):
@@ -27,11 +28,13 @@ class LCTContext(AgentContext):
 
     def default_understanding(self):
 
+
+        # Adds Processors to the agents Agenda to order heeuristic processing. See UnderstandingProcessor.process() in context.py
         understanding = RootUnderstandingProcessor()
 
         understanding.add_subprocess(IdentifyClosingOfKnownTaskUnderstandingProcessor(self).add_subprocess(IdentifyCompletedTaskUnderstandingProcessor(self)))
         understanding.add_subprocess(IdentifyPreconditionSatisfyingActionsUnderstandingProcessor(self))
-        understanding.add_subprocess(FRResolutionUnderstandingProcessor())
+        understanding.add_subprocess(FRResolutionUnderstandingProcessor(self))
         understanding.add_subprocess(IdentifyPreconditionsUnderstandingProcessor(self))
         understanding.add_subprocess(HandleRequestedActionsUnderstandingProcessor(self))
         understanding.add_subprocess(HandleCurrentActionUnderstandingProcessor(self))
