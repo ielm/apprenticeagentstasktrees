@@ -2,6 +2,7 @@ DEFINE FIND-SOMETHING-TO-DO()
     AS GOAL
     IN EXE
     PRIORITY 0.1
+    RESOURCES 0.3
     ACTION (acknowledge input)
         SELECT IF EXISTS (@^ EXE.INPUT-TMR AND ACKNOWLEDGED = FALSE)
         DO FOR EACH $tmr IN (@^ EXE.INPUT-TMR AND ACKNOWLEDGED = FALSE)
@@ -10,13 +11,15 @@ DEFINE FIND-SOMETHING-TO-DO()
     ACTION (idle)
         SELECT DEFAULT
         DO IDLE
-
+;
 DEFINE UNDERSTAND-TMR($tmr)
     AS GOAL
     IN EXE
     PRIORITY SELF.prioritize_learning($tmr)
+    RESOURCES 0.5
     ACTION (understand)
         SELECT DEFAULT
         DO SELF.understand_input($tmr)
         DO $tmr[STATUS] = "UNDERSTOOD"
     WHEN $tmr[STATUS] == "UNDERSTOOD" THEN satisfied
+;

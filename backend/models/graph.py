@@ -254,6 +254,11 @@ class Graph(Mapping):
         return frame
 
     def search(self, query: 'FrameQuery') -> List['Frame']:
+        """
+
+        :param query:
+        :return:
+        """
         return list(filter(lambda frame: query.compare(frame), self._storage.values()))
 
     def clear(self):
@@ -330,6 +335,11 @@ class Frame(object):
         return list(map(lambda isa: isa._value, self[self._ISA_type()]))
 
     def concept(self, full_path: bool=True) -> str:
+        """
+
+        :param full_path: Boolean value that determines whether the full path of the Frame will be rendered.
+        :return: A string composed of concatenated identifiers.
+        """
         identifiers = list(map(lambda filler: filler._value, filter(lambda filler: isinstance(filler._value, Identifier), self[self._ISA_type()])))
         identifiers = list(map(lambda identifier: identifier if identifier.graph is not None else Identifier(self._graph._namespace, identifier.name, instance=identifier.instance), identifiers))
 

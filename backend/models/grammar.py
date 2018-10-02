@@ -27,6 +27,23 @@ class GrammarTransformer(Transformer):
     def start(self, matches):
         return matches[0]
 
+    # Bootstrap
+
+    def bootstrap(self, matches):
+        from backend.models.bootstrap import Bootstrap
+        return list(filter(lambda match: isinstance(match, Bootstrap), matches))
+
+    def knowledge(self, matches):
+        from backend.models.bootstrap import BootstrapKnowledge
+
+        return BootstrapKnowledge(self.network, matches[0], matches[1], matches[2])
+
+    def slot(self, matches):
+        return str(matches[0])
+
+    def filler(self, matches):
+        return matches[0]
+
     # Statements and executables
 
     def define(self, matches):
@@ -34,12 +51,14 @@ class GrammarTransformer(Transformer):
 
     def goal(self, matches):
         from backend.models.agenda import Action, Condition, Goal
+        from backend.models.bootstrap import BoostrapGoal
 
         name = str(matches[0])
         variables = matches[1]
         graph = matches[5]
 
         priority = matches[6]
+        resources = matches[7]
         plan = list(filter(lambda match: isinstance(match, Action), matches))
         conditions = list(filter(lambda match: isinstance(match, Condition), matches))
 
@@ -48,9 +67,19 @@ class GrammarTransformer(Transformer):
             c.frame["ORDER"] = condition_order
             condition_order += 1
 
-        return Goal.define(self.agent[graph], name, priority, plan, conditions, variables)
+        return BoostrapGoal(Goal.define(self.agent[graph], name, priority, resources, plan, conditions, variables))
 
     def priority(self, matches):
+        from backend.models.statement import Statement
+
+        if len(matches) == 2:
+            if isinstance(matches[1], Statement):
+                return matches[1].frame
+            return matches[1]
+
+        return 0.5
+
+    def resources(self, matches):
         from backend.models.statement import Statement
 
         if len(matches) == 2:

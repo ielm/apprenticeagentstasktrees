@@ -37,7 +37,11 @@ class AndQuery(Query):
         if len(self.queries) == 0:
             return False
 
-        return reduce(lambda x, y: x and y, map(lambda query: query.compare(other), self.queries))
+        return reduce(
+            lambda x, y: x and y,  # ATTN - what are x, y? Where do they come from?
+            map(lambda query: query.compare(other),
+                self.queries)
+        )
 
     def __eq__(self, other):
         if not isinstance(other, AndQuery):
@@ -127,6 +131,12 @@ class FrameQuery(Query):
         self.subquery = subquery
 
     def compare(self, other: Frame) -> bool:
+        """
+        Compares
+
+        :param other:
+        :return:
+        """
         return self.subquery.compare(other)
 
     def __eq__(self, other):
@@ -175,6 +185,7 @@ class SimpleFrameQuery(FrameQuery):
         self._append(IdentifierQuery(self.network, identifier, IdentifierQuery.Comparator.ISA, set=set, from_concept=from_concept))
         return self
 
+    # ATTN - What does sub do?
     def sub(self, identifier: Union[Frame, Filler, Identifier, str], set: bool=True, from_concept: bool=False) -> 'SimpleFrameQuery':
         if isinstance(identifier, Frame):
             identifier = identifier._identifier
