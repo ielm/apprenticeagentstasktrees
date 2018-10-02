@@ -3,6 +3,7 @@
 *.pyc
 .DS_Store
 
+_*/
 
 OntoSem.postman_collection.json
 

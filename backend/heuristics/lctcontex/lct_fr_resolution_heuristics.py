@@ -61,7 +61,6 @@ class FRResolveUndeterminedThemesOfLearning(ContextBasedFRResolutionHeuristic):
 #   5) That EVENT must be found (roughly resolved) in the FR by concept match, AND as LCT.learning
 #   6) For each THEME of the matching FR EVENT, any that are the same concept as the instance are resolved matches
 # ATTN - Resolve undetermined THEMES of learning and similar THEMES
-# CHANGED NAME FROM UNDERTERMINED TO UNDETERMINED - NOT SURE IF THIS WAS INTENTIONAL
 class FRResolveUndeterminedThemesOfLearningInPostfix(ContextBasedFRResolutionHeuristic):
 
     def resolve(self, instance, resolves, tmr=None):
@@ -78,7 +77,7 @@ class FRResolveUndeterminedThemesOfLearningInPostfix(ContextBasedFRResolutionHeu
         articles = list(map(lambda dependency: tmr.syntax.index[str(dependency[2])], dependencies))
         tokens = list(map(lambda article: article["lemma"], articles))
 
-        if "A" not in tokens:
+        if "A" not in tokens and "ANOTHER" not in tokens:
             return
 
         if "THEME-OF" not in instance:
@@ -91,7 +90,6 @@ class FRResolveUndeterminedThemesOfLearningInPostfix(ContextBasedFRResolutionHeu
         from backend.contexts.LCTContext import LCTContext
 
         for theme_of in theme_ofs:
-            # ATTN - searching for theme_ofs?
             results = self.fr.search(
                 Frame.q(self.fr._network).sub(theme_of.concept(), from_concept=True).f(LCTContext.LEARNING, True))
             for result in results:
@@ -122,9 +120,6 @@ class FRResolveLearningEvents(ContextBasedFRResolutionHeuristic):
         if tmr is None:
             return
 
-        if instance._identifier.render(graph=False) == "ASSEMBLE.1":
-            print(instance._identifier.render(graph=False))
-
         matches = set()
 
         from backend.contexts.LCTContext import LCTContext
@@ -141,11 +136,15 @@ class FRResolveLearningEvents(ContextBasedFRResolutionHeuristic):
                             passed = False
                             break
 
-                        # what are all the case_roles in the candidate. i f there are no matches, fail pass
+                        # what are all the case_roles in the candidate. if there are no matches, fail pass
                         if len(resolves[filler._value.render()].intersection(
                                 set(map(lambda f: f._value.render(), candidate[case_role])))) == 0:
                             passed = False
                             break
+
+                        # Looks in candidate at AGENT and THEME;
+                        #    if the candidate[AGENT] == resolves[SET.1] & candidate[THEME] == resolves[ARTIFACT-LEG.1]
+                        #       continue on
 
             if passed:
                 matches.add(candidate.name())

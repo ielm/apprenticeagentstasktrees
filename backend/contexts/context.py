@@ -98,9 +98,9 @@ class FRResolutionUnderstandingProcessor(UnderstandingProcessor):
 
         self.cached_logger = CachedAgentLogger()
         self.cached_logger.enable()
+
         agent.wo_memory.logger(logger=self.cached_logger)
         agent.wo_memory.learn_tmr(tmr)
-
         agent.wo_memory.logger(logger=backup_logger)
 
     def log(self, message):

@@ -34,7 +34,7 @@ class LCTContext(AgentContext):
 
         understanding.add_subprocess(IdentifyClosingOfKnownTaskUnderstandingProcessor(self).add_subprocess(IdentifyCompletedTaskUnderstandingProcessor(self)))
         understanding.add_subprocess(IdentifyPreconditionSatisfyingActionsUnderstandingProcessor(self))
-        understanding.add_subprocess(FRResolutionUnderstandingProcessor())
+        understanding.add_subprocess(FRResolutionUnderstandingProcessor(self))
         understanding.add_subprocess(IdentifyPreconditionsUnderstandingProcessor(self))
         understanding.add_subprocess(HandleRequestedActionsUnderstandingProcessor(self))
         understanding.add_subprocess(HandleCurrentActionUnderstandingProcessor(self))

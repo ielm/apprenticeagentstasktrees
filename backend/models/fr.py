@@ -146,16 +146,11 @@ class FR(Graph):
     def resolve_instance(self, frame, resolves, tmr=None):
         # TODO: currently this resolves everything to None unless found in the input resolves object
 
-        if tmr.sentence == "We have assembled a front leg.":
-            print("Resolve_Instance 1 : We have assembled a front leg. : ", frame._identifier)
-        elif tmr.sentence == "We have assembled another front chair leg.":
-            print("Resolve_Instance 2 : We have assembled another front chair leg. : ", frame._identifier)
-
         results = dict()
         results[frame._identifier.render(graph=False)] = None
 
         # For every slot in the current frame, try looking up the slot in the ontology
-        # If the slot is found in the ontology, create a results[] entry for it and set it to NONE
+        # If the slot is found in the ontology, create a results[x] entry for it and set it to NONE
         for slot in frame:
             if slot == frame._ISA_type():
                 continue
