@@ -1,13 +1,15 @@
 from backend.contexts.LCTContext import LCTContext
 from backend.models.agenda import Action, Agenda, Goal
+from backend.models.effectors import Callback, Capability, Effector
 from backend.models.fr import FR
-from backend.models.graph import Literal, Network
+from backend.models.graph import Frame, Graph, Identifier, Literal, Network
+from backend.models.mps import MPRegistry
 from backend.models.ontology import Ontology
-from backend.models.statement import Statement
+from backend.models.statement import CapabilityStatement, Statement, VariableMap
 from backend.models.tmr import TMR
 from backend.utils.AgentLogger import AgentLogger
 from enum import Enum
-from typing import Union
+from typing import Callable, List, Union
 
 import sys
 
@@ -190,6 +192,18 @@ class Agent(Network):
         inputs = map(lambda input: self[input], inputs)
         return list(inputs)
 
+    def callback(self, callback: Union[str, Identifier, Frame, 'Callback']):
+        if callback not in self.exe:
+            return
+
+        if isinstance(callback, str):
+            callback = Callback(self.exe[callback])
+        if isinstance(callback, Identifier):
+            callback = Callback(self.exe[callback])
+
+        callback.run()
+        del self.exe[callback.frame.name()]
+
     def _bootstrap(self):
 
         from backend.models.bootstrap import Bootstrap
@@ -197,8 +211,6 @@ class Agent(Network):
         Bootstrap.bootstrap_resource(self, "backend.resources", "bootstrap.knowledge")
 
         self.agenda().add_goal(Goal.instance_of(self.internal, self.exe["FIND-SOMETHING-TO-DO"], []))
-
-        from backend.models.mps import MPRegistry
 
         def understand_input(statement, tmr_frame):
             tmr = self[tmr_frame["REFERS-TO-GRAPH"].singleton()]
@@ -211,6 +223,20 @@ class Agent(Network):
             return 0.75
         MPRegistry.register(prioritize_learning)
 
+        # TODO: move these definitions to an enhanced bootstrap
+        # STATUS = "FREE" | "OPERATING";  EFFECTING = EXE.GOAL;  HAS-CAPABILITY[] = EXE.CAPABILITY
+        self.exe.register("EFFECTOR")
+        self.exe.register("PHYSICAL-EFFECTOR", isa="EXE.EFFECTOR")
+        self.exe.register("VERBAL-EFFECTOR", isa="EXE.EFFECTOR")
+        self.exe.register("MENTAL-EFFECTOR", isa="EXE.EFFECTOR")
+        # MP = str
+        self.exe.register("CAPABILITY")
+        # VARMAP = VariableMap(Frame); STATEMENT = CapabilityStatement(Frame)
+        self.exe.register("CALLBACK")
+
+        learn_capability = Capability.instance(self.exe, "LEARN-CAPABILITY", understand_input)
+        mental_effector_1 = Effector.instance(self.exe, Effector.Type.MENTAL, [learn_capability])
+        self.identity["HAS-EFFECTOR"] += mental_effector_1
 
         # API declared versions of the two goal definitions
 

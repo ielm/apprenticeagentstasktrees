@@ -4,7 +4,7 @@ from backend.models.grammar import Grammar
 from backend.models.graph import Identifier, Literal, Network
 from backend.models.path import Path
 from backend.models.query import AndQuery, ExactQuery, FillerQuery, FrameQuery, IdentifierQuery, LiteralQuery, NameQuery, NotQuery, OrQuery, SlotQuery
-from backend.models.statement import AddFillerStatement, AssignFillerStatement, ExistsStatement, ForEachStatement, IsStatement, MakeInstanceStatement, MeaningProcedureStatement
+from backend.models.statement import AddFillerStatement, AssignFillerStatement, CapabilityStatement, ExistsStatement, ForEachStatement, IsStatement, MakeInstanceStatement, MeaningProcedureStatement
 from backend.models.view import View
 
 import unittest
@@ -282,6 +282,23 @@ class AgendaGrammarTestCase(unittest.TestCase):
 
         statement = MeaningProcedureStatement.instance(self.g, "mp1", ["$var1", "$var2"])
         parsed = Grammar.parse(self.agent, "SELF.mp1($var1, $var2)", start="mp_statement", agent=self.agent)
+        self.assertEqual(statement, parsed)
+
+    def test_capability_statement(self):
+        self.agent.exe.register("TEST-CAPABILITY")
+
+        statement = CapabilityStatement.instance(self.agent.exe, "SELF.TEST-CAPABILITY", [], [])
+        parsed = Grammar.parse(self.agent, "CAPABILITY #SELF.TEST-CAPABILITY()", start="capability_statement", agent=self.agent)
+        self.assertEqual(statement, parsed)
+
+        statement = CapabilityStatement.instance(self.agent.exe, "SELF.TEST-CAPABILITY", [], ["$var1", "$var2"])
+        parsed = Grammar.parse(self.agent, "CAPABILITY #SELF.TEST-CAPABILITY($var1, $var2)", start="capability_statement", agent=self.agent)
+        self.assertEqual(statement, parsed)
+
+        callback1 = AssignFillerStatement.instance(self.g, self.agentFrame, "SLOTA", 123)
+        callback2 = AssignFillerStatement.instance(self.g, self.agentFrame, "SLOTB", 456)
+        statement = CapabilityStatement.instance(self.agent.exe, "SELF.TEST-CAPABILITY", [callback1, callback2], [])
+        parsed = Grammar.parse(self.agent, "CAPABILITY #SELF.TEST-CAPABILITY() | THEN DO SELF[SLOTA] = 123 | THEN DO SELF[SLOTB] = 456", start="capability_statement", agent=self.agent)
         self.assertEqual(statement, parsed)
 
     def test_action(self):

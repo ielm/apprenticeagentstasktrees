@@ -1,4 +1,4 @@
-from backend.agent import Agent
+from backend.agent import Agent, Capability, Effector
 from backend.models.agenda import Action, Goal
 from backend.models.graph import Literal, Network
 from backend.models.ontology import Ontology
@@ -233,3 +233,36 @@ class AgentTestCase(unittest.TestCase):
         agent.iidea()
         agent.iidea()
         agent.iidea()
+
+    def test_callback(self):
+        from backend.agent import Callback
+        from backend.models.mps import MPRegistry
+        from backend.models.statement import CapabilityStatement, MeaningProcedureStatement
+
+        # First, declare a testable Meaning Procedure to run
+        result = 0
+        def TestMp(statement, var1):
+            nonlocal result
+            result += var1
+        MPRegistry.register(TestMp)
+
+        # Next, minimally define a goal
+        definition = self.agent.exe.register("GOAL-DEFINITION")
+        definition["WITH"] += Literal("$var1")
+        params = [1]
+        goal = VariableMap.instance_of(self.agent.exe, definition, params)
+
+        # Now define a capability statement with a callback
+        capability = Capability.instance(self.agent.exe, "CAPABILITY", "no-such-mp")
+        callback = [MeaningProcedureStatement.instance(self.agent.exe, TestMp.__name__, ["$var1"])]
+        statement = CapabilityStatement.instance(self.agent.exe, capability, callback, ["$var1"])
+
+        # Load the callback directly into the agent (this is "after" the capability statement has been executed)
+        cbi = Callback.instance(self.agent.exe, goal, statement)
+
+        # Fire the callback
+        self.agent.callback(cbi.frame._identifier)
+
+        # Did it fire? And has the callback been removed?
+        self.assertEqual(result, 1)
+        self.assertNotIn(cbi.frame.name(), self.agent.exe)
