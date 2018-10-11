@@ -551,7 +551,7 @@ class CapabilityStatementTestCase(unittest.TestCase):
     def test_run(self):
         result = 0
 
-        def TestMP(statement, a, b, c):
+        def TestMP(statement, a, b, c, callback=None):
             nonlocal result
             result += a
             result += b
@@ -578,7 +578,7 @@ class CapabilityStatementTestCase(unittest.TestCase):
     def test_run_with_variables(self):
         result = 0
 
-        def TestMP(statement, a, b, c):
+        def TestMP(statement, a, b, c, callback=None):
             nonlocal result
             result += a
             result += b
@@ -609,7 +609,7 @@ class CapabilityStatementTestCase(unittest.TestCase):
 
     def test_run_with_callbacks(self):
 
-        def TestMP(statement):
+        def TestMP(statement, callback=None):
             pass
 
         from backend.models.mps import MPRegistry
@@ -620,7 +620,7 @@ class CapabilityStatementTestCase(unittest.TestCase):
         graph.register("CAPABILITY")
         graph.register("CALLBACK")
 
-        Capability.instance(graph, "TEST-CAPABILITY", TestMP)
+        c = Capability.instance(graph, "TEST-CAPABILITY", TestMP)
 
         cap = graph.register("TEST-W-CALLBACKS", isa="EXE.CAPABILITY-STATEMENT")
         cap["CAPABILITY"] = "EXE.TEST-CAPABILITY"
@@ -629,10 +629,10 @@ class CapabilityStatementTestCase(unittest.TestCase):
         stmt2 = graph.register("STMT1", isa="EXE.MP-STATEMENT")
         cap["CALLBACK"] = [stmt1, stmt2]
 
-        varmap = graph.register("VARMAP")
+        varmap = graph.register("MY-VARMAP-TEST")
         varmap = VariableMap(varmap)
         Statement.from_instance(cap).run(varmap)
 
-        callback = graph.search(Frame.q(network).f("STATEMENT", cap))[0]
-        self.assertTrue(callback["VARMAP"] == varmap.frame)
+        callback = graph.search(Frame.q(network).f("VARMAP", varmap.frame))[0]
+        self.assertTrue(callback["CAPABILITY"] == c.frame)
         self.assertTrue(callback["STATEMENT"] == [stmt1, stmt2])
