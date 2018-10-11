@@ -50,6 +50,7 @@ class Ontology(Graph):
             item = item.name
 
         if item not in self._wrapped:
+            print(item)
             raise KeyError()
 
         original = self._wrapped[item]

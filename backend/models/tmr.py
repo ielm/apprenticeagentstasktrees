@@ -63,7 +63,6 @@ class TMR(Graph):
                     if isinstance(filler._value, Identifier) and filler._value.graph is None and not filler._value.render() in self:
                         filler._value.graph = self.ontology
 
-
     def __setitem__(self, key, value):
         if not isinstance(value, TMRInstance):
             raise TypeError("TMR elements must be TMRInstance objects.")
