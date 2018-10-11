@@ -191,6 +191,27 @@ class IIDEAConverter(object):
             "selected": action in agent.agenda().action() and goal.is_active()
         }
 
+    @classmethod
+    def effectors(cls):
+        return list(map(lambda e: IIDEAConverter.convert_effector(e), agent.effectors()))
+
+    @classmethod
+    def convert_effector(cls, effector):
+        return {
+            "name": effector.frame.name(),
+            "type": effector.type().name,
+            "status": effector.is_free(),
+            "effecting": effector.effecting().frame.name() if effector.effecting() is not None else None,
+            "capabilities": list(map(lambda c: IIDEAConverter.convert_capability(c, effector), effector.capabilities()))
+        }
+
+    @classmethod
+    def convert_capability(cls, capability, wrt_effector):
+        return {
+            "name": capability.frame.name(),
+            "selected": capability.used_by() == wrt_effector
+        }
+
 
 @app.route("/iidea", methods=["GET"])
 def iidea():
@@ -198,8 +219,9 @@ def iidea():
     stage = agent.IDEA.stage()
     inputs = IIDEAConverter.inputs()
     agenda = IIDEAConverter.agenda()
+    effectors = IIDEAConverter.effectors()
 
-    return render_template("iidea.html", time=time, stage=stage, inputs=inputs, agenda=agenda, aj=json.dumps(agenda))
+    return render_template("iidea.html", time=time, stage=stage, inputs=inputs, agenda=agenda, aj=json.dumps(agenda), effectors=effectors, ae=json.dumps(effectors))
 
 
 @app.route("/iidea/advance", methods=["GET"])
@@ -209,8 +231,10 @@ def iidea_advance():
         "time": agent.IDEA.time(),
         "stage": agent.IDEA.stage(),
         "inputs": IIDEAConverter.inputs(),
-        "agenda": IIDEAConverter.agenda()
+        "agenda": IIDEAConverter.agenda(),
+        "effectors": IIDEAConverter.effectors()
     })
+
 
 @app.route("/iidea/input", methods=["POST"])
 def iidea_input():

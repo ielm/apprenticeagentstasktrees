@@ -64,7 +64,7 @@ class Effector(object):
             return None
 
     def capabilities(self) -> List["Capability"]:
-        return list(map(lambda c: Capability(c), self.frame["HAS-CAPABILITY"]))
+        return list(map(lambda c: Capability(c.resolve()), self.frame["HAS-CAPABILITY"]))
 
     def reserve(self, goal: Union[Frame, Goal], capability: Union[Frame, 'Capability']):
         if isinstance(goal, Goal):

@@ -6,6 +6,7 @@
 
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis.min.css">
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.3.1/css/all.css" integrity="sha384-mzrmE5qonljUremFsqc01SB46JvROS7bZs3IO2EmfFsd15uHvIt+Y8vEf7N7fWAU" crossorigin="anonymous">
 
     <script src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
@@ -36,6 +37,7 @@
                 render_time(output);
                 render_inputs(output["inputs"]);
                 render_agenda(output["agenda"]);
+                render_effectors(output["effectors"]);
                 if (callback != null) {
                     callback();
                 }
@@ -151,6 +153,31 @@
                 $($(document).find("#agenda")[0]).prepend($(rendered));
             }
         }
+
+        function render_effectors(effectors) {
+            $("#effectorList").empty();
+
+            for (var i in effectors) {
+                var effector = effectors[i];
+
+                if (effector.type == "PHYSICAL") {
+                    effector["icon"] = "fa-walking";
+                } else if (effector.type == "VERBAL") {
+                    effector["icon"] = "fa-microphone-alt";
+                } else if (effector.type == "MENTAL") {
+                    effector["icon"] = "fa-cloud";
+                }
+
+                var template = document.getElementById('effector-template').innerHTML;
+                Mustache.parse(template, ["{|", "|}"]);
+                var rendered = Mustache.render(template, effector);
+                $($(document).find("#effectorList")[0]).prepend($(rendered));
+
+                $(function () {
+                    $('[data-toggle="tooltip"]').tooltip();
+                });
+            }
+        }
     </script>
 
     <script>
@@ -167,13 +194,18 @@
             $("#pause-button").on("click", function() {
                 pause();
             });
-
+            $(function () {
+                $('[data-toggle="tooltip"]').tooltip();
+            });
 
 
 
 
             var agenda = JSON.parse('{{ aj|safe }}');
             render_agenda(agenda);
+
+            var effectors = JSON.parse('{{ ae|safe }}');
+            render_effectors(effectors);
         });
     </script>
 
@@ -195,6 +227,42 @@
                     {| /selected |}
                 </div>
             {|/plan|}
+        </div>
+    </script>
+
+    <script id="effector-template" type="x-tmpl-mustache">
+        <div>
+            <table class="table table-sm table-borderless">
+                <tr>
+                    <td>
+                        <i class="fas {| icon |}"></i>
+                    </td>
+                    <td>
+                        {| #status |}
+                            <i class="fas fa-toggle-off"></i>
+                        {| /status |}
+                        {| ^status |}
+                            <i class="fas fa-toggle-on" style="color: green" data-toggle="tooltip" data-placement="top" title="{| effecting |}"></i>
+                        {| /status |}
+                    </td>
+                    <td>
+                        {| name |}
+                    </td>
+                </tr>
+                <tr>
+                    <td></td>
+                    <td></td>
+                    <td>
+                        {| #capabilities |}
+                            {| #selected |}
+                                <i class="fas fa-check-circle" style="color: green"></i>
+                            {| /selected |}
+
+                            {| name |}
+                        {| /capabilities |}
+                    </td>
+                </tr>
+            </table>
         </div>
     </script>
 
@@ -269,6 +337,14 @@
                                 {% endif %}
                             {% endfor %}
                         </div>
+                    </div>
+                </div>
+                <div class="card" style="margin-bottom: 25px;">
+                    <div class="card-header">
+                        Effectors
+                    </div>
+                    <div class="card-body">
+                        <div id="effectorList"></div>
                     </div>
                 </div>
             </div>
