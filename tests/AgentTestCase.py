@@ -2,7 +2,7 @@ from backend.agent import Agent, Capability, Effector
 from backend.models.agenda import Action, Goal
 from backend.models.graph import Literal, Network
 from backend.models.ontology import Ontology
-from backend.models.statement import Statement, VariableMap
+from backend.models.statement import CapabilityStatement, Statement, VariableMap
 from backend.models.tmr import TMR
 
 import unittest
@@ -85,32 +85,121 @@ class AgentTestCase(unittest.TestCase):
         self.assertEqual(0.625, goal.decision(None))
         self.assertTrue(self.agent.identity["ACTION-TO-TAKE"] == action)
 
-    def test_idea_decision_deactivates_other_goals(self):
+    def test_idea_decision_reserves_effectors(self):
         graph = self.agent.internal
-        definition1 = graph.register("GOAL")
-        definition2 = graph.register("GOAL")
-        action = graph.register("ACTION")
 
-        definition1["PRIORITY"] = 0.1
-        definition2["PRIORITY"] = 0.2
+        # 1) Define and assign a capability and effector
+        capability = Capability.instance(graph, "CAP-A", "")
+        effector = Effector.instance(graph, Effector.Type.MENTAL, [capability])
+        self.agent.identity["HAS-EFFECTOR"] += effector.frame
 
-        definition1["PLAN"] = action
-        definition2["PLAN"] = action
+        # 2) Define and instance a goal that needs the capability
+        stmt = CapabilityStatement.instance(graph, capability, [], [])
+        action = Action.build(graph, "ACTION", Action.DEFAULT, stmt)
+        definition = Goal.define(graph, "TEST", 0.5, 0.5, [action], [], [])
+        goal = Goal.instance_of(graph, definition, [])
+        self.agent.agenda().add_goal(goal)
 
-        action["SELECT"] = Literal(Action.DEFAULT)
+        # 3) Decide on the next task; the effector should then be reserved
+        self.assertTrue(effector.is_free())
+        self.agent._decision()
+        self.assertFalse(effector.is_free())
 
+    def test_idea_decision_reserves_multiple_effectors(self):
+        graph = self.agent.internal
+
+        # 1) Define and assign two capabilities and effectors
+        capability1 = Capability.instance(graph, "CAP-A", "")
+        capability2 = Capability.instance(graph, "CAP-B", "")
+        effector1 = Effector.instance(graph, Effector.Type.MENTAL, [capability1])
+        effector2 = Effector.instance(graph, Effector.Type.MENTAL, [capability2])
+        self.agent.identity["HAS-EFFECTOR"] += effector1.frame
+        self.agent.identity["HAS-EFFECTOR"] += effector2.frame
+
+        # 2) Define and instance a goal that needs both capabilities
+        stmt1 = CapabilityStatement.instance(graph, capability1, [], [])
+        stmt2 = CapabilityStatement.instance(graph, capability2, [], [])
+        action = Action.build(graph, "ACTION", Action.DEFAULT, [stmt1, stmt2])
+        definition = Goal.define(graph, "TEST", 0.5, 0.5, [action], [], [])
+        goal = Goal.instance_of(graph, definition, [])
+        self.agent.agenda().add_goal(goal)
+
+        # 3) Decide on the next task; the effectors should then be reserved
+        self.assertTrue(effector1.is_free())
+        self.assertTrue(effector2.is_free())
+        self.agent._decision()
+        self.assertFalse(effector1.is_free())
+        self.assertFalse(effector2.is_free())
+
+    def test_idea_decision_reserves_effectors_in_decision_order(self):
+        graph = self.agent.internal
+
+        # 1) Define and assign a capability and effector
+        capability = Capability.instance(graph, "CAP-A", "")
+        effector = Effector.instance(graph, Effector.Type.MENTAL, [capability])
+        self.agent.identity["HAS-EFFECTOR"] += effector.frame
+
+        # 2) Define and instance two goals that needs the capability (with different weights)
+        stmt = CapabilityStatement.instance(graph, capability, [], [])
+        action1 = Action.build(graph, "ACTION", Action.DEFAULT, stmt)
+        action2 = Action.build(graph, "ACTION", Action.DEFAULT, stmt)
+        definition1 = Goal.define(graph, "TEST", 0.5, 0.5, [action1], [], [])
+        definition2 = Goal.define(graph, "TEST", 1.0, 0.1, [action2], [], [])
         goal1 = Goal.instance_of(graph, definition1, [])
         goal2 = Goal.instance_of(graph, definition2, [])
-
-        goal1.status(Goal.Status.ACTIVE)
-        goal2.status(Goal.Status.PENDING)
-
         self.agent.agenda().add_goal(goal1)
         self.agent.agenda().add_goal(goal2)
-        self.agent._decision()
 
-        self.assertTrue(goal1.is_pending())
+        # 3) Decide on the next task; goal2 should be selected and goal1 should not be
+        self.assertFalse(goal1.is_active())
+        self.assertFalse(goal2.is_active())
+        self.agent._decision()
+        self.assertFalse(goal1.is_active())
         self.assertTrue(goal2.is_active())
+
+    def test_idea_decision_activates_multiple_goals_if_capabilities_exist(self):
+        graph = self.agent.internal
+
+        # 1) Define and assign two capabilities and effectors
+        capability1 = Capability.instance(graph, "CAP-A", "")
+        capability2 = Capability.instance(graph, "CAP-B", "")
+        effector1 = Effector.instance(graph, Effector.Type.MENTAL, [capability1])
+        effector2 = Effector.instance(graph, Effector.Type.MENTAL, [capability2])
+        self.agent.identity["HAS-EFFECTOR"] += effector1.frame
+        self.agent.identity["HAS-EFFECTOR"] += effector2.frame
+
+        # 2) Define and instance two goals that needs different capabilities
+        stmt1 = CapabilityStatement.instance(graph, capability1, [], [])
+        stmt2 = CapabilityStatement.instance(graph, capability2, [], [])
+        action1 = Action.build(graph, "ACTION", Action.DEFAULT, stmt1)
+        action2 = Action.build(graph, "ACTION", Action.DEFAULT, stmt2)
+        definition1 = Goal.define(graph, "TEST", 0.5, 0.5, [action1], [], [])
+        definition2 = Goal.define(graph, "TEST", 0.5, 0.5, [action2], [], [])
+        goal1 = Goal.instance_of(graph, definition1, [])
+        goal2 = Goal.instance_of(graph, definition2, [])
+        self.agent.agenda().add_goal(goal1)
+        self.agent.agenda().add_goal(goal2)
+
+        # 3) Decide on the next task; both goals should be made active
+        self.assertFalse(goal1.is_active())
+        self.assertFalse(goal2.is_active())
+        self.agent._decision()
+        self.assertTrue(goal1.is_active())
+        self.assertTrue(goal2.is_active())
+
+    def test_idea_decision_activates_goals_with_no_capability_requirements(self):
+        graph = self.agent.internal
+
+        # 1) Define and instance a goal that needs no capability
+        action = Action.build(graph, "ACTION", Action.DEFAULT, Action.IDLE)
+        definition = Goal.define(graph, "TEST", 0.5, 0.5, [action], [], [])
+        goal = Goal.instance_of(graph, definition, [])
+        self.agent.agenda().add_goal(goal)
+
+        # 2) Decide on the next task; the goal should be made active
+        self.assertFalse(goal.is_active())
+        self.agent._decision()
+        self.assertTrue(goal.is_active())
 
     def test_idea_execute(self):
         ran = False
@@ -241,7 +330,7 @@ class AgentTestCase(unittest.TestCase):
 
         # First, declare a testable Meaning Procedure to run
         result = 0
-        def TestMp(statement, var1):
+        def TestMp(statement, var1, callback=None):
             nonlocal result
             result += var1
         MPRegistry.register(TestMp)
@@ -253,12 +342,12 @@ class AgentTestCase(unittest.TestCase):
         goal = VariableMap.instance_of(self.agent.exe, definition, params)
 
         # Now define a capability statement with a callback
-        capability = Capability.instance(self.agent.exe, "CAPABILITY", "no-such-mp")
+        capability = Capability.instance(self.agent.exe, "CAPABILITY", TestMp.__name__)
         callback = [MeaningProcedureStatement.instance(self.agent.exe, TestMp.__name__, ["$var1"])]
         statement = CapabilityStatement.instance(self.agent.exe, capability, callback, ["$var1"])
 
         # Load the callback directly into the agent (this is "after" the capability statement has been executed)
-        cbi = Callback.instance(self.agent.exe, goal, statement)
+        cbi = Callback.instance(self.agent.exe, goal, [statement], capability)
 
         # Fire the callback
         self.agent.callback(cbi.frame._identifier)

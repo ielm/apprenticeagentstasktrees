@@ -188,7 +188,7 @@ class IIDEAConverter(object):
 
         return {
             "name": action.name(),
-            "selected": agent.agenda().action() == action and goal.is_active()
+            "selected": action in agent.agenda().action() and goal.is_active()
         }
 
 

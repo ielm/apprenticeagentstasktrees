@@ -22,20 +22,22 @@ class Effector(object):
         if isinstance(type, str):
             type = Effector.Type[type]
 
-        parent = "EXE.EFFECTOR"
+        parent = "EFFECTOR"
         if type == Effector.Type.PHYSICAL:
-            parent = "EXE.PHYSICAL-EFFECTOR"
+            parent = "PHYSICAL-EFFECTOR"
         if type == Effector.Type.VERBAL:
-            parent = "EXE.VERBAL-EFFECTOR"
+            parent = "VERBAL-EFFECTOR"
         if type == Effector.Type.MENTAL:
-            parent = "EXE.MENTAL-EFFECTOR"
+            parent = "MENTAL-EFFECTOR"
 
-        frame = graph.register(parent, isa=parent, generate_index=True)
+        frame = graph.register(parent, isa="EXE." + parent, generate_index=True)
 
         for capability in capabilities:
             if isinstance(capability, Capability):
                 capability = capability.frame
             frame["HAS-CAPABILITY"] += capability
+
+        frame["STATUS"] = Effector.Status.FREE
 
         return Effector(frame)
 

@@ -155,27 +155,41 @@ class Agent(Network):
         priority_weight = self.identity["PRIORITY_WEIGHT"].singleton()
         resources_weight = self.identity["RESOURCES_WEIGHT"].singleton()
 
-        decision = -sys.maxsize
-        selected = None
-
-        for goal in agenda.goals(pending=True, active=True):
-            goal.status(Goal.Status.PENDING)
+        goals = agenda.goals(pending=True, active=True)
+        for goal in goals:
             _priority = goal.priority(self)
             _resources = goal.resources(self)
             _decision = (_priority * priority_weight) - (_resources * resources_weight)
             goal.decision(decide=_decision)
 
-            if _decision > decision:
-                decision = _decision
-                selected = goal
+        ordered = sorted(goals, key=lambda g: g.decision(), reverse=True)
+        effectors = self.effectors()
 
-        if selected is not None:
-            selected.status(Goal.Status.ACTIVE)
-            agenda.prepare_action(selected.plan())
+        for goal in ordered:
+            action = goal.plan()
+            capabilities = action.capabilities()
+
+            assigned_effectors = []
+            for capability in capabilities:
+                for effector in filter(lambda e: e.is_free() and not e in assigned_effectors, effectors):
+                    if capability in effector.capabilities():
+                        assigned_effectors.append(effector)
+                        break
+
+            if len(capabilities) != len(assigned_effectors):
+                continue
+
+            goal.status(Goal.Status.ACTIVE)
+            agenda.prepare_action(action)
+
+            for i, effector in enumerate(assigned_effectors):
+                effector.reserve(goal, capabilities[i])
 
     def _execute(self):
         goal = self.agenda().goals(active=True)[0]
-        self.agenda().action().perform(goal)
+        # self.agenda().action().perform(goal)
+        for action in self.agenda().action():
+            action.perform(goal)
         del self.agenda().frame["ACTION-TO-TAKE"]
 
     def _assess(self):
@@ -185,6 +199,9 @@ class Agent(Network):
     def agenda(self):
         return Agenda(self.identity)
 
+    def effectors(self) -> List[Effector]:
+        return list(map(lambda e: Effector(e.resolve()), self.identity["HAS-EFFECTOR"]))
+
     def pending_inputs(self):
         inputs = map(lambda input: input.resolve(), self.identity["HAS-INPUT"])
         inputs = filter(lambda input: input["ACKNOWLEDGED"] == False, inputs)
@@ -193,6 +210,11 @@ class Agent(Network):
         return list(inputs)
 
     def callback(self, callback: Union[str, Identifier, Frame, 'Callback']):
+        if isinstance(callback, Callback):
+            callback = callback.frame
+        if isinstance(callback, Frame):
+            callback = callback._identifier
+
         if callback not in self.exe:
             return
 
@@ -206,17 +228,14 @@ class Agent(Network):
 
     def _bootstrap(self):
 
-        from backend.models.bootstrap import Bootstrap
-        Bootstrap.bootstrap_resource(self, "backend.resources", "goals.aa")
-        Bootstrap.bootstrap_resource(self, "backend.resources", "bootstrap.knowledge")
-
-        self.agenda().add_goal(Goal.instance_of(self.internal, self.exe["FIND-SOMETHING-TO-DO"], []))
-
-        def understand_input(statement, tmr_frame):
+        def understand_input(statement, tmr_frame, callback=None):
             tmr = self[tmr_frame["REFERS-TO-GRAPH"].singleton()]
             agenda = self.context.default_understanding()
             agenda.logger(self._logger)
             agenda.process(self, tmr)
+            if callback is not None:
+                self.callback(callback)
+
         MPRegistry.register(understand_input)
 
         def prioritize_learning(statement, tmr_frame):
@@ -235,8 +254,14 @@ class Agent(Network):
         self.exe.register("CALLBACK")
 
         learn_capability = Capability.instance(self.exe, "LEARN-CAPABILITY", understand_input)
-        mental_effector_1 = Effector.instance(self.exe, Effector.Type.MENTAL, [learn_capability])
-        self.identity["HAS-EFFECTOR"] += mental_effector_1
+        mental_effector_1 = Effector.instance(self.internal, Effector.Type.MENTAL, [learn_capability])
+        self.identity["HAS-EFFECTOR"] += mental_effector_1.frame
+
+        from backend.models.bootstrap import Bootstrap
+        Bootstrap.bootstrap_resource(self, "backend.resources", "goals.aa")
+        Bootstrap.bootstrap_resource(self, "backend.resources", "bootstrap.knowledge")
+
+        self.agenda().add_goal(Goal.instance_of(self.internal, self.exe["FIND-SOMETHING-TO-DO"], []))
 
         # API declared versions of the two goal definitions
 

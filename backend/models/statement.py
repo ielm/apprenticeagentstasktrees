@@ -214,6 +214,9 @@ class Statement(object):
 
         return param
 
+    def capabilities(self) -> List['Capability']:
+        return []
+
     def __eq__(self, other):
         if isinstance(other, Statement):
             return self.frame == other.frame
@@ -389,6 +392,13 @@ class ForEachStatement(Statement):
             for stmt in do:
                 stmt.run(varmap)
 
+    def capabilities(self) -> List['Capability']:
+        do: List[Statement] = list(map(lambda stmt: Statement.from_instance(stmt.resolve()), self.frame["DO"]))
+        capabilities = []
+        for stmt in do:
+            capabilities.extend(stmt.capabilities())
+        return capabilities
+
     def __eq__(self, other):
         if isinstance(other, ForEachStatement):
             return other.frame["FROM"] == self.frame["FROM"] and \
@@ -508,6 +518,7 @@ class CapabilityStatement(Statement):
 
     @classmethod
     def instance(cls, graph: Graph, capability: Union[str, Identifier, Frame, 'Capability'], callback: List[Union[str, Identifier, Frame, Statement]], params: List[Any]) -> 'CapabilityStatement':
+        from backend.models.effectors import Capability
 
         frame = graph.register("CAPABILITY-STATEMENT", isa="EXE.CAPABILITY-STATEMENT", generate_index=True)
 
@@ -533,6 +544,7 @@ class CapabilityStatement(Statement):
         return CapabilityStatement(frame)
 
     def run(self, varmap: VariableMap):
+        from backend.models.effectors import Capability
 
         capability: Capability = Capability(self.frame["CAPABILITY"].singleton())
 
@@ -544,6 +556,11 @@ class CapabilityStatement(Statement):
 
     def callbacks(self) -> List[Statement]:
         return list(map(lambda cb: Statement.from_instance(cb.resolve()), self.frame["CALLBACK"]))
+
+    def capabilities(self) -> List['Capability']:
+        from backend.models.effectors import Capability
+
+        return [Capability(self.frame["CAPABILITY"].singleton())]
 
     def __eq__(self, other):
         if isinstance(other, CapabilityStatement):
