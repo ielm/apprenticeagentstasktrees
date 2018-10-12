@@ -1,7 +1,12 @@
+# from backend.models.effectors import Callback, Capability
 from backend.models.graph import Filler, Frame, Graph, Identifier, Literal
 from backend.models.mps import MPRegistry
 from backend.models.query import Query
 from typing import Any, List, Union
+
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from backend.models.effectors import Capability
 
 
 class Variable(object):
@@ -146,6 +151,7 @@ class StatementHierarchy(object):
         hierarchy.register("QUERY-STATEMENT", isa="EXE.RETURNING-STATEMENT")
         hierarchy.register("SLOT-STATEMENT", isa="EXE.RETURNING-STATEMENT")
         hierarchy.register("MP-STATEMENT", isa="EXE.RETURNING-STATEMENT")
+        hierarchy.register("CAPABILITY-STATEMENT", isa="EXE.RETURNING-STATEMENT")
         hierarchy.register("NONRETURNING-STATEMENT", isa="EXE.STATEMENT")
         hierarchy.register("FOREACH-STATEMENT", isa="EXE.NONRETURNING-STATEMENT")
         hierarchy.register("ADDFILLER-STATEMENT", isa="EXE.NONRETURNING-STATEMENT")
@@ -159,6 +165,7 @@ class StatementHierarchy(object):
         hierarchy["IS-STATEMENT"]["CLASSMAP"] = Literal(IsStatement)
         hierarchy["MAKEINSTANCE-STATEMENT"]["CLASSMAP"] = Literal(MakeInstanceStatement)
         hierarchy["MP-STATEMENT"]["CLASSMAP"] = Literal(MeaningProcedureStatement)
+        hierarchy["CAPABILITY-STATEMENT"]["CLASSMAP"] = Literal(CapabilityStatement)
 
         return hierarchy
 
@@ -206,6 +213,16 @@ class Statement(object):
             except: pass
 
         return param
+
+    def capabilities(self) -> List['Capability']:
+        return []
+
+    def __eq__(self, other):
+        if isinstance(other, Statement):
+            return self.frame == other.frame
+        if isinstance(other, Frame):
+            return self.frame == other
+        return super().__eq__(other)
 
 
 class AddFillerStatement(Statement):
@@ -375,6 +392,13 @@ class ForEachStatement(Statement):
             for stmt in do:
                 stmt.run(varmap)
 
+    def capabilities(self) -> List['Capability']:
+        do: List[Statement] = list(map(lambda stmt: Statement.from_instance(stmt.resolve()), self.frame["DO"]))
+        capabilities = []
+        for stmt in do:
+            capabilities.extend(stmt.capabilities())
+        return capabilities
+
     def __eq__(self, other):
         if isinstance(other, ForEachStatement):
             return other.frame["FROM"] == self.frame["FROM"] and \
@@ -488,3 +512,63 @@ class MeaningProcedureStatement(Statement):
             return other.frame["CALLS"] == self.frame["CALLS"] and \
                    other.frame["PARAMS"] == self.frame["PARAMS"]
         return super().__eq__(other)
+
+
+class CapabilityStatement(Statement):
+
+    @classmethod
+    def instance(cls, graph: Graph, capability: Union[str, Identifier, Frame, 'Capability'], callback: List[Union[str, Identifier, Frame, Statement]], params: List[Any]) -> 'CapabilityStatement':
+        from backend.models.effectors import Capability
+
+        frame = graph.register("CAPABILITY-STATEMENT", isa="EXE.CAPABILITY-STATEMENT", generate_index=True)
+
+        if isinstance(capability, str):
+            capability = Identifier.parse(capability)
+        if isinstance(capability, Capability):
+            capability = capability.frame
+        if isinstance(capability, Frame):
+            capability = capability._identifier
+        frame["CAPABILITY"] = capability
+
+        for cb in callback:
+            if isinstance(cb, str):
+                cb = Identifier.parse(cb)
+            if isinstance(cb, Statement):
+                cb = cb.frame
+            if isinstance(cb, Frame):
+                cb = cb._identifier
+            frame["CALLBACK"] += cb
+
+        frame["PARAMS"] = params
+
+        return CapabilityStatement(frame)
+
+    def run(self, varmap: VariableMap):
+        from backend.models.effectors import Capability
+
+        capability: Capability = Capability(self.frame["CAPABILITY"].singleton())
+
+        params = list(map(lambda param: self._resolve_param(param, varmap), self.frame["PARAMS"]))
+        params.insert(0, self)
+
+        result = capability.run(*params, graph=self.frame._graph, callbacks=self.callbacks(), varmap=varmap)
+        return result
+
+    def callbacks(self) -> List[Statement]:
+        return list(map(lambda cb: Statement.from_instance(cb.resolve()), self.frame["CALLBACK"]))
+
+    def capabilities(self) -> List['Capability']:
+        from backend.models.effectors import Capability
+
+        return [Capability(self.frame["CAPABILITY"].singleton())]
+
+    def __eq__(self, other):
+        if isinstance(other, CapabilityStatement):
+            other = other.frame
+
+        if isinstance(other, Frame):
+            return self.frame["CAPABILITY"] == other["CAPABILITY"] and \
+                    list(map(lambda frame: Statement.from_instance(frame.resolve()), other["CALLBACK"])) == list(map(lambda frame: Statement.from_instance(frame.resolve()), self.frame["CALLBACK"])) and \
+                    self.frame["PARAMS"] == other["PARAMS"]
+        else:
+            return super().__eq__(other)

@@ -1,3 +1,4 @@
+from backend.agent import Capability
 from backend.models.graph import Frame, Graph, Identifier, Literal, Network
 from backend.models.query import Query
 from backend.models.statement import Statement, Variable, VariableMap
@@ -543,3 +544,95 @@ class MeaningProcedureStatementTestCase(unittest.TestCase):
         Statement.from_instance(mp).run(varmap)
 
         self.assertEqual(result, 10)
+
+
+class CapabilityStatementTestCase(unittest.TestCase):
+
+    def test_run(self):
+        result = 0
+
+        def TestMP(statement, a, b, c, callback=None):
+            nonlocal result
+            result += a
+            result += b
+            result += c
+            result += statement.frame["X"][0].resolve().value
+
+        from backend.models.mps import MPRegistry
+        MPRegistry.register(TestMP)
+
+        network = Network()
+        graph = network.register(Statement.hierarchy())
+
+        Capability.instance(graph, "TEST-CAPABILITY", TestMP)
+
+        cap = graph.register("TEST", isa="EXE.CAPABILITY-STATEMENT")
+        cap["CAPABILITY"] = "EXE.TEST-CAPABILITY"
+        cap["PARAMS"] = [1, 2, 3]
+        cap["X"] = 4
+
+        Statement.from_instance(cap).run(None)
+
+        self.assertEqual(result, 10)
+
+    def test_run_with_variables(self):
+        result = 0
+
+        def TestMP(statement, a, b, c, callback=None):
+            nonlocal result
+            result += a
+            result += b
+            result += c
+            result += statement.frame["X"][0].resolve().value
+
+        from backend.models.mps import MPRegistry
+        MPRegistry.register(TestMP)
+
+        network = Network()
+        graph = network.register(Statement.hierarchy())
+
+        Capability.instance(graph, "TEST-CAPABILITY", TestMP)
+
+        cap = graph.register("TEST", isa="EXE.CAPABILITY-STATEMENT")
+        varmap = graph.register("VARMAP")
+
+        cap["CAPABILITY"] = "EXE.TEST-CAPABILITY"
+        cap["PARAMS"] = [1, 2, Literal("$var")]
+        cap["X"] = 4
+
+        varmap = VariableMap(varmap)
+        Variable.instance(graph, "$var", 3, varmap)
+
+        Statement.from_instance(cap).run(varmap)
+
+        self.assertEqual(result, 10)
+
+    def test_run_with_callbacks(self):
+
+        def TestMP(statement, callback=None):
+            pass
+
+        from backend.models.mps import MPRegistry
+        MPRegistry.register(TestMP)
+
+        network = Network()
+        graph = network.register(Statement.hierarchy())
+        graph.register("CAPABILITY")
+        graph.register("CALLBACK")
+
+        c = Capability.instance(graph, "TEST-CAPABILITY", TestMP)
+
+        cap = graph.register("TEST-W-CALLBACKS", isa="EXE.CAPABILITY-STATEMENT")
+        cap["CAPABILITY"] = "EXE.TEST-CAPABILITY"
+
+        stmt1 = graph.register("STMT1", isa="EXE.MP-STATEMENT")
+        stmt2 = graph.register("STMT1", isa="EXE.MP-STATEMENT")
+        cap["CALLBACK"] = [stmt1, stmt2]
+
+        varmap = graph.register("MY-VARMAP-TEST")
+        varmap = VariableMap(varmap)
+        Statement.from_instance(cap).run(varmap)
+
+        callback = graph.search(Frame.q(network).f("VARMAP", varmap.frame))[0]
+        self.assertTrue(callback["CAPABILITY"] == c.frame)
+        self.assertTrue(callback["STATEMENT"] == [stmt1, stmt2])

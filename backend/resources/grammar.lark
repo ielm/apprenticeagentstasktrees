@@ -28,11 +28,12 @@ condition_nand: boolean_statement (NAND boolean_statement)+
 condition_nor: boolean_statement (NOR boolean_statement)+
 condition_not: boolean_statement (NOT boolean_statement)+
 
-statement: (add_filler_statement | assign_filler_statement | exists_statement | foreach_statement | is_statement | make_instance_statement | mp_statement)
+statement: (add_filler_statement | assign_filler_statement | capability_statement | exists_statement | foreach_statement | is_statement | make_instance_statement | mp_statement)
 boolean_statement: (exists_statement | is_statement)
 
 add_filler_statement: statement_instance "[" NAME "]" "+=" (statement_instance | literal)
 assign_filler_statement: statement_instance "[" NAME "]" "=" (statement_instance | literal)
+capability_statement: CAPABILITY statement_instance arguments ("|" THEN action_do)*
 exists_statement: EXISTS logical_slot_query
 foreach_statement: FOR EACH ARGUMENT IN logical_slot_query ("|" statement)*
 is_statement: statement_instance "[" NAME "]" EQUALS EQUALS literal
@@ -48,6 +49,7 @@ ABANDONED: "abandoned"i
 ACTION: "action"i
 ACTIVE: "active"i
 AS: "as"i
+CAPABILITY: "capability"i
 DEFAULT: "default"i
 DEFINE: "define"i
 DO: "DO"i

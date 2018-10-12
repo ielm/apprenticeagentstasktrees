@@ -8,7 +8,7 @@ from typing import Any, Dict, List, Tuple, Union
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from backend.agent import Agent
-
+    from backend.models.effectors import Capability
 
 class Agenda(object):
 
@@ -45,13 +45,15 @@ class Agenda(object):
         if isinstance(action, Action):
             action = action.frame
 
-        self.frame["ACTION-TO-TAKE"] = action
+        self.frame["ACTION-TO-TAKE"] += action
 
     def action(self):
         if "ACTION-TO-TAKE" not in self.frame:
-            return None
+            return []
 
-        return Action(self.frame["ACTION-TO-TAKE"].singleton())
+        return list(map(lambda a: Action(a.resolve()), self.frame["ACTION-TO-TAKE"]))
+
+        # return Action(self.frame["ACTION-TO-TAKE"].singleton())
 
 
 class Goal(VariableMap):
@@ -75,7 +77,10 @@ class Goal(VariableMap):
         return Goal(frame)
 
     @classmethod
-    def instance_of(cls, graph: Graph, definition: Frame, params: List[Any], existing: Union[str, Identifier, Frame]=None):
+    def instance_of(cls, graph: Graph, definition: Union[Frame, 'Goal'], params: List[Any], existing: Union[str, Identifier, Frame]=None):
+        if isinstance(definition, Goal):
+            definition = definition.frame
+
         if existing is not None:
             if isinstance(existing, str):
                 existing = Identifier.parse(existing)
@@ -127,6 +132,9 @@ class Goal(VariableMap):
         self.frame["STATUS"] = status
 
     def assess(self):
+        if self.reserved_effector() is not None:
+            return
+
         conditions = sorted(self.conditions(), key=lambda condition: condition.order())
         for condition in conditions:
             if condition.assess(self):
@@ -203,6 +211,15 @@ class Goal(VariableMap):
             if action.select(self):
                 return action
         raise Exception("No action was selected in the plan.")
+
+    def reserved_effector(self) -> 'Effector':
+        from backend.models.effectors import Effector
+
+        for u in self.frame["USES"]:
+            u = u.resolve()
+            if u ^ "EXE.EFFECTOR":
+                return Effector(u)
+        return None
 
     def __eq__(self, other):
         if isinstance(other, Goal):
@@ -289,6 +306,13 @@ class Action(object):
                 pass
             if isinstance(statement, Frame) and statement ^ "EXE.STATEMENT":
                 Statement.from_instance(statement).run(varmap)
+
+    def capabilities(self) -> List['Capability']:
+        do: List[Statement] = list(map(lambda do: Statement.from_instance(do), filter(lambda do: do != Action.IDLE, map(lambda do: do.resolve(), self.frame["PERFORM"]))))
+        capabilities = []
+        for stmt in do:
+            capabilities.extend(stmt.capabilities())
+        return capabilities
 
     def __eq__(self, other):
         if isinstance(other, Action):

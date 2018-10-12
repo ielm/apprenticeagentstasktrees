@@ -188,6 +188,14 @@ class GrammarTransformer(Transformer):
 
         return AssignFillerStatement.instance(self.agent.exe, domain, slot, filler)
 
+    def capability_statement(self, matches):
+        from backend.models.statement import CapabilityStatement, Statement
+        capability = matches[1]
+        callback = list(filter(lambda match: isinstance(match, Statement), matches))
+        params = matches[2]
+
+        return CapabilityStatement.instance(self.agent.exe, capability, callback, params)
+
     def exists_statement(self, matches):
         from backend.models.statement import ExistsStatement
 
