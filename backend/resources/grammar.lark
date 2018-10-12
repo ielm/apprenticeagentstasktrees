@@ -126,7 +126,7 @@ literal: (integer | double | string | boolean)
 boolean: (TRUE | FALSE)
 integer: INTEGER
 double: INTEGER "." INTEGER
-string: ("\"") (ALPHA | INTEGER | SYMBOL)+ ("\"")
+string: ("\"") STRING ("\"")
 
 identifier: (graph ".")? name ("." instance)?
 graph: (GRAPH | tmr)
@@ -168,6 +168,7 @@ WILDCARD: "*"
 INTEGER: /[0-9]+/
 ALPHA: /[a-zA-Z]+/
 SYMBOL: /[\_]+/
+STRING: /[0-9a-zA-z\_]+/
 
 WHITESPACE: (" " | /\t/ | /\n/)+
 %ignore WHITESPACE
