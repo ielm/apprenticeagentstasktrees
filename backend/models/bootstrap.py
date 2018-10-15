@@ -2,7 +2,7 @@ from backend.agent import Agent
 from backend.models.agenda import Goal
 from backend.models.grammar import Grammar
 from backend.models.graph import Filler, Frame, Graph, Identifier, Literal, Network
-from backend.models.ontology import Ontology, OntologyFiller
+from backend.models.ontology import Ontology, OntologyFrame, OntologyFiller
 from pkgutil import get_data
 from typing import List, Union
 
@@ -80,32 +80,31 @@ class BootstrapDeclareKnowledge(Bootstrap):
 
 class BootstrapAppendKnowledge(Bootstrap):
 
-    def __init__(self, network: Network, frame: Union[Frame, Identifier, str], slot: str, filler: Union[Filler, Identifier, Literal]):
+    def __init__(self, network: Network, frame: Union[Frame, Identifier, str], properties: Union[BootstrapTriple, List[BootstrapTriple]]):
         self.network = network
         self.frame = frame
-        self.slot = slot
-        self.filler = filler
+        self.properties = properties
+
+        if not isinstance(self.properties, list):
+            self.properties = [self.properties]
 
     def __call__(self, *args, **kwargs):
         if isinstance(self.frame, str):
-            self.frame = Identifier.parse(self.frame)
+            self.frame = self.network.lookup(self.frame)
         if isinstance(self.frame, Identifier):
             self.frame = self.network.lookup(self.frame)
 
-        if isinstance(self.filler, Identifier):
-            self.filler = Filler(self.filler)
-        if isinstance(self.filler, Literal):
-            self.filler = Filler(self.filler)
-
-        self.frame[self.slot] += self.filler
+        for property in self.properties:
+            if isinstance(self.frame, OntologyFrame):
+                self.frame[property.slot] += OntologyFiller(property.filler, property.facet)
+            else:
+                self.frame[property.slot] += property.filler
 
     def __eq__(self, other):
         if isinstance(other, BootstrapAppendKnowledge):
-            return \
-                self.network == other.network and \
-                self.frame == other.frame and \
-                self.slot == other.slot and \
-                self.filler == other.filler
+            return self.network == other.network and \
+                    self.frame == other.frame and \
+                    self.properties == other.properties
         return super().__eq__(other)
 
 

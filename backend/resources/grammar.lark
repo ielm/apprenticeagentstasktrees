@@ -3,13 +3,17 @@ start: (view)
 // Bootstrap
 
 bootstrap: ((declare_knowledge | append_knowledge | define) BOOTSTRAPDELIMITER)*
+
 declare_knowledge: "@" graph "." name (declare_knowledge_instance)? "=" "{" (declare_knowledge_element (BOOTSTRAPDELIMITER declare_knowledge_element)*)? (BOOTSTRAPDELIMITER)? "}"
 declare_knowledge_instance: "." (instance | GENERATE_INSTANCE)
 declare_knowledge_element: (declare_isa_knowledge | declare_property_knowledge)
 declare_isa_knowledge: DISA "@" identifier
 declare_property_knowledge: slot (facet)? filler
 
-append_knowledge: "@" identifier slot filler
+append_knowledge: "@" identifier "+=" "{" (append_knowledge_element (BOOTSTRAPDELIMITER append_knowledge_element)*)? (BOOTSTRAPDELIMITER)? "}"
+append_knowledge_element: (append_property_knowledge)
+append_property_knowledge: slot (facet)? filler
+
 slot: NAME
 facet: (SEM | DEFAULT | VALUE | NOT)
 filler: ("@" identifier | literal)

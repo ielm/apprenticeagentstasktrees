@@ -64,9 +64,23 @@ class GrammarTransformer(Transformer):
         return BootstrapTriple(slot, filler, facet=facet)
 
     def append_knowledge(self, matches):
-        from backend.models.bootstrap import BootstrapAppendKnowledge
+        from backend.models.bootstrap import BootstrapAppendKnowledge, BootstrapTriple
 
-        return BootstrapAppendKnowledge(self.network, matches[0], matches[1], matches[2])
+        identifier = matches[0]
+        properties = list(filter(lambda m: isinstance(m, BootstrapTriple), matches))
+
+        return BootstrapAppendKnowledge(self.network, identifier, properties)
+
+    def append_knowledge_element(self, matches):
+        return matches[0]
+
+    def append_property_knowledge(self, matches):
+        from backend.models.bootstrap import BootstrapTriple
+        slot = matches[0]
+        facet = matches[1] if len(matches) == 3 else None
+        filler = matches[-1]
+
+        return BootstrapTriple(slot, filler, facet=facet)
 
     def slot(self, matches):
         return str(matches[0])

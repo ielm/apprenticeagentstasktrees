@@ -93,12 +93,64 @@ class BootstrapDeclareKnowledgeTestCase(unittest.TestCase):
 
 class BootstrapAppendKnowledgeTestCase(unittest.TestCase):
 
-    def test_call(self):
-        n = Network()
-        g = n.register("TEST")
-        f = g.register("SOMEFRAME")
+    def setUp(self):
+        self.n = Network()
+        self.g = self.n.register("TEST")
 
-        boot = BootstrapAppendKnowledge(n, "TEST.SOMEFRAME", "slot", Literal(123))
+    def test_call_adds_property(self):
+        frame = self.g.register("MYFRAME")
+
+        prop = BootstrapTriple("MYSLOT", Identifier.parse("ONT.ALL"))
+
+        boot = BootstrapAppendKnowledge(self.n, "TEST.MYFRAME", properties=[prop])
         boot()
 
-        self.assertTrue(123 in f["slot"])
+        self.assertTrue(frame["MYSLOT"] == Identifier.parse("ONT.ALL"))
+
+    def test_call_adds_multiple_properties(self):
+        frame = self.g.register("MYFRAME")
+
+        prop1 = BootstrapTriple("MYSLOT", Literal("ONT.ALL"))
+        prop2 = BootstrapTriple("MYSLOT", Literal(123))
+
+        boot = BootstrapAppendKnowledge(self.n, "TEST.MYFRAME", properties=[prop1, prop2])
+        boot()
+
+        self.assertTrue(frame["MYSLOT"] == "ONT.ALL")
+        self.assertTrue(frame["MYSLOT"] == 123)
+
+    def test_call_adds_filler_to_existing_property(self):
+        frame = self.g.register("MYFRAME")
+        frame["MYSLOT"] = Identifier.parse("ONT.FIRST")
+
+        prop = BootstrapTriple("MYSLOT", Identifier.parse("ONT.SECOND"))
+
+        boot = BootstrapAppendKnowledge(self.n, "TEST.MYFRAME", properties=[prop])
+        boot()
+
+        self.assertTrue(frame["MYSLOT"] == Identifier.parse("ONT.FIRST"))
+        self.assertTrue(frame["MYSLOT"] == Identifier.parse("ONT.SECOND"))
+
+    def test_call_respects_facets_in_ontology(self):
+        from backend.models.ontology import Ontology
+        ontology = self.n.register(Ontology("ONT"))
+
+        frame = ontology.register("MYFRAME")
+
+        prop = BootstrapTriple("MYSLOT", Identifier.parse("ONT.ALL"), facet="SEM")
+
+        boot = BootstrapAppendKnowledge(self.n, "ONT.MYFRAME", properties=[prop])
+        boot()
+
+        self.assertTrue(frame["MYSLOT"] == Identifier.parse("ONT.ALL"))
+        self.assertEqual("SEM", frame["MYSLOT"][0]._facet)
+
+    def test_call_ignores_facets_in_non_ontology_graphs(self):
+        frame = self.g.register("MYFRAME")
+
+        prop = BootstrapTriple("MYSLOT", Identifier.parse("ONT.ALL"), facet="does-not-matter")
+
+        boot = BootstrapAppendKnowledge(self.n, "TEST.MYFRAME", properties=[prop])
+        boot()
+
+        self.assertTrue(frame["MYSLOT"] == Identifier.parse("ONT.ALL"))
