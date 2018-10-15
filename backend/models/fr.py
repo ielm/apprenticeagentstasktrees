@@ -87,9 +87,6 @@ class FR(Graph):
                     for f in ambiguous_fillers: f._metadata = {"ambiguities": ids}
 
     def _resolve_log_wrapper(self, heuristic, instance, results, tmr=None):
-        # print(instance._identifier.render(graph=False))
-        if instance._identifier == "TMR#11.ASSEMBLE.1":
-            print(instance._identifier.render(graph=False))
         input_results = copy.deepcopy(results)
         heuristic(self).resolve(instance, results, tmr=tmr)
 

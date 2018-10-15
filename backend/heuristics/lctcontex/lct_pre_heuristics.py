@@ -24,14 +24,7 @@ class IdentifyClosingOfKnownTaskUnderstandingProcessor(UnderstandingProcessor):
         if tmr.is_postfix():
 
             agent.wo_memory.logger().pause()
-            if tmr.sentence == "We have assembled a front leg.":
-                print("DEBUG.1 : We have assembled a front leg.")
-                resolved = agent.wo_memory.resolve_tmr(tmr)
-            elif tmr.sentence == "We have assembled another front chair leg.":
-                print("DEBUG.2 : We have assembled another front chair leg.")
-                resolved = agent.wo_memory.resolve_tmr(tmr)
-            else:
-                resolved = agent.wo_memory.resolve_tmr(tmr)
+            resolved = agent.wo_memory.resolve_tmr(tmr)
             agent.wo_memory.logger().unpause()
 
             event = tmr.find_main_event()
@@ -117,36 +110,8 @@ class IdentifyPreconditionSatisfyingActionsUnderstandingProcessor(UnderstandingP
         if len(agent.input_memory) < 2:
             raise HeuristicException()
 
-
-        # print("\n\n" + "="*50 + "\nAGENT MEMORY: ")
-        # for i in agent.input_memory:
-        #     print(" ", i)
-        # print("="*50)
-
-
-
         # Event is None; cannot find main event.
         event = tmr.find_main_event()
-
-        # ======================================= #
-        # ================ HACK ================= #
-        # ======================================= #
-
-        # print("\nTMR: \n", tmr.sentence)
-
-        # print("\nEVENT:\n", event, "\n")
-        # print("\nONTOLOGY:\n", agent.ontology["REQUEST-ACTION"])
-
-        # if not event:
-            # print("\n\n\n NOT EVENT \n\n\n")
-            # raise HeuristicException()
-
-        # ======================================= #
-        # ============== END HACK =============== #
-        # ======================================= #
-
-        # print("\n\nAGENT ONTOLOGY: ")
-
 
         if not event ^ agent.ontology["REQUEST-ACTION"] or "ROBOT" not in event["BENEFICIARY"]:
             raise HeuristicException()
