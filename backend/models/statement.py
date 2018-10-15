@@ -179,7 +179,9 @@ class StatementHierarchy(object):
 
 class Statement(object):
 
-    hierarchy = StatementHierarchy()
+    @classmethod
+    def hierarchy(cls):
+        return StatementHierarchy().build()
 
     @classmethod
     def from_instance(cls, frame: Frame) -> 'Statement':

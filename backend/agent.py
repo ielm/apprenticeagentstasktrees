@@ -242,24 +242,9 @@ class Agent(Network):
             return 0.75
         MPRegistry.register(prioritize_learning)
 
-        # TODO: move these definitions to an enhanced bootstrap
-        # STATUS = "FREE" | "OPERATING";  EFFECTING = EXE.GOAL;  HAS-CAPABILITY[] = EXE.CAPABILITY
-        self.exe.register("EFFECTOR")
-        self.exe.register("PHYSICAL-EFFECTOR", isa="EXE.EFFECTOR")
-        self.exe.register("VERBAL-EFFECTOR", isa="EXE.EFFECTOR")
-        self.exe.register("MENTAL-EFFECTOR", isa="EXE.EFFECTOR")
-        # MP = str
-        self.exe.register("CAPABILITY")
-        # VARMAP = VariableMap(Frame); STATEMENT = CapabilityStatement(Frame)
-        self.exe.register("CALLBACK")
-
-        learn_capability = Capability.instance(self.exe, "LEARN-CAPABILITY", understand_input)
-        mental_effector_1 = Effector.instance(self.internal, Effector.Type.MENTAL, [learn_capability])
-        self.identity["HAS-EFFECTOR"] += mental_effector_1.frame
-
         from backend.models.bootstrap import Bootstrap
-        Bootstrap.bootstrap_resource(self, "backend.resources", "goals.aa")
         Bootstrap.bootstrap_resource(self, "backend.resources", "bootstrap.knowledge")
+        Bootstrap.bootstrap_resource(self, "backend.resources", "goals.aa")
 
         self.agenda().add_goal(Goal.instance_of(self.internal, self.exe["FIND-SOMETHING-TO-DO"], []))
 

@@ -2,12 +2,27 @@ start: (view)
 
 // Bootstrap
 
-bootstrap: ((knowledge | define) BOOTSTRAPDELIMITER)*
-knowledge: "@" identifier slot filler
+bootstrap: ((declare_knowledge | append_knowledge | define) BOOTSTRAPDELIMITER)*
+
+declare_knowledge: "@" graph "." name (declare_knowledge_instance)? "=" "{" (declare_knowledge_element (BOOTSTRAPDELIMITER declare_knowledge_element)*)? (BOOTSTRAPDELIMITER)? "}"
+declare_knowledge_instance: "." (instance | GENERATE_INSTANCE)
+declare_knowledge_element: (declare_isa_knowledge | declare_property_knowledge)
+declare_isa_knowledge: DISA "@" identifier
+declare_property_knowledge: slot (facet)? filler
+
+append_knowledge: "@" identifier "+=" "{" (append_knowledge_element (BOOTSTRAPDELIMITER append_knowledge_element)*)? (BOOTSTRAPDELIMITER)? "}"
+append_knowledge_element: (append_property_knowledge)
+append_property_knowledge: slot (facet)? filler
+
 slot: NAME
+facet: (SEM | DEFAULT | VALUE | NOT)
 filler: ("@" identifier | literal)
 
 BOOTSTRAPDELIMITER: ";"
+DISA: "isa"i
+GENERATE_INSTANCE: "?"
+SEM: "sem"i
+VALUE: "value"i
 
 // Statements and executables
 
@@ -115,7 +130,7 @@ literal: (integer | double | string | boolean)
 boolean: (TRUE | FALSE)
 integer: INTEGER
 double: INTEGER "." INTEGER
-string: ("\"") (ALPHA | INTEGER)+ ("\"")
+string: ("\"") STRING ("\"")
 
 identifier: (graph ".")? name ("." instance)?
 graph: (GRAPH | tmr)
@@ -149,13 +164,15 @@ RECURSIVE: "*"
 SUBCLASSES: ">"
 
 GRAPH: /[a-zA-Z]+/
-NAME: /(?!True|False)[a-zA-Z\.\*\_\-]+/i
+NAME: /(?!True|False|isa)[a-zA-Z\.\*\_\-]+/i
 INSTANCE: /[0-9]+/
 RELATION: /[a-zA-Z0-9\-]+/
 WILDCARD: "*"
 
 INTEGER: /[0-9]+/
 ALPHA: /[a-zA-Z]+/
+SYMBOL: /[\_]+/
+STRING: /[0-9a-zA-z\_]+/
 
 WHITESPACE: (" " | /\t/ | /\n/)+
 %ignore WHITESPACE

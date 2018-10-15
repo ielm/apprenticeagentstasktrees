@@ -455,13 +455,13 @@ class BootstrapGrammarTestCase(unittest.TestCase):
         from backend.models.bootstrap import Bootstrap
 
         input = '''
-        @SELF.AGENT myslot 123;
+        @SELF.AGENT += {myslot 123};
         
-        @SELF.AGENT myslot 123
+        @SELF.AGENT += {myslot 123}
         ;
         
         
-        @SELF.AGENT myslot 123;
+        @SELF.AGENT += {myslot 123};
         '''
 
         bootstrap = Grammar.parse(self.agent, input, start="bootstrap", agent=self.agent)
@@ -469,13 +469,54 @@ class BootstrapGrammarTestCase(unittest.TestCase):
         for b in bootstrap:
             self.assertIsInstance(b, Bootstrap)
 
-    def test_knowledge(self):
-        from backend.models.bootstrap import BootstrapKnowledge
+    def test_declare_knowledge(self):
+        from backend.models.bootstrap import BootstrapDeclareKnowledge, BootstrapTriple
+
+        bootstrap = BootstrapDeclareKnowledge(self.agent, "MYGRAPH", "MYFRAME")
+        parsed = Grammar.parse(self.agent, "@MYGRAPH.MYFRAME = {}", start="declare_knowledge", agent=self.agent)
+        self.assertEqual(bootstrap, parsed)
+
+        bootstrap = BootstrapDeclareKnowledge(self.agent, "MYGRAPH", "MYFRAME", index=123)
+        parsed = Grammar.parse(self.agent, "@MYGRAPH.MYFRAME.123 = {}", start="declare_knowledge", agent=self.agent)
+        self.assertEqual(bootstrap, parsed)
+
+        bootstrap = BootstrapDeclareKnowledge(self.agent, "MYGRAPH", "MYFRAME", index=True)
+        parsed = Grammar.parse(self.agent, "@MYGRAPH.MYFRAME.? = {}", start="declare_knowledge", agent=self.agent)
+        self.assertEqual(bootstrap, parsed)
+
+        bootstrap = BootstrapDeclareKnowledge(self.agent, "MYGRAPH", "MYFRAME", isa="ONT.ALL")
+        parsed = Grammar.parse(self.agent, "@MYGRAPH.MYFRAME = {ISA @ONT.ALL}", start="declare_knowledge", agent=self.agent)
+        self.assertEqual(bootstrap, parsed)
+
+        bootstrap = BootstrapDeclareKnowledge(self.agent, "MYGRAPH", "MYFRAME", isa=["ONT.ALL", "ONT.OTHER"])
+        parsed = Grammar.parse(self.agent, "@MYGRAPH.MYFRAME = {ISA @ONT.ALL; ISA @ONT.OTHER}", start="declare_knowledge", agent=self.agent)
+        self.assertEqual(bootstrap, parsed)
+
+        bootstrap = BootstrapDeclareKnowledge(self.agent, "MYGRAPH", "MYFRAME", properties=[BootstrapTriple("MYPROP", Identifier.parse("ONT.ALL"))])
+        parsed = Grammar.parse(self.agent, "@MYGRAPH.MYFRAME = {MYPROP @ONT.ALL}", start="declare_knowledge", agent=self.agent)
+        self.assertEqual(bootstrap, parsed)
+
+        bootstrap = BootstrapDeclareKnowledge(self.agent, "MYGRAPH", "MYFRAME", properties=[BootstrapTriple("MYPROP", Identifier.parse("ONT.ALL")), BootstrapTriple("OTHERPROP", Literal("VALUE"))])
+        parsed = Grammar.parse(self.agent, "@MYGRAPH.MYFRAME = {MYPROP @ONT.ALL; OTHERPROP \"VALUE\"}", start="declare_knowledge", agent=self.agent)
+        self.assertEqual(bootstrap, parsed)
+
+        bootstrap = BootstrapDeclareKnowledge(self.agent, "MYGRAPH", "MYFRAME", properties=[BootstrapTriple("MYPROP", Identifier.parse("ONT.ALL"), facet="SEM")])
+        parsed = Grammar.parse(self.agent, "@MYGRAPH.MYFRAME = {MYPROP SEM @ONT.ALL}", start="declare_knowledge", agent=self.agent)
+        self.assertEqual(bootstrap, parsed)
+
+    def test_append_knowledge(self):
+        from backend.models.bootstrap import BootstrapAppendKnowledge, BootstrapTriple
 
         f = self.g.register("FRAME")
 
-        bootstrap = Grammar.parse(self.agent, "@SELF.AGENT myslot 123", start="knowledge", agent=self.agent)
-        self.assertEqual(bootstrap, BootstrapKnowledge(self.agent, "SELF.AGENT", "myslot", Literal(123)))
+        bootstrap = BootstrapAppendKnowledge(self.agent, "SELF.FRAME", properties=[BootstrapTriple("MYPROP", Identifier.parse("ONT.ALL"))])
+        parsed = Grammar.parse(self.agent, "@SELF.FRAME += {MYPROP @ONT.ALL}", start="append_knowledge", agent=self.agent)
+        self.assertEqual(bootstrap, parsed)
 
-        bootstrap = Grammar.parse(self.agent, "@SELF.AGENT myrel @SELF.FRAME", start="knowledge", agent=self.agent)
-        self.assertEqual(bootstrap, BootstrapKnowledge(self.agent, "SELF.AGENT", "myrel", Identifier.parse("SELF.FRAME")))
+        bootstrap = BootstrapAppendKnowledge(self.agent, "SELF.FRAME", properties=[BootstrapTriple("MYPROP", Identifier.parse("ONT.ALL")), BootstrapTriple("OTHERPROP", Literal("VALUE"))])
+        parsed = Grammar.parse(self.agent, "@SELF.FRAME += {MYPROP @ONT.ALL; OTHERPROP \"VALUE\"}", start="append_knowledge", agent=self.agent)
+        self.assertEqual(bootstrap, parsed)
+
+        bootstrap = BootstrapAppendKnowledge(self.agent, "SELF.FRAME", properties=[BootstrapTriple("MYPROP", Identifier.parse("ONT.ALL"), facet="SEM")])
+        parsed = Grammar.parse(self.agent, "@SELF.FRAME += {MYPROP SEM @ONT.ALL}", start="append_knowledge", agent=self.agent)
+        self.assertEqual(bootstrap, parsed)
