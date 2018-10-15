@@ -9,4 +9,6 @@ OntoSem.postman_collection.json
 
 venv/
 
+docs/
+
 *.uml
