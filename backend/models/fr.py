@@ -230,6 +230,9 @@ class FRInstance(Frame):
 
     def lemmas(self):
         lemmas = []
+        if len(self[FRInstance.ATTRIBUTED_TO]) == 0:
+            return list(map(lambda p: p.name, self.parents()))
+
         for tmr_instance in self[FRInstance.ATTRIBUTED_TO]:
             tmr_instance = tmr_instance.resolve()
             lemma = " ".join(map(lambda ti: tmr_instance._graph.syntax.index[str(ti)]["lemma"], tmr_instance.token_index))

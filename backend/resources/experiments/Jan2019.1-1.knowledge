@@ -1,0 +1,14 @@
+
+@LT.HUMAN.1 = {
+    HAS-NAME "Jake";
+};
+
+@ENV.HUMAN.1 = {
+    RESOLVED-TO @LT.HUMAN.1;
+};
+
+@LT.TEACH.1 = {
+    AGENT @LT.HUMAN.1;
+    BENEFICIARY @SELF.ROBOT.1;
+    THEME @LT.BUILD.1;
+};

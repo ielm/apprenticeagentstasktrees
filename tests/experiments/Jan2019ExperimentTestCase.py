@@ -1,24 +1,75 @@
+from backend.agent import Agent
+from backend.models.agenda import Goal
+from backend.models.bootstrap import Bootstrap
+from backend.models.ontology import Ontology
 
+from pkgutil import get_data
+from typing import Callable
 
+import json
 import unittest
 
 
 class Jan2019Experiment(unittest.TestCase):
 
-    def test_1_1(self):
-        fail()
+    def analyses(self):
+        return json.loads(get_data("tests.resources", "DemoJan2019_Analyses.json").decode('ascii'))
 
-        # Pa) Load LTM with the chair building instructions, as taught by "Jake"
-        # Pb) Load WM with an instance of "Jake", location = "here";  Possibly use an ENV graph (see 3b).
-        # Pc) All other typical bootstrapping is done as well
+    def iidea_loop(self, agent: Agent):
+        if agent.IDEA._stage == Agent.IDEA.D:
+            agent.iidea()
+        while agent.IDEA._stage != Agent.IDEA.D:
+            agent.iidea()
+
+    def assertGoalExists(self, agent: Agent, isa: str=None, status: Goal.Status=None, query: Callable=None):
+        goals = list(map(lambda g: Goal(g.resolve()), agent.identity["HAS-GOAL"]))
+
+        if status is not None:
+            goals = agent.agenda().goals(pending=(status == Goal.Status.PENDING), active=(status == Goal.Status.ACTIVE), abandoned=(status == Goal.Status.ABANDONED), satisfied=(status == Goal.Status.SATISFIED))
+
+        if isa is not None:
+            goals = list(filter(lambda goal: goal.frame ^ isa, goals))
+
+        if filter is not None:
+            goals = list(filter(query, goals))
+
+        if len(goals) == 0:
+            self.fail("No such matching goal.")
+
+    def test_1_1(self):
+
+        agent = Agent(ontology=Ontology.init_default())
+
+        #######
+
+        # Pa) Load LTM with the chair building instructions
+        Bootstrap.bootstrap_resource(agent, "backend.resources", "chair.knowledge")
+
+        # Pb) There is an instance of "Jake", who is known, present, and taught the robot the chair instructions
+        Bootstrap.bootstrap_resource(agent, "backend.resources.experiments", "Jan2019.1-1.knowledge")
+
+        #######
 
         # 1a) Input from "Jake", "Let's build a chair."
+        agent._input(self.analyses()[0])
+
         # 1b) IIDEA loop
+        self.iidea_loop(agent)
+
         # 1c) TEST: An instance of ACKNOWLEDGE-INPUT with the correct TMR is on the agenda
+        self.assertGoalExists(agent, isa="EXE.ACKNOWLEDGE-INPUT", status=Goal.Status.PENDING, query=lambda goal: goal.resolve("$tmr")["REFERS-TO-GRAPH"].singleton() == "TMR#1")
+
         # 1d) IIDEA loop
+        self.iidea_loop(agent)
+
         # 1e) TEST: An instance of DECIDE-ON-LANGUAGE-INPUT with the correct TMR is on the agenda
+        self.assertGoalExists(agent, isa="EXE.DECIDE-ON-LANGUAGE-INPUT", status=Goal.Status.PENDING, query=lambda goal: goal.resolve("$tmr")["REFERS-TO-GRAPH"].singleton() == "TMR#1")
+
         # 1f) IIDEA loop
+        self.iidea_loop(agent)
+
         # 1g) TEST: An instance of PERFORM-COMPLEX-TASK with the LTM instructions root is on the agenda
+        self.assertGoalExists(agent, isa="EXE.PERFORM-COMPLEX-TASK", status=Goal.Status.PENDING, query=lambda goal: goal.resolve("$task").singleton() == "LT.BUILD.1")
 
         # 2a) Visual input "Jake leaves"
         # 2b) IIDEA loop
@@ -82,4 +133,5 @@ class Jan2019Experiment(unittest.TestCase):
         # 8c) TEST: The PHYSICAL-EFFECTOR is released
         # 8d) TEST: PERFORM-COMPLEX-TASK is still "active" (the chair is not yet built)
 
+        self.fail()
 

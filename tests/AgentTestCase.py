@@ -51,16 +51,16 @@ class AgentTestCase(unittest.TestCase):
         }
 
     def test_idea_input(self):
-        self.assertEqual(5, len(self.agent))
+        self.assertEqual(6, len(self.agent))
         self.assertEqual(0, len(self.agent.input_memory))
 
         self.agent._input()
-        self.assertEqual(5, len(self.agent))
+        self.assertEqual(6, len(self.agent))
         self.assertEqual(0, len(self.agent.input_memory))
 
         tmr = self.tmr()
         self.agent._input(input=tmr)
-        self.assertEqual(6, len(self.agent))
+        self.assertEqual(7, len(self.agent))
         self.assertIn("TMR#1", self.agent)
         self.assertEqual(1, len(self.agent.pending_inputs()))
         self.assertEqual(tmr["sentence"], self.agent.pending_inputs()[0].sentence)

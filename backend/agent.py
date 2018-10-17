@@ -28,8 +28,9 @@ class Agent(Network):
         self.internal = self.register(FR("SELF", self.ontology))
         self.wo_memory = self.register(FR("WM", self.ontology))
         self.lt_memory = self.register(FR("LT", self.ontology))
+        self.environment = self.register(FR("ENV", self.ontology))
 
-        self.identity = self.internal.register("ROBOT")
+        self.identity = self.internal.register("ROBOT", isa="ONT.ROBOT")
         self.exe.register("INPUT-TMR", generate_index=False)
         self._bootstrap()
 
