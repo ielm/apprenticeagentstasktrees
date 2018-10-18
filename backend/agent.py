@@ -237,6 +237,9 @@ class Agent(Network):
             if callback is not None:
                 self.callback(callback)
 
+            if callback is not None:
+                self.callback(callback)
+
         MPRegistry.register(understand_input)
 
         def prioritize_learning(statement, tmr_frame):
