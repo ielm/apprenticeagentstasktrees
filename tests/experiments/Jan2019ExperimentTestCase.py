@@ -30,7 +30,7 @@ class Jan2019Experiment(unittest.TestCase):
         if isa is not None:
             goals = list(filter(lambda goal: goal.frame ^ isa, goals))
 
-        if filter is not None:
+        if query is not None:
             goals = list(filter(query, goals))
 
         if len(goals) == 0:
