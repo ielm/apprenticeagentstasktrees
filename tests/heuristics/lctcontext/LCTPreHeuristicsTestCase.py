@@ -1,6 +1,6 @@
 from backend.agent import Agent
 from backend.contexts.LCTContext import LCTContext
-from backend.heuristics.lctcontex.lct_pre_heuristics import *
+from backend.heuristics.lctcontext.lct_pre_heuristics import *
 from backend.models.graph import Graph, Network
 from backend.models.tmr import TMR
 from tests.ApprenticeAgentsTestCase import ApprenticeAgentsTestCase

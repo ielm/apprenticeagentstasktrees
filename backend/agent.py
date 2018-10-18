@@ -15,6 +15,11 @@ import sys
 class Agent(Network):
 
     def __init__(self, ontology: Ontology=None):
+        """
+        Initialize Agent
+
+        :param ontology:
+        """
         super().__init__()
 
         if ontology is None:

@@ -1,7 +1,7 @@
 from backend.agent import Agent
 from backend.contexts.LCTContext import LCTContext
 from backend.heuristics.fr_heuristics import FRResolveHumanAndRobotAsSingletonsHeuristic
-from backend.heuristics.lctcontex.lct_post_heuristics import *
+from backend.heuristics.lctcontext.lct_post_heuristics import *
 from backend.models.graph import Graph, Network
 from backend.models.tmr import TMR
 from tests.ApprenticeAgentsTestCase import ApprenticeAgentsTestCase

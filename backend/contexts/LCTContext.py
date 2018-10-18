@@ -1,16 +1,17 @@
 from backend.contexts.context import AgentContext, FRResolutionUnderstandingProcessor, RootUnderstandingProcessor
 
-from backend.heuristics.lctcontex.lct_fr_resolution_heuristics import *
-from backend.heuristics.lctcontex.lct_post_heuristics import *
-from backend.heuristics.lctcontex.lct_pre_heuristics import *
+from backend.heuristics.lctcontext.lct_fr_resolution_heuristics import *
+from backend.heuristics.lctcontext.lct_post_heuristics import *
+from backend.heuristics.lctcontext.lct_pre_heuristics import *
 
 from backend.models.graph import Frame
 from backend.models.ontology import OntologyFiller
 
 
-# An agent context for (L)earning (C)omplex (T)asks.
 class LCTContext(AgentContext):
-
+    """
+    An agent context for (L)earning (C)omplex (T)asks.
+    """
     def __init__(self, agent):
         super().__init__(agent)
 

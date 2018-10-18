@@ -1,6 +1,6 @@
 from backend.contexts.context import HeuristicException, FRResolutionUnderstandingProcessor, UnderstandingProcessor
 from backend.heuristics.fr_heuristics import FRResolveHumanAndRobotAsSingletonsHeuristic, FRResolveSetsWithIdenticalMembersHeuristic
-from backend.heuristics.lctcontex.lct_fr_import_heuristics import FRImportDoNotImportRequestActions
+from backend.heuristics.lctcontext.lct_fr_import_heuristics import FRImportDoNotImportRequestActions
 from backend.models.graph import Frame
 
 import random

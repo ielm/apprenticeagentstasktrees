@@ -1,0 +1,4 @@
+[submodule "ApprenticeAgentsDocumentation"]
+	path = ApprenticeAgentsDocumentation
+	url = https://github.com/ielm/ApprenticeAgentsDocumentation.git
+	branch = master
