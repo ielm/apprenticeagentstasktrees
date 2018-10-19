@@ -13,6 +13,9 @@ import sys
 
 
 class Agent(Network):
+    """
+    The agent
+    """
 
     def __init__(self, ontology: Ontology=None):
         """

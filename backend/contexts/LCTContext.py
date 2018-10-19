@@ -11,8 +11,15 @@ from backend.models.ontology import OntologyFiller
 class LCTContext(AgentContext):
     """
     An agent context for (L)earning (C)omplex (T)asks.
+
+    LCT Context assembles a graph of heuristics in the order in which they will be processed. Subprocesses are added in default_understanding()
     """
     def __init__(self, agent):
+        """
+        Initializes LCT Context for the given Agent
+
+        :param agent: Agent
+        """
         super().__init__(agent)
 
         # agent.prepare_static_knowledge()
@@ -21,6 +28,10 @@ class LCTContext(AgentContext):
         agent.wo_memory.heuristics.append(FRResolveLearningEvents)
 
     def prepare_static_knowledge(self):
+        """
+        Prepares Static Knowledge for the current context
+
+        """
         self.agent.ontology["FASTEN"]["IS-A"] += OntologyFiller("ASSEMBLE", "VALUE")
         self.agent.ontology["ASSEMBLE"]["IS-A"] += OntologyFiller("BUILD", "VALUE")
 
@@ -28,9 +39,11 @@ class LCTContext(AgentContext):
         self.agent.ontology.register("DOWEL", isa="ARTIFACT-PART")
 
     def default_understanding(self):
+        """
+        Adds Processors to the agents Agenda to order heuristic processing. See UnderstandingProcessor.process() in context.py
 
-
-        # Adds Processors to the agents Agenda to order heeuristic processing. See UnderstandingProcessor.process() in context.py
+        :return:
+        """
         understanding = RootUnderstandingProcessor()
 
         understanding.add_subprocess(IdentifyClosingOfKnownTaskUnderstandingProcessor(self).add_subprocess(IdentifyCompletedTaskUnderstandingProcessor(self)))
@@ -55,9 +68,13 @@ class LCTContext(AgentContext):
 
     # ------ Context Helper Functions -------
 
-    # Helper function for returning the learning hierarchy; starting with LTC.current, and finding each "parent"
-    # via the LCT.waiting_on property; the names are returned in that order (element 0 is current).
+
     def learning_hierarchy(self):
+        """
+        Helper function for returning the learning hierarchy; starting with LTC.current, and finding each "parent" via the LCT.waiting_on property; the names are returned in that order (element 0 is current).
+
+        :return: Learning Hierarchy
+        """
         results = self.agent.wo_memory.search(Frame.q(self.agent).f(self.LEARNING, True).f(self.CURRENT, True))
         if len(results) != 1:
             return []
@@ -70,11 +87,13 @@ class LCTContext(AgentContext):
             results = self.agent.wo_memory.search(Frame.q(self.agent).f(self.LEARNING, True).f(self.CURRENT, False).f(self.WAITING_ON, hierarchy[-1]))
         return hierarchy
 
-    # Helper function for marking a single instance that is currently LTC.learning as finished learning.  This means
-    # that LCT.learning, LCT.waiting_on, and LCT.current are all removed, while LCT.learned is added.  Further, if
-    # this instance has a parent (LCT.waiting_on = instance), that instance is modified to no longer be LCT.waiting_on
-    # and is marked as LCT.current if this instance was considered current.
+
     def finish_learning(self, instance):
+        """
+        Helper function for marking a single instance that is currently LTC.learning as finished learning.  This means that LCT.learning, LCT.waiting_on, and LCT.current are all removed, while LCT.learned is added.  Further, if this instance has a parent (LCT.waiting_on = instance), that instance is modified to no longer be LCT.waiting_on and is marked as LCT.current if this instance was considered current.
+
+        :param instance: Instance to be marked as learned
+        """
         instance = self.agent.wo_memory[instance]
         roll_up_current = instance[self.CURRENT][0].resolve()
 

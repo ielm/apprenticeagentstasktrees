@@ -3,19 +3,33 @@ from backend.utils.AgentLogger import CachedAgentLogger
 
 
 class AgentContext(object):
+    """
+    Agent Context
+    """
 
     LEARN_WO_MEMORY = "LEARN_WO_MEMORY"
     POST_PROCESS = "POST_PROCESS"
 
     def __init__(self, agent):
+        """
+        Initialize Agent Context Template
+
+        :param agent: Agent
+        """
         self.agent = agent
 
         # self.prepare_static_knowledge()
 
     def prepare_static_knowledge(self):
+        """
+        Prepare Static Knowledge Template
+        """
         pass
 
     def default_understanding(self):
+        """
+        Default Understanding Template
+        """
         raise Exception("Context.default_understanding must be implemented in subclasses.")
 
 
@@ -24,19 +38,36 @@ class HeuristicException(Exception):
 
 
 class UnderstandingProcessor(object):
+    """
+    Understanding Processor
+    """
 
     def __init__(self, parent=None):
+        """
+
+        :param parent: Parent
+        """
         self.parent = parent
         self._logger = None
         self.subprocesses = list()
 
     def log(self, message):
+        """
+
+        :param message: Message to log
+        :return:
+        """
         if not self._logger:
             return
 
         self._logger.log(message)
 
     def logger(self, logger=None):
+        """
+
+        :param logger: Agent Logger
+        :return:
+        """
         if not logger is None:
             self._logger = logger
 
@@ -49,12 +80,24 @@ class UnderstandingProcessor(object):
         raise Exception("UnderstandingProcessor._logic must be implemented in subclasses.")
 
     def add_subprocess(self, subprocess):
+        """
+        Adds subprocess to Understanding Processor
+
+        :param subprocess: Subprocess to add
+        :return: self
+        """
         subprocess.parent = self
         self.subprocesses.append(subprocess)
 
         return self
 
     def process(self, agent, tmr):
+        """
+        Process input with Understanding Processor
+
+        :param agent: Agent
+        :param tmr: TMR to process
+        """
         try:
             self._logic(agent, tmr)
             self.log("+ " + self.__class__.__name__)
@@ -73,12 +116,23 @@ class UnderstandingProcessor(object):
             self._logger.unindent()
 
     def halt_siblings(self):
+        """
+        Halts sibling processors
+
+        :return:
+        """
         if self.parent is None:
             return
 
         self.parent.subprocesses = []
 
     def reassign_siblings(self, siblings):
+        """
+        Reassign siblings to parent
+
+        :param siblings:
+        :return:
+        """
         if self.parent is None:
             return
 
@@ -88,12 +142,26 @@ class UnderstandingProcessor(object):
 
 
 class RootUnderstandingProcessor(UnderstandingProcessor):
+    """
+    Root Understanding Processor
+    """
+
     def _logic(self, agent, tmr):
         pass
 
 
 class FRResolutionUnderstandingProcessor(UnderstandingProcessor):
+    """
+    Fact Repository Resolution Understanding Processor
+    """
+
     def _logic(self, agent, tmr):
+        """
+        FR Resolution processor logic funcrion
+
+        :param agent: Agent
+        :param tmr: TMR to process
+        """
         backup_logger = agent.wo_memory.logger()
 
         self.cached_logger = CachedAgentLogger()
@@ -104,6 +172,11 @@ class FRResolutionUnderstandingProcessor(UnderstandingProcessor):
         agent.wo_memory.logger(logger=backup_logger)
 
     def log(self, message):
+        """
+        Logs a message
+
+        :param message: Message to log
+        """
         super().log(message)
         if self.cached_logger:
             self.logger().indent()
