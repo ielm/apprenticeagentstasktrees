@@ -35,6 +35,7 @@ from pkgutil import get_data
 # agent.input(json.loads(get_data("tests.resources", "DemoMay2018_Analyses.json"))[10])
 # agent.input(json.loads(get_data("tests.resources", "DemoMay2018_Analyses.json"))[11])
 
+
 def graph_to_json(graph):
     frames = []
 
