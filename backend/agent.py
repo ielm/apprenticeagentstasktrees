@@ -241,7 +241,7 @@ class Agent(Network):
         del self.exe[callback.frame.name()]
 
     def _bootstrap(self):
-
+        # ATTN - Should these be declared somewhere else for cleanliness?
         def understand_input(statement, tmr_frame, callback=None):
             tmr = self[tmr_frame["REFERS-TO-GRAPH"].singleton()]
             agenda = self.context.default_understanding()
@@ -252,12 +252,17 @@ class Agent(Network):
 
             if callback is not None:
                 self.callback(callback)
-
         MPRegistry.register(understand_input)
 
+        # TODO - write logic for learning prioritization
         def prioritize_learning(statement, tmr_frame):
             return 0.75
         MPRegistry.register(prioritize_learning)
+
+        # TODO - write logic for resource evaluation
+        def evaluate_resources(statement, tmr_frame):
+            return 0.5
+        MPRegistry.register(evaluate_resources)
 
         from backend.models.bootstrap import Bootstrap
         Bootstrap.bootstrap_resource(self, "backend.resources", "bootstrap.knowledge")

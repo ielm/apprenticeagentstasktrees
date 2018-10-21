@@ -23,3 +23,24 @@ DEFINE UNDERSTAND-TMR($tmr)
         | THEN DO $tmr[STATUS] = "UNDERSTOOD"
     WHEN $tmr[STATUS] == "UNDERSTOOD" THEN satisfied
 ;
+DEFINE UNDERSTAND-TMR($tmr)
+    AS GOAL
+    IN EXE
+    PRIORITY SELF.prioritize_learning($tmr)
+    RESOURCES SELF.evaluate_resources($tmr)
+    ACTION (understand TMR)
+        SELECT DEFAULT
+        DO CAPABILITY #EXE.LEARN-CAPABILITY
+;
+DEFINE ACKNOWLEDGE-INPUT($tmr)
+    AS GOAL
+    IN EXE
+;
+DEFINE DECIDE-ON-LANGUAGE-INPUT()
+    AS GOAL
+    IN EXE
+;
+DEFINE PERFORM-COMPLEX-TASK()
+    AS GOAL
+    IN EXE
+    ;
