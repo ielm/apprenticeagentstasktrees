@@ -242,6 +242,7 @@ class Agent(Network):
 
     def _bootstrap(self):
         # ATTN - Should these be declared somewhere else for cleanliness?
+        # TODO - Rewrite logic for input understanding
         def understand_input(statement, tmr_frame, callback=None):
             tmr = self[tmr_frame["REFERS-TO-GRAPH"].singleton()]
             agenda = self.context.default_understanding()
@@ -263,6 +264,12 @@ class Agent(Network):
         def evaluate_resources(statement, tmr_frame):
             return 0.5
         MPRegistry.register(evaluate_resources)
+
+        # TODO - write logic for acknowledging input
+        def acknowledge_input(statement, tmr_frame):
+            return
+        MPRegistry.register(acknowledge_input)
+
 
         from backend.models.bootstrap import Bootstrap
         Bootstrap.bootstrap_resource(self, "backend.resources", "bootstrap.knowledge")
