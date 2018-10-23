@@ -6,3 +6,7 @@
 venv/
 
 ApprenticeAgentsDocumentation/
+
+#---Service Files---#
+ontosem-analyzer.yml
+static-knowledge.yml
