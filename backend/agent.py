@@ -11,6 +11,8 @@ from backend.utils.AgentLogger import AgentLogger
 from enum import Enum
 from typing import Callable, List, Union
 
+from backend.resources.goals import BootstrapGoals
+
 import sys
 
 
@@ -151,14 +153,21 @@ class Agent(Network):
         if input is None:
             return
 
+        # Create TMR with input dict()
         if isinstance(input, dict):
             input = TMR(input, ontology=self.ontology)
 
+        # Register TMR as a new graph in self._storage
         tmr = self.register(input)
 
+        # Set var frame as registered "INPUT-TMR" in self.internal graph.
         frame = self.internal.register("INPUT-TMR", isa="EXE.INPUT-TMR", generate_index=True)
+        # The frame "INPUT-TMR" regers to the input TMR
         frame["REFERS-TO-GRAPH"] = Literal(tmr._namespace)
+        # Frame has not been acknowledged yet
         frame["ACKNOWLEDGED"] = False
+        # Add frame to ROBOT["HAS-INPUT"].
+        # ATTN - Does ROBOT["HAS-INPUT"] contain all past inputs?
         self.identity["HAS-INPUT"] += frame
 
         self._logger.log("Input: '" + tmr.sentence + "'")
@@ -241,7 +250,7 @@ class Agent(Network):
         del self.exe[callback.frame.name()]
 
     def _bootstrap(self):
-        # ATTN - Should these be declared somewhere else for cleanliness?
+        # ATTN - Should these be declared somewhere else for cleanliness? If so, where? backend.resources.goals?
         # TODO - Rewrite logic for input understanding
         def understand_input(statement, tmr_frame, callback=None):
             tmr = self[tmr_frame["REFERS-TO-GRAPH"].singleton()]
@@ -266,10 +275,9 @@ class Agent(Network):
         MPRegistry.register(evaluate_resources)
 
         # TODO - write logic for acknowledging input
-        def acknowledge_input(statement, tmr_frame):
+        def acknowledge_input(statement, input, callback=None):
             return
         MPRegistry.register(acknowledge_input)
-
 
         from backend.models.bootstrap import Bootstrap
         Bootstrap.bootstrap_resource(self, "backend.resources", "bootstrap.knowledge")

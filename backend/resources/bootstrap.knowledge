@@ -22,7 +22,7 @@
 @EXE.ACKNOWLEDGE-INPUT = {
     ISA @EXE.CAPABILITY;
     MP "acknowledge_input"
-}
+};
 
 @SELF.MENTAL-EFFECTOR.1 = {
     ISA @EXE.MENTAL-EFFECTOR;

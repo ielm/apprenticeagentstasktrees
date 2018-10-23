@@ -34,14 +34,16 @@ DEFINE UNDERSTAND-TMR($tmr)
         | THEN DO $tmr[STATUS] = "UNDERSTOOD"
     WHEN $tmr[STATUS] == "UNDERSTOOD" THEN satisfied
 ;
-DEFINE ACKNOWLEDGE-INPUT($tmr)
+DEFINE ACKNOWLEDGE-INPUT($input)
     AS GOAL
     IN EXE
-    PRIORITY SELF.prioritize_learning($tmr)
-    RESOURCES SELF.evaluate_resources($tmr)
+    PRIORITY SELF.prioritize_learning($input)
+    RESOURCES SELF.evaluate_resources($input)
     ACTION (acknowledge input)
         SELECT DEFAULT
-        DO CAPABILITY #EXE.
+        DO CAPABILITY #EXE.ACKNOWLEDGE-INPUT($input)
+        | THEN DO $input[STATUS] = "ACKNOWLEDGED"
+    WHEN $input[STATUS] == "ACKNOWLEDGED" THEN satisfied
 ;
 DEFINE DECIDE-ON-LANGUAGE-INPUT()
     AS GOAL
