@@ -238,12 +238,15 @@ def iidea_advance():
 
 @app.route("/iidea/input", methods=["POST"])
 def iidea_input():
-    data = request.data.decode("utf-8")
+    if not request.get_json():
+        abort(400)
+
+    data = request.get_json()
 
     from backend.utils.YaleUtils import analyze
-    tmr = analyze(data)
+    tmr = analyze(data["input"])
 
-    agent._input(input=tmr)
+    agent._input(input=tmr, source=data["source"])
 
     return json.dumps({
         "time": agent.IDEA.time(),

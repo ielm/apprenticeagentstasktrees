@@ -51,7 +51,7 @@ class Jan2019Experiment(unittest.TestCase):
         #######
 
         # 1a) Input from "Jake", "Let's build a chair."
-        agent._input(self.analyses()[0])
+        agent._input(self.analyses()[0], source="LT.HUMAN.1")
 
         # 1b) IIDEA loop
         self.iidea_loop(agent)
