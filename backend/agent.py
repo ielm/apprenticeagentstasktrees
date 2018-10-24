@@ -134,7 +134,7 @@ class Agent(Network):
         print("T" + str(Agent.IDEA.time()) + " " + Agent.IDEA.stage())
         print(self.internal)
 
-    def _input(self, input: Union[dict, TMR]=None, source: Union[str, Identifier, Frame]=None):
+    def _input(self, input: Union[dict, TMR]=None, source: Union[str, Identifier, Frame]=None, type: str=None):
         if input is None:
             return
 
@@ -150,6 +150,8 @@ class Agent(Network):
 
         if source is not None:
             frame["SOURCE"] = source
+        if type is not None:
+            frame["TYPE"] = Literal(type)
 
         self._logger.log("Input: '" + tmr.sentence + "'")
 

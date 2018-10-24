@@ -246,7 +246,7 @@ def iidea_input():
     from backend.utils.YaleUtils import analyze
     tmr = analyze(data["input"])
 
-    agent._input(input=tmr, source=data["source"])
+    agent._input(input=tmr, source=data["source"], type=data["type"])
 
     return json.dumps({
         "time": agent.IDEA.time(),
