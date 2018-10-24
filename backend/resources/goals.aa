@@ -28,10 +28,13 @@ DEFINE ACKNOWLEDGE-INPUT($tmr)
     IN EXE
     PRIORITY SELF.prioritize_learning($tmr)
     RESOURCES SELF.evaluate_resources($tmr)
+    TYPE SELF.acknowledge_input($tmr)
     ACTION (acknowledge input)
-        SELECT DEFAULT
-        DO SELF.acknowledge_input($tmr)
-    WHEN $tmr[STATUS] == "ACKNOWLEDGED" THEN satisfied
+        SELECT IF EXISTS (@^ EXE.INPUT-TMR)
+        DO SELF[HAS-GOAL] += @SELF:EXE.DECIDE-ON-LANGUAGE-INPUT($tmr)
+#        | $tmr[STATUS] == "ACKNOWLEDGED"
+#    ACTION ()
+    WHEN $tmr[STATUS] == "ACKNOWLEDGED" OR $tmr[STATUS] == "IGNORED" THEN satisfied
 ;
 DEFINE DECIDE-ON-LANGUAGE-INPUT($tmr)
     AS GOAL

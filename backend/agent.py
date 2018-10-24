@@ -275,10 +275,25 @@ class Agent(Network):
 
         MPRegistry.register(evaluate_resources)
 
+        def is_language_input(statement, input):
+            print(input._frame_type()._ISA_TYPE())
+            if input._frame_type()._ISA_TYPE() == "":
+                return True
+            else:
+                return False
+
+        MPRegistry.register(is_language_input)
+
         # TODO - write logic for acknowledging input
         def acknowledge_input(statement, input, callback=None):
             # Input should be frame that tells you name of graph
+            if input is not Frame:
+                return
             # Is it language input or visual input
+            if input._frame_type()._ISA_TYPE() == "": # Type language input
+                input["STATUS"] == "ACKNOWLEDGED"
+            else:
+                input["STATUS"] == "IGNORED"
             # Is it of sufficient interest?
             #     Mark as acknowledged
             # Else mark as ignored -> tmr["STATUS"] = "IGNORED"
