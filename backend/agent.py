@@ -11,8 +11,6 @@ from backend.utils.AgentLogger import AgentLogger
 from enum import Enum
 from typing import Callable, List, Union
 
-from backend.resources.goals import BootstrapGoals
-
 import sys
 
 
@@ -21,7 +19,7 @@ class Agent(Network):
     The Agent
     """
 
-    def __init__(self, ontology: Ontology=None):
+    def __init__(self, ontology: Ontology = None):
         """
         Initialize Agent
 
@@ -149,7 +147,7 @@ class Agent(Network):
         print("T" + str(Agent.IDEA.time()) + " " + Agent.IDEA.stage())
         print(self.internal)
 
-    def _input(self, input: Union[dict, TMR]=None):
+    def _input(self, input: Union[dict, TMR] = None):
         if input is None:
             return
 
@@ -262,22 +260,49 @@ class Agent(Network):
 
             if callback is not None:
                 self.callback(callback)
+
         MPRegistry.register(understand_input)
 
         # TODO - write logic for learning prioritization
         def prioritize_learning(statement, tmr_frame):
             return 0.75
+
         MPRegistry.register(prioritize_learning)
 
         # TODO - write logic for resource evaluation
         def evaluate_resources(statement, tmr_frame):
             return 0.5
+
         MPRegistry.register(evaluate_resources)
 
         # TODO - write logic for acknowledging input
         def acknowledge_input(statement, input, callback=None):
+            # Input should be frame that tells you name of graph
+            # Is it language input or visual input
+            # Is it of sufficient interest?
+            #     Mark as acknowledged
+            # Else mark as ignored -> tmr["STATUS"] = "IGNORED"
             return
+
         MPRegistry.register(acknowledge_input)
+
+        def decide_on_language_input(statement, input, callback=None):
+            """
+            DECIDE-ON-LANGUAGE-INPUT is a goal that determines what to do with an input of sufficient interest.  It can do several things after determining the nature of the input.
+            - If the input appears to be a request for action of a complex task (such as building a chair)
+                - a new instance of PERFORM-COMPLEX-TASK will be created.
+            - If the input appears to be a request for information (a question or query)
+                - a new instance of RESPOND-TO-QUERY will be created.
+            - It can also determine that it needs to learn from input, in other words, the previous demo
+
+            :param statement:
+            :param input:
+            :return:
+            """
+            # print(input._frame_type()._ISA_type())
+            return
+
+        MPRegistry.register(decide_on_language_input)
 
         from backend.models.bootstrap import Bootstrap
         Bootstrap.bootstrap_resource(self, "backend.resources", "bootstrap.knowledge")
@@ -315,4 +340,3 @@ class Agent(Network):
         #                     [IsStatement.instance(graph, "$tmr", "STATUS", Literal("UNDERSTOOD"))],
         #                     Goal.Status.SATISFIED)
         # ], ["$tmr"])
-

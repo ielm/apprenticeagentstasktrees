@@ -6,22 +6,11 @@ DEFINE FIND-SOMETHING-TO-DO()
     ACTION (acknowledge input)
         SELECT IF EXISTS (@^ EXE.INPUT-TMR AND ACKNOWLEDGED = FALSE)
         DO FOR EACH $tmr IN (@^ EXE.INPUT-TMR AND ACKNOWLEDGED = FALSE)
-        | SELF[HAS-GOAL] += @SELF:EXE.UNDERSTAND-TMR($tmr)
+        | SELF[HAS-GOAL] += @SELF:EXE.ACKNOWLEDGE-INPUT($tmr)
         | $tmr[ACKNOWLEDGED] = True
     ACTION (idle)
         SELECT DEFAULT
         DO IDLE
-;
-DEFINE UNDERSTAND-TMR($tmr)
-    AS GOAL
-    IN EXE
-    PRIORITY SELF.prioritize_learning($tmr)
-    RESOURCES 0.5
-    ACTION (understand)
-        SELECT DEFAULT
-        DO CAPABILITY #EXE.LEARN-CAPABILITY($tmr)
-        | THEN DO $tmr[STATUS] = "UNDERSTOOD"
-    WHEN $tmr[STATUS] == "UNDERSTOOD" THEN satisfied
 ;
 DEFINE UNDERSTAND-TMR($tmr)
     AS GOAL
@@ -34,22 +23,26 @@ DEFINE UNDERSTAND-TMR($tmr)
         | THEN DO $tmr[STATUS] = "UNDERSTOOD"
     WHEN $tmr[STATUS] == "UNDERSTOOD" THEN satisfied
 ;
-DEFINE ACKNOWLEDGE-INPUT($input)
+DEFINE ACKNOWLEDGE-INPUT($tmr)
     AS GOAL
     IN EXE
-    PRIORITY SELF.prioritize_learning($input)
-    RESOURCES SELF.evaluate_resources($input)
+    PRIORITY SELF.prioritize_learning($tmr)
+    RESOURCES SELF.evaluate_resources($tmr)
     ACTION (acknowledge input)
         SELECT DEFAULT
-        DO CAPABILITY #EXE.ACKNOWLEDGE-INPUT($input)
-        | THEN DO $input[STATUS] = "ACKNOWLEDGED"
-    WHEN $input[STATUS] == "ACKNOWLEDGED" THEN satisfied
+        DO SELF.acknowledge_input($tmr)
+    WHEN $tmr[STATUS] == "ACKNOWLEDGED" THEN satisfied
 ;
-DEFINE DECIDE-ON-LANGUAGE-INPUT()
+DEFINE DECIDE-ON-LANGUAGE-INPUT($tmr)
     AS GOAL
     IN EXE
+    PRIORITY SELF.prioritize_learning($tmr)
+    RESOURCES SELF.evaluate_resources($tmr)
+    ACTION (decide on language input)
+        SELECT DEFAULT
+        DO SELF.decide_on_language_input($tmr)
 ;
 DEFINE PERFORM-COMPLEX-TASK()
     AS GOAL
     IN EXE
-    ;
+;

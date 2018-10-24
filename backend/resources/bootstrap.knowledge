@@ -19,11 +19,6 @@
     MP  "understand_input";
 };
 
-@EXE.ACKNOWLEDGE-INPUT = {
-    ISA @EXE.CAPABILITY;
-    MP "acknowledge_input"
-};
-
 @SELF.MENTAL-EFFECTOR.1 = {
     ISA @EXE.MENTAL-EFFECTOR;
     HAS-CAPABILITY @EXE.LEARN-CAPABILITY;
