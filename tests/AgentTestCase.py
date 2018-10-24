@@ -65,6 +65,13 @@ class AgentTestCase(unittest.TestCase):
         self.assertEqual(1, len(self.agent.pending_inputs()))
         self.assertEqual(tmr["sentence"], self.agent.pending_inputs()[0].sentence)
 
+        tmr = self.tmr()
+        source = self.agent.lt_memory.register("HUMAN")
+        self.agent._input(input=tmr, source=source)
+        self.assertEqual(8, len(self.agent))
+        self.assertIn("TMR#2", self.agent)
+        self.assertTrue(self.agent.internal["INPUT-TMR.2"]["SOURCE"] == source)
+
     def test_idea_decision(self):
         graph = self.agent.internal
         definition = graph.register("GOAL")

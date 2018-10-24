@@ -147,7 +147,7 @@ class Agent(Network):
         print("T" + str(Agent.IDEA.time()) + " " + Agent.IDEA.stage())
         print(self.internal)
 
-    def _input(self, input: Union[dict, TMR] = None):
+    def _input(self, input: Union[dict, TMR]=None, source: Union[str, Identifier, Frame]=None):
         if input is None:
             return
 
@@ -167,6 +167,9 @@ class Agent(Network):
         # Add frame to ROBOT["HAS-INPUT"].
         # ATTN - Does ROBOT["HAS-INPUT"] contain all past inputs?
         self.identity["HAS-INPUT"] += frame
+
+        if source is not None:
+            frame["SOURCE"] = source
 
         self._logger.log("Input: '" + tmr.sentence + "'")
 
@@ -255,9 +258,6 @@ class Agent(Network):
             agenda = self.context.default_understanding()
             agenda.logger(self._logger)
             agenda.process(self, tmr)
-            if callback is not None:
-                self.callback(callback)
-
             if callback is not None:
                 self.callback(callback)
 

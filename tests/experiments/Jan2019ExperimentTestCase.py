@@ -30,7 +30,7 @@ class Jan2019Experiment(unittest.TestCase):
         if isa is not None:
             goals = list(filter(lambda goal: goal.frame ^ isa, goals))
 
-        if filter is not None:
+        if query is not None:
             goals = list(filter(query, goals))
 
         if len(goals) == 0:
@@ -51,7 +51,7 @@ class Jan2019Experiment(unittest.TestCase):
         #######
 
         # 1a) Input from "Jake", "Let's build a chair."
-        agent._input(self.analyses()[0])
+        agent._input(self.analyses()[0], source="LT.HUMAN.1")
 
         # 1b) IIDEA loop
         self.iidea_loop(agent)
