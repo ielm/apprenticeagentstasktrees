@@ -7,6 +7,7 @@ from backend.models.mps import MPRegistry
 from backend.models.ontology import Ontology
 from backend.models.statement import CapabilityStatement, Statement, VariableMap
 from backend.models.tmr import TMR
+from backend.models.xmr import XMR
 from backend.utils.AgentLogger import AgentLogger
 from enum import Enum
 from typing import Callable, List, Union
@@ -143,15 +144,14 @@ class Agent(Network):
 
         tmr = self.register(input)
 
-        frame = self.internal.register("INPUT-TMR", isa="EXE.INPUT-TMR", generate_index=True)
-        frame["REFERS-TO-GRAPH"] = Literal(tmr._namespace)
-        frame["ACKNOWLEDGED"] = False
-        self.identity["HAS-INPUT"] += frame
-
+        kwargs = {}
         if source is not None:
-            frame["SOURCE"] = source
+            kwargs["source"] = source
         if type is not None:
-            frame["TYPE"] = Literal(type)
+            kwargs["type"] = type
+
+        xmr = XMR.instance(self.internal, tmr, status=XMR.Status.RECEIVED, **kwargs)
+        self.identity["HAS-INPUT"] += xmr.frame
 
         self._logger.log("Input: '" + tmr.sentence + "'")
 
@@ -208,11 +208,11 @@ class Agent(Network):
     def effectors(self) -> List[Effector]:
         return list(map(lambda e: Effector(e.resolve()), self.identity["HAS-EFFECTOR"]))
 
-    def pending_inputs(self):
-        inputs = map(lambda input: input.resolve(), self.identity["HAS-INPUT"])
-        inputs = filter(lambda input: input["ACKNOWLEDGED"] == False, inputs)
-        inputs = map(lambda input: input["REFERS-TO-GRAPH"].singleton(), inputs)
-        inputs = map(lambda input: self[input], inputs)
+    def pending_inputs(self) -> List[Graph]:
+        inputs = map(lambda input: XMR(input.resolve()), self.identity["HAS-INPUT"])
+        inputs = filter(lambda input: input.status() == XMR.Status.RECEIVED, inputs)
+        inputs = map(lambda input: input.graph(self), inputs)
+
         return list(inputs)
 
     def callback(self, callback: Union[str, Identifier, Frame, 'Callback']):

@@ -321,11 +321,9 @@ class AssignFillerStatement(Statement):
         if isinstance(to, Frame):
             to = [to]
 
-        if isinstance(value, Literal):
-            value = value.value
-        if isinstance(value, str):
+        if isinstance(value, Literal) and isinstance(value.value, str):
             try:
-                value = varmap.resolve(value)
+                value = varmap.resolve(value.value)
             except: pass
         if isinstance(value, Frame):
             if value ^ "EXE.RETURNING-STATEMENT":
