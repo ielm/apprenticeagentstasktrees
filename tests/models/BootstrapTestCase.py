@@ -1,5 +1,6 @@
-from backend.models.bootstrap import BootstrapAppendKnowledge, BootstrapDeclareKnowledge, BootstrapTriple
+from backend.models.bootstrap import BootstrapAppendKnowledge, BootstrapDeclareKnowledge, BootstrapRegisterMP, BootstrapTriple
 from backend.models.graph import Identifier, Literal, Network
+from backend.models.mps import AgentMethod, MPRegistry
 
 import unittest
 
@@ -154,3 +155,31 @@ class BootstrapAppendKnowledgeTestCase(unittest.TestCase):
         boot()
 
         self.assertTrue(frame["MYSLOT"] == Identifier.parse("ONT.ALL"))
+
+
+class BootstrapRegisterMPTestCase(unittest.TestCase):
+
+    def setUp(self):
+        self.n = Network()
+        self.g = self.n.register("TEST")
+        MPRegistry.clear()
+
+        class MP(AgentMethod):
+            def run(self):
+                return True
+
+        self.mp = MP
+
+    def test_call(self):
+        boot = BootstrapRegisterMP(self.mp)
+        boot()
+
+        self.assertTrue(MPRegistry.has_mp(self.mp.__name__))
+        self.assertTrue(MPRegistry.run(self.mp.__name__, None))
+
+    def test_call_with_name(self):
+        boot = BootstrapRegisterMP(self.mp, name="TestMP")
+        boot()
+
+        self.assertTrue(MPRegistry.has_mp("TestMP"))
+        self.assertTrue(MPRegistry.run("TestMP", None))

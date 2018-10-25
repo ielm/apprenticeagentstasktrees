@@ -1,5 +1,10 @@
-from backend.models.graph import Frame
-from typing import Any, Callable, List
+from backend.models.graph import Frame, Identifier
+from typing import Any, Callable, List, Union
+
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from backend.agent import Agent
+    from backend.models.statement import CapabilityStatement, Statement
 
 import sys
 
@@ -12,7 +17,7 @@ class Registry(object):
     def has_mp(self, name: str) -> bool:
         return name in self._storage
 
-    def register(self, mp: Callable, name: str=None):
+    def register(self, mp: 'AgentMethod', name: str=None):
         if name is None:
             name = mp.__name__
 
@@ -21,13 +26,27 @@ class Registry(object):
 
         self._storage[name] = mp
 
-    def run(self, mp: str, *args, **kwargs) -> Any:
+    def run(self, mp: str, agent: 'Agent', *args, statement: 'Statement'=None, callback: Union[str, Identifier, Frame, 'Callback']=None, **kwargs) -> Any:
         if mp not in self._storage:
             raise Exception("Unknown meaning procedure '" + mp + "'.")
-        return self._storage[mp](*args, **kwargs)
+        return self._storage[mp](agent, statement=statement, callback=callback)(*args, **kwargs)
 
     def clear(self):
         self._storage = dict()
+
+
+class AgentMethod(object):
+
+    def __init__(self, agent: 'Agent', statement: 'Statement'=None, callback: Union[str, Identifier, Frame, 'Callback']=None):
+        self.agent = agent
+        self.statement = statement
+        self.callback = callback
+
+    def run(self, *args, **kwargs):
+        raise Exception("AgentMethod.run(*, **) must be implemented.")
+
+    def __call__(self, *args, **kwargs):
+        return self.run(*args, **kwargs)
 
 
 class Executable(object):

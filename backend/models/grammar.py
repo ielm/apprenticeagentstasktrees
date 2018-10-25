@@ -82,6 +82,19 @@ class GrammarTransformer(Transformer):
 
         return BootstrapTriple(slot, filler, facet=facet)
 
+    def register_mp(self, matches):
+        from backend.models.bootstrap import BootstrapRegisterMP
+
+        mp = matches[2]
+        name = None if len(matches) == 3 else str(matches[4])
+
+        return BootstrapRegisterMP(mp, name=name)
+
+    def agent_method(self, matches):
+        import sys
+        __import__(matches[0])
+        return getattr(sys.modules[matches[0]], matches[1])
+
     def slot(self, matches):
         return str(matches[0])
 

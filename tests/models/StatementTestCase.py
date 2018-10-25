@@ -1,5 +1,6 @@
 from backend.agent import Capability
 from backend.models.graph import Frame, Graph, Identifier, Literal, Network
+from backend.models.mps import AgentMethod
 from backend.models.query import Query
 from backend.models.statement import Statement, Variable, VariableMap
 
@@ -494,12 +495,13 @@ class MeaningProcedureStatementTestCase(unittest.TestCase):
     def test_run(self):
         result = 0
 
-        def TestMP(statement, a, b, c):
-            nonlocal result
-            result += a
-            result += b
-            result += c
-            result += statement.frame["X"][0].resolve().value
+        class TestMP(AgentMethod):
+            def run(self, a, b, c):
+                nonlocal result
+                result += a
+                result += b
+                result += c
+                result += self.statement.frame["X"][0].resolve().value
 
         from backend.models.mps import MPRegistry
         MPRegistry.register(TestMP)
@@ -519,12 +521,13 @@ class MeaningProcedureStatementTestCase(unittest.TestCase):
     def test_run_with_variables(self):
         result = 0
 
-        def TestMP(statement, a, b, c):
-            nonlocal result
-            result += a
-            result += b
-            result += c
-            result += statement.frame["X"][0].resolve().value
+        class TestMP(AgentMethod):
+            def run(self, a, b, c):
+                nonlocal result
+                result += a
+                result += b
+                result += c
+                result += self.statement.frame["X"][0].resolve().value
 
         from backend.models.mps import MPRegistry
         MPRegistry.register(TestMP)
@@ -551,12 +554,13 @@ class CapabilityStatementTestCase(unittest.TestCase):
     def test_run(self):
         result = 0
 
-        def TestMP(statement, a, b, c, callback=None):
-            nonlocal result
-            result += a
-            result += b
-            result += c
-            result += statement.frame["X"][0].resolve().value
+        class TestMP(AgentMethod):
+            def run(self, a, b, c):
+                nonlocal result
+                result += a
+                result += b
+                result += c
+                result += self.statement.frame["X"][0].resolve().value
 
         from backend.models.mps import MPRegistry
         MPRegistry.register(TestMP)
@@ -578,12 +582,13 @@ class CapabilityStatementTestCase(unittest.TestCase):
     def test_run_with_variables(self):
         result = 0
 
-        def TestMP(statement, a, b, c, callback=None):
-            nonlocal result
-            result += a
-            result += b
-            result += c
-            result += statement.frame["X"][0].resolve().value
+        class TestMP(AgentMethod):
+            def run(self, a, b, c):
+                nonlocal result
+                result += a
+                result += b
+                result += c
+                result += self.statement.frame["X"][0].resolve().value
 
         from backend.models.mps import MPRegistry
         MPRegistry.register(TestMP)
@@ -609,8 +614,9 @@ class CapabilityStatementTestCase(unittest.TestCase):
 
     def test_run_with_callbacks(self):
 
-        def TestMP(statement, callback=None):
-            pass
+        class TestMP(AgentMethod):
+            def run(self):
+                pass
 
         from backend.models.mps import MPRegistry
         MPRegistry.register(TestMP)

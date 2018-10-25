@@ -339,15 +339,18 @@ class AgentTestCase(unittest.TestCase):
 
     def test_callback(self):
         from backend.agent import Callback
-        from backend.models.mps import MPRegistry
+        from backend.models.mps import AgentMethod, MPRegistry
         from backend.models.statement import CapabilityStatement, MeaningProcedureStatement
 
         # First, declare a testable Meaning Procedure to run
         result = 0
-        def TestMp(statement, var1, callback=None):
-            nonlocal result
-            result += var1
-        MPRegistry.register(TestMp)
+
+        class TestMP(AgentMethod):
+            def run(self, var1):
+                nonlocal result
+                result += 1
+
+        MPRegistry.register(TestMP)
 
         # Next, minimally define a goal
         definition = self.agent.exe.register("GOAL-DEFINITION")
@@ -356,8 +359,8 @@ class AgentTestCase(unittest.TestCase):
         goal = VariableMap.instance_of(self.agent.exe, definition, params)
 
         # Now define a capability statement with a callback
-        capability = Capability.instance(self.agent.exe, "CAPABILITY", TestMp.__name__)
-        callback = [MeaningProcedureStatement.instance(self.agent.exe, TestMp.__name__, ["$var1"])]
+        capability = Capability.instance(self.agent.exe, "CAPABILITY", TestMP.__name__)
+        callback = [MeaningProcedureStatement.instance(self.agent.exe, TestMP.__name__, ["$var1"])]
         statement = CapabilityStatement.instance(self.agent.exe, capability, callback, ["$var1"])
 
         # Load the callback directly into the agent (this is "after" the capability statement has been executed)

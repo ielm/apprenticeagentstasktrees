@@ -3,7 +3,7 @@ from backend.models.agenda import Action, Agenda, Goal
 from backend.models.effectors import Callback, Capability, Effector
 from backend.models.fr import FR
 from backend.models.graph import Frame, Graph, Identifier, Literal, Network
-from backend.models.mps import MPRegistry
+from backend.models.mps import AgentMethod, MPRegistry
 from backend.models.ontology import Ontology
 from backend.models.statement import CapabilityStatement, Statement, VariableMap
 from backend.models.tmr import TMR
@@ -246,85 +246,9 @@ class Agent(Network):
         del self.exe[callback.frame.name()]
 
     def _bootstrap(self):
-        # ATTN - Should these be declared somewhere else for cleanliness? If so, where? backend.resources.goals?
-        # TODO - Rewrite logic for input understanding
-        def understand_input(statement, tmr_frame, callback=None):
-            tmr = self[tmr_frame["REFERS-TO-GRAPH"].singleton()]
-            agenda = self.context.default_understanding()
-            agenda.logger(self._logger)
-            agenda.process(self, tmr)
-            if callback is not None:
-                self.callback(callback)
-
-        MPRegistry.register(understand_input)
-
-        def prioritize_learning(statement):
-            return 0.75
-        MPRegistry.register(prioritize_learning)
-
-        # TODO - write logic for resource evaluation
-        def evaluate_resources(statement):
-            return 0.5
-
-        MPRegistry.register(evaluate_resources)
-
-        def is_language_input(statement, input):
-            print(input._frame_type()._ISA_TYPE())
-            if input._frame_type()._ISA_TYPE() == "":
-                return True
-            else:
-                return False
-
-        MPRegistry.register(is_language_input)
-
-        # TODO - write logic for acknowledging input
-        def acknowledge_input(statement, input, callback=None):
-            # Input should be frame that tells you name of graph
-            if input is not Frame:
-                return
-
-            # self.agenda().add_goal(Goal.instance_of(self.internal, self.exe["DECIDE-ON-LANGUAGE-INPUT"], []))
-            # Is it language input or visual input
-            if input._frame_type()._ISA_TYPE() == "": # Type language input
-                input["STATUS"] == "ACKNOWLEDGED"
-            else:
-                input["STATUS"] == "IGNORED"
-            # Is it of sufficient interest?
-            #     Mark as acknowledged
-            # Else mark as ignored -> tmr["STATUS"] = "IGNORED"
-            return
-
-        MPRegistry.register(acknowledge_input)
-
-        def decide_on_language_input(statement, input, callback=None):
-            """
-            DECIDE-ON-LANGUAGE-INPUT is a goal that determines what to do with an input of sufficient interest.  It can do several things after determining the nature of the input.
-            - If the input appears to be a request for action of a complex task (such as building a chair)
-                - a new instance of PERFORM-COMPLEX-TASK will be created.
-            - If the input appears to be a request for information (a question or query)
-                - a new instance of RESPOND-TO-QUERY will be created.
-            - It can also determine that it needs to learn from input, in other words, the previous demo
-
-            :param statement:
-            :param input:
-            :return:
-            """
-            # print(input._frame_type()._ISA_type())
-            return
-
-        MPRegistry.register(decide_on_language_input)
-
-        def perform_complex_task(statement, input, callback=None):
-            return
-
-        MPRegistry.register(perform_complex_task)
-
-        def respond_to_query(statement, input):
-            return
-
-        MPRegistry.register(respond_to_query)
 
         from backend.models.bootstrap import Bootstrap
+        Bootstrap.bootstrap_resource(self, "backend.resources", "bootstrap.mps")
         Bootstrap.bootstrap_resource(self, "backend.resources", "bootstrap.knowledge")
         Bootstrap.bootstrap_resource(self, "backend.resources", "goals.aa")
 
@@ -361,3 +285,17 @@ class Agent(Network):
         #                     Goal.Status.SATISFIED)
         # ], ["$tmr"])
 
+
+class UnderstandInputMP(AgentMethod):
+    def run(self, tmr_frame):
+        tmr = self.agent[tmr_frame["REFERS-TO-GRAPH"].singleton()]
+        agenda = self.agent.context.default_understanding()
+        agenda.logger(self.agent._logger)
+        agenda.process(self.agent, tmr)
+        if self.callback is not None:
+            self.agent.callback(self.callback)
+
+
+class PrioritizeLearningMP(AgentMethod):
+    def run(self, tmr_frame):
+        return 0.75

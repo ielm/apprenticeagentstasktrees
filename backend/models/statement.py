@@ -502,9 +502,8 @@ class MeaningProcedureStatement(Statement):
         mp: str = self.frame["CALLS"][0].resolve().value
 
         params = list(map(lambda param: self._resolve_param(param, varmap), self.frame["PARAMS"]))
-        params.insert(0, self)
 
-        result = MPRegistry.run(mp, *params)
+        result = MPRegistry.run(mp, self.frame._graph._network, *params, statement=self)
         return result
 
     def __eq__(self, other):
@@ -549,9 +548,8 @@ class CapabilityStatement(Statement):
         capability: Capability = Capability(self.frame["CAPABILITY"].singleton())
 
         params = list(map(lambda param: self._resolve_param(param, varmap), self.frame["PARAMS"]))
-        params.insert(0, self)
 
-        result = capability.run(*params, graph=self.frame._graph, callbacks=self.callbacks(), varmap=varmap)
+        result = capability.run(self.frame._graph._network, *params, statement=self, graph=self.frame._graph, callbacks=self.callbacks(), varmap=varmap)
         return result
 
     def callbacks(self) -> List[Statement]:
