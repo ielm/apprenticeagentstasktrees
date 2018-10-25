@@ -7,6 +7,7 @@ from backend.models.mps import MPRegistry
 from backend.models.ontology import Ontology
 from backend.models.statement import CapabilityStatement, Statement, VariableMap
 from backend.models.tmr import TMR
+from backend.models.xmr import XMR
 from backend.utils.AgentLogger import AgentLogger
 from enum import Enum
 from typing import Callable, List, Union
@@ -147,29 +148,23 @@ class Agent(Network):
         print("T" + str(Agent.IDEA.time()) + " " + Agent.IDEA.stage())
         print(self.internal)
 
-    def _input(self, input: Union[dict, TMR]=None, source: Union[str, Identifier, Frame]=None):
+    def _input(self, input: Union[dict, TMR]=None, source: Union[str, Identifier, Frame]=None, type: str=None):
         if input is None:
             return
 
-        # Create TMR with input dict()
         if isinstance(input, dict):
             input = TMR(input, ontology=self.ontology)
 
-        # Register TMR as a new graph in self._storage
         tmr = self.register(input)
 
-        # Set var frame as registered "INPUT-TMR" in self.internal graph.
-        frame = self.internal.register("INPUT-TMR", isa="EXE.INPUT-TMR", generate_index=True)
-        # The frame "INPUT-TMR" regers to the input TMR
-        frame["REFERS-TO-GRAPH"] = Literal(tmr._namespace)
-        # Frame has not been acknowledged yet
-        frame["ACKNOWLEDGED"] = False
-        # Add frame to ROBOT["HAS-INPUT"].
-        # ATTN - Does ROBOT["HAS-INPUT"] contain all past inputs?
-        self.identity["HAS-INPUT"] += frame
-
+        kwargs = {}
         if source is not None:
-            frame["SOURCE"] = source
+            kwargs["source"] = source
+        if type is not None:
+            kwargs["type"] = type
+
+        xmr = XMR.instance(self.internal, tmr, status=XMR.Status.RECEIVED, **kwargs)
+        self.identity["HAS-INPUT"] += xmr.frame
 
         self._logger.log("Input: '" + tmr.sentence + "'")
 
@@ -226,11 +221,11 @@ class Agent(Network):
     def effectors(self) -> List[Effector]:
         return list(map(lambda e: Effector(e.resolve()), self.identity["HAS-EFFECTOR"]))
 
-    def pending_inputs(self):
-        inputs = map(lambda input: input.resolve(), self.identity["HAS-INPUT"])
-        inputs = filter(lambda input: input["ACKNOWLEDGED"] == False, inputs)
-        inputs = map(lambda input: input["REFERS-TO-GRAPH"].singleton(), inputs)
-        inputs = map(lambda input: self[input], inputs)
+    def pending_inputs(self) -> List[Graph]:
+        inputs = map(lambda input: XMR(input.resolve()), self.identity["HAS-INPUT"])
+        inputs = filter(lambda input: input.status() == XMR.Status.RECEIVED, inputs)
+        inputs = map(lambda input: input.graph(self), inputs)
+
         return list(inputs)
 
     def callback(self, callback: Union[str, Identifier, Frame, 'Callback']):
@@ -263,10 +258,8 @@ class Agent(Network):
 
         MPRegistry.register(understand_input)
 
-        # TODO - write logic for learning prioritization
         def prioritize_learning(statement, tmr_frame):
             return 0.75
-
         MPRegistry.register(prioritize_learning)
 
         # TODO - write logic for resource evaluation
@@ -367,3 +360,4 @@ class Agent(Network):
         #                     [IsStatement.instance(graph, "$tmr", "STATUS", Literal("UNDERSTOOD"))],
         #                     Goal.Status.SATISFIED)
         # ], ["$tmr"])
+

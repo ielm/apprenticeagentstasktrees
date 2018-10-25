@@ -4,6 +4,7 @@ from backend.models.graph import Literal, Network
 from backend.models.ontology import Ontology
 from backend.models.statement import CapabilityStatement, Statement, VariableMap
 from backend.models.tmr import TMR
+from backend.models.xmr import XMR
 
 import unittest
 
@@ -70,7 +71,13 @@ class AgentTestCase(unittest.TestCase):
         self.agent._input(input=tmr, source=source)
         self.assertEqual(8, len(self.agent))
         self.assertIn("TMR#2", self.agent)
-        self.assertTrue(self.agent.internal["INPUT-TMR.2"]["SOURCE"] == source)
+        self.assertTrue(self.agent.internal["XMR.2"]["SOURCE"] == source)
+
+        tmr = self.tmr()
+        self.agent._input(input=tmr, type="LANGUAGE")
+        self.assertEqual(9, len(self.agent))
+        self.assertIn("TMR#3", self.agent)
+        self.assertTrue(self.agent.internal["XMR.3"]["TYPE"] == XMR.Type.LANGUAGE.value)
 
     def test_idea_decision(self):
         graph = self.agent.internal

@@ -10,6 +10,7 @@ from backend.models.agenda import Action, Goal
 from backend.models.grammar import Grammar
 from backend.models.graph import Frame, Identifier, Network
 from backend.models.ontology import Ontology
+from backend.models.xmr import XMR
 from backend.utils.YaleUtils import format_learned_event_yale, input_to_tmrs
 
 app = Flask(__name__, template_folder="../frontend/templates/")
@@ -149,13 +150,7 @@ class IIDEAConverter(object):
 
     @classmethod
     def convert_input(cls, input):
-        status = "received"
-        if input["ACKNOWLEDGED"] == True:
-            status = "acknowledged"
-        if input["STATUS"] == "UNDERSTOOD":
-            status = "understood"
-        if input["STATUS"] == "IGNORED":
-            status = "ignored"
+        status = XMR(input).status().value.lower()
 
         return {
             "name": input["REFERS-TO-GRAPH"][0].resolve().value,
@@ -247,7 +242,7 @@ def iidea_input():
     from backend.utils.YaleUtils import analyze
     tmr = analyze(data["input"])
 
-    agent._input(input=tmr, source=data["source"])
+    agent._input(input=tmr, source=data["source"], type=data["type"])
 
     return json.dumps({
         "time": agent.IDEA.time(),

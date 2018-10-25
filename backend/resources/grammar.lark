@@ -174,7 +174,7 @@ ALPHA: /[a-zA-Z]+/
 SYMBOL: /[\_]+/
 STRING: /[0-9a-zA-z\_\-\>]+/
 
-COMMENT: /#.*\n/
+COMMENT: /\/\/.*\n/
 WHITESPACE: (" " | /\t/ | /\n/)+
 %ignore COMMENT
 %ignore WHITESPACE
