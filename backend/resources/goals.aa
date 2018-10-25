@@ -28,12 +28,11 @@ DEFINE ACKNOWLEDGE-INPUT($tmr)
     IN EXE
     PRIORITY SELF.prioritize_learning($tmr)
     RESOURCES SELF.evaluate_resources($tmr)
-    TYPE SELF.acknowledge_input($tmr)
     ACTION (acknowledge input)
-        SELECT IF EXISTS (@^ EXE.INPUT-TMR)
+#        SELECT IF EXISTS (@^ EXE.INPUT-TMR AND ACKNOWLEDGED = False)
+        SELECT DEFAULT
         DO SELF[HAS-GOAL] += @SELF:EXE.DECIDE-ON-LANGUAGE-INPUT($tmr)
-#        | $tmr[STATUS] == "ACKNOWLEDGED"
-#    ACTION ()
+        DO $tmr[STATUS] == "ACKNOWLEDGED"
     WHEN $tmr[STATUS] == "ACKNOWLEDGED" OR $tmr[STATUS] == "IGNORED" THEN satisfied
 ;
 DEFINE DECIDE-ON-LANGUAGE-INPUT($tmr)
@@ -44,8 +43,21 @@ DEFINE DECIDE-ON-LANGUAGE-INPUT($tmr)
     ACTION (decide on language input)
         SELECT DEFAULT
         DO SELF.decide_on_language_input($tmr)
+        DO SELF[HAS-GOAL] += @SELF:EXE.PERFORM-COMPLEX-TASK($tmr)
 ;
-DEFINE PERFORM-COMPLEX-TASK()
+DEFINE RESPOND-TO-QUERY($tmr)
     AS GOAL
     IN EXE
+    PRIORITY SELF.prioritize_learning($tmr)
+    RESOURCES SELF.evaluate_resources($tmr)
+;
+DEFINE PERFORM-COMPLEX-TASK($task)
+    AS GOAL
+    IN EXE
+    PRIORITY SELF.prioritize_learning($task)
+    RESOURCES SELF.evaluate_resources($task)
+    ACTION (perform complex task)
+        SELECT DEFAULT
+        DO SELF.perform_complex_task($task)
+        DO IDLE
 ;

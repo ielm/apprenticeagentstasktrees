@@ -289,6 +289,8 @@ class Agent(Network):
             # Input should be frame that tells you name of graph
             if input is not Frame:
                 return
+
+            # self.agenda().add_goal(Goal.instance_of(self.internal, self.exe["DECIDE-ON-LANGUAGE-INPUT"], []))
             # Is it language input or visual input
             if input._frame_type()._ISA_TYPE() == "": # Type language input
                 input["STATUS"] == "ACKNOWLEDGED"
@@ -318,6 +320,16 @@ class Agent(Network):
             return
 
         MPRegistry.register(decide_on_language_input)
+
+        def perform_complex_task(statement, input, callback=None):
+            return
+
+        MPRegistry.register(perform_complex_task)
+
+        def respond_to_query(statement, input):
+            return
+
+        MPRegistry.register(respond_to_query)
 
         from backend.models.bootstrap import Bootstrap
         Bootstrap.bootstrap_resource(self, "backend.resources", "bootstrap.knowledge")
