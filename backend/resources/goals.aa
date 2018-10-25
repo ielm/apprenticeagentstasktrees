@@ -15,8 +15,8 @@ DEFINE FIND-SOMETHING-TO-DO()
 DEFINE UNDERSTAND-TMR($tmr)
     AS GOAL
     IN EXE
-    PRIORITY SELF.prioritize_learning($tmr)
-    RESOURCES SELF.evaluate_resources($tmr)
+    PRIORITY SELF.prioritize_learning()
+    RESOURCES SELF.evaluate_resources()
     ACTION (understand TMR)
         SELECT DEFAULT
         DO CAPABILITY #EXE.LEARN-CAPABILITY($tmr)
@@ -29,7 +29,7 @@ DEFINE ACKNOWLEDGE-INPUT($tmr)
     PRIORITY SELF.prioritize_learning($tmr)
     RESOURCES SELF.evaluate_resources($tmr)
     ACTION (acknowledge input)
-#        SELECT IF EXISTS (@^ EXE.INPUT-TMR AND ACKNOWLEDGED = False)
+//        SELECT IF EXISTS (@^ EXE.INPUT-TMR AND ACKNOWLEDGED = False)
         SELECT DEFAULT
         DO SELF[HAS-GOAL] += @SELF:EXE.DECIDE-ON-LANGUAGE-INPUT($tmr)
         DO $tmr[STATUS] == "ACKNOWLEDGED"

@@ -258,12 +258,12 @@ class Agent(Network):
 
         MPRegistry.register(understand_input)
 
-        def prioritize_learning(statement, tmr_frame):
+        def prioritize_learning(statement):
             return 0.75
         MPRegistry.register(prioritize_learning)
 
         # TODO - write logic for resource evaluation
-        def evaluate_resources(statement, tmr_frame):
+        def evaluate_resources(statement):
             return 0.5
 
         MPRegistry.register(evaluate_resources)
