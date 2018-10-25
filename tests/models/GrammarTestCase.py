@@ -453,9 +453,9 @@ class BootstrapGrammarTestCase(unittest.TestCase):
 
     def test_bootstrap_comments(self):
         input = '''
-        # A comment
-        @SELF.AGENT += {myslot 123}; # More comments
-        @SELF.AGENT += {myslot 123}; # More comments
+        // A comment
+        @SELF.AGENT += {myslot 123}; // More comments
+        @SELF.AGENT += {myslot 123}; // More comments
         @SELF.AGENT += {myslot 123};
         '''
 
