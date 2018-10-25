@@ -5,6 +5,10 @@ from backend.models.statement import CapabilityStatement, Statement, VariableMap
 from enum import Enum
 from typing import Callable, List, Union
 
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from backend.agent import Agent
+
 
 class Effector(object):
 
@@ -115,7 +119,7 @@ class Capability(object):
     def __init__(self, frame: Frame):
         self.frame = frame
 
-    def run(self, *args, graph: Graph=None, callbacks: List[Union[Frame, CapabilityStatement]]=None, varmap: Union[Frame, VariableMap]=None, **kwargs) -> Callable:
+    def run(self, agent: 'Agent', *args, statement: Statement=None, graph: Graph=None, callbacks: List[Union[Frame, CapabilityStatement]]=None, varmap: Union[Frame, VariableMap]=None, **kwargs) -> Callable:
         if graph is None:
             graph = self.frame._graph
         if callbacks is None:
@@ -124,7 +128,7 @@ class Capability(object):
         cb = Callback.instance(graph, varmap, callbacks, capability=self)
         kwargs["callback"] = cb
 
-        return MPRegistry.run(self.mp_name(), *args, **kwargs)
+        return MPRegistry.run(self.mp_name(), agent, *args, statement=statement, **kwargs)
 
     def mp_name(self) -> str:
         return self.frame["MP"].singleton()

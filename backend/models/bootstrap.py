@@ -2,9 +2,10 @@ from backend.agent import Agent
 from backend.models.agenda import Goal
 from backend.models.grammar import Grammar
 from backend.models.graph import Filler, Frame, Graph, Identifier, Literal, Network
+from backend.models.mps import AgentMethod, MPRegistry
 from backend.models.ontology import Ontology, OntologyFrame, OntologyFiller
 from pkgutil import get_data
-from typing import List, Union
+from typing import Callable, List, Type, Union
 
 
 class Bootstrap(object):
@@ -105,6 +106,22 @@ class BootstrapAppendKnowledge(Bootstrap):
             return self.network == other.network and \
                     self.frame == other.frame and \
                     self.properties == other.properties
+        return super().__eq__(other)
+
+
+class BootstrapRegisterMP(Bootstrap):
+
+    def __init__(self, mp: Type[AgentMethod], name: str=None):
+        self.mp = mp
+        self.name = name
+
+    def __call__(self, *args, **kwargs):
+        name = self.name if self.name is not None else self.mp.__name__
+        MPRegistry.register(self.mp, name)
+
+    def __eq__(self, other):
+        if isinstance(other, BootstrapRegisterMP):
+            return self.mp.__name__ == other.mp.__name__ and self.name == other.name
         return super().__eq__(other)
 
 

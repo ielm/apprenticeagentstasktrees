@@ -2,7 +2,7 @@ start: (view)
 
 // Bootstrap
 
-bootstrap: ((declare_knowledge | append_knowledge | define) BOOTSTRAPDELIMITER)*
+bootstrap: ((declare_knowledge | append_knowledge | define | register_mp) BOOTSTRAPDELIMITER)*
 
 declare_knowledge: "@" graph "." name (declare_knowledge_instance)? "=" "{" (declare_knowledge_element (BOOTSTRAPDELIMITER declare_knowledge_element)*)? (BOOTSTRAPDELIMITER)? "}"
 declare_knowledge_instance: "." (instance | GENERATE_INSTANCE)
@@ -14,6 +14,9 @@ append_knowledge: "@" identifier "+=" "{" (append_knowledge_element (BOOTSTRAPDE
 append_knowledge_element: (append_property_knowledge)
 append_property_knowledge: slot (facet)? filler
 
+register_mp: REGISTER MP agent_method (AS NAME)?
+agent_method: MODULE "." CLASS
+
 slot: NAME
 facet: (SEM | DEFAULT | VALUE | NOT)
 filler: ("@" identifier | literal)
@@ -21,6 +24,7 @@ filler: ("@" identifier | literal)
 BOOTSTRAPDELIMITER: ";"
 DISA: "isa"i
 GENERATE_INSTANCE: "?"
+REGISTER: "register"i
 SEM: "sem"i
 VALUE: "value"i
 
@@ -163,7 +167,9 @@ ISPARENT: "^."
 RECURSIVE: "*"
 SUBCLASSES: ">"
 
+CLASS: /[a-z0-9\_]+/i
 GRAPH: /[a-zA-Z]+/
+MODULE: /[a-z0-9\_]+[\.[a-z0-9\_]+]*/i
 NAME: /(?!True|False|isa)[a-zA-Z\.\*\_\-]+/i
 INSTANCE: /[0-9]+/
 RELATION: /[a-zA-Z0-9\-]+/

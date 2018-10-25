@@ -2,6 +2,7 @@ from backend.agent import Agent
 from backend.models.agenda import Action, Condition, Goal
 from backend.models.grammar import Grammar
 from backend.models.graph import Identifier, Literal, Network
+from backend.models.mps import AgentMethod
 from backend.models.path import Path
 from backend.models.query import AndQuery, ExactQuery, FillerQuery, FrameQuery, IdentifierQuery, LiteralQuery, NameQuery, NotQuery, OrQuery, SlotQuery
 from backend.models.statement import AddFillerStatement, AssignFillerStatement, CapabilityStatement, ExistsStatement, ForEachStatement, IsStatement, MakeInstanceStatement, MeaningProcedureStatement
@@ -531,3 +532,18 @@ class BootstrapGrammarTestCase(unittest.TestCase):
         bootstrap = BootstrapAppendKnowledge(self.agent, "SELF.FRAME", properties=[BootstrapTriple("MYPROP", Identifier.parse("ONT.ALL"), facet="SEM")])
         parsed = Grammar.parse(self.agent, "@SELF.FRAME += {MYPROP SEM @ONT.ALL}", start="append_knowledge", agent=self.agent)
         self.assertEqual(bootstrap, parsed)
+
+    def test_register_mp(self):
+        from backend.models.bootstrap import BootstrapRegisterMP
+
+        bootstrap = BootstrapRegisterMP(TestAgentMethod)
+        parsed = Grammar.parse(self.agent, "REGISTER MP tests.models.GrammarTestCase.TestAgentMethod", start="register_mp", agent=self.agent)
+        self.assertEqual(bootstrap, parsed)
+
+        bootstrap = BootstrapRegisterMP(TestAgentMethod, name="TestMP")
+        parsed = Grammar.parse(self.agent, "REGISTER MP tests.models.GrammarTestCase.TestAgentMethod AS TestMP", start="register_mp", agent=self.agent)
+        self.assertEqual(bootstrap, parsed)
+
+
+class TestAgentMethod(AgentMethod):
+    pass

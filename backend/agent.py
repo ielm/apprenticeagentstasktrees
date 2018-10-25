@@ -3,7 +3,7 @@ from backend.models.agenda import Action, Agenda, Goal
 from backend.models.effectors import Callback, Capability, Effector
 from backend.models.fr import FR
 from backend.models.graph import Frame, Graph, Identifier, Literal, Network
-from backend.models.mps import MPRegistry
+from backend.models.mps import AgentMethod, MPRegistry
 from backend.models.ontology import Ontology
 from backend.models.statement import CapabilityStatement, Statement, VariableMap
 from backend.models.tmr import TMR
@@ -234,21 +234,8 @@ class Agent(Network):
 
     def _bootstrap(self):
 
-        def understand_input(statement, tmr_frame, callback=None):
-            tmr = self[tmr_frame["REFERS-TO-GRAPH"].singleton()]
-            agenda = self.context.default_understanding()
-            agenda.logger(self._logger)
-            agenda.process(self, tmr)
-            if callback is not None:
-                self.callback(callback)
-
-        MPRegistry.register(understand_input)
-
-        def prioritize_learning(statement, tmr_frame):
-            return 0.75
-        MPRegistry.register(prioritize_learning)
-
         from backend.models.bootstrap import Bootstrap
+        Bootstrap.bootstrap_resource(self, "backend.resources", "bootstrap.mps")
         Bootstrap.bootstrap_resource(self, "backend.resources", "bootstrap.knowledge")
         Bootstrap.bootstrap_resource(self, "backend.resources", "goals.aa")
 
@@ -285,3 +272,17 @@ class Agent(Network):
         #                     Goal.Status.SATISFIED)
         # ], ["$tmr"])
 
+
+class UnderstandInputMP(AgentMethod):
+    def run(self, tmr_frame):
+        tmr = self.agent[tmr_frame["REFERS-TO-GRAPH"].singleton()]
+        agenda = self.agent.context.default_understanding()
+        agenda.logger(self.agent._logger)
+        agenda.process(self.agent, tmr)
+        if self.callback is not None:
+            self.agent.callback(self.callback)
+
+
+class PrioritizeLearningMP(AgentMethod):
+    def run(self, tmr_frame):
+        return 0.75

@@ -1,7 +1,7 @@
 from backend.models.agenda import Goal
 from backend.models.effectors import Callback, Capability, Effector
 from backend.models.graph import Literal, Network
-from backend.models.mps import MPRegistry
+from backend.models.mps import AgentMethod, MPRegistry
 from backend.models.statement import VariableMap
 
 import unittest
@@ -107,20 +107,21 @@ class CapabilityTestCase(unittest.TestCase):
 
         MPRegistry.clear()
 
-        def test_mp(var1, callback=None):
-            return var1 + 1
+        class TestMP(AgentMethod):
+            def run(self, var1):
+                return var1 + 1
 
-        self.mp = test_mp
+        self.mp = TestMP
 
         MPRegistry.register(self.mp)
 
     def test_capability_mp(self):
         f = self.g.register("CAPABILITY")
-        f["MP"] = Literal("test_mp")
+        f["MP"] = Literal("TestMP")
 
         capability = Capability(f)
-        self.assertEqual("test_mp", capability.mp_name())
-        self.assertEqual(2, capability.run(1))
+        self.assertEqual("TestMP", capability.mp_name())
+        self.assertEqual(2, capability.run(None, 1))
 
     def test_capability_in_use_by_effector(self):
         f1 = self.g.register("CAPABILITY")
@@ -135,17 +136,18 @@ class CapabilityTestCase(unittest.TestCase):
     def test_run(self):
         result = 0
 
-        def test_mp(var1, callback=None):
-            nonlocal result
-            result = var1
+        class TestMP(AgentMethod):
+            def run(self, var1):
+                nonlocal result
+                result = var1
 
-        MPRegistry.register(test_mp)
+        MPRegistry.register(TestMP)
 
         f = self.g.register("CAPABILITY")
-        f["MP"] = Literal(test_mp.__name__)
+        f["MP"] = Literal(TestMP.__name__)
 
         capability = Capability(f)
-        capability.run(5)
+        capability.run(None, 5)
 
         self.assertEqual(5, result)
 
@@ -153,18 +155,21 @@ class CapabilityTestCase(unittest.TestCase):
         from backend.models.statement import Statement
         self.n.register(Statement.hierarchy())
 
-        def test_mp(var1, callback=None): pass
-        MPRegistry.register(test_mp)
+        class TestMP(AgentMethod):
+            def run(self, var1):
+                pass
+
+        MPRegistry.register(TestMP)
 
         stmt1 = self.g.register("SOME-STATEMENT.1", isa="EXE.STATEMENT")
         stmt2 = self.g.register("SOME-STATEMENT.2", isa="EXE.STATEMENT")
         varmap = self.g.register("SOME-VARIABLE-MAP")
 
         f = self.g.register("CAPABILITY")
-        f["MP"] = Literal(test_mp.__name__)
+        f["MP"] = Literal(TestMP.__name__)
 
         capability = Capability(f)
-        capability.run(5, graph=self.g, callbacks=[stmt1, stmt2], varmap=varmap)
+        capability.run(None, 5, graph=self.g, callbacks=[stmt1, stmt2], varmap=varmap)
 
         callback = Callback(self.g["CALLBACK.1"])
         self.assertEqual([stmt1, stmt2], callback.statements())
@@ -203,11 +208,13 @@ class CallbackTestCase(unittest.TestCase):
     def test_callback_runs_statements(self):
         # 1) Define a meaning procedure and associated statement
         result = 0
-        def test_mp(statement, var1):
-            nonlocal result
-            result += var1
 
-        self.mp = test_mp
+        class TestMP(AgentMethod):
+            def run(self, var1):
+                nonlocal result
+                result += var1
+
+        self.mp = TestMP
         MPRegistry.clear()
         MPRegistry.register(self.mp)
 

@@ -1,5 +1,5 @@
 from backend.models.graph import Frame, Graph, Literal
-from backend.models.mps import Executable, MeaningProcedure, MPRegistry, Registry
+from backend.models.mps import AgentMethod, Executable, MeaningProcedure, MPRegistry, Registry
 from io import StringIO
 
 import contextlib
@@ -42,24 +42,25 @@ class RegistryTestCase(unittest.TestCase):
         proof_a = None
         proof_b = None
 
-        def test_mp(*args, **kwargs):
-            nonlocal proof_a
-            proof_a = args[0]
+        class TestMP(AgentMethod):
+            def run(self, *args, **kwargs):
+                nonlocal proof_a
+                proof_a = args[0]
 
-            nonlocal proof_b
-            if "test" in kwargs:
-                proof_b = kwargs["test"]
+                nonlocal proof_b
+                if "test" in kwargs:
+                    proof_b = kwargs["test"]
 
         registry = Registry()
 
-        registry.register(test_mp)
+        registry.register(TestMP)
 
-        registry.run(test_mp.__name__, True)
+        registry.run(TestMP.__name__, None, True)
 
         self.assertEqual(proof_a, True)
         self.assertIsNone(proof_b)
 
-        registry.run(test_mp.__name__, False, test=123)
+        registry.run(TestMP.__name__, None, False, test=123)
 
         self.assertEqual(proof_a, False)
         self.assertEqual(proof_b, 123)
@@ -100,21 +101,22 @@ class MeaningProcedureTestCase(unittest.TestCase):
         proof_a = None
         proof_b = None
 
-        def test_mp(*args, **kwargs):
-            nonlocal proof_a
-            proof_a = args[0]
+        class TestMP(AgentMethod):
+            def run(self, *args, **kwargs):
+                nonlocal proof_a
+                proof_a = args[0]
 
-            nonlocal proof_b
-            if "test" in kwargs:
-                proof_b = kwargs["test"]
+                nonlocal proof_b
+                if "test" in kwargs:
+                    proof_b = kwargs["test"]
 
-        MPRegistry.register(test_mp)
+        MPRegistry.register(TestMP)
 
         frame = Frame("MEANING-PROCEDURE.1")
-        frame["CALLS"] = Literal(test_mp.__name__)
+        frame["CALLS"] = Literal(TestMP.__name__)
 
         mp = MeaningProcedure(frame)
-        mp.run(False, test=123)
+        mp.run(None, False, test=123)
 
         self.assertEqual(proof_a, False)
         self.assertEqual(proof_b, 123)
@@ -152,25 +154,26 @@ class ExecutableTestCase(unittest.TestCase):
         proof_a = None
         proof_b = None
 
-        def test_mp(*args, **kwargs):
-            nonlocal proof_a
-            proof_a = args[0]
+        class TestMP(AgentMethod):
+            def run(self, *args, **kwargs):
+                nonlocal proof_a
+                proof_a = args[0]
 
-            nonlocal proof_b
-            if "test" in kwargs:
-                proof_b = kwargs["test"]
+                nonlocal proof_b
+                if "test" in kwargs:
+                    proof_b = kwargs["test"]
 
-        MPRegistry.register(test_mp)
+        MPRegistry.register(TestMP)
 
         g = Graph("TEST")
         e = g.register("EXECUTABLE.1")
         mp = g.register("MEANING-PROCEDURE.1")
 
         e["RUN"] = mp
-        mp["CALLS"] = Literal(test_mp.__name__)
+        mp["CALLS"] = Literal(TestMP.__name__)
 
         executable = Executable(e)
-        executable.run(False, test=123)
+        executable.run(None, False, test=123)
 
         self.assertEqual(proof_a, False)
         self.assertEqual(proof_b, 123)
@@ -178,16 +181,18 @@ class ExecutableTestCase(unittest.TestCase):
     def test_run_multiple_respects_order(self):
         proof = None
 
-        def test_mp1(*args, **kwargs):
-            nonlocal proof
-            proof = args[0]
+        class TestMP1(AgentMethod):
+            def run(self, *args, **kwargs):
+                nonlocal proof
+                proof = args[0]
 
-        def test_mp2(*args, **kwargs):
-            nonlocal proof
-            proof = args[1]
+        class TestMP2(AgentMethod):
+            def run(self, *args, **kwargs):
+                nonlocal proof
+                proof = args[1]
 
-        MPRegistry.register(test_mp1)
-        MPRegistry.register(test_mp2)
+        MPRegistry.register(TestMP1)
+        MPRegistry.register(TestMP2)
 
         g = Graph("TEST")
         e = g.register("EXECUTABLE.1")
@@ -195,13 +200,13 @@ class ExecutableTestCase(unittest.TestCase):
         mp2 = g.register("MEANING-PROCEDURE.2")
 
         e["RUN"] = [mp1, mp2]
-        mp1["CALLS"] = Literal(test_mp1.__name__)
-        mp2["CALLS"] = Literal(test_mp2.__name__)
+        mp1["CALLS"] = Literal(TestMP1.__name__)
+        mp2["CALLS"] = Literal(TestMP2.__name__)
         mp1["ORDER"] = 2
         mp2["ORDER"] = 1
 
         executable = Executable(e)
-        executable.run(1, 2)
+        executable.run(None, 1, 2)
 
         self.assertEqual(proof, 1)
 
