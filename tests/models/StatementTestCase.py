@@ -1,6 +1,6 @@
 from backend.agent import Capability
 from backend.models.graph import Frame, Graph, Identifier, Literal, Network
-from backend.models.mps import AgentMethod
+from backend.models.mps import AgentMethod, MPRegistry
 from backend.models.query import Query
 from backend.models.statement import Statement, Variable, VariableMap
 
@@ -339,6 +339,77 @@ class AssignFillerStatementTestCase(unittest.TestCase):
 
         Statement.from_instance(assignfiller).run(None)
         self.assertTrue(target["X"] == 123)
+
+
+class AssignVariableStatementTestCase(unittest.TestCase):
+
+    def test_run_assign_literal(self):
+        network = Network()
+        graph = network.register(Statement.hierarchy())
+
+        assignvariable = graph.register("TEST", isa="EXE.ASSIGNVARIABLE-STATEMENT")
+        assignvariable["TO"] = Literal("$var1")
+        assignvariable["ASSIGN"] = 123
+
+        varmap = VariableMap(graph.register("VARMAP"))
+        Statement.from_instance(assignvariable).run(varmap)
+        self.assertEqual(123, varmap.resolve("$var1"))
+
+    def test_run_assign_frame(self):
+        network = Network()
+        graph = network.register(Statement.hierarchy())
+        target = graph.register("TARGET")
+
+        assignvariable = graph.register("TEST", isa="EXE.ASSIGNVARIABLE-STATEMENT")
+        assignvariable["TO"] = Literal("$var1")
+        assignvariable["ASSIGN"] = target
+
+        varmap = VariableMap(graph.register("VARMAP"))
+        Statement.from_instance(assignvariable).run(varmap)
+        self.assertEqual(target, varmap.resolve("$var1"))
+
+    def test_run_assign_variable(self):
+        network = Network()
+        graph = network.register(Statement.hierarchy())
+
+        assignvariable = graph.register("TEST", isa="EXE.ASSIGNVARIABLE-STATEMENT")
+        assignvariable["TO"] = Literal("$var1")
+        assignvariable["ASSIGN"] = Literal("$existing")
+
+        varmap = VariableMap(graph.register("VARMAP"))
+        Variable.instance(graph, "$existing", 123, varmap)
+
+        Statement.from_instance(assignvariable).run(varmap)
+        self.assertEqual(123, varmap.resolve("$var1"))
+
+    def test_run_assign_statement_results(self):
+        from backend.models.statement import ExistsStatement, MakeInstanceStatement, MeaningProcedureStatement
+
+        class TestMP(AgentMethod):
+            def run(self, *args, **kwargs):
+                return 123
+        MPRegistry.register(TestMP)
+
+        network = Network()
+        graph = network.register(Statement.hierarchy())
+
+        assignvariable = graph.register("TEST", isa="EXE.ASSIGNVARIABLE-STATEMENT")
+        varmap = VariableMap(graph.register("VARMAP"))
+
+        assignvariable["TO"] = Literal("$var1")
+        assignvariable["ASSIGN"] = MeaningProcedureStatement.instance(graph, "TestMP", [])
+        Statement.from_instance(assignvariable).run(varmap)
+        self.assertEqual(123, varmap.resolve("$var1"))
+
+        assignvariable["TO"] = Literal("$var2")
+        assignvariable["ASSIGN"] = ExistsStatement.instance(graph, Frame.q(network).id("EXE.TEST"))
+        Statement.from_instance(assignvariable).run(varmap)
+        self.assertEqual(True, varmap.resolve("$var2"))
+
+        assignvariable["TO"] = Literal("$var3")
+        assignvariable["ASSIGN"] = MakeInstanceStatement.instance(graph, graph._namespace, "EXE.TEST", [])
+        Statement.from_instance(assignvariable).run(varmap)
+        self.assertEqual(graph["TEST.1"], varmap.resolve("$var3"))
 
 
 class ExistsStatementTestCase(unittest.TestCase):
