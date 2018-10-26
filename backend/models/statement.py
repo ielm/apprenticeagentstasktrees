@@ -156,10 +156,12 @@ class StatementHierarchy(object):
         hierarchy.register("FOREACH-STATEMENT", isa="EXE.NONRETURNING-STATEMENT")
         hierarchy.register("ADDFILLER-STATEMENT", isa="EXE.NONRETURNING-STATEMENT")
         hierarchy.register("ASSIGNFILLER-STATEMENT", isa="EXE.NONRETURNING-STATEMENT")
+        hierarchy.register("ASSIGNVARIABLE-STATEMENT", isa="EXE.NONRETURNING-STATEMENT")
 
         hierarchy["STATEMENT"]["CLASSMAP"] = Literal(Statement)
         hierarchy["ADDFILLER-STATEMENT"]["CLASSMAP"] = Literal(AddFillerStatement)
         hierarchy["ASSIGNFILLER-STATEMENT"]["CLASSMAP"] = Literal(AssignFillerStatement)
+        hierarchy["ASSIGNVARIABLE-STATEMENT"]["CLASSMAP"] = Literal(AssignVariableStatement)
         hierarchy["EXISTS-STATEMENT"]["CLASSMAP"] = Literal(ExistsStatement)
         hierarchy["FOREACH-STATEMENT"]["CLASSMAP"] = Literal(ForEachStatement)
         hierarchy["IS-STATEMENT"]["CLASSMAP"] = Literal(IsStatement)
@@ -337,6 +339,39 @@ class AssignFillerStatement(Statement):
             return other.frame["TO"] == self.frame["TO"] and \
                    other.frame["SLOT"] == self.frame["SLOT"] and \
                    other.frame["ASSIGN"] == self.frame["ASSIGN"]
+        return super().__eq__(other)
+
+
+class AssignVariableStatement(Statement):
+
+    @classmethod
+    def instance(cls, graph: Graph, variable: str, value: Any):
+        frame = graph.register("ASSIGNVARIABLE-STATEMENT", isa="EXE.ASSIGNVARIABLE-STATEMENT", generate_index=True)
+        frame["TO"] = variable
+        frame["ASSIGN"] = value
+
+        return AssignVariableStatement(frame)
+
+    def run(self, varmap: VariableMap):
+        variable = self.frame["TO"].singleton()
+        value = self.frame["ASSIGN"].singleton()
+
+        if isinstance(value, str):
+            try:
+                value = varmap.resolve(value)
+            except: pass
+
+        if isinstance(value, Statement) and value.frame ^ "EXE.RETURNING-STATEMENT":
+            value = value.run(varmap)
+
+        if isinstance(value, Frame) and value ^ "EXE.RETURNING-STATEMENT":
+            value = Statement.from_instance(value).run(varmap)
+
+        Variable.instance(self.frame._graph, variable, value, varmap)
+
+    def __eq__(self, other):
+        if isinstance(other, AssignVariableStatement):
+            return self.frame["TO"] == other.frame["TO"] and self.frame["ASSIGN"] == other.frame["ASSIGN"]
         return super().__eq__(other)
 
 

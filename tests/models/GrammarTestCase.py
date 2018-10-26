@@ -5,7 +5,7 @@ from backend.models.graph import Identifier, Literal, Network
 from backend.models.mps import AgentMethod
 from backend.models.path import Path
 from backend.models.query import AndQuery, ExactQuery, FillerQuery, FrameQuery, IdentifierQuery, LiteralQuery, NameQuery, NotQuery, OrQuery, SlotQuery
-from backend.models.statement import AddFillerStatement, AssignFillerStatement, CapabilityStatement, ExistsStatement, ForEachStatement, IsStatement, MakeInstanceStatement, MeaningProcedureStatement
+from backend.models.statement import AddFillerStatement, AssignFillerStatement, AssignVariableStatement, CapabilityStatement, ExistsStatement, ForEachStatement, IsStatement, MakeInstanceStatement, MeaningProcedureStatement
 from backend.models.view import View
 
 import unittest
@@ -258,6 +258,33 @@ class AgendaGrammarTestCase(unittest.TestCase):
 
         statement = AssignFillerStatement.instance(self.g, f, "SLOT", 123)
         parsed = Grammar.parse(self.agent, "#SELF.FRAME[SLOT] = 123", start="assign_filler_statement", agent=self.agent)
+        self.assertEqual(statement, parsed)
+
+    def test_assign_variable_statement(self):
+        f = self.g.register("FRAME")
+
+        statement = AssignVariableStatement.instance(self.g, "$var1", 123)
+        parsed = Grammar.parse(self.agent, "$var1 = 123", start="assign_variable_statement", agent=self.agent)
+        self.assertEqual(statement, parsed)
+
+        statement = AssignVariableStatement.instance(self.g, "$var1", Literal("test"))
+        parsed = Grammar.parse(self.agent, "$var1 = \"test\"", start="assign_variable_statement", agent=self.agent)
+        self.assertEqual(statement, parsed)
+
+        statement = AssignVariableStatement.instance(self.g, "$var1", f)
+        parsed = Grammar.parse(self.agent, "$var1 = #SELF.FRAME", start="assign_variable_statement", agent=self.agent)
+        self.assertEqual(statement, parsed)
+
+        statement = AssignVariableStatement.instance(self.g, "$var1", Literal("$var2"))
+        parsed = Grammar.parse(self.agent, "$var1 = $var2", start="assign_variable_statement", agent=self.agent)
+        self.assertEqual(statement, parsed)
+
+        statement = AssignVariableStatement.instance(self.g, "$var1", MeaningProcedureStatement.instance(self.g, "TestMP", []))
+        parsed = Grammar.parse(self.agent, "$var1 = SELF.TestMP()", start="assign_variable_statement", agent=self.agent)
+        self.assertEqual(statement, parsed)
+
+        statement = AssignVariableStatement.instance(self.g, "$var1", ExistsStatement.instance(self.g, IdentifierQuery(self.agent, "EXE.TEST.1", IdentifierQuery.Comparator.EQUALS)))
+        parsed = Grammar.parse(self.agent, "$var1 = EXISTS @ = EXE.TEST.1", start="assign_variable_statement", agent=self.agent)
         self.assertEqual(statement, parsed)
 
     def test_exists_statement(self):

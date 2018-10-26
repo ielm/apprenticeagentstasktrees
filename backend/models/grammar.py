@@ -248,6 +248,13 @@ class GrammarTransformer(Transformer):
 
         return AssignFillerStatement.instance(self.agent.exe, domain, slot, filler)
 
+    def assign_variable_statement(self, matches):
+        from backend.models.statement import AssignVariableStatement
+        variable = str(matches[0])
+        value = matches[2]
+
+        return AssignVariableStatement.instance(self.agent.exe, variable, value)
+
     def capability_statement(self, matches):
         from backend.models.statement import CapabilityStatement, Statement
         capability = matches[1]

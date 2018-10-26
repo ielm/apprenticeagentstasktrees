@@ -52,6 +52,7 @@ boolean_statement: (exists_statement | is_statement)
 
 add_filler_statement: statement_instance "[" NAME "]" "+=" (statement_instance | literal)
 assign_filler_statement: statement_instance "[" NAME "]" "=" (statement_instance | literal)
+assign_variable_statement: ARGUMENT "=" (literal | "#" identifier | ARGUMENT | statement)
 capability_statement: CAPABILITY statement_instance arguments ("|" THEN action_do)*
 exists_statement: EXISTS logical_slot_query
 foreach_statement: FOR EACH ARGUMENT IN logical_slot_query ("|" statement)*
