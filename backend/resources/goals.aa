@@ -3,11 +3,11 @@ DEFINE FIND-SOMETHING-TO-DO()
     IN EXE
     PRIORITY 0.1
     RESOURCES 0.3
-    ACTION (acknowledge input)
+    ACTION (find something to do)
         SELECT IF EXISTS (@^ EXE.INPUT-TMR AND STATUS = "RECEIVED")
         DO FOR EACH $tmr IN (@^ EXE.INPUT-TMR AND STATUS = "RECEIVED")
-        | SELF[HAS-GOAL] += @SELF:EXE.UNDERSTAND-TMR($tmr)
-        | $tmr[STATUS] = "ACKNOWLEDGED"
+        | SELF[HAS-GOAL] += @SELF:EXE.ACKNOWLEDGE-INPUT($tmr)
+        | SELF.print_tmr($tmr)
     ACTION (idle)
         SELECT DEFAULT
         DO IDLE
@@ -42,8 +42,9 @@ DEFINE DECIDE-ON-LANGUAGE-INPUT($tmr)
     RESOURCES SELF.evaluate_resources($tmr)
     ACTION (decide on language input)
         SELECT DEFAULT
+//        DO $task = SELF.decide_on_language_input($tmr)
         DO SELF.decide_on_language_input($tmr)
-        DO SELF[HAS-GOAL] += @SELF:EXE.PERFORM-COMPLEX-TASK($tmr)
+        DO SELF[HAS-GOAL] += @SELF:EXE.PERFORM-COMPLEX-TASK($task)
 ;
 DEFINE RESPOND-TO-QUERY($tmr)
     AS GOAL

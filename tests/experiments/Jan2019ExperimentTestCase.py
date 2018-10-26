@@ -25,6 +25,7 @@ class Jan2019Experiment(unittest.TestCase):
         goals = list(map(lambda g: Goal(g.resolve()), agent.identity["HAS-GOAL"]))
 
         if status is not None:
+            # goals is empty?
             goals = agent.agenda().goals(pending=(status == Goal.Status.PENDING), active=(status == Goal.Status.ACTIVE), abandoned=(status == Goal.Status.ABANDONED), satisfied=(status == Goal.Status.SATISFIED))
 
         if isa is not None:

@@ -10,25 +10,26 @@ if TYPE_CHECKING:
     from backend.agent import Agent
     from backend.models.effectors import Capability
 
+
 class Agenda(object):
 
     def __init__(self, frame: Frame):
         self.frame = frame
 
     def goals(self, pending=False, active=True, abandoned=False, satisfied=False):
-        results = map(lambda g: Goal(g.resolve()), self.frame["HAS-GOAL"])
+        results = list(map(lambda g: Goal(g.resolve()), self.frame["HAS-GOAL"]))
 
         if not pending:
-            results = filter(lambda g: not g.is_pending(), results)
+            results = list(filter(lambda g: not g.is_pending(), results))
 
         if not active:
-            results = filter(lambda g: not g.is_active(), results)
+            results = list(filter(lambda g: not g.is_active(), results))
 
         if not abandoned:
-            results = filter(lambda g: not g.is_abandoned(), results)
+            results = list(filter(lambda g: not g.is_abandoned(), results))
 
         if not satisfied:
-            results = filter(lambda g: not g.is_satisfied(), results)
+            results = list(filter(lambda g: not g.is_satisfied(), results))
 
         return list(results)
 
