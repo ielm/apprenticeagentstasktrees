@@ -19,9 +19,9 @@ class PrintTMR(AgentMethod):
         print("\nISA: ", tmr.concept())
 
 
-class FindTaskMP(AgentMethod):
-    def run(self, tmr):
-        return
+# class FindTaskMP(AgentMethod):
+#     def run(self, tmr):
+#         return
 
 
 class AcknowledgeInputMP(AgentMethod):
@@ -33,10 +33,11 @@ class DecideOnLanguageInputMP(AgentMethod):
     def run(self, input_tmr):
         """
         Decides whether to RespondToQuery or PerformComplexTask
-        In the future there will be more functionality
         :param input_tmr:
         :return: TMR or Task
         """
+
+        print("\nDECIDE Name: ", input_tmr.name())
 
         # Find LT.BUILD.1
         #     Request Action
@@ -44,7 +45,7 @@ class DecideOnLanguageInputMP(AgentMethod):
         #     Benef = Robot
         # return LT.BUILD.1
 
-        return
+        return input_tmr
 
 
 class RespondToQueryMP(AgentMethod):
