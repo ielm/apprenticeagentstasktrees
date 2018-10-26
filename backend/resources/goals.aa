@@ -41,12 +41,12 @@ DEFINE DECIDE-ON-LANGUAGE-INPUT($tmr)
     PRIORITY SELF.prioritize_learning($tmr)
     RESOURCES SELF.evaluate_resources($tmr)
     ACTION (decide on language input)
-//        SELECT DEFAULT
-        SELECT IF EXISTS (@^ LT.BUILD.1 AND AGENT = "HUMAN")
+        SELECT DEFAULT
+//        SELECT IF EXISTS (@^ LT.BUILD.1 AND AGENT = "HUMAN")
         DO FOR EACH $tmr IN (@^ LT.BUILD.1 AND AGENT = "HUMAN")
 //        DO $task = SELF.decide_on_language_input($tmr)
         DO SELF.decide_on_language_input($tmr)
-        DO SELF[HAS-GOAL] += @SELF:EXE.PERFORM-COMPLEX-TASK($task)
+//        DO SELF[HAS-GOAL] += @SELF:EXE.PERFORM-COMPLEX-TASK($task)
 ;
 DEFINE RESPOND-TO-QUERY($tmr)
     AS GOAL

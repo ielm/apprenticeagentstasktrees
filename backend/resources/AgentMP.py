@@ -15,9 +15,9 @@ class AddGoalMP(AgentMethod):
 
 class PrintTMR(AgentMethod):
     def run(self, tmr):
-        print("\nName: ", tmr.name())
-        print("\nISA: ", tmr.concept())
-
+        # print("\nName: ", tmr.name())
+        # print("\nISA: ", tmr.concept())
+        return
 
 # class FindTaskMP(AgentMethod):
 #     def run(self, tmr):
@@ -39,13 +39,18 @@ class DecideOnLanguageInputMP(AgentMethod):
 
         print("\nDECIDE Name: ", input_tmr.name())
 
+        # task = input_tmr.
+
+        # self.agent.agenda().add_goal(Goal.instance_of(self.agent.internal, self.agent.exe["PERFORM-COMPLEX-TASK"], [input_tmr]))
+
+
         # Find LT.BUILD.1
         #     Request Action
         #     Agent = Human
         #     Benef = Robot
         # return LT.BUILD.1
 
-        return input_tmr
+        # return input_tmr
 
 
 class RespondToQueryMP(AgentMethod):
@@ -55,6 +60,7 @@ class RespondToQueryMP(AgentMethod):
 
 class PerformComplexTaskMP(AgentMethod):
     def run(self, task):
+        print(task.name())
         return
 
 
