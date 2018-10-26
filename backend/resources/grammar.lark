@@ -47,7 +47,7 @@ condition_nand: boolean_statement (NAND boolean_statement)+
 condition_nor: boolean_statement (NOR boolean_statement)+
 condition_not: boolean_statement (NOT boolean_statement)+
 
-statement: (add_filler_statement | assign_filler_statement | capability_statement | exists_statement | foreach_statement | is_statement | make_instance_statement | mp_statement)
+statement: (add_filler_statement | assign_filler_statement | assign_variable_statement | capability_statement | exists_statement | foreach_statement | is_statement | make_instance_statement | mp_statement)
 boolean_statement: (exists_statement | is_statement)
 
 add_filler_statement: statement_instance "[" NAME "]" "+=" (statement_instance | literal)
