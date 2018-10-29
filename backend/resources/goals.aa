@@ -7,7 +7,6 @@ DEFINE FIND-SOMETHING-TO-DO()
         SELECT IF EXISTS (@^ EXE.INPUT-TMR AND STATUS = "RECEIVED")
         DO FOR EACH $tmr IN (@^ EXE.INPUT-TMR AND STATUS = "RECEIVED")
         | SELF[HAS-GOAL] += @SELF:EXE.ACKNOWLEDGE-INPUT($tmr)
-        | SELF.print_tmr($tmr)
     ACTION (idle)
         SELECT DEFAULT
         DO IDLE
@@ -29,25 +28,21 @@ DEFINE ACKNOWLEDGE-INPUT($tmr)
     PRIORITY SELF.prioritize_learning($tmr)
     RESOURCES SELF.evaluate_resources($tmr)
     ACTION (acknowledge input)
-//        SELECT IF EXISTS (@^ EXE.INPUT-TMR AND ACKNOWLEDGED = False)
         SELECT DEFAULT
         DO SELF[HAS-GOAL] += @SELF:EXE.DECIDE-ON-LANGUAGE-INPUT($tmr)
         DO $tmr[STATUS] == "ACKNOWLEDGED"
     WHEN $tmr[STATUS] == "ACKNOWLEDGED" OR $tmr[STATUS] == "IGNORED" THEN satisfied
 ;
 DEFINE DECIDE-ON-LANGUAGE-INPUT($tmr)
+//  TODO - return $task from decide_on_language_input and create PERFORM-COMPLEX-TASK from goal definition
     AS GOAL
     IN EXE
     PRIORITY SELF.prioritize_learning($tmr)
     RESOURCES SELF.evaluate_resources($tmr)
     ACTION (decide on language input)
         SELECT DEFAULT
-//        SELECT IF EXISTS (@^ LT.BUILD.1 AND AGENT = "HUMAN")
         DO FOR EACH $tmr IN (@^ LT.BUILD.1 AND AGENT = "HUMAN")
-//        DO $task = SELF.decide_on_language_input($tmr)
-//        DO SELF.print_tmr($tmr)
         DO SELF.decide_on_language_input($tmr)
-//        DO SELF[HAS-GOAL] += @SELF:EXE.PERFORM-COMPLEX-TASK($task)
 ;
 DEFINE RESPOND-TO-QUERY($tmr)
     AS GOAL
