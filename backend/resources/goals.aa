@@ -45,6 +45,7 @@ DEFINE DECIDE-ON-LANGUAGE-INPUT($tmr)
 //        SELECT IF EXISTS (@^ LT.BUILD.1 AND AGENT = "HUMAN")
         DO FOR EACH $tmr IN (@^ LT.BUILD.1 AND AGENT = "HUMAN")
 //        DO $task = SELF.decide_on_language_input($tmr)
+//        DO SELF.print_tmr($tmr)
         DO SELF.decide_on_language_input($tmr)
 //        DO SELF[HAS-GOAL] += @SELF:EXE.PERFORM-COMPLEX-TASK($task)
 ;
