@@ -215,7 +215,7 @@ class SimpleFrameQuery(FrameQuery):
         if isinstance(filler, Filler):
             filler = filler._value
 
-        vq = IdentifierQuery(self.network, filler, IdentifierQuery.Comparator.ISA)
+        vq = FillerQuery(self.network, IdentifierQuery(self.network, filler, IdentifierQuery.Comparator.ISA))
 
         self._append(SlotQuery(self.network, AndQuery(self.network, [NameQuery(self.network, slot), vq])))
         return self
