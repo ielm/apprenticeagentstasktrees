@@ -1,14 +1,21 @@
 
 @LT.HUMAN.1 = {
+    ISA @HUMAN;
     HAS-NAME "Jake";
 };
 
 @ENV.HUMAN.1 = {
+    ISA @HUMAN;
     RESOLVED-TO @LT.HUMAN.1;
 };
 
 @LT.TEACH.1 = {
+    ISA @ONT.TEACH;
     AGENT @LT.HUMAN.1;
     BENEFICIARY @SELF.ROBOT.1;
     THEME @LT.BUILD.1;
+};
+
+@ENV.SCREWDRIVER.1 = {
+    ISA @SCREWDRIVER.1;
 };
