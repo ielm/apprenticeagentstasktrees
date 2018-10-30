@@ -1,10 +1,15 @@
 from backend.agent import Agent
 from backend.models.agenda import Goal
 from backend.models.bootstrap import Bootstrap
+from backend.models.effectors import Capability, Effector
+from backend.models.graph import Frame, Identifier
+from backend.models.mps import AgentMethod
 from backend.models.ontology import Ontology
+from backend.models.xmr import XMR
 
 from pkgutil import get_data
-from typing import Callable
+from typing import Callable, Type, Union
+from unittest.mock import patch
 
 import json
 import unittest
@@ -15,11 +20,23 @@ class Jan2019Experiment(unittest.TestCase):
     def analyses(self):
         return json.loads(get_data("tests.resources", "DemoJan2019_Analyses.json").decode('ascii'))
 
-    def iidea_loop(self, agent: Agent):
-        if agent.IDEA._stage == Agent.IDEA.D:
-            agent.iidea()
-        while agent.IDEA._stage != Agent.IDEA.D:
-            agent.iidea()
+    def observations(self):
+        return json.loads(get_data("tests.resources", "DemoJan2019_Observations.json").decode('ascii'))
+
+    def iidea_loop(self, agent: Agent, mock: Type[AgentMethod]=None):
+
+        def __iidea(agent: Agent):
+            if agent.IDEA._stage == Agent.IDEA.D:
+                agent.iidea()
+            while agent.IDEA._stage != Agent.IDEA.D:
+                agent.iidea()
+
+        if mock is None:
+            __iidea(agent)
+        else:
+            with patch.object(mock, 'run', wraps=mock().run) as m:
+                __iidea(agent)
+                return m
 
     def assertGoalExists(self, agent: Agent, isa: str=None, status: Goal.Status=None, query: Callable=None):
         goals = list(map(lambda g: Goal(g.resolve()), agent.identity["HAS-GOAL"]))
@@ -36,6 +53,33 @@ class Jan2019Experiment(unittest.TestCase):
 
         if len(goals) == 0:
             self.fail("No such matching goal.")
+
+    def assertEffectorReserved(self, agent: Agent, effector: Union[str, Identifier, Frame, Effector], goal: [str, Identifier, Frame, Goal], capability: Union[str, Identifier, Frame, Capability]):
+
+        if isinstance(effector, str):
+            effector = Identifier.parse(effector)
+        if isinstance(effector, Identifier):
+            effector = agent.lookup(effector)
+        if isinstance(effector, Frame):
+            effector = Effector(effector)
+
+        if isinstance(goal, str):
+            goal = Identifier.parse(goal)
+        if isinstance(goal, Identifier):
+            goal = agent.lookup(goal)
+        if isinstance(goal, Frame):
+            goal = Goal(goal)
+
+        if isinstance(capability, str):
+            capability = Identifier.parse(capability)
+        if isinstance(capability, Identifier):
+            capability = agent.lookup(capability)
+        if isinstance(capability, Frame):
+            capability = Capability(capability)
+
+        self.assertFalse(effector.is_free())
+        self.assertEqual(goal, effector.effecting())
+        self.assertTrue(effector.frame["USES"] == capability.frame)
 
     def test_1_1(self):
 
@@ -73,15 +117,35 @@ class Jan2019Experiment(unittest.TestCase):
         self.assertGoalExists(agent, isa="EXE.PERFORM-COMPLEX-TASK", status=Goal.Status.PENDING, query=lambda goal: goal.resolve("$task")._identifier == "LT.BUILD.1")
 
         # 2a) Visual input "Jake leaves"
+        agent._input(self.observations()[0], type=XMR.Type.VISUAL.name)
+
         # 2b) IIDEA loop
+        mock = self.iidea_loop(agent, mock=GetPhysicalObjectCapabilityMP)
+
         # 2c) TEST: An instance of ACKNOWLEDGE-INPUT with the correct TMR is on the agenda
+        self.assertGoalExists(agent, isa="EXE.ACKNOWLEDGE-INPUT", status=Goal.Status.PENDING, query=lambda goal: XMR(goal.resolve("$tmr")).graph(agent) == agent["TMR#2"])
+
         # 2d) TEST: The only PHYSICAL-EFFECTOR is reserved to PERFORM-COMPLEX-TASK (using capability GET(screwdriver))
+        self.assertEffectorReserved(agent, "SELF.PHYSICAL-EFFECTOR.1", "SELF.PERFORM-COMPLEX-TASK.1", "EXE.GET-CAPABILITY")
+        mock.assert_called_once_with("ENV.SCREWDRIVER.1")
+
         # 2e) IIDEA loop
+        self.iidea_loop(agent)
+
         # 2f) TEST: An instance of REACT-TO-VISUAL-INPUT with the correct VMR is on the agenda
+        self.assertGoalExists(agent, isa="EXE.REACT-TO-VISUAL-INPUT", status=Goal.Status.PENDING, query=lambda goal: XMR(goal.resolve("$vmr")).graph(agent) == agent["VMR#1"])
+
         # 2g) TEST: The PHYSICAL-EFFECTOR is still reserved; PERFORM-COMPLEX-TASK is still "active"
+        self.assertEffectorReserved(agent, "SELF.PHYSICAL-EFFECTOR.1", "SELF.PERFORM-COMPLEX-TASK.1", "EXE.GET-CAPABILITY")
+
         # 2h) IIDEA loop
+        self.iidea_loop(agent)
+
         # 2i) TEST: REACT-TO-VISUAL-INPUT is satisfied (only 2 goals: FSTD and PERFORM-COMPLEX-TASK)
+        self.assertGoalExists(agent, isa="EXE.REACT-TO-VISUAL-INPUT", status=Goal.Status.SATISFIED, query=lambda goal: XMR(goal.resolve("$vmr")).graph(agent) == agent["VMR#1"])
+
         # 2j) TEST: The PHYSICAL-EFFECTOR is still reserved; PERFORM-COMPLEX-TASK is still "active"
+        self.assertEffectorReserved(agent, "SELF.PHYSICAL-EFFECTOR.1", "SELF.PERFORM-COMPLEX-TASK.1", "EXE.GET-CAPABILITY")
 
         # 3a) Callback input capability GET(screwdriver) is complete
         # 3b) MOCK: The status of the screwdriver must be changed in WM (to reflect what would happen in a real environment)
