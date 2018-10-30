@@ -2,3 +2,11 @@
 *~
 *.pyc
 .DS_Store
+
+venv/
+
+ApprenticeAgentsDocumentation/
+
+#---Service Files---#
+ontosem-analyzer.yml
+static-knowledge.yml

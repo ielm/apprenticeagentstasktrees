@@ -16,8 +16,16 @@ import sys
 
 
 class Agent(Network):
+    """
+    The Agent
+    """
 
-    def __init__(self, ontology: Ontology=None):
+    def __init__(self, ontology: Ontology = None):
+        """
+        Initialize Agent
+
+        :param ontology: The agent's "World Model"
+        """
         super().__init__()
 
         if ontology is None:
@@ -123,7 +131,12 @@ class Agent(Network):
         def time(cls) -> int:
             return Agent.IDEA._time
 
-    def iidea(self, input=None): # (I)ndependent (I)nput, (D)ecide + (E)xecute + (A)ssess
+    def iidea(self, input=None):
+        """
+        (I)ndependent (I)nput, (D)ecide + (E)xecute + (A)ssess
+
+        :param input: Input for iidea loop
+        """
         global iidea_stage
 
         if input is not None:
@@ -286,3 +299,9 @@ class UnderstandInputMP(AgentMethod):
 class PrioritizeLearningMP(AgentMethod):
     def run(self, tmr_frame):
         return 0.75
+
+class EvalResourcesMP(AgentMethod):
+    def run(self, tmr_frame):
+        return 0.5
+
+from backend.resources.AgentMP import AcknowledgeInputMP, DecideOnLanguageInputMP

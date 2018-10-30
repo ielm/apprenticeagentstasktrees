@@ -10,6 +10,7 @@ if TYPE_CHECKING:
     from backend.agent import Agent
     from backend.models.effectors import Capability
 
+
 class Agenda(object):
 
     def __init__(self, frame: Frame):

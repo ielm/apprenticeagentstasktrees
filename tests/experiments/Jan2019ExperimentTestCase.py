@@ -42,6 +42,7 @@ class Jan2019Experiment(unittest.TestCase):
         goals = list(map(lambda g: Goal(g.resolve()), agent.identity["HAS-GOAL"]))
 
         if status is not None:
+            # goals is empty?
             goals = agent.agenda().goals(pending=(status == Goal.Status.PENDING), active=(status == Goal.Status.ACTIVE), abandoned=(status == Goal.Status.ABANDONED), satisfied=(status == Goal.Status.SATISFIED))
 
         if isa is not None:
@@ -113,7 +114,7 @@ class Jan2019Experiment(unittest.TestCase):
         self.iidea_loop(agent)
 
         # 1g) TEST: An instance of PERFORM-COMPLEX-TASK with the LTM instructions root is on the agenda
-        self.assertGoalExists(agent, isa="EXE.PERFORM-COMPLEX-TASK", status=Goal.Status.PENDING, query=lambda goal: goal.resolve("$task").singleton() == "LT.BUILD.1")
+        self.assertGoalExists(agent, isa="EXE.PERFORM-COMPLEX-TASK", status=Goal.Status.PENDING, query=lambda goal: goal.resolve("$task")._identifier == "LT.BUILD.1")
 
         # 2a) Visual input "Jake leaves"
         agent._input(self.observations()[0], type=XMR.Type.VISUAL.name)

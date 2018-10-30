@@ -3,11 +3,10 @@ DEFINE FIND-SOMETHING-TO-DO()
     IN EXE
     PRIORITY 0.1
     RESOURCES 0.3
-    ACTION (acknowledge input)
+    ACTION (find something to do)
         SELECT IF EXISTS (@^ EXE.INPUT-TMR AND STATUS = "RECEIVED")
         DO FOR EACH $tmr IN (@^ EXE.INPUT-TMR AND STATUS = "RECEIVED")
-        | SELF[HAS-GOAL] += @SELF:EXE.UNDERSTAND-TMR($tmr)
-        | $tmr[STATUS] = "ACKNOWLEDGED"
+        | SELF[HAS-GOAL] += @SELF:EXE.ACKNOWLEDGE-INPUT($tmr)
     ACTION (idle)
         SELECT DEFAULT
         DO IDLE
@@ -15,11 +14,48 @@ DEFINE FIND-SOMETHING-TO-DO()
 DEFINE UNDERSTAND-TMR($tmr)
     AS GOAL
     IN EXE
-    PRIORITY SELF.prioritize_learning($tmr)
-    RESOURCES 0.5
-    ACTION (understand)
+    PRIORITY SELF.prioritize_learning()
+    RESOURCES SELF.evaluate_resources()
+    ACTION (understand TMR)
         SELECT DEFAULT
         DO CAPABILITY #EXE.LEARN-CAPABILITY($tmr)
         | THEN DO $tmr[STATUS] = "UNDERSTOOD"
     WHEN $tmr[STATUS] == "UNDERSTOOD" THEN satisfied
+;
+DEFINE ACKNOWLEDGE-INPUT($tmr)
+    AS GOAL
+    IN EXE
+    PRIORITY SELF.prioritize_learning($tmr)
+    RESOURCES SELF.evaluate_resources($tmr)
+    ACTION (acknowledge input)
+        SELECT DEFAULT
+        DO SELF[HAS-GOAL] += @SELF:EXE.DECIDE-ON-LANGUAGE-INPUT($tmr)
+        DO $tmr[STATUS] = "ACKNOWLEDGED"
+    WHEN $tmr[STATUS] == "ACKNOWLEDGED" OR $tmr[STATUS] == "IGNORED" THEN satisfied
+;
+DEFINE DECIDE-ON-LANGUAGE-INPUT($tmr)
+//  TODO - return $task from decide_on_language_input and create PERFORM-COMPLEX-TASK from goal definition
+    AS GOAL
+    IN EXE
+    PRIORITY SELF.prioritize_learning($tmr)
+    RESOURCES SELF.evaluate_resources($tmr)
+    ACTION (decide on language input)
+        SELECT DEFAULT
+        DO SELF.decide_on_language_input($tmr)
+;
+DEFINE RESPOND-TO-QUERY($tmr)
+    AS GOAL
+    IN EXE
+    PRIORITY SELF.prioritize_learning($tmr)
+    RESOURCES SELF.evaluate_resources($tmr)
+;
+DEFINE PERFORM-COMPLEX-TASK($task)
+    AS GOAL
+    IN EXE
+    PRIORITY SELF.prioritize_learning($task)
+    RESOURCES SELF.evaluate_resources($task)
+    ACTION (perform complex task)
+        SELECT DEFAULT
+        DO SELF.perform_complex_task($task)
+        DO IDLE
 ;
