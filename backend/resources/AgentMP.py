@@ -41,6 +41,10 @@ class DecideOnLanguageInputMP(AgentMethod):
 
         # REQUEST-ACTION
         request_action = xmr.graph(self.agent).search(Frame.q(self.agent).isa("ONT.REQUEST-ACTION"))
+        
+        if len(request_action) == 0: 
+            return
+        
         # TMR.BUILD.1
         action = request_action[0]["THEME"].singleton()
         # ONT.CHAIR
