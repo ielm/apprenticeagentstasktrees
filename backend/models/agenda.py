@@ -20,16 +20,16 @@ class Agenda(object):
         results = list(map(lambda g: Goal(g.resolve()), self.frame["HAS-GOAL"]))
 
         if not pending:
-            results = list(filter(lambda g: not g.is_pending(), results))
+            results = filter(lambda g: not g.is_pending(), results)
 
         if not active:
-            results = list(filter(lambda g: not g.is_active(), results))
+            results = filter(lambda g: not g.is_active(), results)
 
         if not abandoned:
-            results = list(filter(lambda g: not g.is_abandoned(), results))
+            results = filter(lambda g: not g.is_abandoned(), results)
 
         if not satisfied:
-            results = list(filter(lambda g: not g.is_satisfied(), results))
+            results = filter(lambda g: not g.is_satisfied(), results)
 
         return list(results)
 
