@@ -17,7 +17,7 @@ class Agenda(object):
         self.frame = frame
 
     def goals(self, pending=False, active=True, abandoned=False, satisfied=False):
-        results = list(map(lambda g: Goal(g.resolve()), self.frame["HAS-GOAL"]))
+        results = map(lambda g: Goal(g.resolve()), self.frame["HAS-GOAL"])
 
         if not pending:
             results = filter(lambda g: not g.is_pending(), results)
