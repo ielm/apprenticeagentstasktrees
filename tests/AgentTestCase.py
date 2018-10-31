@@ -233,6 +233,7 @@ class AgentTestCase(unittest.TestCase):
         action = graph.register("ACTION")
         statement = graph.register("STATEMENT", isa="EXE.STATEMENT")
         goal = graph.register("GOAL")
+        goal["PLAN"] = action
 
         action["PERFORM"] = statement
         Goal(goal).status(Goal.Status.ACTIVE)

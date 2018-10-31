@@ -54,8 +54,6 @@ class Agenda(object):
 
         return list(map(lambda a: Action(a.resolve()), self.frame["ACTION-TO-TAKE"]))
 
-        # return Action(self.frame["ACTION-TO-TAKE"].singleton())
-
 
 class Goal(VariableMap):
 

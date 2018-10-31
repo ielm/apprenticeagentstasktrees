@@ -203,9 +203,8 @@ class Agent(Network):
                 effector.reserve(goal, capabilities[i])
 
     def _execute(self):
-        goal = self.agenda().goals(active=True)[0]
-        # self.agenda().action().perform(goal)
         for action in self.agenda().action():
+            goal = list(filter(lambda g: action.frame in g.frame["PLAN"], self.agenda().goals()))[0]
             action.perform(goal)
         del self.agenda().frame["ACTION-TO-TAKE"]
 
