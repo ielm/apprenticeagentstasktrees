@@ -133,7 +133,7 @@ class Jan2019Experiment(unittest.TestCase):
         self.iidea_loop(agent)
 
         # 2f) TEST: An instance of REACT-TO-VISUAL-INPUT with the correct VMR is on the agenda
-        self.assertGoalExists(agent, isa="EXE.REACT-TO-VISUAL-INPUT", status=Goal.Status.PENDING, query=lambda goal: XMR(goal.resolve("$vmr")).graph(agent) == agent["VMR#1"])
+        self.assertGoalExists(agent, isa="EXE.REACT-TO-VISUAL-INPUT", status=Goal.Status.PENDING, query=lambda goal: XMR(goal.resolve("$vmr")).graph(agent) == agent["TMR#2"])
 
         # 2g) TEST: The PHYSICAL-EFFECTOR is still reserved; PERFORM-COMPLEX-TASK is still "active"
         self.assertEffectorReserved(agent, "SELF.PHYSICAL-EFFECTOR.1", "SELF.PERFORM-COMPLEX-TASK.1", "EXE.GET-CAPABILITY")
@@ -142,7 +142,7 @@ class Jan2019Experiment(unittest.TestCase):
         self.iidea_loop(agent)
 
         # 2i) TEST: REACT-TO-VISUAL-INPUT is satisfied (only 2 goals: FSTD and PERFORM-COMPLEX-TASK)
-        self.assertGoalExists(agent, isa="EXE.REACT-TO-VISUAL-INPUT", status=Goal.Status.SATISFIED, query=lambda goal: XMR(goal.resolve("$vmr")).graph(agent) == agent["VMR#1"])
+        self.assertGoalExists(agent, isa="EXE.REACT-TO-VISUAL-INPUT", status=Goal.Status.SATISFIED, query=lambda goal: XMR(goal.resolve("$vmr")).graph(agent) == agent["TMR#2"])
 
         # 2j) TEST: The PHYSICAL-EFFECTOR is still reserved; PERFORM-COMPLEX-TASK is still "active"
         self.assertEffectorReserved(agent, "SELF.PHYSICAL-EFFECTOR.1", "SELF.PERFORM-COMPLEX-TASK.1", "EXE.GET-CAPABILITY")
