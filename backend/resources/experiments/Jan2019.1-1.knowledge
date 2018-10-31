@@ -1,11 +1,11 @@
 
 @LT.HUMAN.1 = {
-    ISA @HUMAN;
+    ISA @ONT.HUMAN;
     HAS-NAME "Jake";
 };
 
 @ENV.HUMAN.1 = {
-    ISA @HUMAN;
+    ISA @ONT.HUMAN;
     RESOLVED-TO @LT.HUMAN.1;
 };
 
@@ -17,5 +17,13 @@
 };
 
 @ENV.SCREWDRIVER.1 = {
-    ISA @SCREWDRIVER.1;
+    ISA @ONT.SCREWDRIVER.1;
+};
+
+@ENV.EPOCH = {};
+
+@ENV.EPOCH.1 = {
+    TIME 0;
+    CONTAINS @ENV.HUMAN.1;
+    CONTAINS @ENV.SCREWDRIVER.1;
 };

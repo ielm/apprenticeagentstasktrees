@@ -1,5 +1,6 @@
-from backend.agent import Agent, Capability, Effector
+from backend.agent import Agent
 from backend.models.agenda import Action, Goal
+from backend.models.effectors import Capability, Effector
 from backend.models.graph import Literal, Network
 from backend.models.ontology import Ontology
 from backend.models.statement import CapabilityStatement, Statement, VariableMap

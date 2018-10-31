@@ -1,4 +1,4 @@
-from backend.agent import Capability
+from backend.models.effectors import Capability
 from backend.models.graph import Frame, Graph, Identifier, Literal, Network
 from backend.models.mps import AgentMethod, MPRegistry
 from backend.models.query import Query

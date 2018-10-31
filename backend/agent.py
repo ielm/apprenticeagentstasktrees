@@ -1,18 +1,16 @@
 from backend.contexts.LCTContext import LCTContext
-from backend.models.agenda import Action, Agenda, Goal
-from backend.models.effectors import Callback, Capability, Effector
+from backend.models.agenda import Agenda, Goal
+from backend.models.effectors import Callback, Effector
+from backend.models.environment import Environment
 from backend.models.fr import FR
-from backend.models.graph import Frame, Graph, Identifier, Literal, Network
-from backend.models.mps import AgentMethod, MPRegistry
+from backend.models.graph import Frame, Graph, Identifier, Network
+from backend.models.mps import AgentMethod
 from backend.models.ontology import Ontology
-from backend.models.statement import CapabilityStatement, Statement, VariableMap
+from backend.models.statement import Statement
 from backend.models.tmr import TMR
 from backend.models.xmr import XMR
 from backend.utils.AgentLogger import AgentLogger
-from enum import Enum
-from typing import Callable, List, Union
-
-import sys
+from typing import List, Union
 
 
 class Agent(Network):
@@ -217,6 +215,9 @@ class Agent(Network):
 
     def agenda(self):
         return Agenda(self.identity)
+
+    def environment(self):
+        return Environment(self.environment)
 
     def effectors(self) -> List[Effector]:
         return list(map(lambda e: Effector(e.resolve()), self.identity["HAS-EFFECTOR"]))
