@@ -1,10 +1,11 @@
 import json
 import traceback
-from flask import Flask, request, abort, render_template, send_from_directory
+from flask import Flask, redirect, request, abort, render_template, send_from_directory
 from flask_cors import CORS
 
 
 from backend.agent import Agent
+from backend.models.bootstrap import Bootstrap
 from backend.contexts.LCTContext import LCTContext
 from backend.models.agenda import Action, Goal
 from backend.models.grammar import Grammar
@@ -283,6 +284,26 @@ def htn():
     instance: FRInstance = agent.search(Frame.q(agent).id(instance))[0]
 
     return json.dumps(format_learned_event_yale(instance, agent.ontology), indent=4)
+
+
+@app.route("/bootstrap", methods=["GET", "POST"])
+def bootstrap():
+    if request.method == "POST":
+        script = request.form["custom-bootstrap"]
+        script = script.replace("\r\n", "\n")
+        Bootstrap.bootstrap_script(agent, script)
+        return redirect("/bootstrap", code=302)
+
+    if "package" in request.args and "resource" in request.args:
+        package = request.args["package"]
+        resource = request.args["resource"]
+        Bootstrap.bootstrap_resource(agent, package, resource)
+        return redirect("/bootstrap", code=302)
+
+    resources = Bootstrap.list_resources("backend.resources") + Bootstrap.list_resources("backend.resources.experiments")
+    resources = map(lambda r: {"resource": r, "loaded": r[0] + "." + r[1] in Bootstrap.loaded}, resources)
+
+    return render_template("bootstrap.html", resources=resources)
 
 
 if __name__ == '__main__':

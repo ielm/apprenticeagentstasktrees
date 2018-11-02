@@ -10,12 +10,27 @@ from typing import Callable, List, Type, Union
 
 class Bootstrap(object):
 
+    loaded = []
+
+    @classmethod
+    def bootstrap_script(cls, agent: Agent, script: str):
+        bootstraps = Grammar.parse(agent, script, start="bootstrap", agent=agent)
+        for bootstrap in bootstraps:
+            bootstrap()
+
     @classmethod
     def bootstrap_resource(cls, agent: Agent, package: str, file: str):
         input: str = get_data(package, file).decode('ascii')
         bootstraps = Grammar.parse(agent, input, start="bootstrap", agent=agent)
         for bootstrap in bootstraps:
             bootstrap()
+
+        Bootstrap.loaded.append(package + "." + file)
+
+    @classmethod
+    def list_resources(cls, package: str):
+        from pkg_resources import resource_listdir
+        return list(map(lambda f: (package, f), filter(lambda f: f.endswith(".knowledge") or f.endswith(".aa") or f.endswith(".mps"), resource_listdir(package, ''))))
 
 
 class BootstrapTriple(object):
