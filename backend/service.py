@@ -253,6 +253,25 @@ def iidea_input():
     })
 
 
+@app.route("/iidea/observe", methods=["POST"])
+def iidea_observe():
+    if not request.get_json():
+        abort(400)
+
+    data = request.get_json()
+
+    observations = json.loads(get_data("tests.resources", "DemoJan2019_Observations.json").decode('ascii'))
+    observation = observations[data["observation"]]
+    agent._input(observation, type=XMR.Type.VISUAL.name)
+
+    return json.dumps({
+        "time": agent.IDEA.time(),
+        "stage": agent.IDEA.stage(),
+        "inputs": IIDEAConverter.inputs(),
+        "agenda": IIDEAConverter.agenda()
+    })
+
+
 @app.route("/input", methods=["POST"])
 def input():
     if not request.get_json():

@@ -117,7 +117,7 @@ class Jan2019Experiment(unittest.TestCase):
         self.assertGoalExists(agent, isa="EXE.PERFORM-COMPLEX-TASK", status=Goal.Status.PENDING, query=lambda goal: goal.resolve("$task")._identifier == "LT.BUILD.1")
 
         # 2a) Visual input "Jake leaves"
-        agent._input(self.observations()[0], type=XMR.Type.VISUAL.name)
+        agent._input(self.observations()["jake leaves"], type=XMR.Type.VISUAL.name)
 
         # 2b) IIDEA loop
         mock = self.iidea_loop(agent, mock=GetPhysicalObjectCapabilityMP)

@@ -1,7 +1,7 @@
-[
-  {
+{
+  "jake leaves": {
     "@ENV.HUMAN.1": {
       "LOCATION": "NOT-HERE"
     }
   }
-]
+}
