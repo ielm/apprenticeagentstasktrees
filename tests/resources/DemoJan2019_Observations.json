@@ -3,5 +3,10 @@
     "@ENV.HUMAN.1": {
       "LOCATION": "NOT-HERE"
     }
+  },
+  "screwdriver moved close": {
+    "@ENV.SCREWDRIVER.1": {
+      "SPATIAL-DISTANCE": 0.1
+    }
   }
 }
