@@ -14,16 +14,21 @@ from unittest.mock import patch
 import json
 import unittest
 
+from backend.resources.AgentMP import GetPhysicalObjectCapabilityMP
+
 
 class Jan2019Experiment(unittest.TestCase):
 
-    def analyses(self):
+    @staticmethod
+    def analyses():
         return json.loads(get_data("tests.resources", "DemoJan2019_Analyses.json").decode('ascii'))
 
-    def observations(self):
+    @staticmethod
+    def observations():
         return json.loads(get_data("tests.resources", "DemoJan2019_Observations.json").decode('ascii'))
 
-    def iidea_loop(self, agent: Agent, mock: Type[AgentMethod]=None):
+    @staticmethod
+    def iidea_loop(agent: Agent, mock: Type[AgentMethod]=None):
 
         def __iidea(agent: Agent):
             if agent.IDEA._stage == Agent.IDEA.D:
@@ -123,7 +128,7 @@ class Jan2019Experiment(unittest.TestCase):
         mock = self.iidea_loop(agent, mock=GetPhysicalObjectCapabilityMP)
 
         # 2c) TEST: An instance of ACKNOWLEDGE-INPUT with the correct TMR is on the agenda
-        self.assertGoalExists(agent, isa="EXE.ACKNOWLEDGE-INPUT", status=Goal.Status.PENDING, query=lambda goal: XMR(goal.resolve("$tmr")).graph(agent) == agent["TMR#2"])
+        self.assertGoalExists(agent, isa="EXE.ACKNOWLEDGE-INPUT", status=Goal.Status.PENDING, query=lambda goal: XMR(goal.resolve("$tmr")).graph(agent) == agent["VMR#1"])
 
         # 2d) TEST: The only PHYSICAL-EFFECTOR is reserved to PERFORM-COMPLEX-TASK (using capability GET(screwdriver))
         self.assertEffectorReserved(agent, "SELF.PHYSICAL-EFFECTOR.1", "SELF.PERFORM-COMPLEX-TASK.1", "EXE.GET-CAPABILITY")
@@ -133,7 +138,7 @@ class Jan2019Experiment(unittest.TestCase):
         self.iidea_loop(agent)
 
         # 2f) TEST: An instance of REACT-TO-VISUAL-INPUT with the correct VMR is on the agenda
-        self.assertGoalExists(agent, isa="EXE.REACT-TO-VISUAL-INPUT", status=Goal.Status.PENDING, query=lambda goal: XMR(goal.resolve("$vmr")).graph(agent) == agent["TMR#2"])
+        self.assertGoalExists(agent, isa="EXE.REACT-TO-VISUAL-INPUT", status=Goal.Status.PENDING, query=lambda goal: XMR(goal.resolve("$vmr")).graph(agent) == agent["VMR#1"])
 
         # 2g) TEST: The PHYSICAL-EFFECTOR is still reserved; PERFORM-COMPLEX-TASK is still "active"
         self.assertEffectorReserved(agent, "SELF.PHYSICAL-EFFECTOR.1", "SELF.PERFORM-COMPLEX-TASK.1", "EXE.GET-CAPABILITY")
@@ -142,9 +147,10 @@ class Jan2019Experiment(unittest.TestCase):
         self.iidea_loop(agent)
 
         # 2i) TEST: REACT-TO-VISUAL-INPUT is satisfied (only 2 goals: FSTD and PERFORM-COMPLEX-TASK)
-        self.assertGoalExists(agent, isa="EXE.REACT-TO-VISUAL-INPUT", status=Goal.Status.SATISFIED, query=lambda goal: XMR(goal.resolve("$vmr")).graph(agent) == agent["TMR#2"])
+        self.assertGoalExists(agent, isa="EXE.REACT-TO-VISUAL-INPUT", status=Goal.Status.SATISFIED, query=lambda goal: XMR(goal.resolve("$vmr")).graph(agent) == agent["VMR#1"])
 
         # 2j) TEST: The environment no longer registers "Jake" as being present
+        # Might need to be frame rather than name
         self.assertNotIn("ENV.HUMAN.1", agent.environment().current())
 
         # 2k) TEST: The PHYSICAL-EFFECTOR is still reserved; PERFORM-COMPLEX-TASK is still "active"

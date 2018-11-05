@@ -8,6 +8,7 @@ from backend.models.mps import AgentMethod
 from backend.models.ontology import Ontology
 from backend.models.statement import Statement
 from backend.models.tmr import TMR
+from backend.models.vmr import VMR
 from backend.models.xmr import XMR
 from backend.utils.AgentLogger import AgentLogger
 from typing import List, Union
@@ -150,9 +151,13 @@ class Agent(Network):
         if input is None:
             return
 
-        if isinstance(input, dict):
+        # If input is visual input, create VMR, else create tmr and continue
+        if type == "VISUAL":
+            input = VMR(input, ontology=self.ontology)
+        elif isinstance(input, dict):
             input = TMR(input, ontology=self.ontology)
 
+        # Takes graph obj and writes it to the network
         tmr = self.register(input)
 
         kwargs = {}
@@ -164,7 +169,10 @@ class Agent(Network):
         xmr = XMR.instance(self.internal, tmr, status=XMR.Status.RECEIVED, **kwargs)
         self.identity["HAS-INPUT"] += xmr.frame
 
-        self._logger.log("Input: '" + tmr.sentence + "'")
+        if type == "VISUAL":
+            self._logger.log("Input: <<VMR INSTANCE HERE>>")
+        else:
+            self._logger.log("Input: '" + tmr.sentence + "'")
 
     def _decision(self):
         agenda = self.agenda()

@@ -65,6 +65,15 @@ class RespondToQueryMP(AgentMethod):
 
 class PerformComplexTaskMP(AgentMethod):
     def run(self, task):
+        print("\n\n\n\n", task)
         return
 
 
+class ReactToVisualInputMP(AgentMethod):
+    def run(self, input_tmr):
+        return
+
+
+class GetPhysicalObjectCapabilityMP(AgentMethod):
+    def run(self):
+        return
