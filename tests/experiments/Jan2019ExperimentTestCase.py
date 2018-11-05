@@ -17,6 +17,12 @@ import unittest
 
 class Jan2019Experiment(unittest.TestCase):
 
+    def setUp(self):
+        from backend.models.tmr import TMR
+        from backend.utils.AtomicCounter import AtomicCounter
+
+        TMR.counter = AtomicCounter()
+
     def analyses(self):
         return json.loads(get_data("tests.resources", "DemoJan2019_Analyses.json").decode('ascii'))
 
