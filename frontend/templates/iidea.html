@@ -80,6 +80,24 @@
             $("#inputText").val("");
         }
 
+        function observe() {
+            var observation = $("#observations").val();
+
+            $.ajax({
+                url: "/iidea/observe",
+                method: "POST",
+                data: JSON.stringify({"observation": observation}),
+                contentType: "application/json",
+            }).done(function(data) {
+                var output = JSON.parse(data);
+                render_time(output);
+                render_inputs(output["inputs"]);
+                render_agenda(output["agenda"]);
+            }).fail(function(error) {
+                console.log(error);
+            });
+        }
+
         function start() {
             $("#start-button").hide();
             $("#pause-button").show();
@@ -199,6 +217,9 @@
             $("#inputTextButton").on("click", function() {
                 input();
             });
+            $("#observationButton").on("click", function() {
+                observe();
+            });
             $("#start-button").on("click", function() {
                 start();
             });
@@ -283,6 +304,13 @@
 </head>
 <body>
 
+    {% include 'nav.html' %}
+    <script>
+        $(document).ready(function() {
+            $("#nav-agenda").addClass("active");
+        });
+    </script>
+
     <div class="container">
         <div class="row" style="margin-top: 25px;">
             <div class="col-sm-8">
@@ -308,7 +336,7 @@
                 </div>
                 <div class="card" style="margin-bottom: 25px;">
                     <div class="card-header">
-                        Input
+                        Inputs and Observations
                     </div>
                     <div class="card-body">
                         <div class="input-group mb-3">
@@ -329,6 +357,14 @@
                             </datalist>
                             <div class="input-group-append">
                                 <button id="inputTextButton" class="btn btn-sm btn-primary" type="button">Input</button>
+                            </div>
+                        </div>
+                        <div class="input-group mb-3">
+                            <select class="custom-select custom-select-sm" id="observations">
+                                <option value="jake leaves">Jake Leaves</option>
+                            </select>
+                            <div class="input-group-append">
+                                <button id="observationButton" class="btn btn-sm btn-primary" type="button">Observe</button>
                             </div>
                         </div>
                         <div class="input-group mb-3">
