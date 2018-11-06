@@ -8,5 +8,10 @@
     "@ENV.SCREWDRIVER.1": {
       "SPATIAL-DISTANCE": 0.1
     }
+  },
+  "jake enters": {
+    "@ENV.HUMAN.1": {
+      "LOCATION": "HERE"
+    }
   }
 }

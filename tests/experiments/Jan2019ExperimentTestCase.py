@@ -197,19 +197,47 @@ class Jan2019Experiment(unittest.TestCase):
         self.assertTrue(Goal(agent.internal["PERFORM-COMPLEX-TASK.1"]).is_active())
 
         # 4a) Visual input "Jake returns"
+        agent._input(self.observations()["jake enters"], type=XMR.Type.VISUAL.name)
+
         # 4b) IIDEA loop
+        self.iidea_loop(agent)
+
         # 4c) TEST: An instance of ACKNOWLEDGE-INPUT with the correct TMR is on the agenda
+        self.assertGoalExists(agent, isa="EXE.ACKNOWLEDGE-INPUT", status=Goal.Status.PENDING, query=lambda goal: XMR(goal.resolve("$tmr")).graph(agent) == agent["VMR#3"])
+
         # 4d) TEST: PERFORM-COMPLEX-TASK is still "active"
+        self.assertTrue(Goal(agent.internal["PERFORM-COMPLEX-TASK.1"]).is_active())
+
         # 4e) IIDEA loop
+        self.iidea_loop(agent)
+
         # 4f) TEST: An instance of REACT-TO-VISUAL-INPUT with the correct VMR is on the agenda
+        self.assertGoalExists(agent, isa="EXE.REACT-TO-VISUAL-INPUT", status=Goal.Status.SATISFIED, query=lambda goal: XMR(goal.resolve("$vmr")).graph(agent) == agent["VMR#3"])
+
         # 4g) TEST: PERFORM-COMPLEX-TASK is still "active"
+        self.assertTrue(Goal(agent.internal["PERFORM-COMPLEX-TASK.1"]).is_active())
+
         # 4h) IIDEA loop
+        self.iidea_loop(agent)
+
         # 4i) TEST: An instance of ACKNOWLEDGE-HUMAN with the correct @human instance is on the agenda
+        self.assertGoalExists(agent, isa="EXE.ACKNOWLEDGE-HUMAN", status=Goal.Status.PENDING, query=lambda goal: goal.resolve("$human")._identifier == "ENV.HUMAN.1")
+
         # 4j) TEST: PERFORM-COMPLEX-TASK is still "active"
+        self.assertTrue(Goal(agent.internal["PERFORM-COMPLEX-TASK.1"]).is_active())
+
         # 4k) IIDEA loop
+        mock = self.iidea_loop(agent, mock=SpeakCapabilityMP)
+
         # 4l) TEST: The only VERBAL-EFFECTOR is reserved to ACKNOWLEDGE-HUMAN (using capability SPEAK("Hi Jake."))
+        self.assertEffectorReserved(agent, "SELF.VERBAL-EFFECTOR.1", "SELF.ACKNOWLEDGE-HUMAN.1", "EXE.SPEAK-CAPABILITY")
+        mock.assert_called_once_with("Hi Jake.")
+
         # 4m) TEST: ACKNOWLEDGE-HUMAN is "active"
+        self.assertTrue(Goal(agent.internal["ACKNOWLEDGE-HUMAN.1"]).is_active())
+
         # 4n) TEST: PERFORM-COMPLEX-TASK is still "active"
+        self.assertTrue(Goal(agent.internal["PERFORM-COMPLEX-TASK.1"]).is_active())
 
         # 5a) Callback input capability SPEAK("Hi Jake.") is complete
         # 5b) IIDEA loop
