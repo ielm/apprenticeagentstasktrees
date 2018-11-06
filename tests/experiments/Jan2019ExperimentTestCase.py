@@ -240,33 +240,78 @@ class Jan2019Experiment(unittest.TestCase):
         self.assertTrue(Goal(agent.internal["PERFORM-COMPLEX-TASK.1"]).is_active())
 
         # 5a) Callback input capability SPEAK("Hi Jake.") is complete
+        agent.callback("SELF.CALLBACK.3")
+
         # 5b) IIDEA loop
+        self.iidea_loop(agent)
+
         # 5c) TEST: ACKNOWLEDGE-HUMAN is "satisfied"
+        self.assertTrue(Goal(agent.internal["ACKNOWLEDGE-HUMAN.1"]).is_satisfied())
+
         # 5d) TEST: PERFORM-COMPLEX-TASK is still "active"
+        self.assertTrue(Goal(agent.internal["PERFORM-COMPLEX-TASK.1"]).is_active())
 
         # 6a) Input from "Jake", "What are you doing?"
-        # 6b) IIDEA loop
-        # 6c) TEST: An instance of ACKNOWLEDGE-INPUT with the correct TMR is on the agenda
-        # 6d) TEST: PERFORM-COMPLEX-TASK is still "active"
-        # 6e) IIDEA loop
-        # 6f) TEST: An instance of DECIDE-ON-LANGUAGE-INPUT with the correct TMR is on the agenda
-        # 6g) TEST: PERFORM-COMPLEX-TASK is still "active"
-        # 6h) IIDEA loop
-        # 6i) TEST: An instance of RESPOND-TO-QUERY with the LTM instructions root is on the agenda
-        # 6j) TEST: PERFORM-COMPLEX-TASK is still "active"
-        # 6k) IIDEA loop
-        # 6l) TEST: The only VERBAL-EFFECTOR is reserved to RESPOND-TO-QUERY (using capability SPEAK("I am fetching a foot bracket."))
-        # 6m) TEST: PERFORM-COMPLEX-TASK is still "active"
+        agent._input(self.analyses()[1], source="LT.HUMAN.1")
 
-        # 7a) Callback input capability SPEAK("I am fetching a front bracket.") is complete
+        # 6b) IIDEA loop
+        self.iidea_loop(agent)
+
+        # 6c) TEST: An instance of ACKNOWLEDGE-INPUT with the correct TMR is on the agenda
+        self.assertGoalExists(agent, isa="EXE.ACKNOWLEDGE-INPUT", status=Goal.Status.PENDING, query=lambda goal: XMR(goal.resolve("$tmr")).graph(agent) == agent["TMR#2"])
+
+        # 6d) TEST: PERFORM-COMPLEX-TASK is still "active"
+        self.assertTrue(Goal(agent.internal["PERFORM-COMPLEX-TASK.1"]).is_active())
+
+        # 6e) IIDEA loop
+        self.iidea_loop(agent)
+
+        # 6f) TEST: An instance of DECIDE-ON-LANGUAGE-INPUT with the correct TMR is on the agenda
+        self.assertGoalExists(agent, isa="EXE.DECIDE-ON-LANGUAGE-INPUT", status=Goal.Status.PENDING, query=lambda goal: XMR(goal.resolve("$tmr")).graph(agent) == "TMR#2")
+
+        # 6g) TEST: PERFORM-COMPLEX-TASK is still "active"
+        self.assertTrue(Goal(agent.internal["PERFORM-COMPLEX-TASK.1"]).is_active())
+
+        # 6h) IIDEA loop
+        self.iidea_loop(agent)
+
+        # 6i) TEST: An instance of RESPOND-TO-QUERY with the correct TMR is on the agenda
+        self.assertGoalExists(agent, isa="EXE.RESPOND-TO-QUERY", status=Goal.Status.PENDING, query=lambda goal: XMR(goal.resolve("$tmr")).graph(agent) == "TMR#2")
+
+        # 6j) TEST: PERFORM-COMPLEX-TASK is still "active"
+        self.assertTrue(Goal(agent.internal["PERFORM-COMPLEX-TASK.1"]).is_active())
+
+        # 6k) IIDEA loop
+        mock = self.iidea_loop(agent, mock=SpeakCapabilityMP)
+
+        # 6l) TEST: The only VERBAL-EFFECTOR is reserved to RESPOND-TO-QUERY (using capability SPEAK("I am fetching a foot bracket."))
+        self.assertEffectorReserved(agent, "SELF.VERBAL-EFFECTOR.1", "SELF.RESPOND-TO-QUERY.1", "EXE.SPEAK-CAPABILITY")
+        mock.assert_called_once_with("I am fetching a foot bracket.")
+
+        # 6m) TEST: PERFORM-COMPLEX-TASK is still "active"
+        self.assertTrue(Goal(agent.internal["PERFORM-COMPLEX-TASK.1"]).is_active())
+
+        # 7a) Callback input capability SPEAK("I am fetching a foot bracket.") is complete
+        agent.callback("SELF.CALLBACK.4")
+
         # 7b) IIDEA loop
+        self.iidea_loop(agent)
+
         # 7c) TEST: RESPOND-TO-QUERY is "satisfied"
+        self.assertTrue(Goal(agent.internal["RESPOND-TO-QUERY.1"]).is_satisfied())
+
         # 7d) TEST: PERFORM-COMPLEX-TASK is still "active"
+        self.assertTrue(Goal(agent.internal["PERFORM-COMPLEX-TASK.1"]).is_active())
 
         # 8a) Callback input capability GET(foot_bracket)
-        # 8b) IIDEA loop
-        # 8c) TEST: The PHYSICAL-EFFECTOR is released
-        # 8d) TEST: PERFORM-COMPLEX-TASK is still "active" (the chair is not yet built)
+        agent.callback("SELF.CALLBACK.2")
 
-        self.fail()
+        # 8b) IIDEA loop
+        self.iidea_loop(agent)
+
+        # 8c) TEST: The PHYSICAL-EFFECTOR is released
+        self.assertTrue(Effector(agent.internal["PHYSICAL-EFFECTOR.1"]).is_free())
+
+        # 8d) TEST: PERFORM-COMPLEX-TASK is still "active" (the chair is not yet built)
+        self.assertTrue(Goal(agent.internal["PERFORM-COMPLEX-TASK.1"]).is_active())
 
