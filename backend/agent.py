@@ -168,6 +168,7 @@ class Agent(Network):
 
     def _decision(self):
         agenda = self.agenda()
+        agenda.fire_triggers()
 
         priority_weight = self.identity["PRIORITY_WEIGHT"].singleton()
         resources_weight = self.identity["RESOURCES_WEIGHT"].singleton()

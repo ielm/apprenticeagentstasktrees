@@ -95,6 +95,15 @@ class GrammarTransformer(Transformer):
         __import__(matches[0])
         return getattr(sys.modules[matches[0]], matches[1])
 
+    def add_trigger(self, matches):
+        from backend.models.bootstrap import BootstrapAddTrigger
+
+        agenda = matches[3]
+        definition = matches[5]
+        query = matches[7]
+
+        return BootstrapAddTrigger(self.agent, agenda, definition, query)
+
     def slot(self, matches):
         return str(matches[0])
 

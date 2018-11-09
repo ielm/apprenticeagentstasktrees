@@ -1,5 +1,6 @@
 from backend.models.grammar import Grammar
 from backend.models.graph import Frame, Graph, Identifier, Literal
+from backend.models.query import Query
 from backend.models.statement import Statement, VariableMap
 from enum import Enum
 from functools import reduce
@@ -53,6 +54,23 @@ class Agenda(object):
             return []
 
         return list(map(lambda a: Action(a.resolve()), self.frame["ACTION-TO-TAKE"]))
+
+    def add_trigger(self, trigger: [str, Identifier, Frame, 'Trigger']):
+        if isinstance(trigger, str):
+            trigger = Identifier.parse(trigger)
+        if isinstance(trigger, Trigger):
+            trigger = trigger.frame
+        if isinstance(trigger, Frame):
+            trigger = trigger._identifier
+
+        self.frame["TRIGGER"] += trigger
+
+    def triggers(self) -> List['Trigger']:
+        return list(map(lambda t: Trigger(t.resolve()), self.frame["TRIGGER"]))
+
+    def fire_triggers(self):
+        for trigger in self.triggers():
+            trigger.fire(self)
 
 
 class Goal(VariableMap):
@@ -345,6 +363,51 @@ class Action(object):
         s2 = list(map(lambda frame: Statement.from_instance(frame.resolve()), other.frame["PERFORM"]))
 
         return s1 == s2
+
+
+class Trigger(object):
+
+    @classmethod
+    def build(cls, graph: Graph, query: Query, definition: Union[str, Identifier, Frame, Goal]) -> 'Trigger':
+        if isinstance(definition, str):
+            definition = Identifier.parse(definition)
+        if isinstance(definition, Goal):
+            definition = definition.frame
+        if isinstance(definition, Frame):
+            definition = definition._identifier
+
+        frame = graph.register("TRIGGER", generate_index=True)
+        frame["QUERY"] = query
+        frame["DEFINITION"] = definition
+
+        return Trigger(frame)
+
+    def __init__(self, frame: Frame):
+        self.frame = frame
+
+    def query(self) -> Query:
+        return self.frame["QUERY"].singleton()
+
+    def definition(self) -> Goal:
+        return Goal(self.frame["DEFINITION"].singleton())
+
+    def fire(self, agenda: [Frame, Agenda]):
+        if isinstance(agenda, Frame):
+            agenda = Agenda(agenda)
+
+        results = self.frame._graph._network.search(self.query())
+        results = filter(lambda r: r not in self.frame["TRIGGERED-ON"], results)
+
+        for r in results:
+            agenda.add_goal(Goal.instance_of(self.frame._graph, self.definition(), [r]))
+            self.frame["TRIGGERED-ON"] += r
+
+    def __eq__(self, other):
+        if isinstance(other, Trigger):
+            return self.query() == other.query() and self.definition() == other.definition()
+        if isinstance(other, Frame):
+            return self.frame == other
+        return super().__eq__(other)
 
 
 class Condition(object):

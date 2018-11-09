@@ -571,6 +571,15 @@ class BootstrapGrammarTestCase(unittest.TestCase):
         parsed = Grammar.parse(self.agent, "REGISTER MP tests.models.GrammarTestCase.TestAgentMethod AS TestMP", start="register_mp", agent=self.agent)
         self.assertEqual(bootstrap, parsed)
 
+    def test_add_trigger(self):
+        from backend.models.bootstrap import BootstrapAddTrigger
+
+        query = SlotQuery(self.agent, AndQuery(self.agent, [NameQuery(self.agent, "THEME"), FillerQuery(self.agent, LiteralQuery(self.agent, 123))]))
+
+        bootstrap = BootstrapAddTrigger(self.agent, "SELF.AGENDA.1", "EXE.MYGOAL.1", query)
+        parsed = Grammar.parse(self.agent, "ADD TRIGGER TO @SELF.AGENDA.1 INSTANTIATE @EXE.MYGOAL.1 WHEN THEME = 123", start="add_trigger", agent=self.agent)
+        self.assertEqual(bootstrap, parsed)
+
 
 class TestAgentMethod(AgentMethod):
     pass
