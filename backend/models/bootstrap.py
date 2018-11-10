@@ -1,9 +1,10 @@
 from backend.agent import Agent
-from backend.models.agenda import Goal
+from backend.models.agenda import Agenda, Goal, Trigger
 from backend.models.grammar import Grammar
 from backend.models.graph import Filler, Frame, Graph, Identifier, Literal, Network
 from backend.models.mps import AgentMethod, MPRegistry
 from backend.models.ontology import Ontology, OntologyFrame, OntologyFiller
+from backend.models.query import Query
 from pkgutil import get_data
 from typing import Callable, List, Type, Union
 
@@ -147,3 +148,32 @@ class BoostrapGoal(Bootstrap):
 
     def __call__(self, *args, **kwargs):
         return self.goal
+
+
+class BootstrapAddTrigger(Bootstrap):
+
+    def __init__(self, network: Network, agenda: Union[str, Identifier, Frame, Agenda], definition: Union[str, Identifier, Frame, Goal], query: Query):
+        self.network = network
+        self.agenda = agenda
+        self.definition = definition
+        self.query = query
+
+    def __call__(self, *args, **kwargs):
+        agenda = self.agenda
+        if isinstance(agenda, str):
+            agenda = self.network.lookup(agenda)
+        if isinstance(agenda, Identifier):
+            agenda = self.network.lookup(agenda)
+        if isinstance(agenda, Agenda):
+            agenda = agenda.frame
+
+        trigger = Trigger.build(agenda._graph, self.query, self.definition)
+        Agenda(agenda).add_trigger(trigger)
+
+    def __eq__(self, other):
+        if isinstance(other, BootstrapAddTrigger):
+            return self.network == other.network and \
+                    self.agenda == other.agenda and \
+                    self.definition == other.definition and \
+                    self.query == other.query
+        return super().__eq__(other)

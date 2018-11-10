@@ -1,5 +1,5 @@
-from backend.models.agenda import Action, Agenda, Condition, Goal
-from backend.models.graph import Frame, Graph, Literal
+from backend.models.agenda import Action, Agenda, Condition, Goal, Trigger
+from backend.models.graph import Frame, Graph, Literal, Network
 from backend.models.statement import Statement, VariableMap
 
 import unittest
@@ -67,6 +67,63 @@ class AgendaTestCase(unittest.TestCase):
 
         agenda = Agenda(f1)
         self.assertEqual([a1], agenda.action())
+
+    def test_triggers(self):
+        n = Network()
+        graph = n.register(Graph("TEST"))
+        agenda = graph.register("AGENDA")
+        definition = graph.register("MYGOAL")
+
+        query1 = Frame.q(n).isa("TEST1")
+        query2 = Frame.q(n).isa("TEST2")
+
+        trigger1 = Trigger.build(graph, query1, definition)
+        trigger2 = Trigger.build(graph, query2, definition)
+
+        agenda["TRIGGER"] += trigger1.frame
+        agenda["TRIGGER"] += trigger2.frame
+
+        self.assertEqual([trigger1, trigger2], Agenda(agenda).triggers())
+
+    def test_add_trigger(self):
+        n = Network()
+        graph = n.register(Graph("TEST"))
+        agenda = graph.register("AGENDA")
+        definition = graph.register("MYGOAL")
+
+        query = Frame.q(n).isa("TEST1")
+
+        trigger = Trigger.build(graph, query, definition)
+
+        Agenda(agenda).add_trigger(trigger)
+
+        self.assertEqual([trigger], Agenda(agenda).triggers())
+
+    def test_fire_triggers(self):
+        n = Network()
+        graph = n.register(Graph("TEST"))
+        agenda = Agenda(graph.register("AGENDA"))
+
+        definition = graph.register("MYGOAL")
+        definition["WITH"] = Literal("$var1")
+
+        trigger1 = Trigger.build(graph, Frame.q(n).id("TEST.TARGET.1"), definition)
+        agenda.add_trigger(trigger1)
+
+        trigger2 = Trigger.build(graph, Frame.q(n).id("TEST.TARGET.1"), definition)
+        agenda.add_trigger(trigger2)
+
+        target = graph.register("TARGET", generate_index=True)
+
+        self.assertEqual(0, len(agenda.goals(pending=True, active=True)))
+
+        agenda.fire_triggers()
+
+        self.assertIn(graph["GOAL.1"], agenda.goals(pending=True, active=True))
+        self.assertEqual(target, Goal(graph["GOAL.1"]).resolve("$var1"))
+
+        self.assertIn(graph["GOAL.2"], agenda.goals(pending=True, active=True))
+        self.assertEqual(target, Goal(graph["GOAL.2"]).resolve("$var1"))
 
 
 class GoalTestCase(unittest.TestCase):
@@ -332,6 +389,104 @@ class GoalTestCase(unittest.TestCase):
         self.assertEqual(var["NAME"], "VAR_X")
         self.assertEqual(var["FROM"], goal.frame)
         self.assertEqual(var["VALUE"], 123)
+
+
+class TriggerTestCase(unittest.TestCase):
+
+    def test_query(self):
+        n = Network()
+
+        query = Frame.q(n).id("TEST.FRAME.123")
+
+        graph = n.register(Graph("TEST"))
+        trigger = graph.register("TRIGGER")
+        trigger["QUERY"] = query
+
+        self.assertEqual(query, Trigger(trigger).query())
+
+    def test_definition(self):
+        n = Network()
+        graph = n.register(Graph("TEST"))
+        goal = graph.register("MYGOAL")
+        trigger = graph.register("TRIGGER")
+        trigger["DEFINITION"] = goal
+
+        self.assertEqual(goal, Trigger(trigger).definition())
+
+    def test_fire_creates_goal_instance(self):
+        n = Network()
+        graph = n.register(Graph("TEST"))
+        agenda = Agenda(graph.register("AGENDA"))
+
+        definition = graph.register("MYGOAL")
+        definition["WITH"] = Literal("$var1")
+
+        trigger = Trigger.build(graph, Frame.q(n).id("TEST.TARGET.1"), definition)
+        agenda.add_trigger(trigger)
+
+        target = graph.register("TARGET", generate_index=True)
+
+        self.assertEqual(0, len(agenda.goals(pending=True, active=True)))
+
+        trigger.fire(agenda)
+
+        self.assertIn(graph["GOAL.1"], agenda.goals(pending=True, active=True))
+        self.assertEqual(target, Goal(graph["GOAL.1"]).resolve("$var1"))
+
+    def test_fire_creates_multiple_goal_instances(self):
+        n = Network()
+        graph = n.register(Graph("TEST"))
+        agenda = Agenda(graph.register("AGENDA"))
+
+        definition = graph.register("MYGOAL")
+        definition["WITH"] = Literal("$var1")
+
+        trigger = Trigger.build(graph, Frame.q(n).has("MYSLOT"), definition)
+
+        target1 = graph.register("TARGET", generate_index=True)
+        target1["MYSLOT"] = 123
+
+        target2 = graph.register("TARGET", generate_index=True)
+        target2["MYSLOT"] = 123
+
+        self.assertEqual(0, len(agenda.goals(pending=True, active=True)))
+
+        trigger.fire(agenda)
+
+        self.assertIn(graph["GOAL.1"], agenda.goals(pending=True, active=True))
+        self.assertIn(graph["GOAL.2"], agenda.goals(pending=True, active=True))
+        self.assertEqual(target1, Goal(graph["GOAL.1"]).resolve("$var1"))
+        self.assertEqual(target2, Goal(graph["GOAL.2"]).resolve("$var1"))
+
+    def test_fire_filters_existing_triggered_instances(self):
+        n = Network()
+        graph = n.register(Graph("TEST"))
+        agenda = Agenda(graph.register("AGENDA"))
+
+        definition = graph.register("MYGOAL")
+        definition["WITH"] = Literal("$var1")
+
+        trigger = Trigger.build(graph, Frame.q(n).has("MYSLOT"), definition)
+
+        target1 = graph.register("TARGET", generate_index=True)
+        target1["MYSLOT"] = 123
+
+        self.assertEqual(0, len(agenda.goals(pending=True, active=True)))
+
+        trigger.fire(agenda)
+
+        self.assertIn(graph["GOAL.1"], agenda.goals(pending=True, active=True))
+        self.assertEqual(target1, Goal(graph["GOAL.1"]).resolve("$var1"))
+
+        target2 = graph.register("TARGET", generate_index=True)
+        target2["MYSLOT"] = 123
+
+        trigger.fire(agenda)
+
+        self.assertIn(graph["GOAL.2"], agenda.goals(pending=True, active=True))
+        self.assertEqual(target2, Goal(graph["GOAL.2"]).resolve("$var1"))
+
+        self.assertEqual(2, len(agenda.goals(pending=True, active=True)))
 
 
 class ConditionTestCase(unittest.TestCase):

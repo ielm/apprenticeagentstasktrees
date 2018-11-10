@@ -1,5 +1,6 @@
-from backend.models.bootstrap import BootstrapAppendKnowledge, BootstrapDeclareKnowledge, BootstrapRegisterMP, BootstrapTriple
-from backend.models.graph import Identifier, Literal, Network
+from backend.models.agenda import Agenda
+from backend.models.bootstrap import BootstrapAddTrigger, BootstrapAppendKnowledge, BootstrapDeclareKnowledge, BootstrapRegisterMP, BootstrapTriple
+from backend.models.graph import Frame, Identifier, Literal, Network
 from backend.models.mps import AgentMethod, MPRegistry
 
 import unittest
@@ -183,3 +184,22 @@ class BootstrapRegisterMPTestCase(unittest.TestCase):
 
         self.assertTrue(MPRegistry.has_mp("TestMP"))
         self.assertTrue(MPRegistry.run("TestMP", None))
+
+
+class BootstrapAddTriggerTestCase(unittest.TestCase):
+
+    def setUp(self):
+        self.n = Network()
+        self.g = self.n.register("TEST")
+
+    def test_call(self):
+        agenda = self.g.register("AGENDA")
+        definition = self.g.register("DEFINITION")
+        query = Frame.q(self.n).id("TEST.SOMETHING.123")
+
+        boot = BootstrapAddTrigger(self.n, agenda, definition, query)
+        boot()
+
+        self.assertEqual(1, len(Agenda(agenda).triggers()))
+        self.assertEqual(definition, Agenda(agenda).triggers()[0].definition())
+        self.assertEqual(query, Agenda(agenda).triggers()[0].query())

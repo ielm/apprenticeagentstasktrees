@@ -163,55 +163,161 @@ class Jan2019Experiment(unittest.TestCase):
         self.assertEffectorReserved(agent, "SELF.PHYSICAL-EFFECTOR.1", "SELF.PERFORM-COMPLEX-TASK.1", "EXE.GET-CAPABILITY")
 
         # 3a) Callback input capability GET(screwdriver) is complete
-        # 3b) MOCK: The status of the screwdriver must be changed in WM (to reflect what would happen in a real environment)
-        #           Should we have an ENV graph?  Probably.
-        # 3c) IIDEA loop
-        # 3d) TEST: The only PHYSICAL-EFFECTOR is reserved to PERFORM-COMPLEX-TASK (using capability GET(foot_bracket))
-        # 3e) TEST: PERFORM-COMPLEX-TASK is still "active"
+        agent.callback("SELF.CALLBACK.1")
+
+        # 3b) Visual input "the screwdriver has been moved"
+        agent._input(self.observations()["screwdriver moved close"], type=XMR.Type.VISUAL.name)
+
+        # 3c) TEST: The screwdriver is "close" to the agent
+        self.assertEqual(0.1, agent.environment().distance("ENV.SCREWDRIVER.1"))
+
+        # 3d) IIDEA loop
+        mock = self.iidea_loop(agent, mock=GetPhysicalObjectCapabilityMP)
+
+        # 3e) TEST: An instance of ACKNOWLEDGE-INPUT with the correct VMR is on the agenda
+        self.assertGoalExists(agent, isa="EXE.ACKNOWLEDGE-INPUT", status=Goal.Status.PENDING, query=lambda goal: XMR(goal.resolve("$tmr")).graph(agent) == agent["VMR#2"])
+
+        # 3f) TEST: The only PHYSICAL-EFFECTOR is reserved to PERFORM-COMPLEX-TASK (using capability GET(foot_bracket))
+        self.assertEffectorReserved(agent, "SELF.PHYSICAL-EFFECTOR.1", "SELF.PERFORM-COMPLEX-TASK.1",  "EXE.GET-CAPABILITY")
+        mock.assert_called_once_with("ENV.BRACKET.1")
+
+        # 3g) TEST: PERFORM-COMPLEX-TASK is still "active"
+        self.assertTrue(Goal(agent.internal["PERFORM-COMPLEX-TASK.1"]).is_active())
+
+        # 3h) IIDEA loop
+        self.iidea_loop(agent)
+
+        # 3i) TEST: An instance of REACT-TO-VISUAL-INPUT with the correct VMR is on the agenda
+        self.assertGoalExists(agent, isa="EXE.REACT-TO-VISUAL-INPUT", status=Goal.Status.SATISFIED, query=lambda goal: XMR(goal.resolve("$vmr")).graph(agent) == agent["VMR#2"])
+
+        # 3j) TEST: PERFORM-COMPLEX-TASK is still "active"
+        self.assertTrue(Goal(agent.internal["PERFORM-COMPLEX-TASK.1"]).is_active())
+
+        # 3k) IIDEA loop
+        self.iidea_loop(agent)
+
+        # 3l) TEST: All instances of REACT-TO-VISUAL-INPUT are satisified
+        self.assertEqual(0, len(list(filter(lambda g: not g.is_satisfied(), map(lambda g: Goal(g), agent.internal.search(Frame.q(agent).isa("EXE.REACT-TO-VISUAL-INPUT")))))))
+
+        # 3j) TEST: PERFORM-COMPLEX-TASK is still "active"
+        self.assertTrue(Goal(agent.internal["PERFORM-COMPLEX-TASK.1"]).is_active())
 
         # 4a) Visual input "Jake returns"
+        agent._input(self.observations()["jake enters"], type=XMR.Type.VISUAL.name)
+
         # 4b) IIDEA loop
+        self.iidea_loop(agent)
+
         # 4c) TEST: An instance of ACKNOWLEDGE-INPUT with the correct TMR is on the agenda
+        self.assertGoalExists(agent, isa="EXE.ACKNOWLEDGE-INPUT", status=Goal.Status.PENDING, query=lambda goal: XMR(goal.resolve("$tmr")).graph(agent) == agent["VMR#3"])
+
         # 4d) TEST: PERFORM-COMPLEX-TASK is still "active"
+        self.assertTrue(Goal(agent.internal["PERFORM-COMPLEX-TASK.1"]).is_active())
+
         # 4e) IIDEA loop
+        self.iidea_loop(agent)
+
         # 4f) TEST: An instance of REACT-TO-VISUAL-INPUT with the correct VMR is on the agenda
+        self.assertGoalExists(agent, isa="EXE.REACT-TO-VISUAL-INPUT", status=Goal.Status.SATISFIED, query=lambda goal: XMR(goal.resolve("$vmr")).graph(agent) == agent["VMR#3"])
+
         # 4g) TEST: PERFORM-COMPLEX-TASK is still "active"
+        self.assertTrue(Goal(agent.internal["PERFORM-COMPLEX-TASK.1"]).is_active())
+
         # 4h) IIDEA loop
+        self.iidea_loop(agent)
+
         # 4i) TEST: An instance of ACKNOWLEDGE-HUMAN with the correct @human instance is on the agenda
+        self.assertGoalExists(agent, isa="EXE.ACKNOWLEDGE-HUMAN", status=Goal.Status.PENDING, query=lambda goal: goal.resolve("$human")._identifier == "ENV.HUMAN.1")
+
         # 4j) TEST: PERFORM-COMPLEX-TASK is still "active"
+        self.assertTrue(Goal(agent.internal["PERFORM-COMPLEX-TASK.1"]).is_active())
+
         # 4k) IIDEA loop
+        mock = self.iidea_loop(agent, mock=SpeakCapabilityMP)
+
         # 4l) TEST: The only VERBAL-EFFECTOR is reserved to ACKNOWLEDGE-HUMAN (using capability SPEAK("Hi Jake."))
+        self.assertEffectorReserved(agent, "SELF.VERBAL-EFFECTOR.1", "SELF.ACKNOWLEDGE-HUMAN.1", "EXE.SPEAK-CAPABILITY")
+        mock.assert_called_once_with("Hi Jake.")
+
         # 4m) TEST: ACKNOWLEDGE-HUMAN is "active"
+        self.assertTrue(Goal(agent.internal["ACKNOWLEDGE-HUMAN.1"]).is_active())
+
         # 4n) TEST: PERFORM-COMPLEX-TASK is still "active"
+        self.assertTrue(Goal(agent.internal["PERFORM-COMPLEX-TASK.1"]).is_active())
 
         # 5a) Callback input capability SPEAK("Hi Jake.") is complete
+        agent.callback("SELF.CALLBACK.3")
+
         # 5b) IIDEA loop
+        self.iidea_loop(agent)
+
         # 5c) TEST: ACKNOWLEDGE-HUMAN is "satisfied"
+        self.assertTrue(Goal(agent.internal["ACKNOWLEDGE-HUMAN.1"]).is_satisfied())
+
         # 5d) TEST: PERFORM-COMPLEX-TASK is still "active"
+        self.assertTrue(Goal(agent.internal["PERFORM-COMPLEX-TASK.1"]).is_active())
 
         # 6a) Input from "Jake", "What are you doing?"
-        # 6b) IIDEA loop
-        # 6c) TEST: An instance of ACKNOWLEDGE-INPUT with the correct TMR is on the agenda
-        # 6d) TEST: PERFORM-COMPLEX-TASK is still "active"
-        # 6e) IIDEA loop
-        # 6f) TEST: An instance of DECIDE-ON-LANGUAGE-INPUT with the correct TMR is on the agenda
-        # 6g) TEST: PERFORM-COMPLEX-TASK is still "active"
-        # 6h) IIDEA loop
-        # 6i) TEST: An instance of RESPOND-TO-QUERY with the LTM instructions root is on the agenda
-        # 6j) TEST: PERFORM-COMPLEX-TASK is still "active"
-        # 6k) IIDEA loop
-        # 6l) TEST: The only VERBAL-EFFECTOR is reserved to RESPOND-TO-QUERY (using capability SPEAK("I am fetching a foot bracket."))
-        # 6m) TEST: PERFORM-COMPLEX-TASK is still "active"
+        agent._input(self.analyses()[1], source="LT.HUMAN.1")
 
-        # 7a) Callback input capability SPEAK("I am fetching a front bracket.") is complete
+        # 6b) IIDEA loop
+        self.iidea_loop(agent)
+
+        # 6c) TEST: An instance of ACKNOWLEDGE-INPUT with the correct TMR is on the agenda
+        self.assertGoalExists(agent, isa="EXE.ACKNOWLEDGE-INPUT", status=Goal.Status.PENDING, query=lambda goal: XMR(goal.resolve("$tmr")).graph(agent) == agent["TMR#2"])
+
+        # 6d) TEST: PERFORM-COMPLEX-TASK is still "active"
+        self.assertTrue(Goal(agent.internal["PERFORM-COMPLEX-TASK.1"]).is_active())
+
+        # 6e) IIDEA loop
+        self.iidea_loop(agent)
+
+        # 6f) TEST: An instance of DECIDE-ON-LANGUAGE-INPUT with the correct TMR is on the agenda
+        self.assertGoalExists(agent, isa="EXE.DECIDE-ON-LANGUAGE-INPUT", status=Goal.Status.PENDING, query=lambda goal: XMR(goal.resolve("$tmr")).graph(agent) == "TMR#2")
+
+        # 6g) TEST: PERFORM-COMPLEX-TASK is still "active"
+        self.assertTrue(Goal(agent.internal["PERFORM-COMPLEX-TASK.1"]).is_active())
+
+        # 6h) IIDEA loop
+        self.iidea_loop(agent)
+
+        # 6i) TEST: An instance of RESPOND-TO-QUERY with the correct TMR is on the agenda
+        self.assertGoalExists(agent, isa="EXE.RESPOND-TO-QUERY", status=Goal.Status.PENDING, query=lambda goal: XMR(goal.resolve("$tmr")).graph(agent) == "TMR#2")
+
+        # 6j) TEST: PERFORM-COMPLEX-TASK is still "active"
+        self.assertTrue(Goal(agent.internal["PERFORM-COMPLEX-TASK.1"]).is_active())
+
+        # 6k) IIDEA loop
+        mock = self.iidea_loop(agent, mock=SpeakCapabilityMP)
+
+        # 6l) TEST: The only VERBAL-EFFECTOR is reserved to RESPOND-TO-QUERY (using capability SPEAK("I am fetching a foot bracket."))
+        self.assertEffectorReserved(agent, "SELF.VERBAL-EFFECTOR.1", "SELF.RESPOND-TO-QUERY.1", "EXE.SPEAK-CAPABILITY")
+        mock.assert_called_once_with("I am fetching a foot bracket.")
+
+        # 6m) TEST: PERFORM-COMPLEX-TASK is still "active"
+        self.assertTrue(Goal(agent.internal["PERFORM-COMPLEX-TASK.1"]).is_active())
+
+        # 7a) Callback input capability SPEAK("I am fetching a foot bracket.") is complete
+        agent.callback("SELF.CALLBACK.4")
+
         # 7b) IIDEA loop
+        self.iidea_loop(agent)
+
         # 7c) TEST: RESPOND-TO-QUERY is "satisfied"
+        self.assertTrue(Goal(agent.internal["RESPOND-TO-QUERY.1"]).is_satisfied())
+
         # 7d) TEST: PERFORM-COMPLEX-TASK is still "active"
+        self.assertTrue(Goal(agent.internal["PERFORM-COMPLEX-TASK.1"]).is_active())
 
         # 8a) Callback input capability GET(foot_bracket)
-        # 8b) IIDEA loop
-        # 8c) TEST: The PHYSICAL-EFFECTOR is released
-        # 8d) TEST: PERFORM-COMPLEX-TASK is still "active" (the chair is not yet built)
+        agent.callback("SELF.CALLBACK.2")
 
-        self.fail()
+        # 8b) IIDEA loop
+        self.iidea_loop(agent)
+
+        # 8c) TEST: The PHYSICAL-EFFECTOR is released
+        self.assertTrue(Effector(agent.internal["PHYSICAL-EFFECTOR.1"]).is_free())
+
+        # 8d) TEST: PERFORM-COMPLEX-TASK is still "active" (the chair is not yet built)
+        self.assertTrue(Goal(agent.internal["PERFORM-COMPLEX-TASK.1"]).is_active())
 

@@ -325,5 +325,369 @@
         "syn-map_generator": "CSynmap"
       }
     ]
+  },
+  {
+    "sentence": "What are you doing?",
+    "tmr": [
+      {
+        "sentence": "What are you doing?",
+        "sent-num": 1,
+        "results": [
+          {
+            "words": {
+              "0": [
+                "WHAT",
+                "WHAT-PRO1"
+              ],
+              "1": [
+                "BE",
+                "BE-V21"
+              ],
+              "2": [
+                "YOU",
+                "YOU-N1"
+              ],
+              "3": [
+                "DO",
+                "DO-V1"
+              ],
+              "4": [
+                "?",
+                "?-PUNCT1"
+              ]
+            },
+            "concept_counts": {
+              "REQUEST-INFO": {
+                "count": 1,
+                "word-info": [
+                  [
+                    0,
+                    "top"
+                  ]
+                ]
+              },
+              "ASPECT": {
+                "count": 1,
+                "word-info": [
+                  [
+                    1,
+                    "top"
+                  ]
+                ]
+              },
+              "ROBOT": {
+                "count": 1,
+                "word-info": [
+                  [
+                    2,
+                    "top"
+                  ]
+                ]
+              },
+              "EVENT": {
+                "count": 1,
+                "word-info": [
+                  [
+                    3,
+                    "top"
+                  ]
+                ]
+              }
+            },
+            "TMR": {
+              "REQUEST-INFO-1": {
+                "from-sense": "WHAT-PRO1",
+                "concept": "REQUEST-INFO",
+                "sent-word-ind": [
+                  1,
+                  [
+                    0
+                  ]
+                ],
+                "token": "What",
+                "AGENT": "HUMAN",
+                "THEME": "EVENT-1",
+                "is-in-subtree": "EVENT",
+                "preference": 1,
+                "THEME_constraint_info": {
+                  "match": "SEM",
+                  "matched_constraint": "ALL",
+                  "type": "onto",
+                  "orig_constr": {},
+                  "from_sense": "WHAT-PRO1",
+                  "variable": "^$VAR3",
+                  "from_word_num": 0
+                },
+                "sem-preference": 2
+              },
+              "ASPECT-1": {
+                "from-sense": "BE-V21",
+                "concept": "ASPECT",
+                "sent-word-ind": [
+                  1,
+                  [
+                    1
+                  ]
+                ],
+                "token": "are",
+                "PHASE": "CONTINUE",
+                "SCOPE": "EVENT-1",
+                "SCOPE_constraint_info": {
+                  "match": "SEM",
+                  "matched_constraint": [
+                    "EVENT",
+                    "OBJECT"
+                  ],
+                  "type": "onto",
+                  "orig_constr": {},
+                  "from_sense": "BE-V21",
+                  "variable": "^$VAR1",
+                  "from_word_num": 1
+                }
+              },
+              "ROBOT-1": {
+                "from-sense": "YOU-N1",
+                "concept": "ROBOT",
+                "sent-word-ind": [
+                  1,
+                  [
+                    2
+                  ]
+                ],
+                "token": "you",
+                "is-in-subtree": "OBJECT",
+                "preference": 0,
+                "AGENT-OF": "EVENT-1",
+                "sem-preference": 0
+              },
+              "EVENT-1": {
+                "from-sense": "DO-V1",
+                "concept": "EVENT",
+                "sent-word-ind": [
+                  1,
+                  [
+                    3,
+                    1
+                  ]
+                ],
+                "token": "doing",
+                "TIME": [
+                  "FIND-ANCHOR-TIME"
+                ],
+                "preference": -1,
+                "SCOPE-OF": "ASPECT-1",
+                "AGENT": "ROBOT-1",
+                "THEME-OF": "REQUEST-INFO-1",
+                "AGENT_constraint_info": {
+                  "match": "Failed",
+                  "matched_constraint": [
+                    "SOCIAL-OBJECT"
+                  ],
+                  "type": "onto",
+                  "orig_constr": {},
+                  "from_sense": "DO-V1",
+                  "variable": "^$VAR1",
+                  "from_word_num": 3
+                },
+                "sem-preference": -10
+              },
+              "syntactic-score": 0,
+              "semantic-score": -8,
+              "baseline-semantic-score": 2,
+              "combined-score": -8
+            }
+          }
+        ],
+        "timestamp": "2018-Nov-06 14:19:42",
+        "candidatesBeforePrunning": 1,
+        "OriginalSentence": "What are you doing?"
+      }
+    ],
+    "syntax": [
+      {
+        "0": {
+          "coref": [],
+          "lemma": "WHAT",
+          "ner": "O",
+          "offset": [
+            0,
+            4
+          ],
+          "pos": [
+            "PRO"
+          ],
+          "token": "What"
+        },
+        "1": {
+          "coref": [],
+          "lemma": "BE",
+          "ner": "O",
+          "offset": [
+            5,
+            8
+          ],
+          "pos": [
+            "V",
+            "PRESENT"
+          ],
+          "token": "are"
+        },
+        "2": {
+          "coref": [],
+          "lemma": "YOU",
+          "ner": "O",
+          "offset": [
+            9,
+            12
+          ],
+          "pos": [
+            "PRO"
+          ],
+          "token": "you"
+        },
+        "3": {
+          "coref": [],
+          "lemma": "DO",
+          "ner": "O",
+          "offset": [
+            13,
+            18
+          ],
+          "pos": [
+            "V",
+            "PROGRESSIVE"
+          ],
+          "token": "doing"
+        },
+        "4": {
+          "coref": [],
+          "lemma": "?",
+          "ner": "O",
+          "offset": [
+            18,
+            19
+          ],
+          "pos": [
+            "?"
+          ],
+          "token": "?"
+        },
+        "basicDeps": [
+          [
+            "ROOT",
+            -1,
+            3
+          ],
+          [
+            "DIRECTOBJECT",
+            3,
+            0
+          ],
+          [
+            "AUX",
+            3,
+            1
+          ],
+          [
+            "SUBJECT",
+            3,
+            2
+          ]
+        ],
+        "originalSentence": "What are you doing?",
+        "parse": "(ROOT (SBARQ (WHNP (PRO WHAT-0)) (SQ (V BE-1) (NP (PRO YOU-2)) (VP (V DO-3))) (? ?-4)))",
+        "sentence": "What are you doing?",
+        "syn-map": [
+          [
+            [
+              "WHAT-PRO1",
+              {
+                "$VAR0": [
+                  0
+                ],
+                "$VAR1": [
+                  1
+                ],
+                "$VAR2": [
+                  2
+                ],
+                "$VAR3": [
+                  3
+                ],
+                "preference": 1
+              }
+            ]
+          ],
+          [
+            [
+              "BE-V21",
+              {
+                "$VAR0": [
+                  1
+                ],
+                "$VAR1": [
+                  3
+                ],
+                "preference": 0
+              }
+            ],
+            [
+              "BE-V2",
+              {
+                "$VAR0": [
+                  1
+                ],
+                "$VAR1": [
+                  2
+                ],
+                "$VAR2": [
+                  3
+                ],
+                "$VAR3": null,
+                "preference": -1
+              }
+            ]
+          ],
+          [
+            [
+              "YOU-N1",
+              {
+                "$VAR0": [
+                  2
+                ],
+                "preference": 0
+              }
+            ]
+          ],
+          [
+            [
+              "DO-V1",
+              {
+                "$VAR1": [
+                  2
+                ],
+                "$VAR0": [
+                  3
+                ],
+                "$VAR2": null,
+                "preference": -1
+              }
+            ]
+          ],
+          [
+            [
+              "?-PUNCT1",
+              {
+                "$VAR0": [
+                  4
+                ],
+                "preference": 3
+              }
+            ]
+          ]
+        ],
+        "syn-map_generator": "KSynmap"
+      }
+    ]
   }
 ]

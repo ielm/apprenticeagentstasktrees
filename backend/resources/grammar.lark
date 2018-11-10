@@ -2,7 +2,7 @@ start: (view)
 
 // Bootstrap
 
-bootstrap: ((declare_knowledge | append_knowledge | define | register_mp) BOOTSTRAPDELIMITER)*
+bootstrap: ((declare_knowledge | append_knowledge | define | register_mp | add_trigger) BOOTSTRAPDELIMITER)*
 
 declare_knowledge: "@" graph "." name (declare_knowledge_instance)? "=" "{" (declare_knowledge_element (BOOTSTRAPDELIMITER declare_knowledge_element)*)? (BOOTSTRAPDELIMITER)? "}"
 declare_knowledge_instance: "." (instance | GENERATE_INSTANCE)
@@ -17,15 +17,20 @@ append_property_knowledge: slot (facet)? filler
 register_mp: REGISTER MP agent_method (AS NAME)?
 agent_method: MODULE "." CLASS
 
+add_trigger: ADD TRIGGER TO "@" identifier INSTANTIATE "@" identifier WHEN logical_slot_query
+
 slot: NAME
 facet: (SEM | DEFAULT | VALUE | NOT)
 filler: ("@" identifier | literal)
 
+ADD: "add"i
 BOOTSTRAPDELIMITER: ";"
 DISA: "isa"i
 GENERATE_INSTANCE: "?"
+INSTANTIATE: "instantiate"i
 REGISTER: "register"i
 SEM: "sem"i
+TRIGGER: "trigger"i
 VALUE: "value"i
 
 // Statements and executables
