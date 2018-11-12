@@ -193,7 +193,7 @@ class Agent(Network):
 
         for goal in ordered:
             action = goal.plan()
-            capabilities = action.capabilities()
+            capabilities = action.capabilities(goal)
 
             assigned_effectors = []
             for capability in capabilities:

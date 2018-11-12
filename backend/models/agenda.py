@@ -324,11 +324,11 @@ class Action(object):
             if isinstance(statement, Frame) and statement ^ "EXE.STATEMENT":
                 Statement.from_instance(statement).run(varmap)
 
-    def capabilities(self) -> List['Capability']:
+    def capabilities(self, varmap: VariableMap) -> List['Capability']:
         do: List[Statement] = list(map(lambda do: Statement.from_instance(do), filter(lambda do: do != Action.IDLE, map(lambda do: do.resolve(), self.frame["PERFORM"]))))
         capabilities = []
         for stmt in do:
-            capabilities.extend(stmt.capabilities())
+            capabilities.extend(stmt.capabilities(varmap))
         return capabilities
 
     def __eq__(self, other):

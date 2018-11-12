@@ -218,7 +218,7 @@ class Statement(object):
 
         return param
 
-    def capabilities(self) -> List['Capability']:
+    def capabilities(self, varmap: VariableMap) -> List['Capability']:
         return []
 
     def __eq__(self, other):
@@ -427,11 +427,11 @@ class ForEachStatement(Statement):
             for stmt in do:
                 stmt.run(varmap)
 
-    def capabilities(self) -> List['Capability']:
+    def capabilities(self, varmap: VariableMap) -> List['Capability']:
         do: List[Statement] = list(map(lambda stmt: Statement.from_instance(stmt.resolve()), self.frame["DO"]))
         capabilities = []
         for stmt in do:
-            capabilities.extend(stmt.capabilities())
+            capabilities.extend(stmt.capabilities(varmap))
         return capabilities
 
     def __eq__(self, other):
@@ -541,6 +541,14 @@ class MeaningProcedureStatement(Statement):
         result = MPRegistry.run(mp, self.frame._graph._network, *params, statement=self)
         return result
 
+    def capabilities(self, varmap: VariableMap):
+        mp: str = self.frame["CALLS"][0].resolve().value
+
+        params = list(map(lambda param: self._resolve_param(param, varmap), self.frame["PARAMS"]))
+
+        result = MPRegistry.method(mp, self.frame._graph._network, statement=self).capabilities(*params)
+        return result
+
     def __eq__(self, other):
         if isinstance(other, MeaningProcedureStatement):
             return other.frame["CALLS"] == self.frame["CALLS"] and \
@@ -590,7 +598,7 @@ class CapabilityStatement(Statement):
     def callbacks(self) -> List[Statement]:
         return list(map(lambda cb: Statement.from_instance(cb.resolve()), self.frame["CALLBACK"]))
 
-    def capabilities(self) -> List['Capability']:
+    def capabilities(self, varmap: VariableMap) -> List['Capability']:
         from backend.models.effectors import Capability
 
         return [Capability(self.frame["CAPABILITY"].singleton())]
