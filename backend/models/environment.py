@@ -3,6 +3,7 @@ from typing import List, Union
 
 
 class Environment(object):
+    # TODO - Modify Environment to hold
 
     def __init__(self, graph: Graph):
         self.graph = graph

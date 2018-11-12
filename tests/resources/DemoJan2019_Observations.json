@@ -1,17 +1,127 @@
 {
   "jake leaves": {
-    "@ENV.HUMAN.1": {
+    "ENV.HUMAN.1": {
       "LOCATION": "NOT-HERE"
     }
   },
   "screwdriver moved close": {
-    "@ENV.SCREWDRIVER.1": {
+    "SCREWDRIVER.1": {
       "SPATIAL-DISTANCE": 0.1
     }
   },
   "jake enters": {
-    "@ENV.HUMAN.1": {
+    "HUMAN.1": {
       "LOCATION": "HERE"
+    }
+  }
+},
+
+{
+  "_id": "faf38347-4f81-403a-b8ae-d88e7daa2d52",
+  "slices": {
+    "SLICE.1": {
+      "ENVIRONMENT.1": {
+        "_refers_to": "@ENV",
+        "contains": {
+          "HUMAN.1": {
+            "_refers_to": "",
+            "_identifier": "Jake",
+            "_in": "ENVIRONMENT.1",
+            "LOCATION": "HERE"
+          },
+          "SCREWDRIVER.1": {
+            "_refers_to": "",
+            "_in": "ENVIRONMENT.1",
+            "SPATIAL-DISTANCE": 0.8
+          },
+          "_SELF_": {
+            "_refers_to": "",
+            "_identifier": "self",
+            "_in": "ENVIRONMENT.1"
+          }
+        }
+      },
+      "_timestamp": "2018-11-11 14:01:18.251602",
+      "_id": "433f1d58-e5e4-11e8-b8a0-7200c4f8d301",
+      "_label": ""
+    },
+    "SLICE.2": {
+      "ENVIRONMENT.1": {
+        "_refers_to": "@ENV",
+        "contains": {
+          "HUMAN.1": {
+            "_refers_to": "",
+            "_identifier": "Jake",
+            "_in": "ENVIRONMENT.1",
+            "LOCATION": "NOT HERE"
+          },
+          "SCREWDRIVER.1": {
+            "_refers_to": "",
+            "_in": "ENVIRONMENT.1",
+            "SPATIAL-DISTANCE": 0.8
+          },
+          "_SELF_": {
+            "_refers_to": "",
+            "_identifier": "self",
+            "_in": "ENVIRONMENT.1"
+          }
+        }
+      },
+      "_timestamp": "2018-11-11 14:08:04.126188",
+      "_id": "28c2346c-e5e5-11e8-8e76-7200c4f8d301",
+      "_label": ""
+    },
+    "SLICE.3": {
+      "ENVIRONMENT.1": {
+        "_refers_to": "@ENV",
+        "contains": {
+          "HUMAN.1": {
+            "_refers_to": "",
+            "_identifier": "Jake",
+            "_in": "ENVIRONMENT.1",
+            "LOCATION": "NOT HERE"
+          },
+          "SCREWDRIVER.1": {
+            "_refers_to": "",
+            "_in": "ENVIRONMENT.1",
+            "SPATIAL-DISTANCE": 0.1
+          },
+          "_SELF_": {
+            "_refers_to": "",
+            "_identifier": "self",
+            "_in": "ENVIRONMENT.1"
+          }
+        }
+      },
+      "_timestamp": "2018-11-11 14:09:16.084407",
+      "_id": "4ecf3da8-e5e5-11e8-a6c6-7200c4f8d301",
+      "_label": ""
+    },
+    "SLICE.4": {
+      "ENVIRONMENT.1": {
+        "_refers_to": "@ENV",
+        "contains": {
+          "HUMAN.1": {
+            "_refers_to": "",
+            "_identifier": "Jake",
+            "_in": "ENVIRONMENT.1",
+            "LOCATION": "HERE"
+          },
+          "SCREWDRIVER.1": {
+            "_refers_to": "",
+            "_in": "ENVIRONMENT.1",
+            "SPATIAL-DISTANCE": 0.1
+          },
+          "_SELF_": {
+            "_refers_to": "",
+            "_identifier": "self",
+            "_in": "ENVIRONMENT.1"
+          }
+        }
+      },
+      "_timestamp": "2018-11-11 14:10:02.529190",
+      "_id": "658b357e-e5e5-11e8-98ce-7200c4f8d301",
+      "_label": ""
     }
   }
 }

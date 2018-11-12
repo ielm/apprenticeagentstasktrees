@@ -66,7 +66,10 @@ class RespondToQueryMP(AgentMethod):
 class PerformComplexTaskMP(AgentMethod):
     def run(self, task):
         print("\n\n\n\n", task)
+        # TODO - reserve effector here
         return
+
+#   TODO - overwrite capabilities() to return available and necessary capabilities.
 
 
 class ReactToVisualInputMP(AgentMethod):
@@ -75,5 +78,10 @@ class ReactToVisualInputMP(AgentMethod):
 
 
 class GetPhysicalObjectCapabilityMP(AgentMethod):
+    def run(self):
+        return
+
+
+class SpeakCapabilityMP(AgentMethod):
     def run(self):
         return

@@ -5,6 +5,7 @@ from backend.models.environment import Environment
 
 import re
 import datetime
+from uuid import uuid1, uuid4
 
 
 class VMR(Graph):
@@ -83,19 +84,22 @@ class VMR(Graph):
     counter = AtomicCounter()
 
     @staticmethod
-    def new(ontology: Ontology, vmr=None, namespace=None):
+    def new(ontology: Ontology, vmr=None, namespace=None, id=None):
         if vmr is None:
             vmr = [{
-                "SLICES": [{
-                    "VMR.SLICE.1": [{
-                        "@ENV.ENVIRONMENT.1": [{
-                            "_CONTAINS": {},
+                "_id": uuid4() if not id else id,  # use uuid4 for vmr IDs
+                "slices": [{
+                    "SLICE.1": [{
+                        "ENVIRONMENT.1": [{
+                            "_refers_to": {},
+                            "contains": {}
                         }],
                         "_timestamp": datetime.datetime.now(),
+                        "_id": uuid1(),  # use uuid1 for slice IDs
                     }],
                 }],
                 "_label": None,
-                "_VISUAL_FRAMES": None,
+                "_visual_frames": None,
             }]
             return VMR(vmr[0], ontology, namespace=namespace)
 
@@ -108,26 +112,56 @@ class VMR(Graph):
         super().__init__(namespace)
 
         self.ontology = ontology._namespace
+        self._id = None
+
+        # empty_env =
         # self.environment = Environment()
 
+        COUNTER = 0
+
+        # TODO - create Slice instance for each slice in VMR
+
         for key in vmr_dict:
-            if key == "_timestamp" or key == "_label":
-                self._timestamp = vmr_dict[key]
-            if key == key.upper():
-                inst_dict = vmr_dict[key]
+            if key == "_id":
+                self._id = key
+            if key == "slices":
+                for s in vmr_dict[key]:
+                    print("COUNT#" + str(COUNTER) + ": ")
+                    print(vmr_dict[key][s])
+                    COUNTER += 1
+                    # print(vmr_dict[key][s])
 
-                key = re.sub(r"-([0-9]+)$", ".\\1", key)
+                    # slice = Slice(vmr_dict[key][s])
 
-                #     TODO - create self[key] VMRInstance for all keys in vmr
-                self[key] = VMRInstance(key, properties=inst_dict, isa=None, ontology=ontology)
+                # slice = Slice(key)
+                # self[key] = slice
 
-        """
+
+        # for key in vmr_dict:
+        #     print("COUNT#" + str(COUNTER) + ": " + key)
+        #     COUNTER += 1
+            # if key == "_timestamp":
+            #     self._timestamp = vmr_dict[key]
+            # if key == "_label":
+            #     self._label = vmr_dict[key]
+            # if key == key.upper():
+            #     print("COUNT#"+str(COUNTER)+": "+key)
+            #
+            #     # TODO - If key is referring to element in @ENV
+            #     # TODO -     Update environment
+            #
+            #     inst_dict = vmr_dict[key]
+            #
+            #     key = re.sub(r"-([0-9]+)$", ".\\1", key)
+            #
+            #     #     TODO - create self[key] VMRInstance for all keys in vmr
+            #     self[key] = VMRInstance(key, properties=inst_dict, isa=None, ontology=ontology)
+
         for instance in self._storage.values():
             for slot in instance._storage.values():
                 for filler in slot:
                     if isinstance(filler._value, Identifier) and filler._value.graph is None and not filler._value.render() in self:
                         filler._value.graph = self.ontology
-        """
 
     def update_environment(self, env: Environment, vmr=None):
         env.advance()
@@ -151,7 +185,7 @@ class VMRInstance(Frame):
             original_key = key
             key = re.sub(r"-[0-9]+$", "", key)
 
-            # if key == "SLICES":
+            # if key == "slices":
             #     if ontology is not None \
             #     and key in ontology \
             #     and
@@ -176,3 +210,14 @@ class VMRInstance(Frame):
             else:
                 self[key] += Literal(_properties[original_key])
     """
+
+class Slice(Frame):
+    def __init__(self, name, slice=None, isa=None, ontology: Ontology = None):
+        super().__init__(name, isa=isa)
+
+        # g = agent.register("ENV")
+
+        # environment = Environment(g)
+
+
+

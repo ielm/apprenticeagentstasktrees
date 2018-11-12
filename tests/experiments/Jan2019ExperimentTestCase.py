@@ -14,7 +14,7 @@ from unittest.mock import patch
 import json
 import unittest
 
-from backend.resources.AgentMP import GetPhysicalObjectCapabilityMP
+from backend.resources.AgentMP import GetPhysicalObjectCapabilityMP, SpeakCapabilityMP
 
 
 class Jan2019Experiment(unittest.TestCase):
@@ -31,10 +31,12 @@ class Jan2019Experiment(unittest.TestCase):
 
     @staticmethod
     def observations():
-        return json.loads(get_data("tests.resources", "DemoJan2019_Observations.json").decode('ascii'))
+        return json.loads(get_data("tests.resources", "DemoJan2019_Observations_VMR.json").decode('ascii'))
 
     @staticmethod
     def iidea_loop(agent: Agent, mock: Type[AgentMethod]=None):
+        if mock is not None:
+            print(mock)
 
         def __iidea(agent: Agent):
             if agent.IDEA._stage == Agent.IDEA.D:
@@ -45,7 +47,7 @@ class Jan2019Experiment(unittest.TestCase):
         if mock is None:
             __iidea(agent)
         else:
-            with patch.object(mock, 'run', wraps=mock().run) as m:
+            with patch.object(mock, 'run') as m:
                 __iidea(agent)
                 return m
 
@@ -127,8 +129,10 @@ class Jan2019Experiment(unittest.TestCase):
         # 1g) TEST: An instance of PERFORM-COMPLEX-TASK with the LTM instructions root is on the agenda
         self.assertGoalExists(agent, isa="EXE.PERFORM-COMPLEX-TASK", status=Goal.Status.PENDING, query=lambda goal: goal.resolve("$task")._identifier == "LT.BUILD.1")
 
+# ====================================================================================== #
+
         # 2a) Visual input "Jake leaves"
-        agent._input(self.observations()["jake leaves"], type=XMR.Type.VISUAL.name)
+        agent._input(self.observations()["Jake leaves"], type=XMR.Type.VISUAL.name)
 
         # 2b) IIDEA loop
         mock = self.iidea_loop(agent, mock=GetPhysicalObjectCapabilityMP)

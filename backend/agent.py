@@ -147,7 +147,7 @@ class Agent(Network):
         print("T" + str(Agent.IDEA.time()) + " " + Agent.IDEA.stage())
         print(self.internal)
 
-    def _input(self, input: Union[dict, TMR]=None, source: Union[str, Identifier, Frame]=None, type: str=None):
+    def _input(self, input: Union[dict, TMR, VMR]=None, source: Union[str, Identifier, Frame]=None, type: str=None):
         if input is None:
             return
 
@@ -158,7 +158,7 @@ class Agent(Network):
             input = TMR(input, ontology=self.ontology)
 
         # Takes graph obj and writes it to the network
-        tmr = self.register(input)
+        registered_xMR = self.register(input)
 
         kwargs = {}
         if source is not None:
@@ -166,13 +166,13 @@ class Agent(Network):
         if type is not None:
             kwargs["type"] = type
 
-        xmr = XMR.instance(self.internal, tmr, status=XMR.Status.RECEIVED, **kwargs)
+        xmr = XMR.instance(self.internal, registered_xMR, status=XMR.Status.RECEIVED, **kwargs)
         self.identity["HAS-INPUT"] += xmr.frame
 
         if type == "VISUAL":
             self._logger.log("Input: <<VMR INSTANCE HERE>>")
         else:
-            self._logger.log("Input: '" + tmr.sentence + "'")
+            self._logger.log("Input: '" + registered_xMR.sentence + "'")
 
     def _decision(self):
         agenda = self.agenda()
