@@ -4,6 +4,7 @@ from typing import Any, Callable, List, Union
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from backend.agent import Agent
+    from backend.models.effectors import Callback, Capability
     from backend.models.statement import CapabilityStatement, Statement
 
 import sys
@@ -31,6 +32,11 @@ class Registry(object):
             raise Exception("Unknown meaning procedure '" + mp + "'.")
         return self._storage[mp](agent, statement=statement, callback=callback)(*args, **kwargs)
 
+    def method(self, mp: str, agent: 'Agent', statement: 'Statement'=None, callback: Union[str, Identifier, Frame, 'Callback']=None) -> 'AgentMethod':
+        if mp not in self._storage:
+            raise Exception("Unknown meaning procedure '" + mp + "'.")
+        return self._storage[mp](agent, statement=statement, callback=callback)
+
     def clear(self):
         self._storage = dict()
 
@@ -44,6 +50,9 @@ class AgentMethod(object):
 
     def run(self, *args, **kwargs):
         raise Exception("AgentMethod.run(*, **) must be implemented.")
+
+    def capabilities(self, *args, **kwargs) -> List['Capability']:
+        return []
 
     def __call__(self, *args, **kwargs):
         return self.run(*args, **kwargs)

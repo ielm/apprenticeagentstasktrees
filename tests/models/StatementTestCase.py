@@ -619,6 +619,28 @@ class MeaningProcedureStatementTestCase(unittest.TestCase):
 
         self.assertEqual(result, 10)
 
+    def test_capabilities(self):
+
+        class TestMP(AgentMethod):
+            def capabilities(self, a, b, c):
+                return a + b + c
+
+        from backend.models.mps import MPRegistry
+        MPRegistry.register(TestMP)
+
+        network = Network()
+        graph = network.register(Statement.hierarchy())
+
+        mp = graph.register("TEST", isa="EXE.MP-STATEMENT")
+        mp["PARAMS"] = [1, 2, Literal("$var")]
+        mp["CALLS"] = Literal(TestMP.__name__)
+
+        varmap = graph.register("VARMAP")
+        varmap = VariableMap(varmap)
+        Variable.instance(graph, "$var", 3, varmap)
+
+        self.assertEqual(6, Statement.from_instance(mp).capabilities(varmap))
+
 
 class CapabilityStatementTestCase(unittest.TestCase):
 

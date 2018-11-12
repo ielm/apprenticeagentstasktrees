@@ -865,4 +865,4 @@ class ActionTestCase(unittest.TestCase):
 
         action = Action.build(graph, "TEST", Action.DEFAULT, [stmt1, stmt3])
 
-        self.assertEqual([cap1, cap2], action.capabilities())
+        self.assertEqual([cap1, cap2], action.capabilities(None))
