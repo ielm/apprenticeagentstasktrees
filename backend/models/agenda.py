@@ -391,6 +391,9 @@ class Trigger(object):
     def definition(self) -> Goal:
         return Goal(self.frame["DEFINITION"].singleton())
 
+    def triggered_on(self) -> List[Identifier]:
+        return list(map(lambda to: to._value, self.frame["TRIGGERED-ON"]))
+
     def fire(self, agenda: [Frame, Agenda]):
         if isinstance(agenda, Frame):
             agenda = Agenda(agenda)

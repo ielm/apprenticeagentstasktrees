@@ -25,6 +25,12 @@
         .goal-contents {
             padding-left: 25px;
         }
+        .trigger {
+            padding-bottom: 10px;
+        }
+        .trigger:last-child {
+            padding-bottom: 0px;
+        }
     </style>
 
     <script>
@@ -38,6 +44,7 @@
                 render_inputs(output["inputs"]);
                 render_agenda(output["agenda"]);
                 render_effectors(output["effectors"]);
+                render_triggers(output["triggers"]);
                 if (callback != null) {
                     callback();
                 }
@@ -207,6 +214,23 @@
                 });
             }
         }
+
+        function render_triggers(triggers) {
+            $("#triggerList").empty();
+
+            for (var i in triggers) {
+                var trigger = triggers[i];
+
+                var template = document.getElementById('trigger-template').innerHTML;
+                Mustache.parse(template, ["{|", "|}"]);
+                var rendered = Mustache.render(template, trigger);
+                $($(document).find("#triggerList")[0]).prepend($(rendered));
+            }
+
+            $(function () {
+                $('[data-toggle="tooltip"]').tooltip();
+            });
+        }
     </script>
 
     <script>
@@ -239,8 +263,11 @@
             var agenda = JSON.parse('{{ aj|safe }}');
             render_agenda(agenda);
 
-            var effectors = JSON.parse('{{ ae|safe }}');
+            var effectors = JSON.parse('{{ ej|safe }}');
             render_effectors(effectors);
+
+            var triggers = JSON.parse('{{ tj|safe }}');
+            render_triggers(triggers);
         });
     </script>
 
@@ -298,6 +325,12 @@
                     </td>
                 </tr>
             </table>
+        </div>
+    </script>
+
+    <script id="trigger-template" type="x-tmpl-mustache">
+        <div class="trigger">
+            <i class="fas fa-eye" data-toggle="tooltip" data-placement="top" title="{| triggered-on |}"></i> Trigger {| goal |} when {| query |}
         </div>
     </script>
 
@@ -406,6 +439,14 @@
                     </div>
                     <div class="card-body">
                         <div id="effectorList"></div>
+                    </div>
+                </div>
+                <div class="card" style="margin-bottom: 25px;">
+                    <div class="card-header">
+                        Triggers
+                    </div>
+                    <div class="card-body">
+                        <div id="triggerList"></div>
                     </div>
                 </div>
             </div>

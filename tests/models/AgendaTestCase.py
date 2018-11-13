@@ -413,6 +413,19 @@ class TriggerTestCase(unittest.TestCase):
 
         self.assertEqual(goal, Trigger(trigger).definition())
 
+    def test_triggered_on(self):
+        n = Network()
+        graph = n.register(Graph("TEST"))
+        o1 = graph.register("OBJECT.1")
+        o2 = graph.register("OBJECT.2")
+
+        trigger = graph.register("TRIGGER")
+
+        trigger["TRIGGERED-ON"] += "TEST.OBJECT.1"
+        trigger["TRIGGERED-ON"] += "TEST.OBJECT.2"
+
+        self.assertEqual([o1, o2], Trigger(trigger).triggered_on())
+
     def test_fire_creates_goal_instance(self):
         n = Network()
         graph = n.register(Graph("TEST"))
