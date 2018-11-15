@@ -191,6 +191,16 @@ class GoalTestCase(unittest.TestCase):
         self.assertFalse(Goal.Status.ABANDONED in f["STATUS"])
         self.assertTrue(Goal.Status.SATISFIED in f["STATUS"])
 
+    def test_executed(self):
+        graph = Graph("TEST")
+        f = graph.register("GOAL")
+
+        self.assertFalse(Goal(f).executed())
+
+        f["EXECUTED"] = True
+
+        self.assertTrue(Goal(f).executed())
+
     def test_priority_numeric(self):
 
         graph = Graph("TEST")
@@ -518,6 +528,13 @@ class ConditionTestCase(unittest.TestCase):
 
         self.assertEqual(Condition(gc).status(), Goal.Status.SATISFIED)
 
+    def test_on(self):
+        graph = Graph("TEST")
+        gc = graph.register("GOAL-CONDITION.1")
+        gc["ON"] = Literal(Condition.On.EXECUTED)
+
+        self.assertEqual(Condition(gc).on(), Condition.On.EXECUTED)
+
     def test_requires_boolean_statement(self):
         graph = Statement.hierarchy()
         c = graph.register("CONDITION.1")
@@ -527,6 +544,19 @@ class ConditionTestCase(unittest.TestCase):
 
         with self.assertRaises(Exception):
             Condition(c)
+
+    def test_assess_executed(self):
+        graph = Graph("TEST")
+        goal = graph.register("GOAL")
+
+        condition = graph.register("CONDITION")
+        condition["ON"] = Condition.On.EXECUTED
+
+        self.assertFalse(Condition(condition).assess(VariableMap(goal)))
+
+        goal["EXECUTED"] = True
+
+        self.assertTrue(Condition(condition).assess(VariableMap(goal)))
 
     def test_assess_if(self):
 
@@ -828,7 +858,7 @@ class ActionTestCase(unittest.TestCase):
         statement1["LOCAL"] = Literal("X")
         statement2["LOCAL"] = Literal("Y")
 
-        Action(action).perform(None)
+        Action(action).perform(VariableMap(graph.register("VARMAP")))
 
         self.assertEqual(out, ["X", "Y"])
 
@@ -861,7 +891,15 @@ class ActionTestCase(unittest.TestCase):
         action = graph.register("ACTION.1")
         action["PERFORM"] = Literal(Action.IDLE)
 
-        Action(action).perform(None)
+        Action(action).perform(VariableMap(graph.register("VARMAP")))
+
+    def test_perform_marks_goal_as_executed(self):
+        graph = Graph("TEST")
+        goal = graph.register("GOAL")
+        action = graph.register("ACTION")
+
+        Action(action).perform(VariableMap(goal))
+        self.assertTrue(goal["EXECUTED"] == True)
 
     def test_capabilities(self):
         from backend.models.effectors import Capability

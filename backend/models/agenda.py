@@ -148,6 +148,9 @@ class Goal(VariableMap):
     def status(self, status: 'Goal.Status'):
         self.frame["STATUS"] = status
 
+    def executed(self) -> bool:
+        return self.frame["EXECUTED"] == True
+
     def assess(self):
         if self.reserved_effector() is not None:
             return
@@ -323,6 +326,7 @@ class Action(object):
                 pass
             if isinstance(statement, Frame) and statement ^ "EXE.STATEMENT":
                 Statement.from_instance(statement).run(varmap)
+        varmap.frame["EXECUTED"] = True
 
     def capabilities(self, varmap: VariableMap) -> List['Capability']:
         do: List[Statement] = list(map(lambda do: Statement.from_instance(do), filter(lambda do: do != Action.IDLE, map(lambda do: do.resolve(), self.frame["PERFORM"]))))
@@ -416,14 +420,20 @@ class Trigger(object):
 class Condition(object):
 
     @classmethod
-    def build(cls, graph: Graph, statements: List[Statement], status: Goal.Status, logic: 'Condition.Logic'=1, order: int=1):
+    def build(cls, graph: Graph, statements: List[Statement], status: Goal.Status, logic: 'Condition.Logic'=1, order: int=1, on: 'Condition.On'=None):
         frame = graph.register("CONDITION", generate_index=True)
         frame["IF"] = list(map(lambda statement: statement.frame, statements))
         frame["LOGIC"] = logic
         frame["STATUS"] = status
         frame["ORDER"] = order
 
+        if on is not None:
+            frame["ON"] = on
+
         return Condition(frame)
+
+    class On(Enum):
+        EXECUTED = "EXECUTED"
 
     class Logic(Enum):
         AND = 1
@@ -451,7 +461,16 @@ class Condition(object):
             if isinstance(status, str):
                 return Goal.Status[status]
 
+    def on(self) -> 'Condition.On':
+        if "ON" in self.frame:
+            return self.frame["ON"].singleton()
+
     def assess(self, varmap: VariableMap) -> bool:
+        if "ON" in self.frame:
+            on = self.on()
+            if on == Condition.On.EXECUTED:
+                return Goal(varmap.frame).executed()
+
         if "IF" not in self.frame:
             return True
 
@@ -488,7 +507,8 @@ class Condition(object):
                 self.__eqIF(other) and
                 self.frame["LOGIC"] == other.frame["LOGIC"] and
                 self.frame["STATUS"] == other.frame["STATUS"] and
-                self.frame["ORDER"] == other.frame["ORDER"]
+                self.frame["ORDER"] == other.frame["ORDER"] and
+                self.frame["ON"] == other.frame["ON"]
             )
         if isinstance(other, Frame):
             return self.frame == other

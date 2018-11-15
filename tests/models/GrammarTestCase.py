@@ -360,6 +360,10 @@ class AgendaGrammarTestCase(unittest.TestCase):
         parsed = Grammar.parse(self.agent, "WHEN EXISTS THEME = 123 OR EXISTS THEME = 123 THEN satisfied", start="condition", agent=self.agent)
         self.assertEqual(condition, parsed)
 
+        condition = Condition.build(self.g, [], Goal.Status.SATISFIED, on=Condition.On.EXECUTED)
+        parsed = Grammar.parse(self.agent, "WHEN EXECUTED THEN satisfied", start="condition", agent=self.agent)
+        self.assertEqual(condition, parsed)
+
     def test_define_goal(self):
         # A goal has a name and a destination graph, and a default priority
         goal: Goal = Grammar.parse(self.agent, "DEFINE XYZ() AS GOAL IN SELF", start="define", agent=self.agent).goal
