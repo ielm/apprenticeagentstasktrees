@@ -36,49 +36,26 @@ class VMR(Graph):
        /      |      \           /           \
      [_pos][_name][_interax]   [_status]     [_pos]
 
-
-    To represent Jake leaving:
-
-    VMR: [
-        SLICES: [
-            SLICE#1:[
-                ENVIRONMENT#1: [
-                    _CONTAINS:[
-                        LT.HUMAN.1: [
-                            _IDENTIFIER: "Jake",
-                            _LOCATION: HERE,
-                            _IN: ENVIRONMENT#1,
-                        ],
-                        LT.CHAIR.1: [
-                            _LOCATION: HERE,
-                            _IN: ENVIRONMENT#1,
-                        ],
-                    ]
-                ],
-                _timestamp: <FIND-ANCHOR-TIME>
-            ],
-            SLICE#2:[
-                ENVIRONMENT#1: [
-                    _IN:[
-                        LT.HUMAN.1: [
-                            _IDENTIFIER: "Jake",
-                            _LOCATION: NOT_HERE,
-                            _IN: ENVIRONMENT#1,
-                        ],
-                        LT.CHAIR.1: [
-                            _LOCATION: HERE,
-                            _IN: ENVIRONMENT#1,
-                        ],
-                    ]
-                ],
-                _timestamp: <FIND-ANCHOR-TIME += 1>
-            ]
-        ],
-        _LABEL: "Jake has left.",
-        _VISUAL_FRAMES: <sequence of images corresponding to vmr>,
-    ]
-
-
+The environment contains STORAGE.1, STORAGE.2, and WORKSPACE.1, which are each their own micro environments. They always come first in the ENVIRONMENT graph.
+    "slices": {
+        "SLICE.1": {
+            "ENVIRONMENT.1": {
+                "_refers_to": {},
+                "contains": {
+                    "STORAGE.1": {
+                        "contains": {}
+                    },
+                    "STORAGE.2": {
+                        "contains": {}
+                    },
+                    "WORKSPACE.1": {
+                        "contains": {}
+                    },
+                }
+            },
+            "_timestamp": datetime.datetime.now(),
+            "_id": uuid1(),  # use uuid1 for slice IDs
+        }
     """
     # TODO - create environment modifier function that takes Environment as input and decides if it needs to change anything in Environment
     counter = AtomicCounter()
@@ -117,18 +94,19 @@ class VMR(Graph):
         # empty_env =
         # self.environment = Environment()
 
-        COUNTER = 0
+        # COUNTER = 0
 
         # TODO - create Slice instance for each slice in VMR
 
-        for key in vmr_dict:
-            if key == "_id":
-                self._id = key
-            if key == "slices":
-                for s in vmr_dict[key]:
-                    print("COUNT#" + str(COUNTER) + ": ")
-                    print(vmr_dict[key][s])
-                    COUNTER += 1
+        # for key in vmr_dict:
+        #     if key == "_id":
+        #         self._id = key
+        #     if key == "slices":
+        #         for s in vmr_dict[key]:
+        #             print()
+                    # print("COUNT#" + str(COUNTER) + ": ")
+                    # print(vmr_dict[key][s])
+                    # COUNTER += 1
                     # print(vmr_dict[key][s])
 
                     # slice = Slice(vmr_dict[key][s])
@@ -147,14 +125,13 @@ class VMR(Graph):
             # if key == key.upper():
             #     print("COUNT#"+str(COUNTER)+": "+key)
             #
-            #     # TODO - If key is referring to element in @ENV
-            #     # TODO -     Update environment
+            #     # TODO - If key is referring to element in @ENV, update environment
             #
             #     inst_dict = vmr_dict[key]
             #
             #     key = re.sub(r"-([0-9]+)$", ".\\1", key)
             #
-            #     #     TODO - create self[key] VMRInstance for all keys in vmr
+            #     # TODO - self[key] = VMRInstance for all keys in vmr
             #     self[key] = VMRInstance(key, properties=inst_dict, isa=None, ontology=ontology)
 
         for instance in self._storage.values():
@@ -190,26 +167,6 @@ class VMRInstance(Frame):
             #     and key in ontology \
             #     and
 
-    """
-
-            if ontology is not None \
-                    and key in ontology \
-                    and (ontology[key] ^ ontology["RELATION"]
-                         or ontology[key] ^ ontology["ONTOLOGY-SLOT"]):
-                value = _properties[original_key]
-                if not isinstance(value, list):
-                    value = [value]
-                for v in value:
-                    v = re.sub(r"-([0-9]+)$", ".\\1", v)
-                    identifier = Identifier.parse(v)
-
-                    if identifier.graph is None and identifier.instance is None:
-                        identifier.graph = ontology._namespace
-
-                    self[key] += identifier
-            else:
-                self[key] += Literal(_properties[original_key])
-    """
 
 class Slice(Frame):
     def __init__(self, name, slice=None, isa=None, ontology: Ontology = None):

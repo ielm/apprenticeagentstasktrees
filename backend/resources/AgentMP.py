@@ -2,6 +2,8 @@ from backend.models.mps import AgentMethod
 from backend.models.agenda import Goal
 from backend.models.graph import Frame
 from backend.models.xmr import XMR
+from backend.agent import Agent
+from backend.models.effectors import Capability
 
 
 class FindSomethingToDoMP(AgentMethod):
@@ -64,12 +66,51 @@ class RespondToQueryMP(AgentMethod):
 
 
 class PerformComplexTaskMP(AgentMethod):
-    def run(self, task):
-        print("\n\n\n\n", task)
-        # TODO - reserve effector here
+    def run(self, task, statement=None):
+        """
+        :param task: The current task
+        :param statement:
+        """
+        target = task["HAS-EVENT-AS-PART"][0].resolve()["THEME"].singleton()
+
+        # Create an or query for all targets. i.e. Screwdriver or Wrench or Hammer
+        # For now there will only be one target
+        q = Frame.q(self.agent, comparator="or")
+        for p in target.parents():
+            q.isa(p)
+
+        # Search for the target in the environment
+        env_target = self.agent.environment.search(q)[0]
+
+        # Get the effector that is reserved by the current Goal
+        reserved_effector = self.varmap.reserved_effector()
+
+        # Get the capability that is used by reserved_effector
+        capability = Capability(reserved_effector.frame["USES"].singleton())
+
+        # Run the capability with the env_target as the target of the capability
+        capability.run(self.agent, env_target, statement=statement, graph=self.agent.exe, varmap=self.varmap)
         return
 
-#   TODO - overwrite capabilities() to return available and necessary capabilities.
+    def capabilities(self, task):
+        """
+        Returns a list of capabilities available for the MP
+        :param task: The current task
+        :return: a list of capabilities
+        """
+        capabilities = []
+
+        step = task["HAS-EVENT-AS-PART"][0]
+        if step ^ "ONT.TAKE":
+            step = step.resolve()
+            effectors = self.agent.effectors()
+
+            for e in effectors:
+                if e.frame["HAS-CAPABILITY"] == 'GET-CAPABILITY':
+                    capabilities.append(e.capabilities())
+
+            return [item for sublist in capabilities for item in sublist]
+        return capabilities
 
 
 class ReactToVisualInputMP(AgentMethod):
@@ -85,3 +126,4 @@ class GetPhysicalObjectCapabilityMP(AgentMethod):
 class SpeakCapabilityMP(AgentMethod):
     def run(self):
         return
+

@@ -538,7 +538,7 @@ class MeaningProcedureStatement(Statement):
 
         params = list(map(lambda param: self._resolve_param(param, varmap), self.frame["PARAMS"]))
 
-        result = MPRegistry.run(mp, self.frame._graph._network, *params, statement=self)
+        result = MPRegistry.run(mp, self.frame._graph._network, *params, statement=self, varmap=varmap)
         return result
 
     def capabilities(self, varmap: VariableMap):

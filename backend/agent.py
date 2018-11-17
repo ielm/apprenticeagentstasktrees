@@ -309,8 +309,10 @@ class PrioritizeLearningMP(AgentMethod):
     def run(self, tmr_frame):
         return 0.75
 
+
 class EvalResourcesMP(AgentMethod):
     def run(self, tmr_frame):
         return 0.5
+
 
 from backend.resources.AgentMP import AcknowledgeInputMP, DecideOnLanguageInputMP

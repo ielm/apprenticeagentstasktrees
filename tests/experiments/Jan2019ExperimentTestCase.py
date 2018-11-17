@@ -55,7 +55,6 @@ class Jan2019Experiment(unittest.TestCase):
         goals = list(map(lambda g: Goal(g.resolve()), agent.identity["HAS-GOAL"]))
 
         if status is not None:
-            # goals is empty?
             goals = agent.agenda().goals(pending=(status == Goal.Status.PENDING), active=(status == Goal.Status.ACTIVE), abandoned=(status == Goal.Status.ABANDONED), satisfied=(status == Goal.Status.SATISFIED))
 
         if isa is not None:
@@ -141,8 +140,8 @@ class Jan2019Experiment(unittest.TestCase):
         self.assertGoalExists(agent, isa="EXE.ACKNOWLEDGE-INPUT", status=Goal.Status.PENDING, query=lambda goal: XMR(goal.resolve("$tmr")).graph(agent) == agent["VMR#1"])
 
         # 2d) TEST: The only PHYSICAL-EFFECTOR is reserved to PERFORM-COMPLEX-TASK (using capability GET(screwdriver))
-        self.assertEffectorReserved(agent, "SELF.PHYSICAL-EFFECTOR.1", "SELF.PERFORM-COMPLEX-TASK.1", "EXE.GET-CAPABILITY")
-        mock.assert_called_once_with("ENV.SCREWDRIVER.1")
+        self.assertEffectorReserved(agent, "SELF.PHYSICAL-EFFECTOR.1", "SELF.GOAL.2", "EXE.GET-CAPABILITY")
+        mock.assert_called_once_with(agent.lookup("ENV.SCREWDRIVER.1"))
 
         # 2e) IIDEA loop
         self.iidea_loop(agent)
