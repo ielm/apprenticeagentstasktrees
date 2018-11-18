@@ -197,13 +197,20 @@ class GrammarTransformer(Transformer):
         return perform
 
     def condition(self, matches):
-        from backend.models.agenda import Condition, Goal
+        from backend.models.agenda import Condition
 
-        statements = matches[1][1]
+        if isinstance(matches[1], Condition.On):
+            on = matches[1]
+            statements = []
+            logic = Condition.Logic.AND.value
+        else:
+            on = None
+            statements = matches[1][1]
+            logic = matches[1][0]
+
         status = matches[3]
-        logic = matches[1][0]
 
-        return Condition.build(self.agent.exe, statements, status, logic=logic)
+        return Condition.build(self.agent.exe, statements, status, logic=logic, on=on)
 
     def condition_and(self, matches):
         from backend.models.agenda import Condition
@@ -234,6 +241,11 @@ class GrammarTransformer(Transformer):
         from backend.models.agenda import Statement
 
         return Condition.Logic.NOT, list(filter(lambda match: isinstance(match, Statement), matches))
+
+    def condition_on(self, matches):
+        from backend.models.agenda import Condition
+
+        return Condition.On[str(matches[0])]
 
     def statement(self, matches):
         return matches[0]

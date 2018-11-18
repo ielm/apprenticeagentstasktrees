@@ -209,6 +209,18 @@ class IIDEAConverter(object):
             "selected": capability.used_by() == wrt_effector
         }
 
+    @classmethod
+    def triggers(cls):
+        return list(map(lambda t: IIDEAConverter.convert_trigger(t), agent.agenda().triggers()))
+
+    @classmethod
+    def convert_trigger(cls, trigger):
+        return {
+            "query": str(trigger.query()),
+            "goal": trigger.definition().name(),
+            "triggered-on": list(map(lambda to: str(to), trigger.triggered_on()))
+        }
+
 
 @app.route("/iidea", methods=["GET"])
 def iidea():
@@ -217,8 +229,9 @@ def iidea():
     inputs = IIDEAConverter.inputs()
     agenda = IIDEAConverter.agenda()
     effectors = IIDEAConverter.effectors()
+    triggers = IIDEAConverter.triggers()
 
-    return render_template("iidea.html", time=time, stage=stage, inputs=inputs, agenda=agenda, aj=json.dumps(agenda), effectors=effectors, ae=json.dumps(effectors))
+    return render_template("iidea.html", time=time, stage=stage, inputs=inputs, agenda=agenda, aj=json.dumps(agenda), effectors=effectors, ej=json.dumps(effectors), tj=json.dumps(triggers))
 
 
 @app.route("/iidea/advance", methods=["GET"])
@@ -229,7 +242,8 @@ def iidea_advance():
         "stage": agent.IDEA.stage(),
         "inputs": IIDEAConverter.inputs(),
         "agenda": IIDEAConverter.agenda(),
-        "effectors": IIDEAConverter.effectors()
+        "effectors": IIDEAConverter.effectors(),
+        "triggers": IIDEAConverter.triggers()
     })
 
 

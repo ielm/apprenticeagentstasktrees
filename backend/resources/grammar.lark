@@ -45,12 +45,13 @@ action: ACTION "(" ACTION_NAME ")" action_selection action_do+
 action_selection: SELECT (DEFAULT | IF boolean_statement)
 action_do: DO (statement | IDLE)
 
-condition: WHEN (condition_and | condition_or | condition_nand | condition_nor | condition_not) THEN goal_status
+condition: WHEN (condition_and | condition_or | condition_nand | condition_nor | condition_not | condition_on) THEN goal_status
 condition_and: boolean_statement (AND boolean_statement)*
 condition_or: boolean_statement (OR boolean_statement)+
 condition_nand: boolean_statement (NAND boolean_statement)+
 condition_nor: boolean_statement (NOR boolean_statement)+
 condition_not: boolean_statement (NOT boolean_statement)+
+condition_on: (EXECUTED)
 
 statement: (add_filler_statement | assign_filler_statement | assign_variable_statement | capability_statement | exists_statement | foreach_statement | is_statement | make_instance_statement | mp_statement)
 boolean_statement: (exists_statement | is_statement)
@@ -80,6 +81,7 @@ DEFINE: "define"i
 DO: "DO"i
 EACH: "each"i
 EXE: "exe"i
+EXECUTED: "executed"i
 EXISTS: "exists"i
 FOR: "for"i
 GOAL: "goal"i
