@@ -145,8 +145,9 @@ double: INTEGER "." INTEGER
 string: ("\"") STRING ("\"")
 
 identifier: (graph ".")? name ("." instance)?
-graph: (GRAPH | tmr)
+graph: (GRAPH | tmr | vmr)
 tmr: "TMR" "#" INTEGER
+vmr: "VMR" "#" INTEGER
 name: NAME
 instance: INSTANCE
 

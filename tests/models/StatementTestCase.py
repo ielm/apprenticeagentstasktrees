@@ -159,6 +159,14 @@ class VariableMapTestCase(unittest.TestCase):
         self.assertEqual(vm.find("X"), v1)
         self.assertEqual(vm.find("Y"), v2)
 
+    def test_variables(self):
+        g = Graph("TEST")
+        f = g.register("VARMAP")
+        f["WITH"] += Literal("$var1")
+        f["WITH"] += Literal("$var2")
+
+        self.assertEqual(["$var1", "$var2"], VariableMap(f).variables())
+
 
 class StatementTestCase(unittest.TestCase):
 

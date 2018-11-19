@@ -490,6 +490,9 @@ class GrammarTransformer(Transformer):
     def tmr(self, matches):
         return "TMR#" + str(matches[0])
 
+    def vmr(self, matches):
+        return "VMR#" + str(matches[0])
+
     def name(self, matches):
         return str(matches[0])
 

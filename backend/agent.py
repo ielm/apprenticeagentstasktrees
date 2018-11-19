@@ -10,7 +10,7 @@ from backend.models.statement import Statement
 from backend.models.tmr import TMR
 from backend.models.vmr import VMR
 from backend.models.xmr import XMR
-from backend.utils.AgentLogger import AgentLogger
+from backend.utils.AgentLogger import AgentLogger, CachedAgentLogger
 from typing import List, Union
 
 
@@ -46,11 +46,11 @@ class Agent(Network):
         self.action_queue = []
         self.context = LCTContext(self)
 
-        self._logger = AgentLogger()
+        self._logger = CachedAgentLogger()
         self.wo_memory.logger(self._logger)
         self.lt_memory.logger(self._logger)
 
-    def logger(self, logger=None):
+    def logger(self, logger=None) -> AgentLogger:
         if not logger is None:
             self._logger = logger
         return self._logger

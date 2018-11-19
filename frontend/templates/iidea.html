@@ -31,6 +31,16 @@
         .trigger:last-child {
             padding-bottom: 0px;
         }
+        .variable {
+            margin-left: 20px;
+            font-size: small;
+        }
+        .callback-button {
+            padding-left: 4px;
+            padding-right: 4px;
+            padding-top: 0px;
+            padding-bottom: 0px;
+        }
     </style>
 
     <script>
@@ -45,6 +55,7 @@
                 render_agenda(output["agenda"]);
                 render_effectors(output["effectors"]);
                 render_triggers(output["triggers"]);
+                render_logs(output["logs"]);
                 if (callback != null) {
                     callback();
                 }
@@ -100,6 +111,29 @@
                 render_time(output);
                 render_inputs(output["inputs"]);
                 render_agenda(output["agenda"]);
+            }).fail(function(error) {
+                console.log(error);
+            });
+        }
+
+        function callback(callback) {
+            var data = {
+                "callback-id": callback
+            };
+
+            $.ajax({
+                url: "/iidea/callback",
+                method: "POST",
+                data: JSON.stringify(data),
+                contentType: "application/json",
+            }).done(function(data) {
+                var output = JSON.parse(data);
+                render_time(output);
+                render_inputs(output["inputs"]);
+                render_agenda(output["agenda"]);
+                render_effectors(output["effectors"]);
+                render_triggers(output["triggers"]);
+                render_logs(output["logs"]);
             }).fail(function(error) {
                 console.log(error);
             });
@@ -231,6 +265,19 @@
                 $('[data-toggle="tooltip"]').tooltip();
             });
         }
+
+        function render_logs(logs) {
+            $("#logList").empty();
+
+            for (var i in logs) {
+                var log = logs[i];
+
+                var template = document.getElementById('log-template').innerHTML;
+                Mustache.parse(template, ["{|", "|}"]);
+                var rendered = Mustache.render(template, {"log": log});
+                $($(document).find("#logList")[0]).prepend($(rendered));
+            }
+        }
     </script>
 
     <script>
@@ -253,6 +300,10 @@
             $("#custom-source-input").on("keyup", function() {
                 $("#custom-source-radio").prop("checked", true);
             });
+            $(document).on("click", ".callback-button", function(e) {
+                var id = $(e.currentTarget).data("callback");
+                callback(id);
+            });
             $(function () {
                 $('[data-toggle="tooltip"]').tooltip();
             });
@@ -268,12 +319,21 @@
 
             var triggers = JSON.parse('{{ tj|safe }}');
             render_triggers(triggers);
+
+            var logs = JSON.parse('{{ lj|safe }}');
+            render_logs(logs);
         });
     </script>
 
     <script id="goal-template" type="x-tmpl-mustache">
         <div>{| name |} <span class="goal-id">({| id |})</span></div>
         <div class="goal-contents">
+            <div>
+                <strong>Variables:</strong>
+                {| #params |}
+                    <div class="variable"><strong>{| var |}</strong> = {| value |}</div>
+                {| /params |}
+            </div>
             <div><strong>Priority:</strong> {| priority |}</div>
             <div><strong>Resources:</strong> {| resources |}</div>
             <div><strong>Decision:</strong> {| decision |}</div>
@@ -321,6 +381,10 @@
                             {| /selected |}
 
                             {| name |}
+
+                            {| #callbacks |}
+                                <button type="button" class="btn btn-primary btn-sm callback-button" data-callback="{| . |}"><i class="fas fa-undo-alt" style="font-size: smaller"></i></button>
+                            {| /callbacks |}
                         {| /capabilities |}
                     </td>
                 </tr>
@@ -331,6 +395,12 @@
     <script id="trigger-template" type="x-tmpl-mustache">
         <div class="trigger">
             <i class="fas fa-eye" data-toggle="tooltip" data-placement="top" title="{| triggered-on |}"></i> Trigger {| goal |} when {| query |}
+        </div>
+    </script>
+
+    <script id="log-template" type="x-tmpl-mustache">
+        <div class="log">
+            {| log |}
         </div>
     </script>
 
@@ -387,6 +457,7 @@
                                 <option value="Release the dowel."></option>
                                 <option value="We have assembled a front leg."></option>
                                 <option value="We finished assembling the chair."></option>
+                                <option value="Let's build a chair."></option>
                             </datalist>
                             <div class="input-group-append">
                                 <button id="inputTextButton" class="btn btn-sm btn-primary" type="button">Input</button>
@@ -394,7 +465,7 @@
                         </div>
                         <div class="input-group mb-3">
                             <select class="custom-select custom-select-sm" id="observations">
-                                <option value="jake leaves">Jake Leaves</option>
+                                <option value="Jake leaves">Jake leaves</option>
                             </select>
                             <div class="input-group-append">
                                 <button id="observationButton" class="btn btn-sm btn-primary" type="button">Observe</button>
@@ -408,7 +479,7 @@
                             <div class="custom-control custom-radio custom-control-inline">
                                 <input type="radio" id="custom-source-radio" name="source-radio" class="custom-control-input">
                                 <label class="custom-control-label" for="custom-source-radio"></label>
-                                <input id="custom-source-input" type="text" class="form-control form-control-sm" placeholder="Source ID" >
+                                <input id="custom-source-input" type="text" class="form-control form-control-sm" placeholder="Source ID" value="LT.HUMAN.1">
                             </div>
                         </div>
                         <hr>
@@ -447,6 +518,14 @@
                     </div>
                     <div class="card-body">
                         <div id="triggerList"></div>
+                    </div>
+                </div>
+                <div class="card" style="margin-bottom: 25px;">
+                    <div class="card-header">
+                        Logs
+                    </div>
+                    <div class="card-body">
+                        <div id="logList"></div>
                     </div>
                 </div>
             </div>

@@ -106,6 +106,9 @@ class VariableMap(object):
                 return var
         raise Exception("Variable '" + name + "' is not defined in this mapping.")
 
+    def variables(self) -> List[str]:
+        return list(map(lambda v: v.resolve().value, self.frame["WITH"]))
+
     def __eq__(self, other):
         if isinstance(other, VariableMap):
             return self.frame == other.frame
