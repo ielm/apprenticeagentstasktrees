@@ -22,16 +22,19 @@ DEFINE UNDERSTAND-TMR($tmr)
         | THEN DO $tmr[STATUS] = "UNDERSTOOD"
     WHEN $tmr[STATUS] == "UNDERSTOOD" THEN satisfied
 ;
-DEFINE ACKNOWLEDGE-INPUT($tmr)
+DEFINE ACKNOWLEDGE-INPUT($xmr)
     AS GOAL
     IN EXE
-    PRIORITY SELF.prioritize_learning($tmr)
-    RESOURCES SELF.evaluate_resources($tmr)
-    ACTION (acknowledge input)
-        SELECT DEFAULT
-        DO SELF[HAS-GOAL] += @SELF:EXE.DECIDE-ON-LANGUAGE-INPUT($tmr)
-        DO $tmr[STATUS] = "ACKNOWLEDGED"
-    WHEN $tmr[STATUS] == "ACKNOWLEDGED" OR $tmr[STATUS] == "IGNORED" THEN satisfied
+    PRIORITY SELF.prioritize_learning($xmr)
+    RESOURCES SELF.evaluate_resources($xmr)
+    ACTION (decide on language input)
+        SELECT IF $xmr[TYPE] == "LANGUAGE"
+        DO SELF[HAS-GOAL] += @SELF:EXE.DECIDE-ON-LANGUAGE-INPUT($xmr)
+        DO $xmr[STATUS] = "ACKNOWLEDGED"
+    ACTION (react to visual input)
+        SELECT IF $xmr[TYPE] == "VISUAL"
+        DO SELF[HAS-GOAL] += @SELF:EXE.REACT-TO-VISUAL-INPUT($xmr)
+    WHEN $xmr[STATUS] == "ACKNOWLEDGED" OR $xmr[STATUS] == "IGNORED" THEN satisfied
 ;
 DEFINE DECIDE-ON-LANGUAGE-INPUT($tmr)
 //  TODO - return $task from decide_on_language_input and create PERFORM-COMPLEX-TASK from goal definition
@@ -44,7 +47,7 @@ DEFINE DECIDE-ON-LANGUAGE-INPUT($tmr)
         DO SELF.decide_on_language_input($tmr)
 //        DO SELF[STATUS] = "SATISFIED"
     // TODO - insert WHEN condition for goal satisfaction
-    WHEN EXECUTED satisfied
+    WHEN EXECUTED then satisfied
 ;
 DEFINE RESPOND-TO-QUERY($tmr)
     AS GOAL
@@ -60,5 +63,15 @@ DEFINE PERFORM-COMPLEX-TASK($task)
     ACTION (perform complex task)
         SELECT DEFAULT
         DO SELF.perform_complex_task($task)
+        DO IDLE
+;
+DEFINE REACT-TO-VISUAL-INPUT($vmr)
+    AS GOAL
+    IN EXE
+    PRIORITY SELF.prioritize_learning($vmr)
+    RESOURCES SELF.evaluate_resources($vmr)
+    ACTION (react to visual input)
+        SELECT DEFAULT
+        DO SELF.react_to_visual_input($vmr)
         DO IDLE
 ;
