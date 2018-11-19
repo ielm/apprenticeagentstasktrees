@@ -222,6 +222,12 @@
                 var rendered = Mustache.render(template, goal);
                 $($(document).find("#agenda")[0]).prepend($(rendered));
             }
+
+            if ($("#hideSatisfiedCheckBox").is(":checked")) {
+                $(".goal-satisfied").hide();
+            } else {
+                $(".goal-satisfied").show();
+            }
         }
 
         function render_effectors(effectors) {
@@ -300,6 +306,13 @@
             $("#custom-source-input").on("keyup", function() {
                 $("#custom-source-radio").prop("checked", true);
             });
+            $("#hideSatisfiedCheckBox").on("click", function() {
+                if ($("#hideSatisfiedCheckBox").is(":checked")) {
+                    $(".goal-satisfied").hide();
+                } else {
+                    $(".goal-satisfied").show();
+                }
+            });
             $(document).on("click", ".callback-button", function(e) {
                 var id = $(e.currentTarget).data("callback");
                 callback(id);
@@ -320,14 +333,14 @@
             var triggers = JSON.parse('{{ tj|safe }}');
             render_triggers(triggers);
 
-            var logs = JSON.parse('{{ lj|safe }}');
+            var logs = JSON.parse({{lj|tojson}});
             render_logs(logs);
         });
     </script>
 
     <script id="goal-template" type="x-tmpl-mustache">
-        <div>{| name |} <span class="goal-id">({| id |})</span></div>
-        <div class="goal-contents">
+        <div class="goal-{| status |}">{| name |} <span class="goal-id">({| id |})</span></div>
+        <div class="goal-contents goal-{| status |}">
             <div>
                 <strong>Variables:</strong>
                 {| #params |}
@@ -420,6 +433,12 @@
                 <div class="card">
                     <div class="card-header">
                         Agenda
+                        <div class="form-check float-right">
+                            <input class="form-check-input" type="checkbox" value="" id="hideSatisfiedCheckBox">
+                            <label class="form-check-label" for="hideSatisfiedCheckBox">
+                                Hide satisfied?
+                            </label>
+                        </div>
                     </div>
                     <div class="card-body">
                         <div id="agenda"></div>

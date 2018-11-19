@@ -59,7 +59,7 @@ class Agent(Network):
         tmr = self.register(TMR(input, ontology=self.ontology))
         self.input_memory.append(tmr)
 
-        self._logger.log("Input: '" + tmr.sentence + "'")
+        self._logger.log("Input: " + tmr.sentence)
 
         agenda = self.context.default_understanding()
         agenda.logger(self._logger)
@@ -172,7 +172,7 @@ class Agent(Network):
         if type == "VISUAL":
             self._logger.log("Input: <<VMR INSTANCE HERE>>")
         else:
-            self._logger.log("Input: '" + registered_xMR.sentence + "'")
+            self._logger.log("Input: " + registered_xMR.sentence)
 
     def _decision(self):
         agenda = self.agenda()
