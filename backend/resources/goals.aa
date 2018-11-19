@@ -34,6 +34,7 @@ DEFINE ACKNOWLEDGE-INPUT($xmr)
     ACTION (react to visual input)
         SELECT IF $xmr[TYPE] == "VISUAL"
         DO SELF[HAS-GOAL] += @SELF:EXE.REACT-TO-VISUAL-INPUT($xmr)
+        DO $xmr[STATUS] = "ACKNOWLEDGED"
     WHEN $xmr[STATUS] == "ACKNOWLEDGED" OR $xmr[STATUS] == "IGNORED" THEN satisfied
 ;
 DEFINE DECIDE-ON-LANGUAGE-INPUT($tmr)
