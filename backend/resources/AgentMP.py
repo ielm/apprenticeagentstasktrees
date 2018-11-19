@@ -25,6 +25,7 @@ class PrintTMR(AgentMethod):
 
 class AcknowledgeInputMP(AgentMethod):
     def run(self, input_mr):
+        print(input_mr)
         return
 
 
@@ -128,3 +129,7 @@ class SpeakCapabilityMP(AgentMethod):
     def run(self):
         return
 
+
+class ReactToVisualInputMP(AgentMethod):
+    def run(self, vmr):
+        return

@@ -224,7 +224,8 @@ class Agent(Network):
     def agenda(self):
         return Agenda(self.identity)
 
-    def environment(self):
+    def env(self):
+        # Changed to env to avoid ambiguity with self.environment
         return Environment(self.environment)
 
     def effectors(self) -> List[Effector]:

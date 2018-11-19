@@ -11,3 +11,4 @@ REGISTER MP backend.resources.AgentMP.PrintTMR AS print_tmr;
 REGISTER MP backend.resources.AgentMP.AddGoalMP AS add_goal;
 REGISTER MP backend.resources.AgentMP.ReactToVisualInputMP AS react_to_visual_input;
 REGISTER MP backend.resources.AgentMP.GetPhysicalObjectCapabilityMP as get_physical_object;
+REGISTER MP backend.resources.AgentMP.ReactToVisualInputMP as react_to_visual_input;

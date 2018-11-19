@@ -114,7 +114,7 @@ class Jan2019Experiment(unittest.TestCase):
         self.iidea_loop(agent)
 
         # 1c) TEST: An instance of ACKNOWLEDGE-INPUT with the correct TMR is on the agenda
-        self.assertGoalExists(agent, isa="EXE.ACKNOWLEDGE-INPUT", status=Goal.Status.PENDING, query=lambda goal: goal.resolve("$tmr")["REFERS-TO-GRAPH"].singleton() == "TMR#1")
+        self.assertGoalExists(agent, isa="EXE.ACKNOWLEDGE-INPUT", status=Goal.Status.PENDING, query=lambda goal: goal.resolve("$xmr")["REFERS-TO-GRAPH"].singleton() == "TMR#1")
 
         # 1d) IIDEA loop
         self.iidea_loop(agent)
@@ -137,7 +137,7 @@ class Jan2019Experiment(unittest.TestCase):
         mock = self.iidea_loop(agent, mock=GetPhysicalObjectCapabilityMP)
 
         # 2c) TEST: An instance of ACKNOWLEDGE-INPUT with the correct TMR is on the agenda
-        self.assertGoalExists(agent, isa="EXE.ACKNOWLEDGE-INPUT", status=Goal.Status.PENDING, query=lambda goal: XMR(goal.resolve("$tmr")).graph(agent) == agent["VMR#1"])
+        self.assertGoalExists(agent, isa="EXE.ACKNOWLEDGE-INPUT", status=Goal.Status.PENDING, query=lambda goal: XMR(goal.resolve("$xmr")).graph(agent) == agent["VMR#1"])
 
         # 2d) TEST: The only PHYSICAL-EFFECTOR is reserved to PERFORM-COMPLEX-TASK (using capability GET(screwdriver))
         self.assertEffectorReserved(agent, "SELF.PHYSICAL-EFFECTOR.1", "SELF.GOAL.2", "EXE.GET-CAPABILITY")
@@ -150,7 +150,7 @@ class Jan2019Experiment(unittest.TestCase):
         self.assertGoalExists(agent, isa="EXE.REACT-TO-VISUAL-INPUT", status=Goal.Status.PENDING, query=lambda goal: XMR(goal.resolve("$vmr")).graph(agent) == agent["VMR#1"])
 
         # 2g) TEST: The PHYSICAL-EFFECTOR is still reserved; PERFORM-COMPLEX-TASK is still "active"
-        self.assertEffectorReserved(agent, "SELF.PHYSICAL-EFFECTOR.1", "SELF.PERFORM-COMPLEX-TASK.1", "EXE.GET-CAPABILITY")
+        self.assertEffectorReserved(agent, "SELF.PHYSICAL-EFFECTOR.1", "SELF.GOAL.2", "EXE.GET-CAPABILITY")
 
         # 2h) IIDEA loop
         self.iidea_loop(agent)
@@ -160,7 +160,7 @@ class Jan2019Experiment(unittest.TestCase):
 
         # 2j) TEST: The environment no longer registers "Jake" as being present
         # Might need to be frame rather than name
-        self.assertNotIn("ENV.HUMAN.1", agent.environment().current())
+        self.assertNotIn("ENV.HUMAN.1", agent.env().current())
 
         # 2k) TEST: The PHYSICAL-EFFECTOR is still reserved; PERFORM-COMPLEX-TASK is still "active"
         self.assertEffectorReserved(agent, "SELF.PHYSICAL-EFFECTOR.1", "SELF.PERFORM-COMPLEX-TASK.1", "EXE.GET-CAPABILITY")
