@@ -27,10 +27,10 @@ class Registry(object):
 
         self._storage[name] = mp
 
-    def run(self, mp: str, agent: 'Agent', *args, statement: 'Statement'=None, callback: Union[str, Identifier, Frame, 'Callback']=None, **kwargs) -> Any:
+    def run(self, mp: str, agent: 'Agent', *args, statement: 'Statement'=None, callback: Union[str, Identifier, Frame, 'Callback']=None, varmap=None, **kwargs) -> Any:
         if mp not in self._storage:
             raise Exception("Unknown meaning procedure '" + mp + "'.")
-        return self._storage[mp](agent, statement=statement, callback=callback)(*args, **kwargs)
+        return self._storage[mp](agent, statement=statement, callback=callback, varmap=varmap)(*args, **kwargs)
 
     def method(self, mp: str, agent: 'Agent', statement: 'Statement'=None, callback: Union[str, Identifier, Frame, 'Callback']=None) -> 'AgentMethod':
         if mp not in self._storage:
@@ -43,10 +43,11 @@ class Registry(object):
 
 class AgentMethod(object):
 
-    def __init__(self, agent: 'Agent', statement: 'Statement'=None, callback: Union[str, Identifier, Frame, 'Callback']=None):
+    def __init__(self, agent: 'Agent', statement: 'Statement'=None, callback: Union[str, Identifier, Frame, 'Callback']=None, varmap=None):
         self.agent = agent
         self.statement = statement
         self.callback = callback
+        self.varmap = varmap
 
     def run(self, *args, **kwargs):
         raise Exception("AgentMethod.run(*, **) must be implemented.")

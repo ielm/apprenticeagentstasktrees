@@ -42,6 +42,9 @@ DEFINE DECIDE-ON-LANGUAGE-INPUT($tmr)
     ACTION (decide on language input)
         SELECT DEFAULT
         DO SELF.decide_on_language_input($tmr)
+//        DO SELF[STATUS] = "SATISFIED"
+    // TODO - insert WHEN condition for goal satisfaction
+    WHEN EXECUTED satisfied
 ;
 DEFINE RESPOND-TO-QUERY($tmr)
     AS GOAL

@@ -8,6 +8,7 @@ class Environment(object):
         self.graph = graph
 
     def advance(self) -> Frame:
+        # Create a new timestamp
         epochs = self.history()
 
         epoch = self.graph.register("EPOCH", isa="ENV.EPOCH", generate_index=True)
@@ -35,6 +36,7 @@ class Environment(object):
         return epochs
 
     def enter(self, obj: Union[str, Identifier, Frame], distance: float=1.0):
+        # Something new is in the env
         if isinstance(obj, str):
             obj = Identifier.parse(obj)
         if isinstance(obj, Frame):
@@ -47,6 +49,7 @@ class Environment(object):
             self.move(obj, distance)
 
     def exit(self, obj: Union[str, Identifier, Frame]):
+        # Something has exited the environment
         if isinstance(obj, str):
             obj = Identifier.parse(obj)
         if isinstance(obj, Frame):

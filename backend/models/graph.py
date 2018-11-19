@@ -248,7 +248,6 @@ class Graph(Mapping):
         if generate_index:
             id = id + "." + str(self._next_index(id))
 
-        # ATTN - Does this create a frame the same as Frame(id, isa=isa)?
         frame = self._frame_type()(id, isa=isa)
         self[id] = frame
 
