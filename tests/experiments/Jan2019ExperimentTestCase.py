@@ -163,7 +163,7 @@ class Jan2019Experiment(unittest.TestCase):
         self.assertNotIn("ENV.HUMAN.1", agent.env().current())
 
         # 2k) TEST: The PHYSICAL-EFFECTOR is still reserved; PERFORM-COMPLEX-TASK is still "active"
-        self.assertEffectorReserved(agent, "SELF.PHYSICAL-EFFECTOR.1", "SELF.PERFORM-COMPLEX-TASK.1", "EXE.GET-CAPABILITY")
+        self.assertEffectorReserved(agent, "SELF.PHYSICAL-EFFECTOR.1", "SELF.GOAL.2", "EXE.GET-CAPABILITY")
 
         # 3a) Callback input capability GET(screwdriver) is complete
         agent.callback("SELF.CALLBACK.1")
