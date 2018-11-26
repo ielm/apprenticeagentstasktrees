@@ -343,10 +343,13 @@ class Action(object):
     def capabilities(self, varmap: VariableMap) -> List['Capability']:
         results = []
 
-        for step in self.steps():
-            results.extend(step.capabilities(varmap))
+        steps = self.steps()
+        steps = list(filter(lambda step: step.is_pending(), steps))
 
-        return results
+        if len(steps) == 0:
+            return []
+
+        return steps[0].capabilities(varmap)
 
     def __eq__(self, other):
         if isinstance(other, Action):

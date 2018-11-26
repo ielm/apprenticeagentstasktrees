@@ -977,6 +977,30 @@ class ActionTestCase(unittest.TestCase):
 
         self.assertEqual([cap1, cap2], action.capabilities(None))
 
+    def test_capabilities_for_only_the_next_step(self):
+        from backend.models.effectors import Capability
+        from backend.models.statement import CapabilityStatement, ForEachStatement
+
+        graph = Statement.hierarchy()
+
+        cap1 = Capability.instance(graph, "CAPABILITY-A", "")
+        cap2 = Capability.instance(graph, "CAPABILITY-B", "")
+
+        stmt1 = CapabilityStatement.instance(graph, cap1, [], [])
+        stmt2 = CapabilityStatement.instance(graph, cap2, [], [])
+        stmt3 = ForEachStatement.instance(graph, None, "$var1", stmt2)
+
+        step1 = Step.build(graph, 1, [stmt1])
+        step2 = Step.build(graph, 1, [stmt3])
+
+        action = Action.build(graph, "TEST", Action.DEFAULT, [step1, step2])
+
+        self.assertEqual([cap1], action.capabilities(None))
+
+        step1.frame["STATUS"] = Step.Status.FINISHED
+
+        self.assertEqual([cap2], action.capabilities(None))
+
 
 class StepTestCase(unittest.TestCase):
 
