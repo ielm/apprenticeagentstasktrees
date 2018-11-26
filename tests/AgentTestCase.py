@@ -1,5 +1,5 @@
 from backend.agent import Agent
-from backend.models.agenda import Action, Goal
+from backend.models.agenda import Action, Goal, Step
 from backend.models.effectors import Capability, Effector
 from backend.models.graph import Literal, Network
 from backend.models.ontology import Ontology
@@ -110,7 +110,7 @@ class AgentTestCase(unittest.TestCase):
 
         # 2) Define and instance a goal that needs the capability
         stmt = CapabilityStatement.instance(graph, capability, [], [])
-        action = Action.build(graph, "ACTION", Action.DEFAULT, stmt)
+        action = Action.build(graph, "ACTION", Action.DEFAULT, Step.build(graph, 1, stmt))
         definition = Goal.define(graph, "TEST", 0.5, 0.5, [action], [], [])
         goal = Goal.instance_of(graph, definition, [])
         self.agent.agenda().add_goal(goal)
@@ -134,7 +134,7 @@ class AgentTestCase(unittest.TestCase):
         # 2) Define and instance a goal that needs both capabilities
         stmt1 = CapabilityStatement.instance(graph, capability1, [], [])
         stmt2 = CapabilityStatement.instance(graph, capability2, [], [])
-        action = Action.build(graph, "ACTION", Action.DEFAULT, [stmt1, stmt2])
+        action = Action.build(graph, "ACTION", Action.DEFAULT, Step.build(graph, 1, [stmt1, stmt2]))
         definition = Goal.define(graph, "TEST", 0.5, 0.5, [action], [], [])
         goal = Goal.instance_of(graph, definition, [])
         self.agent.agenda().add_goal(goal)
@@ -156,8 +156,8 @@ class AgentTestCase(unittest.TestCase):
 
         # 2) Define and instance two goals that needs the capability (with different weights)
         stmt = CapabilityStatement.instance(graph, capability, [], [])
-        action1 = Action.build(graph, "ACTION", Action.DEFAULT, stmt)
-        action2 = Action.build(graph, "ACTION", Action.DEFAULT, stmt)
+        action1 = Action.build(graph, "ACTION", Action.DEFAULT, Step.build(graph, 1, stmt))
+        action2 = Action.build(graph, "ACTION", Action.DEFAULT, Step.build(graph, 1, stmt))
         definition1 = Goal.define(graph, "TEST", 0.5, 0.5, [action1], [], [])
         definition2 = Goal.define(graph, "TEST", 1.0, 0.1, [action2], [], [])
         goal1 = Goal.instance_of(graph, definition1, [])
@@ -186,8 +186,8 @@ class AgentTestCase(unittest.TestCase):
         # 2) Define and instance two goals that needs different capabilities
         stmt1 = CapabilityStatement.instance(graph, capability1, [], [])
         stmt2 = CapabilityStatement.instance(graph, capability2, [], [])
-        action1 = Action.build(graph, "ACTION", Action.DEFAULT, stmt1)
-        action2 = Action.build(graph, "ACTION", Action.DEFAULT, stmt2)
+        action1 = Action.build(graph, "ACTION", Action.DEFAULT, Step.build(graph, 1, stmt1))
+        action2 = Action.build(graph, "ACTION", Action.DEFAULT, Step.build(graph, 1, stmt2))
         definition1 = Goal.define(graph, "TEST", 0.5, 0.5, [action1], [], [])
         definition2 = Goal.define(graph, "TEST", 0.5, 0.5, [action2], [], [])
         goal1 = Goal.instance_of(graph, definition1, [])
@@ -206,7 +206,7 @@ class AgentTestCase(unittest.TestCase):
         graph = self.agent.internal
 
         # 1) Define and instance a goal that needs no capability
-        action = Action.build(graph, "ACTION", Action.DEFAULT, Action.IDLE)
+        action = Action.build(graph, "ACTION", Action.DEFAULT, Step.build(graph, 1, Step.IDLE))
         definition = Goal.define(graph, "TEST", 0.5, 0.5, [action], [], [])
         goal = Goal.instance_of(graph, definition, [])
         self.agent.agenda().add_goal(goal)
@@ -231,11 +231,17 @@ class AgentTestCase(unittest.TestCase):
 
         graph = self.agent.internal
         action = graph.register("ACTION")
+        step = graph.register("STEP")
         statement = graph.register("STATEMENT", isa="EXE.STATEMENT")
         goal = graph.register("GOAL")
         goal["PLAN"] = action
 
-        action["PERFORM"] = statement
+        action["HAS-STEP"] = step
+
+        step["INDEX"] = 1
+        step["STATUS"] = Step.Status.PENDING
+        step["PERFORM"] = statement
+
         Goal(goal).status(Goal.Status.ACTIVE)
         self.agent.lookup("EXE.STATEMENT")["CLASSMAP"] = Literal(TestStatement)
         self.agent.identity["ACTION-TO-TAKE"] = action

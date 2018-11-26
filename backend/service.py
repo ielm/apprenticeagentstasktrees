@@ -199,7 +199,9 @@ class IIDEAConverter(object):
 
         return {
             "name": action.name(),
-            "selected": action in agent.agenda().action() and goal.is_active()
+            "selected": action in agent.agenda().action() and goal.is_active(),
+            "current-step": len(list(filter(lambda step: step.is_finished(), action.steps()))),
+            "total-steps": len(action.steps())
         }
 
     @classmethod

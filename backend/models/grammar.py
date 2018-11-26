@@ -173,9 +173,12 @@ class GrammarTransformer(Transformer):
         from backend.models.agenda import Action
         name = matches[1]
         select = matches[2]
-        perform = matches[3:]
+        steps = matches[3:]
 
-        return Action.build(self.agent.exe, name, select, perform)
+        for i, v in enumerate(steps):
+            v.frame["INDEX"] = i + 1
+
+        return Action.build(self.agent.exe, name, select, steps)
 
     def action_selection(self, matches):
         from backend.models.agenda import Action
@@ -187,12 +190,17 @@ class GrammarTransformer(Transformer):
 
         return select
 
+    def action_step(self, matches):
+        from backend.models.agenda import Step
+        return Step.build(self.agent.exe, -1, matches[1:])
+
+
     def action_do(self, matches):
-        from backend.models.agenda import Action
+        from backend.models.agenda import Step
         perform = matches[1]
 
         if str(perform) == "IDLE":
-            perform = Action.IDLE
+            perform = Step.IDLE
 
         return perform
 

@@ -1,4 +1,4 @@
-from backend.models.agenda import Action, Agenda, Condition, Goal, Trigger
+from backend.models.agenda import Action, Agenda, Condition, Goal, Step, Trigger
 from backend.models.graph import Frame, Graph, Literal, Network
 from backend.models.statement import Statement, VariableMap
 
@@ -839,67 +839,124 @@ class ActionTestCase(unittest.TestCase):
 
         self.assertTrue(Action(action).is_default())
 
+    def test_steps(self):
+        graph = Statement.hierarchy()
+        action = graph.register("ACTION.1")
+
+        step1 = graph.register("STEP", generate_index=True)
+        step2 = graph.register("STEP", generate_index=True)
+
+        step1["INDEX"] = 1
+        step2["INDEX"] = 2
+
+        self.assertEqual([], Action(action).steps())
+
+        action["HAS-STEP"] += step2
+        action["HAS-STEP"] += step1
+
+        self.assertEqual([Step(step1), Step(step2)], Action(action).steps())
+
     def test_perform(self):
 
-        out = []
+        out = None
 
         class TestStatement(Statement):
             def run(self, varmap: VariableMap):
                 nonlocal out
-                out.append(self.frame["LOCAL"][0].resolve().value)
+                out = 123
 
         graph = Statement.hierarchy()
-        action = graph.register("ACTION.1")
-        statement1 = graph.register("STATEMENT.1", isa="EXE.STATEMENT")
-        statement2 = graph.register("STATEMENT.2", isa="EXE.STATEMENT")
+        action = graph.register("ACTION")
+        step = graph.register("STEP")
+        statement = graph.register("STATEMENT", generate_index=True, isa="EXE.STATEMENT")
 
         graph["STATEMENT"]["CLASSMAP"] = Literal(TestStatement)
-        action["PERFORM"] = [statement1, statement2]
-        statement1["LOCAL"] = Literal("X")
-        statement2["LOCAL"] = Literal("Y")
+        action["HAS-STEP"] = step
+        step["INDEX"] = 1
+        step["STATUS"] = Step.Status.PENDING
+        step["PERFORM"] = statement
 
         Action(action).perform(VariableMap(graph.register("VARMAP")))
+        self.assertEqual(123, out)
 
-        self.assertEqual(out, ["X", "Y"])
+    def test_perform_only_runs_one_step(self):
 
-    def test_perform_with_variables(self):
-        out = []
+        out = 0
 
         class TestStatement(Statement):
             def run(self, varmap: VariableMap):
                 nonlocal out
-                out.append(varmap.resolve("X"))
+                out += 1
 
         graph = Statement.hierarchy()
-        action = graph.register("ACTION.1")
-        statement = graph.register("STATEMENT.1", isa="EXE.STATEMENT")
-        varmap = graph.register("VARMAP.1")
-        variable = graph.register("VARIABLE.1")
+        action = graph.register("ACTION")
+        step1 = graph.register("STEP", generate_index=True)
+        step2 = graph.register("STEP", generate_index=True)
+        statement = graph.register("STATEMENT", generate_index=True, isa="EXE.STATEMENT")
 
         graph["STATEMENT"]["CLASSMAP"] = Literal(TestStatement)
-        action["PERFORM"] = statement
-        varmap["_WITH"] = variable
-        variable["NAME"] = Literal("X")
-        variable["VALUE"] = 123
-
-        Action(action).perform(VariableMap(varmap))
-
-        self.assertEqual(out, [123])
-
-    def test_perform_idle(self):
-        graph = Statement.hierarchy()
-        action = graph.register("ACTION.1")
-        action["PERFORM"] = Literal(Action.IDLE)
+        action["HAS-STEP"] = [step1, step2]
+        step1["INDEX"] = 1
+        step2["INDEX"] = 2
+        step1["STATUS"] = Step.Status.PENDING
+        step2["STATUS"] = Step.Status.PENDING
+        step1["PERFORM"] = statement
+        step2["PERFORM"] = statement
 
         Action(action).perform(VariableMap(graph.register("VARMAP")))
+        self.assertEqual(1, out)
+
+    def test_perform_skips_finished_steps(self):
+        from backend.models.mps import AgentMethod, MPRegistry
+        from backend.models.statement import MeaningProcedureStatement
+
+        out = None
+
+        class TestMP(AgentMethod):
+            def run(self, var1):
+                nonlocal out
+                out = var1
+        MPRegistry.register(TestMP)
+
+        graph = Statement.hierarchy()
+        action = graph.register("ACTION")
+        step1 = graph.register("STEP", generate_index=True)
+        step2 = graph.register("STEP", generate_index=True)
+
+        statement1 = MeaningProcedureStatement.instance(graph, "TestMP", ["A"])
+        statement2 = MeaningProcedureStatement.instance(graph, "TestMP", ["B"])
+
+        action["HAS-STEP"] = [step1, step2]
+        step1["INDEX"] = 1
+        step2["INDEX"] = 2
+        step1["STATUS"] = Step.Status.FINISHED
+        step2["STATUS"] = Step.Status.PENDING
+        step1["PERFORM"] = statement1.frame
+        step2["PERFORM"] = statement2.frame
+
+        Action(action).perform(VariableMap(graph.register("VARMAP")))
+        self.assertEqual("B", out)
 
     def test_perform_marks_goal_as_executed(self):
-        graph = Graph("TEST")
+        graph = Statement.hierarchy()
         goal = graph.register("GOAL")
         action = graph.register("ACTION")
+        step1 = graph.register("STEP", generate_index=True)
+        step2 = graph.register("STEP", generate_index=True)
+
+        action["HAS-STEP"] = [step1, step2]
+        step1["INDEX"] = 1
+        step2["INDEX"] = 2
+        step1["STATUS"] = Step.Status.PENDING
+        step2["STATUS"] = Step.Status.PENDING
+
+        self.assertFalse(Goal(goal).executed())
 
         Action(action).perform(VariableMap(goal))
-        self.assertTrue(goal["EXECUTED"] == True)
+        self.assertFalse(Goal(goal).executed())
+
+        Action(action).perform(VariableMap(goal))
+        self.assertTrue(Goal(goal).executed())
 
     def test_capabilities(self):
         from backend.models.effectors import Capability
@@ -914,6 +971,112 @@ class ActionTestCase(unittest.TestCase):
         stmt2 = CapabilityStatement.instance(graph, cap2, [], [])
         stmt3 = ForEachStatement.instance(graph, None, "$var1", stmt2)
 
-        action = Action.build(graph, "TEST", Action.DEFAULT, [stmt1, stmt3])
+        step = Step.build(graph, 1, [stmt1, stmt3])
+
+        action = Action.build(graph, "TEST", Action.DEFAULT, step)
 
         self.assertEqual([cap1, cap2], action.capabilities(None))
+
+
+class StepTestCase(unittest.TestCase):
+
+    def test_index(self):
+        graph = Graph("TEST")
+        step = graph.register("STEP")
+        step["INDEX"] = 1
+
+        self.assertEqual(1, Step(step).index())
+
+    def test_status(self):
+        graph = Graph("TEST")
+        step = graph.register("STEP")
+
+        step["STATUS"] = Step.Status.PENDING
+        self.assertEqual(Step.Status.PENDING, Step(step).status())
+        self.assertTrue(Step(step).is_pending())
+        self.assertFalse(Step(step).is_finished())
+
+        step["STATUS"] = Step.Status.FINISHED
+        self.assertEqual(Step.Status.FINISHED, Step(step).status())
+        self.assertFalse(Step(step).is_pending())
+        self.assertTrue(Step(step).is_finished())
+
+    def test_perform(self):
+
+        out = []
+
+        class TestStatement(Statement):
+            def run(self, varmap: VariableMap):
+                nonlocal out
+                out.append(self.frame["LOCAL"][0].resolve().value)
+
+        graph = Statement.hierarchy()
+        step = graph.register("STEP")
+        statement1 = graph.register("STATEMENT", generate_index=True, isa="EXE.STATEMENT")
+        statement2 = graph.register("STATEMENT", generate_index=True, isa="EXE.STATEMENT")
+
+        graph["STATEMENT"]["CLASSMAP"] = Literal(TestStatement)
+        step["PERFORM"] = [statement1, statement2]
+        statement1["LOCAL"] = Literal("X")
+        statement2["LOCAL"] = Literal("Y")
+
+        Step(step).perform(VariableMap(graph.register("VARMAP")))
+
+        self.assertEqual(out, ["X", "Y"])
+
+    def test_perform_with_variables(self):
+        out = []
+
+        class TestStatement(Statement):
+            def run(self, varmap: VariableMap):
+                nonlocal out
+                out.append(varmap.resolve("X"))
+
+        graph = Statement.hierarchy()
+        step = graph.register("STEP")
+        statement = graph.register("STATEMENT", generate_index=True, isa="EXE.STATEMENT")
+        varmap = graph.register("VARMAP")
+        variable = graph.register("VARIABLE")
+
+        graph["STATEMENT"]["CLASSMAP"] = Literal(TestStatement)
+        step["PERFORM"] = statement
+        varmap["_WITH"] = variable
+        variable["NAME"] = Literal("X")
+        variable["VALUE"] = 123
+
+        Step(step).perform(VariableMap(varmap))
+
+        self.assertEqual(out, [123])
+
+    def test_perform_idle(self):
+        graph = Statement.hierarchy()
+        step = graph.register("STEP")
+        step["PERFORM"] = Literal(Step.IDLE)
+
+        Step(step).perform(VariableMap(graph.register("VARMAP")))
+
+    def test_perform_updates_status(self):
+        graph = Graph("TEST")
+        step = graph.register("STEP")
+        step["STATUS"] = Step.Status.PENDING
+
+        self.assertFalse(Step(step).is_finished())
+        Step(step).perform(VariableMap(graph.register("VARMAP")))
+        self.assertTrue(Step(step).is_finished())
+
+    def test_capabilities(self):
+        from backend.models.effectors import Capability
+        from backend.models.statement import CapabilityStatement, ForEachStatement
+
+        graph = Statement.hierarchy()
+
+        cap1 = Capability.instance(graph, "CAPABILITY-A", "")
+        cap2 = Capability.instance(graph, "CAPABILITY-B", "")
+
+        stmt1 = CapabilityStatement.instance(graph, cap1, [], [])
+        stmt2 = CapabilityStatement.instance(graph, cap2, [], [])
+        stmt3 = ForEachStatement.instance(graph, None, "$var1", stmt2)
+
+        step = Step.build(graph, 1, [stmt1, stmt3])
+
+        self.assertEqual([cap1, cap2], step.capabilities(None))

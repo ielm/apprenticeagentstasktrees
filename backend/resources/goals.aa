@@ -5,11 +5,13 @@ DEFINE FIND-SOMETHING-TO-DO()
     RESOURCES 0.3
     ACTION (find something to do)
         SELECT IF EXISTS (@^ EXE.INPUT-TMR AND STATUS = "RECEIVED")
-        DO FOR EACH $tmr IN (@^ EXE.INPUT-TMR AND STATUS = "RECEIVED")
-        | SELF[HAS-GOAL] += @SELF:EXE.ACKNOWLEDGE-INPUT($tmr)
+        STEP
+            DO FOR EACH $tmr IN (@^ EXE.INPUT-TMR AND STATUS = "RECEIVED")
+            | SELF[HAS-GOAL] += @SELF:EXE.ACKNOWLEDGE-INPUT($tmr)
     ACTION (idle)
         SELECT DEFAULT
-        DO IDLE
+        STEP
+            DO IDLE
 ;
 DEFINE UNDERSTAND-TMR($tmr)
     AS GOAL
@@ -18,8 +20,9 @@ DEFINE UNDERSTAND-TMR($tmr)
     RESOURCES SELF.evaluate_resources()
     ACTION (understand TMR)
         SELECT DEFAULT
-        DO CAPABILITY #EXE.LEARN-CAPABILITY($tmr)
-        | THEN DO $tmr[STATUS] = "UNDERSTOOD"
+        STEP
+            DO CAPABILITY #EXE.LEARN-CAPABILITY($tmr)
+            | THEN DO $tmr[STATUS] = "UNDERSTOOD"
     WHEN $tmr[STATUS] == "UNDERSTOOD" THEN satisfied
 ;
 DEFINE ACKNOWLEDGE-INPUT($xmr)
@@ -29,12 +32,14 @@ DEFINE ACKNOWLEDGE-INPUT($xmr)
     RESOURCES SELF.evaluate_resources($xmr)
     ACTION (decide on language input)
         SELECT IF $xmr[TYPE] == "LANGUAGE"
-        DO SELF[HAS-GOAL] += @SELF:EXE.DECIDE-ON-LANGUAGE-INPUT($xmr)
-        DO $xmr[STATUS] = "ACKNOWLEDGED"
+        STEP
+            DO SELF[HAS-GOAL] += @SELF:EXE.DECIDE-ON-LANGUAGE-INPUT($xmr)
+            DO $xmr[STATUS] = "ACKNOWLEDGED"
     ACTION (react to visual input)
         SELECT IF $xmr[TYPE] == "VISUAL"
-        DO SELF[HAS-GOAL] += @SELF:EXE.REACT-TO-VISUAL-INPUT($xmr)
-        DO $xmr[STATUS] = "ACKNOWLEDGED"
+        STEP
+            DO SELF[HAS-GOAL] += @SELF:EXE.REACT-TO-VISUAL-INPUT($xmr)
+            DO $xmr[STATUS] = "ACKNOWLEDGED"
     WHEN $xmr[STATUS] == "ACKNOWLEDGED" OR $xmr[STATUS] == "IGNORED" THEN satisfied
 ;
 DEFINE DECIDE-ON-LANGUAGE-INPUT($tmr)
@@ -45,7 +50,8 @@ DEFINE DECIDE-ON-LANGUAGE-INPUT($tmr)
     RESOURCES SELF.evaluate_resources($tmr)
     ACTION (decide on language input)
         SELECT DEFAULT
-        DO SELF.decide_on_language_input($tmr)
+        STEP
+            DO SELF.decide_on_language_input($tmr)
 //        DO SELF[STATUS] = "SATISFIED"
     // TODO - insert WHEN condition for goal satisfaction
     WHEN EXECUTED THEN satisfied
@@ -63,8 +69,9 @@ DEFINE PERFORM-COMPLEX-TASK($task)
     RESOURCES SELF.evaluate_resources($task)
     ACTION (perform complex task)
         SELECT DEFAULT
-        DO SELF.perform_complex_task($task)
-        DO IDLE
+        STEP
+            DO SELF.perform_complex_task($task)
+            DO IDLE
 ;
 DEFINE REACT-TO-VISUAL-INPUT($vmr)
     AS GOAL
@@ -73,6 +80,7 @@ DEFINE REACT-TO-VISUAL-INPUT($vmr)
     RESOURCES SELF.evaluate_resources($vmr)
     ACTION (react to visual input)
         SELECT DEFAULT
-        DO SELF.react_to_visual_input($vmr)
-        DO IDLE
+        STEP
+            DO SELF.react_to_visual_input($vmr)
+            DO IDLE
 ;

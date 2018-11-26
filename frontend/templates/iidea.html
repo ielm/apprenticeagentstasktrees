@@ -41,6 +41,10 @@
             padding-top: 0px;
             padding-bottom: 0px;
         }
+        .steps {
+            color: grey;
+            font-size: xx-small;
+        }
     </style>
 
     <script>
@@ -356,7 +360,7 @@
             </div>
             {|#plan|}
                 <div>
-                    <strong>Plan:</strong> {| name |}
+                    <strong>Plan:</strong> {| name |} <span class="steps">step {| current-step |} of {| total-steps |}</span>
                     {| #selected |}
                         <span class="badge badge-pill badge-info">selected</span>
                     {| /selected |}
