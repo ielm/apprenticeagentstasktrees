@@ -276,22 +276,21 @@ class Goal(VariableMap):
 class Action(object):
 
     DEFAULT = "DEFAULT"
-    IDLE = "IDLE"
 
     @classmethod
-    def build(cls, graph: Graph, name: str, select: Union[Statement, str], perform: Union[Statement, str, List[Union[Statement, str]]]):
+    def build(cls, graph: Graph, name: str, select: Union[Statement, str], steps: Union['Step', Frame, List[Union['Step', Frame]]]):
 
         if isinstance(select, Statement):
             select = select.frame
 
-        if not isinstance(perform, List):
-            perform = [perform]
-        perform = list(map(lambda p: Literal(Action.IDLE) if p == Action.IDLE else p.frame, perform))
+        if not isinstance(steps, List):
+            steps = [steps]
+        steps = list(map(lambda s: s.frame if isinstance(s, Step) else s, steps))
 
         frame = graph.register("ACTION", generate_index=True)
         frame["NAME"] = Literal(name)
         frame["SELECT"] = Literal(Action.DEFAULT) if select == Action.DEFAULT else select
-        frame["PERFORM"] = perform
+        frame["HAS-STEP"] = steps
 
         return Action(frame)
 
@@ -319,28 +318,45 @@ class Action(object):
                 return True
         return False
 
+    def steps(self) -> List['Step']:
+        results = list(map(lambda s: Step(s.resolve()), self.frame["HAS-STEP"]))
+        results = sorted(results, key=lambda s: s.index())
+        return results
+
     def perform(self, varmap: VariableMap):
-        for statement in self.frame["PERFORM"]:
-            statement = statement.resolve()
-            if statement == Action.IDLE:
-                pass
-            if isinstance(statement, Frame) and statement ^ "EXE.STATEMENT":
-                Statement.from_instance(statement).run(varmap)
-        varmap.frame["EXECUTED"] = True
+        steps = self.steps()
+        steps = list(filter(lambda s: s.is_pending(), steps))
+
+        if len(steps) == 0:
+            return
+
+        steps[0].perform(varmap)
+
+        # TODO: remove this once FSTD is replaced with triggers
+        if self.name() == "find something to do":
+            steps[0].frame["STATUS"] = Step.Status.PENDING
+
+        steps = list(filter(lambda s: s.is_pending(), steps))
+        if len(steps) == 0 and self.name() != "find something to do":
+            varmap.frame["EXECUTED"] = True
 
     def capabilities(self, varmap: VariableMap) -> List['Capability']:
-        do: List[Statement] = list(map(lambda do: Statement.from_instance(do), filter(lambda do: do != Action.IDLE, map(lambda do: do.resolve(), self.frame["PERFORM"]))))
-        capabilities = []
-        for stmt in do:
-            capabilities.extend(stmt.capabilities(varmap))
-        return capabilities
+        results = []
+
+        steps = self.steps()
+        steps = list(filter(lambda step: step.is_pending(), steps))
+
+        if len(steps) == 0:
+            return []
+
+        return steps[0].capabilities(varmap)
 
     def __eq__(self, other):
         if isinstance(other, Action):
             return (self.frame == other.frame) or (
                 self.frame["NAME"] == other.frame["NAME"] and
                 self.__eqSELECT(other) and
-                self.__eqPERFORM(other)
+                self.__eqSTEPS(other)
             )
         if isinstance(other, Frame):
             return self.frame == other
@@ -357,10 +373,86 @@ class Action(object):
 
         return s1 == s2
 
-    def __eqPERFORM(self, other: 'Action'):
+    def __eqSTEPS(self, other: 'Action'):
+        if self.frame["HAS-STEP"] == other.frame["HAS-STEP"]:
+            return True
+        if len(self.frame["HAS-STEP"]) != len(other.frame["HAS-STEP"]):
+            return False
+
+        s1 = list(map(lambda frame: Step(frame.resolve()), self.frame["HAS-STEP"]))
+        s2 = list(map(lambda frame: Step(frame.resolve()), other.frame["HAS-STEP"]))
+
+        return s1 == s2
+
+
+class Step(object):
+
+    IDLE = "IDLE"
+
+    @classmethod
+    def build(cls, graph: Graph, index: int, perform: Union[Statement, Frame, str, List[Union[Statement, Frame, str]]]) -> 'Step':
+        if not isinstance(perform, list):
+            perform = [perform]
+        perform = list(map(lambda p: Literal(p) if isinstance(p, str) else p, perform))
+        perform = list(map(lambda p: p.frame if isinstance(p, Statement) else p, perform))
+
+        frame = graph.register("STEP", generate_index=True)
+        frame["INDEX"] = index
+        frame["PERFORM"] = perform
+        frame["STATUS"] = Step.Status.PENDING
+
+        return Step(frame)
+
+    class Status(Enum):
+        PENDING = "PENDING"
+        FINISHED = "FINISHED"
+
+    def __init__(self, frame: Frame):
+        self.frame = frame
+
+    def index(self) -> int:
+        return self.frame["INDEX"].singleton()
+
+    def status(self) -> 'Step.Status':
+        return self.frame["STATUS"].singleton()
+
+    def is_pending(self) -> bool:
+        return self.frame["STATUS"].singleton() == Step.Status.PENDING
+
+    def is_finished(self) -> bool:
+        return self.frame["STATUS"].singleton() == Step.Status.FINISHED
+
+    def capabilities(self, varmap: VariableMap) -> List['Capability']:
+        do: List[Statement] = list(map(lambda do: Statement.from_instance(do), filter(lambda do: do != Step.IDLE, map(lambda do: do.resolve(), self.frame["PERFORM"]))))
+        capabilities = []
+        for stmt in do:
+            capabilities.extend(stmt.capabilities(varmap))
+        return capabilities
+
+    def perform(self, varmap: VariableMap):
+        for statement in self.frame["PERFORM"]:
+            statement = statement.resolve()
+            if statement == Step.IDLE:
+                pass
+            if isinstance(statement, Frame) and statement ^ "EXE.STATEMENT":
+                Statement.from_instance(statement).run(varmap)
+        self.frame["STATUS"] = Step.Status.FINISHED
+
+    def __eq__(self, other):
+        if isinstance(other, Step):
+            return self.frame == other.frame or (
+                self.__eqPERFORM(other) and
+                self.frame["STATUS"] == other.frame["STATUS"] and
+                self.frame["INDEX"] == other.frame["INDEX"]
+            )
+        if isinstance(other, Frame):
+            return self.frame == other
+        return super().__eq__(other)
+
+    def __eqPERFORM(self, other: 'Step'):
         if self.frame["PERFORM"] == other.frame["PERFORM"]:
             return True
-        if self.frame["PERFORM"] == Action.IDLE or other.frame["PERFORM"] == Action.IDLE:
+        if self.frame["PERFORM"] == Step.IDLE or other.frame["PERFORM"] == Step.IDLE:
             return False
 
         s1 = list(map(lambda frame: Statement.from_instance(frame.resolve()), self.frame["PERFORM"]))

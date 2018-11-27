@@ -10,7 +10,7 @@ from backend.models.statement import Statement
 from backend.models.tmr import TMR
 from backend.models.vmr import VMR
 from backend.models.xmr import XMR
-from backend.utils.AgentLogger import AgentLogger
+from backend.utils.AgentLogger import AgentLogger, CachedAgentLogger
 from typing import List, Union
 
 
@@ -46,11 +46,11 @@ class Agent(Network):
         self.action_queue = []
         self.context = LCTContext(self)
 
-        self._logger = AgentLogger()
+        self._logger = CachedAgentLogger()
         self.wo_memory.logger(self._logger)
         self.lt_memory.logger(self._logger)
 
-    def logger(self, logger=None):
+    def logger(self, logger=None) -> AgentLogger:
         if not logger is None:
             self._logger = logger
         return self._logger
@@ -59,7 +59,7 @@ class Agent(Network):
         tmr = self.register(TMR(input, ontology=self.ontology))
         self.input_memory.append(tmr)
 
-        self._logger.log("Input: '" + tmr.sentence + "'")
+        self._logger.log("Input: " + tmr.sentence)
 
         agenda = self.context.default_understanding()
         agenda.logger(self._logger)
@@ -172,11 +172,10 @@ class Agent(Network):
         if type == "VISUAL":
             self._logger.log("Input: <<VMR INSTANCE HERE>>")
         else:
-            self._logger.log("Input: '" + registered_xMR.sentence + "'")
+            self._logger.log("Input: " + registered_xMR.sentence)
 
     def _decision(self):
         agenda = self.agenda()
-        agenda.fire_triggers()
 
         priority_weight = self.identity["PRIORITY_WEIGHT"].singleton()
         resources_weight = self.identity["RESOURCES_WEIGHT"].singleton()
@@ -211,11 +210,19 @@ class Agent(Network):
             for i, effector in enumerate(assigned_effectors):
                 effector.reserve(goal, capabilities[i])
 
+        # TODO: this should be at the top; it is moved down here temporarily as the Jan2019 test case will need
+        # to be changed to handle triggers at the top (because, if a trigger creates a goal prior to decision,
+        # that goal may be selected and executed in that loop - in the case of 2019, this causes acknowledge input
+        # to always be one loop ahead - not actually a problem, but the test is too specific and will fail as a
+        # result); therefore, fix the test and move this to where it should be
+        agenda.fire_triggers()
+
     def _execute(self):
         for action in self.agenda().action():
             goal = list(filter(lambda g: action.frame in g.frame["PLAN"], self.agenda().goals()))[0]
             action.perform(goal)
-        del self.agenda().frame["ACTION-TO-TAKE"]
+        if "ACTION-TO-TAKE" in self.agenda().frame:
+            del self.agenda().frame["ACTION-TO-TAKE"]
 
     def _assess(self):
         for active in self.agenda().goals():
@@ -262,7 +269,10 @@ class Agent(Network):
         Bootstrap.bootstrap_resource(self, "backend.resources", "bootstrap.knowledge")
         Bootstrap.bootstrap_resource(self, "backend.resources", "goals.aa")
 
-        self.agenda().add_goal(Goal.instance_of(self.internal, self.exe["FIND-SOMETHING-TO-DO"], []))
+        from backend.models.agenda import Trigger
+        from backend.models.graph import Literal
+        query = Frame.q(self).isa("EXE.INPUT-TMR").f("STATUS", Literal("RECEIVED"))
+        self.agenda().add_trigger(Trigger.build(self.internal, query, self.exe["ACKNOWLEDGE-INPUT"]))
 
         # API declared versions of the two goal definitions
 

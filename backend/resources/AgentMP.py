@@ -120,7 +120,8 @@ class ReactToVisualInputMP(AgentMethod):
 
 
 class GetPhysicalObjectCapabilityMP(AgentMethod):
-    def run(self):
+    def run(self, target: Frame):
+        self.agent.logger().log("Executed GET(" + target._identifier.render() + ")")
         return
 
 

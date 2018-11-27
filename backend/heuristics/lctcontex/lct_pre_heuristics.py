@@ -30,12 +30,12 @@ class IdentifyClosingOfKnownTaskUnderstandingProcessor(UnderstandingProcessor):
             event = tmr.find_main_event()
             hierarchy = self.context.learning_hierarchy()
 
-            if resolved[event._identifier.render(graph=False)] is None:
+            if resolved[event._identifier.render()] is None:
                 raise HeuristicException()
 
             target = -1
             for index, le in enumerate(hierarchy):
-                if le in resolved[event._identifier.render(graph=False)]:
+                if le in resolved[event._identifier.render()]:
                     if agent.wo_memory[le][self.context.LEARNING]:
                         target = index
 

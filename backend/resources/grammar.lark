@@ -41,8 +41,9 @@ priority: (PRIORITY (double | mp_statement))?
 resources: (RESOURCES (double | mp_statement))?
 goal_status: (PENDING | ACTIVE | ABANDONED | SATISFIED)
 
-action: ACTION "(" ACTION_NAME ")" action_selection action_do+
+action: ACTION "(" ACTION_NAME ")" action_selection action_step+
 action_selection: SELECT (DEFAULT | IF boolean_statement)
+action_step: STEP action_do+
 action_do: DO (statement | IDLE)
 
 condition: WHEN (condition_and | condition_or | condition_nand | condition_nor | condition_not | condition_on) THEN goal_status
@@ -99,6 +100,7 @@ RESOURCES: "resources"i
 SATISFIED: "satisfied"i
 SELECT: "select"i
 SELF: "self"i
+STEP: "step"i
 WHEN: "when"i
 WM: "wm"i
 
@@ -145,8 +147,9 @@ double: INTEGER "." INTEGER
 string: ("\"") STRING ("\"")
 
 identifier: (graph ".")? name ("." instance)?
-graph: (GRAPH | tmr)
+graph: (GRAPH | tmr | vmr)
 tmr: "TMR" "#" INTEGER
+vmr: "VMR" "#" INTEGER
 name: NAME
 instance: INSTANCE
 

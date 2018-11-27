@@ -1,5 +1,5 @@
 from backend.agent import Agent
-from backend.models.agenda import Action, Condition, Goal
+from backend.models.agenda import Action, Condition, Goal, Step
 from backend.models.grammar import Grammar
 from backend.models.graph import Identifier, Literal, Network
 from backend.models.mps import AgentMethod
@@ -319,7 +319,7 @@ class AgendaGrammarTestCase(unittest.TestCase):
         parsed = Grammar.parse(self.agent, "CAPABILITY #SELF.TEST-CAPABILITY()", start="capability_statement", agent=self.agent)
         self.assertEqual(statement, parsed)
 
-        statement = CapabilityStatement.instance(self.agent.exe, "SELF.TEST-CAPABILITY", [], ["$var1", "$var2"])
+        statement = CapabilityStatement.instance(self.agent.exe, "SELF.TEST-CAPABILITY", [], [Literal("$var1"), Literal("$var2")])
         parsed = Grammar.parse(self.agent, "CAPABILITY #SELF.TEST-CAPABILITY($var1, $var2)", start="capability_statement", agent=self.agent)
         self.assertEqual(statement, parsed)
 
@@ -331,18 +331,23 @@ class AgendaGrammarTestCase(unittest.TestCase):
 
     def test_action(self):
 
-        action = Action.build(self.g, "testaction", Action.DEFAULT, Action.IDLE)
-        parsed = Grammar.parse(self.agent, "ACTION (testaction) SELECT DEFAULT DO IDLE", start="action", agent=self.agent)
+        action = Action.build(self.g, "testaction", Action.DEFAULT, Step.build(self.g, 1, Step.IDLE))
+        parsed = Grammar.parse(self.agent, "ACTION (testaction) SELECT DEFAULT STEP DO IDLE", start="action", agent=self.agent)
         self.assertEqual(action, parsed)
 
         query = SlotQuery(self.agent, AndQuery(self.agent, [NameQuery(self.agent, "THEME"), FillerQuery(self.agent, LiteralQuery(self.agent, 123))]))
-        action = Action.build(self.g, "testaction", ExistsStatement.instance(self.g, query), Action.IDLE)
-        parsed = Grammar.parse(self.agent, "ACTION (testaction) SELECT IF EXISTS THEME = 123 DO IDLE", start="action", agent=self.agent)
+        action = Action.build(self.g, "testaction", ExistsStatement.instance(self.g, query), Step.build(self.g, 1, Step.IDLE))
+        parsed = Grammar.parse(self.agent, "ACTION (testaction) SELECT IF EXISTS THEME = 123 STEP DO IDLE", start="action", agent=self.agent)
         self.assertEqual(action, parsed)
 
         statement = MeaningProcedureStatement.instance(self.g, "mp1", [])
-        action = Action.build(self.g, "testaction", Action.DEFAULT, [statement, statement])
-        parsed = Grammar.parse(self.agent, "ACTION (testaction) SELECT DEFAULT DO SELF.mp1() DO SELF.mp1()", start="action", agent=self.agent)
+        action = Action.build(self.g, "testaction", Action.DEFAULT, Step.build(self.g, 1, [statement, statement]))
+        parsed = Grammar.parse(self.agent, "ACTION (testaction) SELECT DEFAULT STEP DO SELF.mp1() DO SELF.mp1()", start="action", agent=self.agent)
+        self.assertEqual(action, parsed)
+
+        statement = MeaningProcedureStatement.instance(self.g, "mp1", [])
+        action = Action.build(self.g, "testaction", Action.DEFAULT, [Step.build(self.g, 1, [statement]), Step.build(self.g, 2, [statement])])
+        parsed = Grammar.parse(self.agent, "ACTION (testaction) SELECT DEFAULT STEP DO SELF.mp1() STEP DO SELF.mp1()", start="action", agent=self.agent)
         self.assertEqual(action, parsed)
 
     def test_condition(self):
@@ -403,10 +408,10 @@ class AgendaGrammarTestCase(unittest.TestCase):
         self.assertEqual(goal.frame["RESOURCES"].singleton()["CALLS"].singleton(), parsed.frame["RESOURCES"].singleton()["CALLS"].singleton())
 
         # A goal can have plans (actions)
-        a1: Action = Action.build(self.g, "action_a", Action.DEFAULT, Action.IDLE)
-        a2: Action = Action.build(self.g, "action_b", Action.DEFAULT, Action.IDLE)
+        a1: Action = Action.build(self.g, "action_a", Action.DEFAULT, Step.build(self.g, 1, Step.IDLE))
+        a2: Action = Action.build(self.g, "action_b", Action.DEFAULT, Step.build(self.g, 1, Step.IDLE))
         goal: Goal = Goal.define(self.g, "XYZ", 0.5, 0.5, [a1, a2], [], [])
-        parsed: Goal = Grammar.parse(self.agent, "DEFINE XYZ() AS GOAL IN SELF ACTION (action_a) SELECT DEFAULT DO IDLE ACTION (action_b) SELECT DEFAULT DO IDLE", start="define", agent=self.agent).goal
+        parsed: Goal = Grammar.parse(self.agent, "DEFINE XYZ() AS GOAL IN SELF ACTION (action_a) SELECT DEFAULT STEP DO IDLE ACTION (action_b) SELECT DEFAULT STEP DO IDLE", start="define", agent=self.agent).goal
         self.assertEqual(goal, parsed)
 
         # A goal can have conditions (which are ordered as written)
@@ -423,22 +428,19 @@ class AgendaGrammarTestCase(unittest.TestCase):
         goal1 = Goal.define(graph, "FIND-SOMETHING-TO-DO", 0.1, 0.5, [
             Action.build(graph,
                          "acknowledge input",
-                         ExistsStatement.instance(graph, Grammar.parse(self.agent,
-                                                                     "(@^ SELF.INPUT-TMR AND ACKNOWLEDGED = False)", start="logical_slot_query")),
-                         ForEachStatement.instance(graph, Grammar.parse(self.agent,
-                                                                      "(@^ SELF.INPUT-TMR AND ACKNOWLEDGED = False)", start="logical_slot_query"),
-                                                   "$tmr", [
-                                                       AddFillerStatement.instance(graph, self.agent.identity, "HAS-GOAL",
-                                                                                   MakeInstanceStatement.instance(graph,
-                                                                                                                  "SELF",
-                                                                                                                  "SELF.UNDERSTAND-TMR",
-                                                                                                                  [
-                                                                                                                      "$tmr"])),
-                                                       AssignFillerStatement.instance(graph, "$tmr", "ACKNOWLEDGED",
-                                                                                      True)
-                                                   ])
-                         ),
-            Action.build(graph, "idle", Action.DEFAULT, Action.IDLE)
+                         ExistsStatement.instance(graph, Grammar.parse(self.agent, "(@^ SELF.INPUT-TMR AND ACKNOWLEDGED = False)", start="logical_slot_query")),
+                         Step.build(graph, 1,
+                                    ForEachStatement.instance(
+                                        graph,
+                                        Grammar.parse(self.agent, "(@^ SELF.INPUT-TMR AND ACKNOWLEDGED = False)", start="logical_slot_query"),
+                                        "$tmr",
+                                        [
+                                            AddFillerStatement.instance(graph, self.agent.identity, "HAS-GOAL",
+                                                                        MakeInstanceStatement.instance(graph, "SELF", "SELF.UNDERSTAND-TMR", ["$tmr"])),
+                                           AssignFillerStatement.instance(graph, "$tmr", "ACKNOWLEDGED", True)
+                                        ])
+                         )),
+            Action.build(graph, "idle", Action.DEFAULT, [Step.build(graph, 1, Step.IDLE), Step.build(graph, 2, Step.IDLE)])
         ], [], [])
 
         script = '''
@@ -448,12 +450,16 @@ class AgendaGrammarTestCase(unittest.TestCase):
             PRIORITY 0.1
             ACTION (acknowledge input)
                 SELECT IF EXISTS (@^ SELF.INPUT-TMR AND ACKNOWLEDGED = FALSE)
-                DO FOR EACH $tmr IN (@^ SELF.INPUT-TMR AND ACKNOWLEDGED = FALSE)
-                | SELF[HAS-GOAL] += @SELF:SELF.UNDERSTAND-TMR($tmr)
-                | $tmr[ACKNOWLEDGED] = True
+                STEP
+                    DO FOR EACH $tmr IN (@^ SELF.INPUT-TMR AND ACKNOWLEDGED = FALSE)
+                    | SELF[HAS-GOAL] += @SELF:SELF.UNDERSTAND-TMR($tmr)
+                    | $tmr[ACKNOWLEDGED] = True
             ACTION (idle)
                 SELECT DEFAULT
-                DO IDLE
+                STEP
+                    DO IDLE
+                STEP
+                    DO IDLE
         '''
 
         parsed: Goal = Grammar.parse(self.agent, script, start="define", agent=self.agent).goal

@@ -5,13 +5,15 @@ from flask_cors import CORS
 
 
 from backend.agent import Agent
+from backend.models.effectors import Callback
 from backend.models.bootstrap import Bootstrap
 from backend.contexts.LCTContext import LCTContext
 from backend.models.agenda import Action, Goal
 from backend.models.grammar import Grammar
-from backend.models.graph import Frame, Identifier, Network
+from backend.models.graph import Frame, Identifier, Literal
 from backend.models.ontology import Ontology
 from backend.models.xmr import XMR
+from backend.utils.AgentLogger import CachedAgentLogger
 from backend.utils.YaleUtils import format_learned_event_yale, input_to_tmrs
 
 app = Flask(__name__, template_folder="../frontend/templates/")
@@ -21,6 +23,7 @@ CORS(app)
 # n = Network()
 # ontology = n.register(Ontology.init_default())
 agent = Agent(ontology=Ontology.init_default())
+agent.logger().enable()
 
 # TEST HACK
 from pkgutil import get_data
@@ -176,8 +179,19 @@ class IIDEAConverter(object):
             "active": goal.is_active(),
             "satisfied": goal.is_satisfied(),
             "abandoned": goal.is_abandoned(),
-            "plan": list(map(lambda action: IIDEAConverter.convert_action(action.resolve(), goal), goal.frame["PLAN"]))
+            "plan": list(map(lambda action: IIDEAConverter.convert_action(action.resolve(), goal), goal.frame["PLAN"])),
+            "params": list(map(lambda variable: {"var": variable, "value": IIDEAConverter.convert_value(goal.resolve(variable))}, goal.variables()))
         }
+
+    @classmethod
+    def convert_value(cls, value):
+        if isinstance(value, Literal):
+            return value.value
+        if isinstance(value, Frame):
+            return value._identifier.render()
+        if isinstance(value, Identifier):
+            return value.render()
+        return value
 
     @classmethod
     def convert_action(cls, action, goal):
@@ -185,7 +199,9 @@ class IIDEAConverter(object):
 
         return {
             "name": action.name(),
-            "selected": action in agent.agenda().action() and goal.is_active()
+            "selected": action in agent.agenda().action() and goal.is_active(),
+            "current-step": len(list(filter(lambda step: step.is_finished(), action.steps()))),
+            "total-steps": len(action.steps())
         }
 
     @classmethod
@@ -206,7 +222,8 @@ class IIDEAConverter(object):
     def convert_capability(cls, capability, wrt_effector):
         return {
             "name": capability.frame.name(),
-            "selected": capability.used_by() == wrt_effector
+            "selected": capability.used_by() == wrt_effector,
+            "callbacks": list(map(lambda cb: cb.name(), Callback.find(agent, wrt_effector, capability)))
         }
 
     @classmethod
@@ -221,6 +238,12 @@ class IIDEAConverter(object):
             "triggered-on": list(map(lambda to: str(to), trigger.triggered_on()))
         }
 
+    @classmethod
+    def logs(cls):
+        if isinstance(agent.logger(), CachedAgentLogger):
+            return agent.logger()._cache
+        return []
+
 
 @app.route("/iidea", methods=["GET"])
 def iidea():
@@ -230,8 +253,9 @@ def iidea():
     agenda = IIDEAConverter.agenda()
     effectors = IIDEAConverter.effectors()
     triggers = IIDEAConverter.triggers()
+    logs = IIDEAConverter.logs()
 
-    return render_template("iidea.html", time=time, stage=stage, inputs=inputs, agenda=agenda, aj=json.dumps(agenda), effectors=effectors, ej=json.dumps(effectors), tj=json.dumps(triggers))
+    return render_template("iidea.html", time=time, stage=stage, inputs=inputs, agenda=agenda, aj=json.dumps(agenda), effectors=effectors, ej=json.dumps(effectors), tj=json.dumps(triggers), lj=json.dumps(logs))
 
 
 @app.route("/iidea/advance", methods=["GET"])
@@ -243,7 +267,8 @@ def iidea_advance():
         "inputs": IIDEAConverter.inputs(),
         "agenda": IIDEAConverter.agenda(),
         "effectors": IIDEAConverter.effectors(),
-        "triggers": IIDEAConverter.triggers()
+        "triggers": IIDEAConverter.triggers(),
+        "logs": IIDEAConverter.logs()
     })
 
 
@@ -254,8 +279,11 @@ def iidea_input():
 
     data = request.get_json()
 
-    from backend.utils.YaleUtils import analyze
-    tmr = analyze(data["input"])
+    if data["input"] == "Let's build a chair.":
+        tmr = json.loads(get_data("tests.resources", "DemoJan2019_Analyses.json").decode('ascii'))[0]
+    else:
+        from backend.utils.YaleUtils import analyze
+        tmr = analyze(data["input"])
 
     agent._input(input=tmr, source=data["source"], type=data["type"])
 
@@ -274,7 +302,7 @@ def iidea_observe():
 
     data = request.get_json()
 
-    observations = json.loads(get_data("tests.resources", "DemoJan2019_Observations.json").decode('ascii'))
+    observations = json.loads(get_data("tests.resources", "DemoJan2019_Observations_VMR.json").decode('ascii'))
     observation = observations[data["observation"]]
     agent._input(observation, type=XMR.Type.VISUAL.name)
 
@@ -284,6 +312,57 @@ def iidea_observe():
         "inputs": IIDEAConverter.inputs(),
         "agenda": IIDEAConverter.agenda()
     })
+
+
+@app.route("/iidea/callback", methods=["POST"])
+def iidea_callback():
+    if not request.get_json():
+        abort(400)
+
+    data = request.get_json()
+
+    callback = data["callback-id"]
+    agent.callback(callback)
+
+    return json.dumps({
+        "time": agent.IDEA.time(),
+        "stage": agent.IDEA.stage(),
+        "inputs": IIDEAConverter.inputs(),
+        "agenda": IIDEAConverter.agenda(),
+        "effectors": IIDEAConverter.effectors(),
+        "triggers": IIDEAConverter.triggers(),
+        "logs": IIDEAConverter.logs()
+    })
+
+
+@app.route("/yale/bootstrap", methods=["POST"])
+def yale_bootstrap():
+    if not request.get_json():
+        abort(400)
+
+    data = request.get_json()
+
+    from backend.utils import YaleUtils
+
+    YaleUtils.bootstrap(data, agent.environment)
+
+    return "OK"
+
+
+@app.route("/yale/visual-input", methods=["POST"])
+def yale_visual_input():
+    if not request.get_json():
+        abort(400)
+
+    data = request.get_json()
+
+    from backend.utils import YaleUtils
+
+    data = YaleUtils.visual_input(data, agent.environment)
+
+    agent._input(data, type="VISUAL")
+
+    return "OK"
 
 
 @app.route("/input", methods=["POST"])
