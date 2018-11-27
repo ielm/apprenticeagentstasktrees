@@ -169,10 +169,10 @@ class Jan2019Experiment(unittest.TestCase):
         agent.callback("SELF.CALLBACK.1")
 
         # 3b) Visual input "the screwdriver has been moved"
-        agent._input(self.observations()["screwdriver moved close"], type=XMR.Type.VISUAL.name)
+        agent._input(self.observations()["Screwdriver moves close"], type=XMR.Type.VISUAL.name)
 
         # 3c) TEST: The screwdriver is "close" to the agent
-        self.assertEqual(0.1, agent.environment().distance("ENV.SCREWDRIVER.1"))
+        self.assertEqual(0.1, agent.env().distance("ENV.SCREWDRIVER.1"))
 
         # 3d) IIDEA loop
         mock = self.iidea_loop(agent, mock=GetPhysicalObjectCapabilityMP)
@@ -199,7 +199,7 @@ class Jan2019Experiment(unittest.TestCase):
         # 3k) IIDEA loop
         self.iidea_loop(agent)
 
-        # 3l) TEST: All instances of REACT-TO-VISUAL-INPUT are satisified
+        # 3l) TEST: All instances of REACT-TO-VISUAL-INPUT are satisfied
         self.assertEqual(0, len(list(filter(lambda g: not g.is_satisfied(), map(lambda g: Goal(g), agent.internal.search(Frame.q(agent).isa("EXE.REACT-TO-VISUAL-INPUT")))))))
 
         # 3j) TEST: PERFORM-COMPLEX-TASK is still "active"

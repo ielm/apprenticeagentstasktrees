@@ -89,50 +89,18 @@ The environment contains STORAGE.1, STORAGE.2, and WORKSPACE.1, which are each t
         super().__init__(namespace)
 
         self.ontology = ontology._namespace
-        self._id = None
 
-        # empty_env =
-        # self.environment = Environment()
-
-        # COUNTER = 0
-
+        self.slices = []
         # TODO - create Slice instance for each slice in VMR
 
-        # for key in vmr_dict:
-        #     if key == "_id":
-        #         self._id = key
-        #     if key == "slices":
-        #         for s in vmr_dict[key]:
-        #             print()
-                    # print("COUNT#" + str(COUNTER) + ": ")
-                    # print(vmr_dict[key][s])
-                    # COUNTER += 1
-                    # print(vmr_dict[key][s])
-
-                    # slice = Slice(vmr_dict[key][s])
-
-                # slice = Slice(key)
-                # self[key] = slice
-
-
-        # for key in vmr_dict:
-        #     print("COUNT#" + str(COUNTER) + ": " + key)
-        #     COUNTER += 1
-            # if key == "_timestamp":
-            #     self._timestamp = vmr_dict[key]
-            # if key == "_label":
-            #     self._label = vmr_dict[key]
-            # if key == key.upper():
-            #     print("COUNT#"+str(COUNTER)+": "+key)
-            #
-            #     # TODO - If key is referring to element in @ENV, update environment
-            #
-            #     inst_dict = vmr_dict[key]
-            #
-            #     key = re.sub(r"-([0-9]+)$", ".\\1", key)
-            #
-            #     # TODO - self[key] = VMRInstance for all keys in vmr
-            #     self[key] = VMRInstance(key, properties=inst_dict, isa=None, ontology=ontology)
+        for key in vmr_dict:
+            if key == "_id":
+                self._id = uuid4() if not vmr_dict[key] else vmr_dict[key]
+            if key == "slices":
+                for s in vmr_dict[key]:
+                    # print()
+                    print(vmr_dict[key][s])
+                    self.slices.append(Slice(vmr_dict[key][s]))
 
         for instance in self._storage.values():
             for slot in instance._storage.values():
@@ -143,6 +111,7 @@ The environment contains STORAGE.1, STORAGE.2, and WORKSPACE.1, which are each t
     def update_environment(self, env: Environment, vmr=None):
         env.advance()
         # TODO -  Decide whether obj has entered or exited the environment
+        # TODO - For every slice call advance, then for everything in env, exit. For everything in slice, enter. For all, move
         return
 
 
