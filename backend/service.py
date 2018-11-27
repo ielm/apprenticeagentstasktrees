@@ -335,6 +335,36 @@ def iidea_callback():
     })
 
 
+@app.route("/yale/bootstrap", methods=["POST"])
+def yale_bootstrap():
+    if not request.get_json():
+        abort(400)
+
+    data = request.get_json()
+
+    from backend.utils import YaleUtils
+
+    YaleUtils.bootstrap(data, agent.environment)
+
+    return "OK"
+
+
+@app.route("/yale/visual-input", methods=["POST"])
+def yale_visual_input():
+    if not request.get_json():
+        abort(400)
+
+    data = request.get_json()
+
+    from backend.utils import YaleUtils
+
+    data = YaleUtils.visual_input(data, agent.environment)
+
+    agent._input(data, type="VISUAL")
+
+    return "OK"
+
+
 @app.route("/input", methods=["POST"])
 def input():
     if not request.get_json():
