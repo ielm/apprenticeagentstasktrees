@@ -319,7 +319,7 @@ class AgendaGrammarTestCase(unittest.TestCase):
         parsed = Grammar.parse(self.agent, "CAPABILITY #SELF.TEST-CAPABILITY()", start="capability_statement", agent=self.agent)
         self.assertEqual(statement, parsed)
 
-        statement = CapabilityStatement.instance(self.agent.exe, "SELF.TEST-CAPABILITY", [], ["$var1", "$var2"])
+        statement = CapabilityStatement.instance(self.agent.exe, "SELF.TEST-CAPABILITY", [], [Literal("$var1"), Literal("$var2")])
         parsed = Grammar.parse(self.agent, "CAPABILITY #SELF.TEST-CAPABILITY($var1, $var2)", start="capability_statement", agent=self.agent)
         self.assertEqual(statement, parsed)
 

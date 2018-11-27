@@ -288,7 +288,7 @@ class GrammarTransformer(Transformer):
         from backend.models.statement import CapabilityStatement, Statement
         capability = matches[1]
         callback = list(filter(lambda match: isinstance(match, Statement), matches))
-        params = matches[2]
+        params = list(map(lambda m: Literal(m) if isinstance(m, str) and m.startswith("$") else m, matches[2]))
 
         return CapabilityStatement.instance(self.agent.exe, capability, callback, params)
 
@@ -313,7 +313,9 @@ class GrammarTransformer(Transformer):
     def mp_statement(self, matches):
         from backend.models.statement import MeaningProcedureStatement
 
-        return MeaningProcedureStatement.instance(self.agent.exe, matches[1], matches[2])
+        params = list(map(lambda m: Literal(m) if isinstance(m, str) and m.startswith("$") else m, matches[2]))
+
+        return MeaningProcedureStatement.instance(self.agent.exe, matches[1], params)
 
     def statement_instance(self, matches):
         if isinstance(matches[0], Identifier):

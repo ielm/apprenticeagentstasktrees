@@ -116,7 +116,7 @@ class FR(Graph):
         self.heuristics = resolve_heuristics
 
         filtered_graph = {k: other_fr[k] for k in filter(lambda k: status[k], other_fr.keys())}
-        filtered_graph = {Identifier.parse(k).render(graph=False): filtered_graph[k] for k in filtered_graph}
+        filtered_graph = {Identifier.parse(k).render(): filtered_graph[k] for k in filtered_graph}
 
         resolves = self.resolve_tmr(filtered_graph)
         self.heuristics = backup_heuristics
@@ -143,7 +143,7 @@ class FR(Graph):
     def resolve_instance(self, frame, resolves, tmr=None):
         # TODO: currently this resolves everything to None unless found in the input resolves object
         results = dict()
-        results[frame._identifier.render(graph=False)] = None
+        results[frame._identifier.render()] = None
         for slot in frame:
             if slot == frame._ISA_type():
                 continue
@@ -160,7 +160,7 @@ class FR(Graph):
                 results[id] = resolves[id]
 
         for heuristic in self.heuristics:
-            if results[frame._identifier.render(graph=False)] is None:
+            if results[frame._identifier.render()] is None:
                 self._resolve_log_wrapper(heuristic, frame, results, tmr=tmr)
 
         return results
@@ -202,7 +202,7 @@ class FR(Graph):
                 resolves[id] = {self.register(self.ontology[id]._identifier.name, isa=self.ontology[id], generate_index=True).name()}
 
         for instance in tmr:
-            for resolved in resolves[tmr[instance]._identifier.render(graph=False)]:
+            for resolved in resolves[tmr[instance]._identifier.render()]:
                 self.populate(resolved, tmr[instance], resolves)
 
     def __str__(self):

@@ -62,6 +62,8 @@ class TMR(Graph):
                 for filler in slot:
                     if isinstance(filler._value, Identifier) and filler._value.graph is None and not filler._value.render() in self:
                         filler._value.graph = self.ontology
+                    elif isinstance(filler._value, Identifier) and filler._value.graph is None:
+                        filler._value.graph = namespace
 
     def __setitem__(self, key, value):
         if not isinstance(value, TMRInstance):
