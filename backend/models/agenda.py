@@ -332,10 +332,6 @@ class Action(object):
 
         steps[0].perform(varmap)
 
-        # TODO: remove this once FSTD is replaced with triggers
-        if self.name() == "find something to do":
-            steps[0].frame["STATUS"] = Step.Status.PENDING
-
         steps = list(filter(lambda s: s.is_pending(), steps))
         if len(steps) == 0 and self.name() != "find something to do":
             varmap.frame["EXECUTED"] = True
