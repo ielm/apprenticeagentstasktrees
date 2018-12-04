@@ -1,9 +1,11 @@
 from backend.agent import Agent
 from backend.models.agenda import Agenda, Goal, Trigger
+from backend.models.effectors import Capability
 from backend.models.grammar import Grammar
 from backend.models.graph import Filler, Frame, Graph, Identifier, Literal, Network
 from backend.models.mps import AgentMethod, MPRegistry
 from backend.models.ontology import Ontology, OntologyFrame, OntologyFiller
+from backend.models.output import OutputXMRTemplate
 from backend.models.query import Query
 from pkgutil import get_data
 from typing import Callable, List, Type, Union
@@ -176,4 +178,41 @@ class BootstrapAddTrigger(Bootstrap):
                     self.agenda == other.agenda and \
                     self.definition == other.definition and \
                     self.query == other.query
+        return super().__eq__(other)
+
+
+class BootstrapDefineOutputXMRTemplate(Bootstrap):
+
+    def __init__(self, network: Network, name: str, type: OutputXMRTemplate.Type, capability: Union[str, Identifier, Frame, Capability], params: List[str], root: Union[str, Identifier, Frame, None], frames: List[BootstrapDeclareKnowledge]):
+        self.network = network
+        self.name = name
+        self.type = type
+        self.capability = capability
+        self.params = params
+        self.root = root
+        self.frames = frames
+
+    def __call__(self, *args, **kwargs):
+        template = OutputXMRTemplate.build(self.network, self.name, self.type, self.capability, self.params)
+        template.set_root(self.root)
+
+        for frame in self.frames:
+            frame.graph = template.graph._namespace
+            for triple in frame.properties:
+                if isinstance(triple.filler, Identifier):
+                    if triple.filler.graph == "OUT":
+                        triple.filler.graph = template.graph._namespace
+
+        for frame in self.frames:
+            frame()
+
+    def __eq__(self, other):
+        if isinstance(other, BootstrapDefineOutputXMRTemplate):
+            return self.network == other.network and \
+                self.name == other.name and \
+                self.type == other.type and \
+                self.capability == other.capability and \
+                self.params == other.params and \
+                self.root == other.root and \
+                self.frames == other.frames
         return super().__eq__(other)

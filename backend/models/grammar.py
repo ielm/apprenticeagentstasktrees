@@ -42,6 +42,12 @@ class GrammarTransformer(Transformer):
         isa = list(filter(lambda m: isinstance(m, Identifier), matches))
         properties = list(filter(lambda m: isinstance(m, BootstrapTriple), matches))
 
+        for p in properties:
+            if isinstance(p.filler, Identifier) and p.filler.name == "SELF" and p.filler.graph is None and p.filler.instance is None:
+                p.filler.graph = self.agent.identity._identifier.graph
+                p.filler.name = self.agent.identity._identifier.name
+                p.filler.instance = self.agent.identity._identifier.instance
+
         return BootstrapDeclareKnowledge(self.network, graph, name, index=index, isa=isa, properties=properties)
 
     def declare_knowledge_instance(self, matches):
@@ -103,6 +109,38 @@ class GrammarTransformer(Transformer):
         query = matches[7]
 
         return BootstrapAddTrigger(self.agent, agenda, definition, query)
+
+    def output_xmr_template(self, matches):
+        from backend.models.bootstrap import BootstrapDeclareKnowledge, BootstrapDefineOutputXMRTemplate
+
+        name = str(matches[1])
+        params = matches[2]
+        type = matches[5]
+        capability = matches[6]
+        root = None
+        include = []
+
+        if isinstance(matches[7], Identifier):
+            root = matches[7]
+            include = matches[8]
+        else:
+            include = matches[7]
+
+        return BootstrapDefineOutputXMRTemplate(self.network, name, type, capability, params, root, include)
+
+    def output_xmr_template_type(self, matches):
+        from backend.models.output import OutputXMRTemplate
+
+        return OutputXMRTemplate.Type[matches[1]]
+
+    def output_xmr_template_requires(self, matches):
+        return matches[1]
+
+    def output_xmr_template_root(self, matches):
+        return matches[1]
+
+    def output_xmr_template_include(self, matches):
+        return matches[1:]
 
     def slot(self, matches):
         return str(matches[0])

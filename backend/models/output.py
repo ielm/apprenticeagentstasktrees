@@ -57,7 +57,7 @@ class OutputXMRTemplate(object):
         VERBAL = "VERBAL"
 
     @classmethod
-    def build(cls, network: Network, type: 'OutputXMRTemplate.Type', capability: Union[str, Identifier, Frame, Capability], params: List[str]) -> 'OutputXMRTemplate':
+    def build(cls, network: Network, name: str, type: 'OutputXMRTemplate.Type', capability: Union[str, Identifier, Frame, Capability], params: List[str]) -> 'OutputXMRTemplate':
         template_id = "XMR-TEMPLATE#" + str(len(list(filter(lambda graph: graph.startswith("XMR-TEMPLATE#"), network._storage.keys()))) + 1)
 
         graph = network.register(template_id)
@@ -68,6 +68,7 @@ class OutputXMRTemplate(object):
 
         params = list(map(lambda param: Literal(param) if not isinstance(param, Literal) else param, params))
 
+        anchor["NAME"] = Literal(name)
         anchor["TYPE"] = type
         anchor["REQUIRES"] = capability
         anchor["PARAMS"] = params
@@ -82,6 +83,10 @@ class OutputXMRTemplate(object):
         if len(candidates) != 1:
             raise Exception
         return candidates[0]
+
+    def name(self) -> str:
+        anchor = self.anchor()
+        return anchor["NAME"].singleton()
 
     def type(self) -> 'OutputXMRTemplate.Type':
         anchor = self.anchor()

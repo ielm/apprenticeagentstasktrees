@@ -2,7 +2,7 @@ start: (view)
 
 // Bootstrap
 
-bootstrap: ((declare_knowledge | append_knowledge | define | register_mp | add_trigger) BOOTSTRAPDELIMITER)*
+bootstrap: ((declare_knowledge | append_knowledge | define | register_mp | add_trigger | output_xmr_template) BOOTSTRAPDELIMITER)*
 
 declare_knowledge: "@" graph "." name (declare_knowledge_instance)? "=" "{" (declare_knowledge_element (BOOTSTRAPDELIMITER declare_knowledge_element)*)? (BOOTSTRAPDELIMITER)? "}"
 declare_knowledge_instance: "." (instance | GENERATE_INSTANCE)
@@ -19,6 +19,12 @@ agent_method: MODULE "." CLASS
 
 add_trigger: ADD TRIGGER TO "@" identifier INSTANTIATE "@" identifier WHEN logical_slot_query
 
+output_xmr_template: DEFINE NAME arguments AS TEMPLATE output_xmr_template_type output_xmr_template_requires (output_xmr_template_root)? output_xmr_template_include
+output_xmr_template_type: TYPE (VERBAL | PHYSICAL | MENTAL)
+output_xmr_template_requires: REQUIRES "@" identifier
+output_xmr_template_root: ROOT "@" identifier
+output_xmr_template_include: INCLUDE declare_knowledge*
+
 slot: NAME
 facet: (SEM | DEFAULT | VALUE | NOT)
 filler: ("@" identifier | literal)
@@ -27,11 +33,19 @@ ADD: "add"i
 BOOTSTRAPDELIMITER: ";"
 DISA: "isa"i
 GENERATE_INSTANCE: "?"
+INCLUDE: "include"i
 INSTANTIATE: "instantiate"i
+MENTAL: "mental"i
+PHYSICAL: "physical"i
 REGISTER: "register"i
+REQUIRES: "requires"i
+ROOT: "root"i
 SEM: "sem"i
+TEMPLATE: "template"i
 TRIGGER: "trigger"i
+TYPE: "type"i
 VALUE: "value"i
+VERBAL: "verbal"i
 
 // Statements and executables
 
@@ -189,7 +203,7 @@ WILDCARD: "*"
 INTEGER: /[0-9]+/
 ALPHA: /[a-zA-Z]+/
 SYMBOL: /[\_]+/
-STRING: /[0-9a-zA-z\_\-\>]+/
+STRING: /[0-9a-zA-z\_\-\>\$]+/
 
 COMMENT: /\/\/.*\n/
 WHITESPACE: (" " | /\t/ | /\n/)+

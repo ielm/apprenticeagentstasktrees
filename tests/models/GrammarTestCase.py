@@ -3,6 +3,7 @@ from backend.models.agenda import Action, Condition, Goal, Step
 from backend.models.grammar import Grammar
 from backend.models.graph import Identifier, Literal, Network
 from backend.models.mps import AgentMethod
+from backend.models.output import OutputXMRTemplate
 from backend.models.path import Path
 from backend.models.query import AndQuery, ExactQuery, FillerQuery, FrameQuery, IdentifierQuery, LiteralQuery, NameQuery, NotQuery, OrQuery, SlotQuery
 from backend.models.statement import AddFillerStatement, AssignFillerStatement, AssignVariableStatement, CapabilityStatement, ExistsStatement, ForEachStatement, IsStatement, MakeInstanceStatement, MeaningProcedureStatement
@@ -588,6 +589,119 @@ class BootstrapGrammarTestCase(unittest.TestCase):
 
         bootstrap = BootstrapAddTrigger(self.agent, "SELF.AGENDA.1", "EXE.MYGOAL.1", query)
         parsed = Grammar.parse(self.agent, "ADD TRIGGER TO @SELF.AGENDA.1 INSTANTIATE @EXE.MYGOAL.1 WHEN THEME = 123", start="add_trigger", agent=self.agent)
+        self.assertEqual(bootstrap, parsed)
+
+
+class OutputXMRTemplateGrammarTestCase(unittest.TestCase):
+
+    class TestAgent(Agent):
+        def __init__(self, g, agent):
+            from backend.models.statement import StatementHierarchy
+            Network.__init__(self)
+            self.register(g)
+            self.register(StatementHierarchy().build())
+
+            self.exe = g
+            self.internal = g
+            self.ontology = g
+            self.wo_memory = g
+            self.lt_memory = g
+            self.identity = agent
+
+    def setUp(self):
+        from backend.models.graph import Graph
+        self.g = Graph("SELF")
+        self.agentFrame = self.g.register("AGENT")
+
+        self.agent = AgendaGrammarTestCase.TestAgent(self.g, self.agentFrame)
+        self.n = self.agent
+
+    def test_parse_type(self):
+        type = OutputXMRTemplate.Type.PHYSICAL
+        parsed = Grammar.parse(self.n, "TYPE PHYSICAL", start="output_xmr_template_type")
+        self.assertEqual(type, parsed)
+
+        type = OutputXMRTemplate.Type.MENTAL
+        parsed = Grammar.parse(self.n, "TYPE MENTAL", start="output_xmr_template_type")
+        self.assertEqual(type, parsed)
+
+        type = OutputXMRTemplate.Type.VERBAL
+        parsed = Grammar.parse(self.n, "TYPE VERBAL", start="output_xmr_template_type")
+        self.assertEqual(type, parsed)
+
+    def test_parse_requires(self):
+        requires = Identifier("EXE", "TEST-CAPABILITY")
+        parsed = Grammar.parse(self.n, "REQUIRES @EXE.TEST-CAPABILITY", start="output_xmr_template_requires")
+        self.assertEqual(requires, parsed)
+
+        requires = Identifier("EXE", "TEST-CAPABILITY", instance=1)
+        parsed = Grammar.parse(self.n, "REQUIRES @EXE.TEST-CAPABILITY.1", start="output_xmr_template_requires")
+        self.assertEqual(requires, parsed)
+
+    def test_parse_root(self):
+        requires = Identifier("OUT", "TEST-ROOT")
+        parsed = Grammar.parse(self.n, "ROOT @OUT.TEST-ROOT", start="output_xmr_template_root")
+        self.assertEqual(requires, parsed)
+
+        requires = Identifier("OUT", "TEST-ROOT", instance=1)
+        parsed = Grammar.parse(self.n, "ROOT @OUT.TEST-ROOT.1", start="output_xmr_template_root")
+        self.assertEqual(requires, parsed)
+
+    def test_parse_include(self):
+        from backend.models.bootstrap import BootstrapDeclareKnowledge, BootstrapTriple
+
+        property1 = BootstrapTriple("MYPROP", Identifier.parse("ONT.ALL"))
+        property2 = BootstrapTriple("OTHERPROP", Literal("$var1"))
+        property3 = BootstrapTriple("AGENT", self.agent.identity._identifier)
+
+        include = [BootstrapDeclareKnowledge(self.n, "OUT", "MYFRAME", index=1, properties=[property1, property2])]
+        parsed = Grammar.parse(self.n, "INCLUDE @OUT.MYFRAME.1 = {MYPROP @ONT.ALL; OTHERPROP \"$var1\"}", start="output_xmr_template_include", agent=self.agent)
+        self.assertEqual(include, parsed)
+
+        include = [BootstrapDeclareKnowledge(self.n, "OUT", "MYFRAME", index=1), BootstrapDeclareKnowledge(self.n, "OUT", "MYFRAME", index=2)]
+        parsed = Grammar.parse(self.n, "INCLUDE @OUT.MYFRAME.1 = {} @OUT.MYFRAME.2 = {}", start="output_xmr_template_include", agent=self.agent)
+        self.assertEqual(include, parsed)
+
+        include = [BootstrapDeclareKnowledge(self.n, "OUT", "MYFRAME", index=1, properties=[property3])]
+        parsed = Grammar.parse(self.n, "INCLUDE @OUT.MYFRAME.1 = {AGENT @SELF}", start="output_xmr_template_include", agent=self.agent)
+        self.assertEqual(include, parsed)
+
+    def test_parse_template(self):
+        from backend.models.bootstrap import BootstrapDeclareKnowledge, BootstrapDefineOutputXMRTemplate, BootstrapTriple
+
+        input = '''
+        DEFINE get-item-template($var1, $var2) AS TEMPLATE
+            TYPE PHYSICAL
+            REQUIRES @EXE.GET-CAPABILITY
+            ROOT @OUT.POSSESSION-EVENT.1
+
+            INCLUDE
+
+            @OUT.POSSESSION-EVENT.1 = {
+                AGENT  @SELF;
+                THEME  "$var1";
+                OTHER  @OUT.OBJECT.1;
+            }
+            
+            @OUT.OBJECT.1 = {}
+        '''
+
+        name = "get-item-template"
+        type = OutputXMRTemplate.Type.PHYSICAL
+        capability = "EXE.GET-CAPABILITY"
+        params = ["$var1", "$var2"]
+        root = "OUT.POSSESSION-EVENT.1"
+
+        property1 = BootstrapTriple("AGENT", Identifier.parse("SELF.AGENT"))
+        property2 = BootstrapTriple("THEME", Literal("$var1"))
+        property3 = BootstrapTriple("OTHER", Identifier.parse("OUT.OBJECT.1"))
+        frames = [
+            BootstrapDeclareKnowledge(self.n, "OUT", "POSSESSION-EVENT", index=1, properties=[property1, property2, property3]),
+            BootstrapDeclareKnowledge(self.n, "OUT", "OBJECT", index=1)
+        ]
+
+        bootstrap = BootstrapDefineOutputXMRTemplate(self.n, name, type, capability, params, root, frames)
+        parsed = Grammar.parse(self.n, input, start="output_xmr_template", agent=self.agent)
         self.assertEqual(bootstrap, parsed)
 
 

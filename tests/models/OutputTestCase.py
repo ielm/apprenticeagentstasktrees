@@ -68,6 +68,12 @@ class OutputXMRTemplateTestCase(unittest.TestCase):
 
         self.assertEqual(f1, OutputXMRTemplate(self.g).anchor())
 
+    def test_name(self):
+        f = self.g.register("TEMPLATE-ANCHOR", generate_index=True)
+        f["NAME"] = Literal("Test Name")
+
+        self.assertEqual("Test Name", OutputXMRTemplate(self.g).name())
+
     def test_type(self):
         f = self.g.register("TEMPLATE-ANCHOR", generate_index=True)
         f["TYPE"] = OutputXMRTemplate.Type.PHYSICAL
@@ -97,8 +103,9 @@ class OutputXMRTemplateTestCase(unittest.TestCase):
         self.assertEqual(root, OutputXMRTemplate(self.g).root())
 
     def test_build(self):
-        output = OutputXMRTemplate.build(self.n, OutputXMRTemplate.Type.PHYSICAL, self.capability, ["$var1", "$var2"])
+        output = OutputXMRTemplate.build(self.n, "Test Name", OutputXMRTemplate.Type.PHYSICAL, self.capability, ["$var1", "$var2"])
 
+        self.assertEqual("Test Name", output.name())
         self.assertEqual(OutputXMRTemplate.Type.PHYSICAL, output.type())
         self.assertEqual("TEST.CAPABILITY", output.capability().name())
         self.assertEqual(["$var1", "$var2"], output.params())
@@ -106,7 +113,7 @@ class OutputXMRTemplateTestCase(unittest.TestCase):
     def test_create(self):
         agent = self.n.register(Graph("SELF"))
 
-        output = OutputXMRTemplate.build(self.n, OutputXMRTemplate.Type.PHYSICAL, self.capability, [])
+        output = OutputXMRTemplate.build(self.n, "Test Name", OutputXMRTemplate.Type.PHYSICAL, self.capability, [])
         f = output.graph.register("FRAME", generate_index=True)
 
         xmr = output.create(self.n, agent, [])
@@ -120,7 +127,7 @@ class OutputXMRTemplateTestCase(unittest.TestCase):
     def test_create_with_root(self):
         agent = self.n.register(Graph("SELF"))
 
-        output = OutputXMRTemplate.build(self.n, OutputXMRTemplate.Type.PHYSICAL, self.capability, [])
+        output = OutputXMRTemplate.build(self.n, "Test Name", OutputXMRTemplate.Type.PHYSICAL, self.capability, [])
         f = output.graph.register("FRAME", generate_index=True)
 
         output.set_root(f)
@@ -132,7 +139,7 @@ class OutputXMRTemplateTestCase(unittest.TestCase):
     def test_create_with_properties(self):
         agent = self.n.register(Graph("SELF"))
 
-        output = OutputXMRTemplate.build(self.n, OutputXMRTemplate.Type.PHYSICAL, self.capability, [])
+        output = OutputXMRTemplate.build(self.n, "Test Name", OutputXMRTemplate.Type.PHYSICAL, self.capability, [])
         f1 = output.graph.register("FRAME", generate_index=True)
         f2 = output.graph.register("FRAME", generate_index=True)
         f3 = self.g.register("OTHER", generate_index=True)
@@ -151,7 +158,7 @@ class OutputXMRTemplateTestCase(unittest.TestCase):
     def test_create_with_parameters(self):
         agent = self.n.register(Graph("SELF"))
 
-        output = OutputXMRTemplate.build(self.n, OutputXMRTemplate.Type.PHYSICAL, self.capability, ["$var1", "$var2"])
+        output = OutputXMRTemplate.build(self.n, "Test Name", OutputXMRTemplate.Type.PHYSICAL, self.capability, ["$var1", "$var2"])
         f = output.graph.register("FRAME", generate_index=True)
         f["PROP1"] = Literal("$var1")
         f["PROP2"] = Literal("$var1")
