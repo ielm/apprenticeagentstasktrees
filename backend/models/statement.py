@@ -626,7 +626,7 @@ class CapabilityStatement(Statement):
 class OutputXMRStatement(Statement):
 
     @classmethod
-    def build(cls, graph: Graph, template: Union[str, Graph, 'OutputXMRTemplate'], params: List[Any], agent: Union[str, Identifier, Frame]):
+    def instance(cls, graph: Graph, template: Union[str, Graph, 'OutputXMRTemplate'], params: List[Any], agent: Union[str, Identifier, Frame]):
         from backend.models.output import OutputXMRTemplate
 
         frame = graph.register("OUTPUTXMR-STATEMENT", isa="EXE.OUTPUTXMR-STATEMENT", generate_index=True)
@@ -665,3 +665,13 @@ class OutputXMRStatement(Statement):
         agent["HAS-OUTPUT"] += output.frame
 
         return output
+
+    def __eq__(self, other):
+        if isinstance(other, OutputXMRStatement):
+            return self.template() == other.template() and \
+                self.params() == other.params() and \
+                self.agent() == other.agent()
+        elif isinstance(other, Frame):
+            return self.frame == other
+
+        return super().__eq__(other)

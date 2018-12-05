@@ -68,7 +68,7 @@ condition_nor: boolean_statement (NOR boolean_statement)+
 condition_not: boolean_statement (NOT boolean_statement)+
 condition_on: (EXECUTED)
 
-statement: (add_filler_statement | assign_filler_statement | assign_variable_statement | capability_statement | exists_statement | foreach_statement | is_statement | make_instance_statement | mp_statement)
+statement: (add_filler_statement | assign_filler_statement | assign_variable_statement | capability_statement | exists_statement | foreach_statement | is_statement | make_instance_statement | mp_statement | output_statement)
 boolean_statement: (exists_statement | is_statement)
 
 add_filler_statement: statement_instance "[" NAME "]" "+=" (statement_instance | literal)
@@ -80,16 +80,20 @@ foreach_statement: FOR EACH ARGUMENT IN logical_slot_query ("|" statement)*
 is_statement: statement_instance "[" NAME "]" EQUALS EQUALS literal
 make_instance_statement: "@" (graph | special_agent_graph) ":" identifier arguments
 mp_statement: SELF "." MP arguments
+output_statement: OUTPUT NAME output_arguments BY statement_instance
 
 statement_instance: (SELF | "#" identifier | make_instance_statement | argument)
 special_agent_graph: "AGENT." (INTERNAL | EXE | ONTOLOGY | WM | LT) "!"
 arguments: "(" (argument ("," argument)*)? ")"
 argument: ARGUMENT
+output_arguments: "(" (output_argument ("," output_argument)*)? ")"
+output_argument: (argument | literal | statement_instance)
 
 ABANDONED: "abandoned"i
 ACTION: "action"i
 ACTIVE: "active"i
 AS: "as"i
+BY: "by"i
 CAPABILITY: "capability"i
 DEFAULT: "default"i
 DEFINE: "define"i
@@ -108,6 +112,7 @@ LT: "lt"i
 NAND: "nand"i
 NOR: "nor"i
 ONTOLOGY: "ontology"i
+OUTPUT: "output"i
 PENDING: "pending"i
 PRIORITY: "priority"i
 RESOURCES: "resources"i

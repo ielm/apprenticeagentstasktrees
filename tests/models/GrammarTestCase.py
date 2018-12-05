@@ -6,7 +6,7 @@ from backend.models.mps import AgentMethod
 from backend.models.output import OutputXMRTemplate
 from backend.models.path import Path
 from backend.models.query import AndQuery, ExactQuery, FillerQuery, FrameQuery, IdentifierQuery, LiteralQuery, NameQuery, NotQuery, OrQuery, SlotQuery
-from backend.models.statement import AddFillerStatement, AssignFillerStatement, AssignVariableStatement, CapabilityStatement, ExistsStatement, ForEachStatement, IsStatement, MakeInstanceStatement, MeaningProcedureStatement
+from backend.models.statement import AddFillerStatement, AssignFillerStatement, AssignVariableStatement, CapabilityStatement, ExistsStatement, ForEachStatement, IsStatement, MakeInstanceStatement, MeaningProcedureStatement, OutputXMRStatement
 from backend.models.view import View
 
 import unittest
@@ -328,6 +328,16 @@ class AgendaGrammarTestCase(unittest.TestCase):
         callback2 = AssignFillerStatement.instance(self.g, self.agentFrame, "SLOTB", 456)
         statement = CapabilityStatement.instance(self.agent.exe, "SELF.TEST-CAPABILITY", [callback1, callback2], [])
         parsed = Grammar.parse(self.agent, "CAPABILITY #SELF.TEST-CAPABILITY() | THEN DO SELF[SLOTA] = 123 | THEN DO SELF[SLOTB] = 456", start="capability_statement", agent=self.agent)
+        self.assertEqual(statement, parsed)
+
+    def test_output_statement(self):
+        self.agent.exe.register("TEST")
+        self.agent.exe.register("TEST-CAPABILITY")
+
+        template = OutputXMRTemplate.build(self.agent, "test-xmr", OutputXMRTemplate.Type.PHYSICAL, "SELF.TEST-CAPABILITY", ["$var1", "$var2", "$var3", "$var4"])
+
+        statement = OutputXMRStatement.instance(self.agent.exe, template, [1, Literal("abc"), Literal("$var1"), Identifier.parse("SELF.TEST")], self.agent.identity)
+        parsed = Grammar.parse(self.agent, "OUTPUT test-xmr(1, \"abc\", $var1, #SELF.TEST) BY SELF", start="output_statement", agent=self.agent)
         self.assertEqual(statement, parsed)
 
     def test_action(self):

@@ -783,7 +783,7 @@ class OutputXMRStatementTestCase(unittest.TestCase):
         stmt: OutputXMRStatement = Statement.from_instance(frame)
         self.assertEqual(agent, stmt.agent())
 
-    def test_build(self):
+    def test_instance(self):
         from backend.models.output import OutputXMRTemplate
         from backend.models.statement import OutputXMRStatement
 
@@ -791,7 +791,7 @@ class OutputXMRStatementTestCase(unittest.TestCase):
         params = [1, 2, Literal("$var1"), Literal("$var2")]
         agent = self.g.register("AGENT")
 
-        stmt = OutputXMRStatement.build(self.g, template, params, agent)
+        stmt = OutputXMRStatement.instance(self.g, template, params, agent)
 
         self.assertEqual(template, stmt.template())
         self.assertEqual(params, stmt.params())
@@ -806,7 +806,7 @@ class OutputXMRStatementTestCase(unittest.TestCase):
         template = OutputXMRTemplate.build(self.n, "test-template", OutputXMRTemplate.Type.PHYSICAL, "EXE.CAPABILITY", [])
         agent = self.g.register("AGENT")
 
-        stmt = OutputXMRStatement.build(self.g, template, [], agent)
+        stmt = OutputXMRStatement.instance(self.g, template, [], agent)
 
         self.assertNotIn("XMR#1", self.n)
 
@@ -832,7 +832,7 @@ class OutputXMRStatementTestCase(unittest.TestCase):
         f["PROP3"] = Literal("$var2")
 
         agent = self.g.register("AGENT")
-        stmt = OutputXMRStatement.build(self.g, template, [123, "$myvar"], agent)
+        stmt = OutputXMRStatement.instance(self.g, template, [123, "$myvar"], agent)
 
         varmap = self.g.register("MY-VARMAP-TEST")
         varmap = VariableMap(varmap)

@@ -373,11 +373,27 @@ class GrammarTransformer(Transformer):
 
         return MakeInstanceStatement.instance(self.agent.exe, in_graph, of, params)
 
+    def output_statement(self, matches):
+        from backend.models.statement import OutputXMRStatement
+
+        template = matches[1]
+        params = matches[2]
+        agent = matches[4]
+
+        return OutputXMRStatement.instance(self.agent.exe, template, params, agent)
+
     def arguments(self, matches):
         return matches
 
     def argument(self, matches):
         return str(matches[0])
+
+    def output_arguments(self, matches):
+        from backend.models.graph import Frame
+        return list(map(lambda match: Literal(match) if not isinstance(match, Frame) else match, matches))
+
+    def output_argument(self, matches):
+        return matches[0]
 
     def special_agent_graph(self, matches):
         name = str(matches[0]).upper()
