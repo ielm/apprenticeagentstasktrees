@@ -7,6 +7,7 @@ from typing import Any, List, Union
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from backend.models.effectors import Capability
+    from backend.models.output import OutputXMR, OutputXMRTemplate
 
 
 class Variable(object):
@@ -138,6 +139,8 @@ class StatementHierarchy(object):
                 QUERY-STATEMENT
                 SLOT-STATEMENT
                 MP-STATEMENT
+                CAPABILITY-STATEMENT
+                OUTPUTXMR-STATEMENT
             NONRETURNING-STATEMENT
                 FOREACH-STATEMENT
                 ADDFILLER-STATEMENT
@@ -155,6 +158,7 @@ class StatementHierarchy(object):
         hierarchy.register("SLOT-STATEMENT", isa="EXE.RETURNING-STATEMENT")
         hierarchy.register("MP-STATEMENT", isa="EXE.RETURNING-STATEMENT")
         hierarchy.register("CAPABILITY-STATEMENT", isa="EXE.RETURNING-STATEMENT")
+        hierarchy.register("OUTPUTXMR-STATEMENT", isa="EXE.RETURNING-STATEMENT")
         hierarchy.register("NONRETURNING-STATEMENT", isa="EXE.STATEMENT")
         hierarchy.register("FOREACH-STATEMENT", isa="EXE.NONRETURNING-STATEMENT")
         hierarchy.register("ADDFILLER-STATEMENT", isa="EXE.NONRETURNING-STATEMENT")
@@ -171,6 +175,7 @@ class StatementHierarchy(object):
         hierarchy["MAKEINSTANCE-STATEMENT"]["CLASSMAP"] = Literal(MakeInstanceStatement)
         hierarchy["MP-STATEMENT"]["CLASSMAP"] = Literal(MeaningProcedureStatement)
         hierarchy["CAPABILITY-STATEMENT"]["CLASSMAP"] = Literal(CapabilityStatement)
+        hierarchy["OUTPUTXMR-STATEMENT"]["CLASSMAP"] = Literal(OutputXMRStatement)
 
         return hierarchy
 
@@ -616,3 +621,47 @@ class CapabilityStatement(Statement):
                     self.frame["PARAMS"] == other["PARAMS"]
         else:
             return super().__eq__(other)
+
+
+class OutputXMRStatement(Statement):
+
+    @classmethod
+    def build(cls, graph: Graph, template: Union[str, Graph, 'OutputXMRTemplate'], params: List[Any], agent: Union[str, Identifier, Frame]):
+        from backend.models.output import OutputXMRTemplate
+
+        frame = graph.register("OUTPUTXMR-STATEMENT", isa="EXE.OUTPUTXMR-STATEMENT", generate_index=True)
+
+        if isinstance(template, Graph):
+            template = OutputXMRTemplate(template)
+        if isinstance(template, OutputXMRTemplate):
+            template = template.name()
+
+        frame["TEMPLATE"] = Literal(template)
+        frame["PARAMS"] = params
+        frame["AGENT"] = agent
+
+        return OutputXMRStatement(frame)
+
+    def template(self) -> 'OutputXMRTemplate':
+        from backend.models.output import OutputXMRTemplate
+
+        return OutputXMRTemplate.lookup(self.frame._graph._network, self.frame["TEMPLATE"].singleton())
+
+    def params(self) -> List[Any]:
+        return list(map(lambda param: param._value, self.frame["PARAMS"]))
+
+    def agent(self) -> Frame:
+        return self.frame["AGENT"].singleton()
+
+    def run(self, varmap: VariableMap) -> 'OutputXMR':
+        agent = self.agent()
+        network = self.frame._graph._network
+        graph = agent._graph
+
+        params = self.params()
+        params = list(map(lambda param: self._resolve_param(param, varmap), params))
+
+        output = self.template().create(network, graph, params)
+        agent["HAS-OUTPUT"] += output.frame
+
+        return output

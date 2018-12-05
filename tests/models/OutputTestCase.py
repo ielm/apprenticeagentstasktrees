@@ -168,3 +168,11 @@ class OutputXMRTemplateTestCase(unittest.TestCase):
         self.assertEqual("a", xmr.graph(self.n)["XMR#1.FRAME.1"]["PROP1"])
         self.assertEqual("a", xmr.graph(self.n)["XMR#1.FRAME.1"]["PROP2"])
         self.assertEqual("b", xmr.graph(self.n)["XMR#1.FRAME.1"]["PROP3"])
+
+    def test_lookup(self):
+        template1 = OutputXMRTemplate.build(self.n, "Test 1", OutputXMRTemplate.Type.PHYSICAL, self.capability, [])
+        template2 = OutputXMRTemplate.build(self.n, "Test 2", OutputXMRTemplate.Type.PHYSICAL, self.capability, [])
+
+        self.assertEqual(template1, OutputXMRTemplate.lookup(self.n, "Test 1"))
+        self.assertEqual(template2, OutputXMRTemplate.lookup(self.n, "Test 2"))
+        self.assertIsNone(OutputXMRTemplate.lookup(self.n, "Test 3"))

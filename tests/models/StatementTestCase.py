@@ -743,3 +743,104 @@ class CapabilityStatementTestCase(unittest.TestCase):
         callback = graph.search(Frame.q(network).f("VARMAP", varmap.frame))[0]
         self.assertTrue(callback["CAPABILITY"] == c.frame)
         self.assertTrue(callback["STATEMENT"] == [stmt1, stmt2])
+
+
+class OutputXMRStatementTestCase(unittest.TestCase):
+
+    def setUp(self):
+        self.n = Network()
+        self.g = self.n.register(Statement.hierarchy())
+
+    def test_template(self):
+        from backend.models.output import OutputXMRTemplate
+        from backend.models.statement import OutputXMRStatement
+
+        template = OutputXMRTemplate.build(self.n, "test-template", OutputXMRTemplate.Type.PHYSICAL, "EXE.CAPABILITY", [])
+
+        frame = self.g.register("TEST", isa="EXE.OUTPUTXMR-STATEMENT")
+        frame["TEMPLATE"] = Literal("test-template")
+
+        stmt: OutputXMRStatement = Statement.from_instance(frame)
+        self.assertEqual(template, stmt.template())
+
+    def test_params(self):
+        from backend.models.statement import OutputXMRStatement
+
+        frame = self.g.register("TEST", isa="EXE.OUTPUTXMR-STATEMENT")
+        frame["PARAMS"] = [1, 2, Literal("$var1"), Literal("$var2")]
+
+        stmt: OutputXMRStatement = Statement.from_instance(frame)
+        self.assertEqual([1, 2, "$var1", "$var2"], stmt.params())
+
+    def test_agent(self):
+        from backend.models.statement import OutputXMRStatement
+
+        agent = self.g.register("AGENT")
+
+        frame = self.g.register("TEST", isa="EXE.OUTPUTXMR-STATEMENT")
+        frame["AGENT"] = agent
+
+        stmt: OutputXMRStatement = Statement.from_instance(frame)
+        self.assertEqual(agent, stmt.agent())
+
+    def test_build(self):
+        from backend.models.output import OutputXMRTemplate
+        from backend.models.statement import OutputXMRStatement
+
+        template = OutputXMRTemplate.build(self.n, "test-template", OutputXMRTemplate.Type.PHYSICAL, "EXE.CAPABILITY", [])
+        params = [1, 2, Literal("$var1"), Literal("$var2")]
+        agent = self.g.register("AGENT")
+
+        stmt = OutputXMRStatement.build(self.g, template, params, agent)
+
+        self.assertEqual(template, stmt.template())
+        self.assertEqual(params, stmt.params())
+        self.assertEqual(agent, stmt.agent())
+
+    def test_run(self):
+        from backend.models.output import OutputXMR, OutputXMRTemplate
+        from backend.models.statement import OutputXMRStatement
+
+        self.g.register("CAPABILITY")
+
+        template = OutputXMRTemplate.build(self.n, "test-template", OutputXMRTemplate.Type.PHYSICAL, "EXE.CAPABILITY", [])
+        agent = self.g.register("AGENT")
+
+        stmt = OutputXMRStatement.build(self.g, template, [], agent)
+
+        self.assertNotIn("XMR#1", self.n)
+
+        varmap = self.g.register("MY-VARMAP-TEST")
+        varmap = VariableMap(varmap)
+        output = stmt.run(varmap)
+
+        self.assertIn("XMR#1", self.n)
+        self.assertIsInstance(output, OutputXMR)
+        self.assertIn(output.frame.name(), agent._graph)
+        self.assertEqual(output.frame, agent["HAS-OUTPUT"])
+
+    def test_run_with_variables(self):
+        from backend.models.output import OutputXMR, OutputXMRTemplate
+        from backend.models.statement import OutputXMRStatement
+
+        self.g.register("CAPABILITY")
+
+        template = OutputXMRTemplate.build(self.n, "test-template", OutputXMRTemplate.Type.PHYSICAL, "EXE.CAPABILITY", ["$var1", "$var2"])
+        f = template.graph.register("FRAME", generate_index=True)
+        f["PROP1"] = Literal("$var1")
+        f["PROP2"] = Literal("$var1")
+        f["PROP3"] = Literal("$var2")
+
+        agent = self.g.register("AGENT")
+        stmt = OutputXMRStatement.build(self.g, template, [123, "$myvar"], agent)
+
+        varmap = self.g.register("MY-VARMAP-TEST")
+        varmap = VariableMap(varmap)
+        Variable.instance(self.g, "$myvar", Literal("abc"), varmap)
+
+        output = stmt.run(varmap)
+
+        fi = output.graph(self.n)["FRAME.1"]
+        self.assertEqual(123, fi["PROP1"])
+        self.assertEqual(123, fi["PROP2"])
+        self.assertEqual("abc", fi["PROP3"])

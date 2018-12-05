@@ -63,6 +63,8 @@ class OutputXMRTemplate(object):
         graph = network.register(template_id)
         anchor = graph.register("TEMPLATE-ANCHOR", generate_index=True)
 
+        if isinstance(capability, str):
+            capability = Identifier.parse(capability)
         if isinstance(capability, Capability):
             capability = capability.frame
 
@@ -74,6 +76,16 @@ class OutputXMRTemplate(object):
         anchor["PARAMS"] = params
 
         return OutputXMRTemplate(graph)
+
+    @classmethod
+    def lookup(cls, network: Network, name: str) -> Union['OutputXMRTemplate', None]:
+        for graph in network._storage.values():
+            try:
+                template = OutputXMRTemplate(graph)
+                if template.name() == name:
+                    return template
+            except: pass
+        return None
 
     def __init__(self, graph: Graph):
         self.graph = graph
@@ -140,3 +152,9 @@ class OutputXMRTemplate(object):
 
         return anchor
 
+    def __eq__(self, other):
+        if isinstance(other, OutputXMRTemplate):
+            return self.graph == other.graph
+        if isinstance(other, Graph):
+            return self.graph == other
+        return super().__eq__(other)
