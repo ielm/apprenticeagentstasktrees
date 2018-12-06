@@ -3,7 +3,7 @@ from backend.models.agenda import Agenda, Goal, Trigger
 from backend.models.effectors import Capability
 from backend.models.grammar import Grammar
 from backend.models.graph import Filler, Frame, Graph, Identifier, Literal, Network
-from backend.models.mps import AgentMethod, MPRegistry
+from backend.models.mps import AgentMethod, MPRegistry, OutputMethod
 from backend.models.ontology import Ontology, OntologyFrame, OntologyFiller
 from backend.models.output import OutputXMRTemplate
 from backend.models.query import Query
@@ -129,7 +129,7 @@ class BootstrapAppendKnowledge(Bootstrap):
 
 class BootstrapRegisterMP(Bootstrap):
 
-    def __init__(self, mp: Type[AgentMethod], name: str=None):
+    def __init__(self, mp: Type[Union[AgentMethod, OutputMethod]], name: str=None):
         self.mp = mp
         self.name = name
 

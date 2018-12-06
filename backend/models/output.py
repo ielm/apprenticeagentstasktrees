@@ -48,6 +48,13 @@ class OutputXMR(object):
             return None
         return self.frame["ROOT"].singleton()
 
+    def __eq__(self, other):
+        if isinstance(other, OutputXMR):
+            return self.frame == other.frame
+        if isinstance(other, Frame):
+            return self.frame == other
+        return super().__eq__(other)
+
 
 class OutputXMRTemplate(object):
 

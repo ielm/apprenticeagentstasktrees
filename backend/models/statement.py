@@ -118,6 +118,12 @@ class VariableMap(object):
         return super().__eq__(other)
 
 
+class StatementScope(object):
+
+    def __init__(self):
+        self.outputs = []
+
+
 class StatementHierarchy(object):
 
     def __init__(self):
@@ -201,8 +207,8 @@ class Statement(object):
     def __init__(self, frame: Frame):
         self.frame = frame
 
-    def run(self, varmap: VariableMap, *args, **kwargs) -> Any:
-        raise Exception("Statement.run(varmap) must be implemented.")
+    def run(self, scope: StatementScope, varmap: VariableMap) -> Any:
+        raise Exception("Statement.run(scope, varmap) must be implemented.")
 
     def _resolve_param(self, param: Any, varmap: VariableMap):
         if isinstance(param, Filler):
@@ -251,7 +257,7 @@ class AddFillerStatement(Statement):
 
         return AddFillerStatement(frame)
 
-    def run(self, varmap: VariableMap, *args, **kwargs):
+    def run(self, scope: StatementScope, varmap: VariableMap):
         to: Any = self.frame["TO"][0].resolve()
         slot: str = self.frame["SLOT"][0].resolve().value
         value: Any = self.frame["ADD"][0].resolve()
@@ -277,7 +283,7 @@ class AddFillerStatement(Statement):
             except: pass
         if isinstance(value, Frame):
             if value ^ "EXE.RETURNING-STATEMENT":
-                value = Statement.from_instance(value).run(varmap)
+                value = Statement.from_instance(value).run(StatementScope(), varmap)
 
         for frame in to:
             frame[slot] += value
@@ -313,7 +319,7 @@ class AssignFillerStatement(Statement):
 
         return AssignFillerStatement(frame)
 
-    def run(self, varmap: VariableMap, *args, **kwargs):
+    def run(self, scope: StatementScope, varmap: VariableMap):
         to: Any = self.frame["TO"][0].resolve()
         slot: str = self.frame["SLOT"][0].resolve().value
         value: Any = self.frame["ASSIGN"][0].resolve()
@@ -337,7 +343,7 @@ class AssignFillerStatement(Statement):
             except: pass
         if isinstance(value, Frame):
             if value ^ "EXE.RETURNING-STATEMENT":
-                value = Statement.from_instance(value).run(varmap)
+                value = Statement.from_instance(value).run(StatementScope(), varmap)
 
         for frame in to:
             frame[slot] = value
@@ -360,7 +366,7 @@ class AssignVariableStatement(Statement):
 
         return AssignVariableStatement(frame)
 
-    def run(self, varmap: VariableMap, *args, **kwargs):
+    def run(self, scope: StatementScope, varmap: VariableMap):
         variable = self.frame["TO"].singleton()
         value = self.frame["ASSIGN"].singleton()
 
@@ -370,10 +376,10 @@ class AssignVariableStatement(Statement):
             except: pass
 
         if isinstance(value, Statement) and value.frame ^ "EXE.RETURNING-STATEMENT":
-            value = value.run(varmap)
+            value = value.run(StatementScope(), varmap)
 
         if isinstance(value, Frame) and value ^ "EXE.RETURNING-STATEMENT":
-            value = Statement.from_instance(value).run(varmap)
+            value = Statement.from_instance(value).run(StatementScope(), varmap)
 
         Variable.instance(self.frame._graph, variable, value, varmap)
 
@@ -392,7 +398,7 @@ class ExistsStatement(Statement):
 
         return ExistsStatement(frame)
 
-    def run(self, varmap: VariableMap, *args, **kwargs) -> bool:
+    def run(self, scope: StatementScope, varmap: VariableMap) -> bool:
         query = self.frame["FIND"][0].resolve().value
         results = self.frame._graph._network.search(query)
         return len(results) > 0
@@ -419,7 +425,7 @@ class ForEachStatement(Statement):
 
         return ForEachStatement(frame)
 
-    def run(self, varmap: VariableMap, *args, **kwargs):
+    def run(self, scope: StatementScope, varmap: VariableMap):
         query: Query = self.frame["FROM"].singleton()
         variable: str = self.frame["ASSIGN"].singleton()
         do: List[Statement] = list(map(lambda stmt: Statement.from_instance(stmt.resolve()), self.frame["DO"]))
@@ -433,7 +439,7 @@ class ForEachStatement(Statement):
         for frame in self.frame._graph._network.search(query):
             var.set_value(frame)
             for stmt in do:
-                stmt.run(varmap)
+                stmt.run(scope, varmap)
 
     def capabilities(self, varmap: VariableMap) -> List['Capability']:
         do: List[Statement] = list(map(lambda stmt: Statement.from_instance(stmt.resolve()), self.frame["DO"]))
@@ -462,7 +468,7 @@ class IsStatement(Statement):
 
         return IsStatement(frame)
 
-    def run(self, varmap: VariableMap, *args, **kwargs):
+    def run(self, scope: StatementScope, varmap: VariableMap):
         domain = self.frame["DOMAIN"][0].resolve()
         slot: str = self.frame["SLOT"][0].resolve().value
         filler = self.frame["FILLER"][0].resolve()
@@ -504,7 +510,7 @@ class MakeInstanceStatement(Statement):
 
         return MakeInstanceStatement(frame)
 
-    def run(self, varmap: VariableMap, *args, **kwargs):
+    def run(self, scope: StatementScope, varmap: VariableMap):
         graph: str = self.frame["IN"][0].resolve().value
         of: Frame = self.frame["OF"][0].resolve()
         params: List[Any] = list(map(lambda param: param.resolve().value, self.frame["PARAMS"]))
@@ -541,7 +547,7 @@ class MeaningProcedureStatement(Statement):
 
         return MeaningProcedureStatement(frame)
 
-    def run(self, varmap: VariableMap, *args, **kwargs):
+    def run(self, scope: StatementScope, varmap: VariableMap):
         mp: str = self.frame["CALLS"][0].resolve().value
 
         params = list(map(lambda param: self._resolve_param(param, varmap), self.frame["PARAMS"]))
@@ -593,7 +599,7 @@ class CapabilityStatement(Statement):
 
         return CapabilityStatement(frame)
 
-    def run(self, varmap: VariableMap, *args, **kwargs):
+    def run(self, scope: StatementScope, varmap: VariableMap):
         from backend.models.effectors import Capability
 
         capability: Capability = Capability(self.frame["CAPABILITY"].singleton())
@@ -653,7 +659,7 @@ class OutputXMRStatement(Statement):
     def agent(self) -> Frame:
         return self.frame["AGENT"].singleton()
 
-    def run(self, varmap: VariableMap, *args, **kwargs) -> 'OutputXMR':
+    def run(self, scope: StatementScope, varmap: VariableMap) -> 'OutputXMR':
         agent = self.agent()
         network = self.frame._graph._network
         graph = agent._graph
@@ -662,10 +668,7 @@ class OutputXMRStatement(Statement):
         params = list(map(lambda param: self._resolve_param(param, varmap), params))
 
         output = self.template().create(network, graph, params)
-
-        if "has_output" in kwargs:
-            for target in kwargs["has_output"]:
-                target["HAS-OUTPUT"] += output.frame
+        scope.outputs.append(output)
 
         return output
 

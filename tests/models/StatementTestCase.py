@@ -2,7 +2,7 @@ from backend.models.effectors import Capability
 from backend.models.graph import Frame, Graph, Identifier, Literal, Network
 from backend.models.mps import AgentMethod, MPRegistry
 from backend.models.query import Query
-from backend.models.statement import Statement, Variable, VariableMap
+from backend.models.statement import Statement, StatementScope, Variable, VariableMap
 
 import unittest
 
@@ -173,7 +173,7 @@ class StatementTestCase(unittest.TestCase):
     def test_run(self):
 
         class TestStatement(Statement):
-            def run(self, varmap: VariableMap):
+            def run(self, scope: StatementScope, varmap: VariableMap):
                 return varmap.resolve("X")
 
         graph = Graph("TEST")
@@ -185,12 +185,12 @@ class StatementTestCase(unittest.TestCase):
         vm = VariableMap.instance_of(graph, varmap, [123])
         statement = TestStatement(stmt)
 
-        self.assertEqual(123, statement.run(vm))
+        self.assertEqual(123, statement.run(StatementScope(), vm))
 
     def test_from_instance(self):
 
         class TestStatement(Statement):
-            def run(self, varmap: VariableMap):
+            def run(self, scope: StatementScope, varmap: VariableMap):
                 return 1
 
         graph = Statement.hierarchy()
@@ -215,10 +215,10 @@ class AddFillerStatementTestCase(unittest.TestCase):
         addfiller["SLOT"] = Literal("X")
         addfiller["ADD"] = 123
 
-        Statement.from_instance(addfiller).run(None)
+        Statement.from_instance(addfiller).run(StatementScope(), None)
         self.assertTrue(target["X"] == 123)
 
-        Statement.from_instance(addfiller).run(None)
+        Statement.from_instance(addfiller).run(StatementScope(), None)
         self.assertTrue(target["X"] == [123, 123])
 
     def test_run_variable_to(self):
@@ -235,7 +235,7 @@ class AddFillerStatementTestCase(unittest.TestCase):
         varmap = VariableMap(varmap)
         Variable.instance(graph, "$VAR", target, varmap)
 
-        Statement.from_instance(addfiller).run(varmap)
+        Statement.from_instance(addfiller).run(StatementScope(), varmap)
         self.assertTrue(target["X"] == 123)
 
     def test_run_variable_value(self):
@@ -250,13 +250,13 @@ class AddFillerStatementTestCase(unittest.TestCase):
         addfiller["SLOT"] = Literal("X")
         addfiller["ADD"] = Literal("MYVAR")
 
-        Statement.from_instance(addfiller).run(VariableMap(varmap))
+        Statement.from_instance(addfiller).run(StatementScope(), VariableMap(varmap))
         self.assertTrue(target["X"] == 123)
 
     def test_run_returning_statement_results(self):
 
         class TestStatement(Statement):
-            def run(self, varmap: VariableMap):
+            def run(self, scope: StatementScope(), varmap: VariableMap):
                 return 123
 
         network = Network()
@@ -271,7 +271,7 @@ class AddFillerStatementTestCase(unittest.TestCase):
         addfiller["SLOT"] = Literal("X")
         addfiller["ADD"] = stmt
 
-        Statement.from_instance(addfiller).run(None)
+        Statement.from_instance(addfiller).run(StatementScope(), None)
         self.assertTrue(target["X"] == 123)
 
 
@@ -287,11 +287,11 @@ class AssignFillerStatementTestCase(unittest.TestCase):
         assignfiller["SLOT"] = Literal("X")
         assignfiller["ASSIGN"] = 123
 
-        Statement.from_instance(assignfiller).run(None)
+        Statement.from_instance(assignfiller).run(StatementScope(), None)
         self.assertTrue(target["X"] == 123)
 
         assignfiller["ASSIGN"] = 345
-        Statement.from_instance(assignfiller).run(None)
+        Statement.from_instance(assignfiller).run(StatementScope(), None)
         self.assertTrue(target["X"] == 345)
         self.assertTrue(target["X"] != 123)
 
@@ -309,7 +309,7 @@ class AssignFillerStatementTestCase(unittest.TestCase):
         varmap = VariableMap(varmap)
         Variable.instance(graph, "$VAR", target, varmap)
 
-        Statement.from_instance(assignfiller).run(varmap)
+        Statement.from_instance(assignfiller).run(StatementScope(), varmap)
         self.assertTrue(target["X"] == 123)
 
     def test_run_variable_value(self):
@@ -324,13 +324,13 @@ class AssignFillerStatementTestCase(unittest.TestCase):
         assignfiller["SLOT"] = Literal("X")
         assignfiller["ASSIGN"] = Literal("MYVAR")
 
-        Statement.from_instance(assignfiller).run(VariableMap(varmap))
+        Statement.from_instance(assignfiller).run(StatementScope(), VariableMap(varmap))
         self.assertTrue(target["X"] == 123)
 
     def test_run_returning_statement_results(self):
 
         class TestStatement(Statement):
-            def run(self, varmap: VariableMap):
+            def run(self, scope: StatementScope(), varmap: VariableMap):
                 return 123
 
         network = Network()
@@ -345,7 +345,7 @@ class AssignFillerStatementTestCase(unittest.TestCase):
         assignfiller["SLOT"] = Literal("X")
         assignfiller["ASSIGN"] = stmt
 
-        Statement.from_instance(assignfiller).run(None)
+        Statement.from_instance(assignfiller).run(StatementScope(), None)
         self.assertTrue(target["X"] == 123)
 
 
@@ -360,7 +360,7 @@ class AssignVariableStatementTestCase(unittest.TestCase):
         assignvariable["ASSIGN"] = 123
 
         varmap = VariableMap(graph.register("VARMAP"))
-        Statement.from_instance(assignvariable).run(varmap)
+        Statement.from_instance(assignvariable).run(StatementScope(), varmap)
         self.assertEqual(123, varmap.resolve("$var1"))
 
     def test_run_assign_frame(self):
@@ -373,7 +373,7 @@ class AssignVariableStatementTestCase(unittest.TestCase):
         assignvariable["ASSIGN"] = target
 
         varmap = VariableMap(graph.register("VARMAP"))
-        Statement.from_instance(assignvariable).run(varmap)
+        Statement.from_instance(assignvariable).run(StatementScope(), varmap)
         self.assertEqual(target, varmap.resolve("$var1"))
 
     def test_run_assign_variable(self):
@@ -387,7 +387,7 @@ class AssignVariableStatementTestCase(unittest.TestCase):
         varmap = VariableMap(graph.register("VARMAP"))
         Variable.instance(graph, "$existing", 123, varmap)
 
-        Statement.from_instance(assignvariable).run(varmap)
+        Statement.from_instance(assignvariable).run(StatementScope(), varmap)
         self.assertEqual(123, varmap.resolve("$var1"))
 
     def test_run_assign_statement_results(self):
@@ -406,17 +406,17 @@ class AssignVariableStatementTestCase(unittest.TestCase):
 
         assignvariable["TO"] = Literal("$var1")
         assignvariable["ASSIGN"] = MeaningProcedureStatement.instance(graph, "TestMP", [])
-        Statement.from_instance(assignvariable).run(varmap)
+        Statement.from_instance(assignvariable).run(StatementScope(), varmap)
         self.assertEqual(123, varmap.resolve("$var1"))
 
         assignvariable["TO"] = Literal("$var2")
         assignvariable["ASSIGN"] = ExistsStatement.instance(graph, Frame.q(network).id("EXE.TEST"))
-        Statement.from_instance(assignvariable).run(varmap)
+        Statement.from_instance(assignvariable).run(StatementScope(), varmap)
         self.assertEqual(True, varmap.resolve("$var2"))
 
         assignvariable["TO"] = Literal("$var3")
         assignvariable["ASSIGN"] = MakeInstanceStatement.instance(graph, graph._namespace, "EXE.TEST", [])
-        Statement.from_instance(assignvariable).run(varmap)
+        Statement.from_instance(assignvariable).run(StatementScope(), varmap)
         self.assertEqual(graph["TEST.1"], varmap.resolve("$var3"))
 
 
@@ -428,10 +428,10 @@ class ExistsStatementTestCase(unittest.TestCase):
         stmt = graph.register("TEST", isa="EXE.EXISTS-STATEMENT")
 
         stmt["FIND"] = Query.parse(graph._network, "WHERE @ ^ EXE.EXISTS-STATEMENT")
-        self.assertTrue(Statement.from_instance(stmt).run(None))
+        self.assertTrue(Statement.from_instance(stmt).run(StatementScope(), None))
 
         stmt["FIND"] = Query.parse(graph._network, "WHERE abc=123")
-        self.assertFalse(Statement.from_instance(stmt).run(None))
+        self.assertFalse(Statement.from_instance(stmt).run(StatementScope(), None))
 
 
 class ForEachStatementTestCase(unittest.TestCase):
@@ -439,7 +439,7 @@ class ForEachStatementTestCase(unittest.TestCase):
     def test_run(self):
 
         class TestStatement(Statement):
-            def run(self, varmap: VariableMap):
+            def run(self, scope: StatementScope(), varmap: VariableMap):
                 frame = varmap.resolve("$FOR")
                 frame["c"] = frame["a"][0].resolve().value + frame["b"][0].resolve().value
 
@@ -463,7 +463,7 @@ class ForEachStatementTestCase(unittest.TestCase):
         foreach["ASSIGN"] = Literal("$FOR")
         foreach["DO"] = stmt
 
-        Statement.from_instance(foreach).run(VariableMap(varmap))
+        Statement.from_instance(foreach).run(StatementScope(), VariableMap(varmap))
 
         self.assertTrue(target1["c"] == 3)
         self.assertTrue(target2["c"] == 4)
@@ -483,10 +483,10 @@ class IsStatementTestCase(unittest.TestCase):
 
         stmt = Statement.from_instance(stmt)
 
-        self.assertFalse(stmt.run(None))
+        self.assertFalse(stmt.run(StatementScope(), None))
 
         target["X"] = 123
-        self.assertTrue(stmt.run(None))
+        self.assertTrue(stmt.run(StatementScope(), None))
 
     def test_variable_domain(self):
         network = Network()
@@ -504,10 +504,10 @@ class IsStatementTestCase(unittest.TestCase):
 
         stmt = Statement.from_instance(stmt)
 
-        self.assertFalse(stmt.run(varmap))
+        self.assertFalse(stmt.run(StatementScope(), varmap))
 
         target["X"] = 123
-        self.assertTrue(stmt.run(varmap))
+        self.assertTrue(stmt.run(StatementScope(), varmap))
 
     def test_variable_filler(self):
         network = Network()
@@ -525,10 +525,10 @@ class IsStatementTestCase(unittest.TestCase):
 
         stmt = Statement.from_instance(stmt)
 
-        self.assertFalse(stmt.run(varmap))
+        self.assertFalse(stmt.run(StatementScope(), varmap))
 
         target["X"] = 123
-        self.assertTrue(stmt.run(varmap))
+        self.assertTrue(stmt.run(StatementScope(), varmap))
 
 
 class MakeInstanceStatementTestCase(unittest.TestCase):
@@ -545,7 +545,7 @@ class MakeInstanceStatementTestCase(unittest.TestCase):
 
         target["WITH"] = [Literal("$A"), Literal("$B"), Literal("$C")]
 
-        instance = Statement.from_instance(makeinstance).run(None)
+        instance = Statement.from_instance(makeinstance).run(StatementScope(), None)
         self.assertTrue(instance.name() in graph)
         self.assertEqual(VariableMap(instance).resolve("$A"), 1)
         self.assertEqual(VariableMap(instance).resolve("$B"), 2)
@@ -553,7 +553,7 @@ class MakeInstanceStatementTestCase(unittest.TestCase):
 
         other = network.register("OTHER")
         makeinstance["IN"] = Literal("OTHER")
-        instance = Statement.from_instance(makeinstance).run(None)
+        instance = Statement.from_instance(makeinstance).run(StatementScope(), None)
         self.assertTrue(instance.name() in other)
 
     def test_raises_exception_on_mismatched_params(self):
@@ -566,7 +566,7 @@ class MakeInstanceStatementTestCase(unittest.TestCase):
         makeinstance["PARAMS"] = [1, 2, 3]
 
         with self.assertRaises(Exception):
-            Statement.from_instance(makeinstance).run(None)
+            Statement.from_instance(makeinstance).run(StatementScope(), None)
 
 
 class MeaningProcedureStatementTestCase(unittest.TestCase):
@@ -593,7 +593,7 @@ class MeaningProcedureStatementTestCase(unittest.TestCase):
         mp["PARAMS"] = [1, 2, 3]
         mp["X"] = 4
 
-        Statement.from_instance(mp).run(None)
+        Statement.from_instance(mp).run(StatementScope(), None)
 
         self.assertEqual(result, 10)
 
@@ -623,7 +623,7 @@ class MeaningProcedureStatementTestCase(unittest.TestCase):
         varmap = VariableMap(varmap)
         Variable.instance(graph, "$var", 3, varmap)
 
-        Statement.from_instance(mp).run(varmap)
+        Statement.from_instance(mp).run(StatementScope(), varmap)
 
         self.assertEqual(result, 10)
 
@@ -676,7 +676,7 @@ class CapabilityStatementTestCase(unittest.TestCase):
         cap["PARAMS"] = [1, 2, 3]
         cap["X"] = 4
 
-        Statement.from_instance(cap).run(None)
+        Statement.from_instance(cap).run(StatementScope(), None)
 
         self.assertEqual(result, 10)
 
@@ -709,7 +709,7 @@ class CapabilityStatementTestCase(unittest.TestCase):
         varmap = VariableMap(varmap)
         Variable.instance(graph, "$var", 3, varmap)
 
-        Statement.from_instance(cap).run(varmap)
+        Statement.from_instance(cap).run(StatementScope(), varmap)
 
         self.assertEqual(result, 10)
 
@@ -738,7 +738,7 @@ class CapabilityStatementTestCase(unittest.TestCase):
 
         varmap = graph.register("MY-VARMAP-TEST")
         varmap = VariableMap(varmap)
-        Statement.from_instance(cap).run(varmap)
+        Statement.from_instance(cap).run(StatementScope(), varmap)
 
         callback = graph.search(Frame.q(network).f("VARMAP", varmap.frame))[0]
         self.assertTrue(callback["CAPABILITY"] == c.frame)
@@ -812,13 +812,13 @@ class OutputXMRStatementTestCase(unittest.TestCase):
 
         varmap = self.g.register("MY-VARMAP-TEST")
         varmap = VariableMap(varmap)
-        output = stmt.run(varmap)
+        output = stmt.run(StatementScope(), varmap)
 
         self.assertIn("XMR#1", self.n)
         self.assertIsInstance(output, OutputXMR)
         self.assertIn(output.frame.name(), agent._graph)
 
-    def test_run_with_has_output(self):
+    def test_run_affects_scope(self):
         from backend.models.output import OutputXMR, OutputXMRTemplate
         from backend.models.statement import OutputXMRStatement
 
@@ -836,11 +836,10 @@ class OutputXMRStatementTestCase(unittest.TestCase):
 
         varmap = self.g.register("MY-VARMAP-TEST")
         varmap = VariableMap(varmap)
-        output = stmt.run(varmap, has_output=[agent, test1, test2])
+        scope = StatementScope()
+        output = stmt.run(scope, varmap)
 
-        self.assertEqual(output.frame, agent["HAS-OUTPUT"])
-        self.assertEqual(output.frame, test1["HAS-OUTPUT"])
-        self.assertEqual(output.frame, test2["HAS-OUTPUT"])
+        self.assertIn(output.frame, scope.outputs)
 
     def test_run_with_variables(self):
         from backend.models.output import OutputXMR, OutputXMRTemplate
@@ -861,7 +860,7 @@ class OutputXMRStatementTestCase(unittest.TestCase):
         varmap = VariableMap(varmap)
         Variable.instance(self.g, "$myvar", Literal("abc"), varmap)
 
-        output = stmt.run(varmap)
+        output = stmt.run(StatementScope(), varmap)
 
         fi = output.graph(self.n)["FRAME.1"]
         self.assertEqual(123, fi["PROP1"])

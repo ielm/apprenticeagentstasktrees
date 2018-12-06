@@ -1,7 +1,7 @@
 from backend.models.grammar import Grammar
 from backend.models.graph import Frame, Graph, Identifier, Literal
 from backend.models.query import Query
-from backend.models.statement import Statement, VariableMap
+from backend.models.statement import Statement, StatementScope, VariableMap
 from enum import Enum
 from functools import reduce
 from typing import Any, Dict, List, Tuple, Union
@@ -9,7 +9,8 @@ from typing import Any, Dict, List, Tuple, Union
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from backend.agent import Agent
-    from backend.models.effectors import Capability
+    from backend.models.effectors import Callback, Capability, Effector
+    from backend.models.output import OutputXMR
 
 
 class Agenda(object):
@@ -167,7 +168,7 @@ class Goal(VariableMap):
     def subgoals(self) -> List['Goal']:
         return list(map(lambda goal: Goal(goal.resolve()), self.frame["HAS-GOAL"]))
 
-    def priority(self, agent: 'Agent'):
+    def priority(self):
         try:
             stmt: Statement = Statement.from_instance(self.frame["PRIORITY"].singleton())
             priority = stmt.run(self)
@@ -192,7 +193,7 @@ class Goal(VariableMap):
             return self.frame["_PRIORITY"].singleton()
         return 0.0
 
-    def resources(self, agent: 'Agent'):
+    def resources(self):
         try:
             stmt: Statement = Statement.from_instance(self.frame["RESOURCES"].singleton())
             resources = stmt.run(self)
@@ -323,14 +324,14 @@ class Action(object):
         results = sorted(results, key=lambda s: s.index())
         return results
 
-    def perform(self, varmap: VariableMap, agent: Union[str, Identifier, Frame, 'Agent']=None, goal: Union[str, Identifier, Frame, Goal]=None):
+    def perform(self, varmap: VariableMap):
         steps = self.steps()
         steps = list(filter(lambda s: s.is_pending(), steps))
 
         if len(steps) == 0:
             return
 
-        steps[0].perform(varmap, agent=agent, goal=goal, action=self)
+        steps[0].perform(varmap)
 
         steps = list(filter(lambda s: s.is_pending(), steps))
         if len(steps) == 0 and self.name() != "find something to do":
@@ -425,44 +426,19 @@ class Step(object):
             capabilities.extend(stmt.capabilities(varmap))
         return capabilities
 
-    def perform(self, varmap: VariableMap, agent: Union[str, Identifier, Frame, 'Agent']=None, goal: Union[str, Identifier, Frame, Goal]=None, action: Union[str, Identifier, Frame, Action]=None):
+    def perform(self, varmap: VariableMap):
+        outputs = []
         for statement in self.frame["PERFORM"]:
             statement = statement.resolve()
             if statement == Step.IDLE:
                 pass
             if isinstance(statement, Frame) and statement ^ "EXE.STATEMENT":
-                Statement.from_instance(statement).run(varmap, has_output=self._build_has_output(agent=agent, goal=goal, action=action))
+                scope = StatementScope()
+                Statement.from_instance(statement).run(scope, varmap)
+                outputs.extend(scope.outputs)
         self.frame["STATUS"] = Step.Status.FINISHED
 
-    def _build_has_output(self, agent: Union[str, Identifier, Frame, 'Agent']=None, goal: Union[str, Identifier, Frame, Goal]=None, action: Union[str, Identifier, Frame, Action]=None):
-        from backend.agent import Agent
-
-        has_output = []
-
-        if agent is not None:
-            if isinstance(agent, str):
-                agent = Identifier.parse(agent)
-            if isinstance(agent, Agent):
-                agent = agent.identity
-            has_output.append(agent)
-
-        if goal is not None:
-            if isinstance(goal, str):
-                goal = Identifier.parse(goal)
-            if isinstance(goal, Goal):
-                goal = goal.frame
-            has_output.append(goal)
-
-        if action is not None:
-            if isinstance(action, str):
-                action = Identifier.parse(action)
-            if isinstance(action, Action):
-                action = action.frame._identifier
-            has_output.append(action)
-
-        has_output.append(self.frame)
-
-        return has_output
+        return outputs
 
     def __eq__(self, other):
         if isinstance(other, Step):
@@ -617,7 +593,7 @@ class Condition(object):
     def _assess_if(self, frame: Frame, varmap: VariableMap) -> bool:
         if not frame ^ "EXE.BOOLEAN-STATEMENT":
             raise Exception("IF statement is not a BOOLEAN-STATEMENT.")
-        return Statement.from_instance(frame).run(varmap)
+        return Statement.from_instance(frame).run(StatementScope(), varmap)
 
     def __eq__(self, other):
         if isinstance(other, Condition):
@@ -640,3 +616,132 @@ class Condition(object):
         s2 = list(map(lambda frame: Statement.from_instance(frame.resolve()), other.frame["IF"]))
 
         return s1 == s2
+
+
+class Decision(object):
+
+    class Status(Enum):
+        PENDING = "PENDING"
+        SELECTED = "SELECTED"
+        DECLINED = "DECLINED"
+        EXECUTING = "EXECUTING"
+        FINISHED = "FINISHED"
+
+    '''
+    EXE.DECISION = {
+      ON-GOAL       ^EXE.GOAL;
+      ON-PLAN       ^EXE.ACTION;
+      ON-STEP       ^EXE.STEP;
+      HAS-OUTPUT*   ^EXE.XMR;
+      HAS-PRIORITY? Literal(dbl);
+      HAS-COST?     Literal(dbl);
+      REQUIRES*     ^EXE.CAPABILITY;
+      STATUS        Literal(str[PENDING | SELECTED | DECLINED | EXECUTING | FINISHED])
+      HAS-CALLBACK* ^EXE.CALLBACK;
+    }
+    '''
+
+    @classmethod
+    def build(cls, graph: Graph, goal: Union[str, Identifier, Frame, Goal], plan: Union[str, Identifier, Frame, Action], step: Union[str, Identifier, Frame, Step]) -> 'Decision':
+        if isinstance(goal, Goal):
+            goal = goal.frame
+        if isinstance(plan, Action):
+            plan = plan.frame
+        if isinstance(step, Step):
+            step = step.frame
+
+        decision = graph.register("DECISION", isa="EXE.DECISION", generate_index=True)
+        decision["ON-GOAL"] = goal
+        decision["ON-PLAN"] = plan
+        decision["ON-STEP"] = step
+        decision["STATUS"] = Decision.Status.PENDING
+
+        return Decision(decision)
+
+    def __init__(self, frame: Frame):
+        self.frame = frame
+
+    def goal(self) -> Goal:
+        return Goal(self.frame["ON-GOAL"].singleton())
+
+    def plan(self) -> Action:
+        return Action(self.frame["ON-PLAN"].singleton())
+
+    def step(self) -> Step:
+        return Step(self.frame["ON-STEP"].singleton())
+
+    def outputs(self) -> List['OutputXMR']:
+        from backend.models.output import OutputXMR
+        return list(map(lambda output: OutputXMR(output.resolve()), self.frame["HAS-OUTPUT"]))
+
+    def priority(self) -> Union[float, None]:
+        if "HAS-PRIORITY" not in self.frame:
+            return None
+        return self.frame["HAS-PRIORITY"].singleton()
+
+    def cost(self) -> Union[float, None]:
+        if "HAS-COST" not in self.frame:
+            return None
+        return self.frame["HAS-COST"].singleton()
+
+    def requires(self) -> List['Capability']:
+        from backend.models.effectors import Capability
+        return list(map(lambda capability: Capability(capability.resolve()), self.frame["REQUIRES"]))
+
+    def status(self) -> 'Decision.Status':
+        if "STATUS" not in self.frame:
+            return Decision.Status.PENDING
+        return self.frame["STATUS"].singleton()
+
+    def effectors(self) -> List['Effector']:
+        from backend.models.effectors import Effector
+        return list(map(lambda effector: Effector(effector.resolve()), self.frame["HAS-EFFECTOR"]))
+
+    def callbacks(self) -> List['Callback']:
+        from backend.models.effectors import Callback
+        return list(map(lambda callback: Callback(callback.resolve()), self.frame["HAS-CALLBACK"]))
+
+    def select(self):
+        self.frame["STATUS"] = Decision.Status.SELECTED
+
+    def decline(self):
+        self.frame["STATUS"] = Decision.Status.DECLINED
+
+    def inspect(self):
+        self._generate_outputs()
+        self._calculate_priority()
+        self._calculate_cost()
+
+    def _generate_outputs(self):
+        self.frame["HAS-OUTPUT"] = self.step().perform(self.goal())
+
+    def _calculate_priority(self):
+        self.frame["HAS-PRIORITY"] = self.goal().priority()
+
+    def _calculate_cost(self):
+        self.frame["HAS-COST"] = self.goal().resources()
+
+    def execute(self, effectors: List['Effector']):
+        from backend.models.effectors import Callback
+
+        self.frame["STATUS"] = Decision.Status.EXECUTING
+
+        for effector in effectors:
+            self.frame["HAS-EFFECTOR"] += effector.frame
+
+        for effector in effectors:
+            callback = Callback.build(self.frame._graph, self, effector)
+            self.frame["HAS-CALLBACK"] += callback.frame
+
+            effector.on_capability().run(effector.on_output(), callback)
+
+    def callback_received(self, callback: 'Callback'):
+        self.frame["HAS-EFFECTOR"] -= callback.effector().frame
+        self.frame["HAS-CALLBACK"] -= callback.frame
+
+    def __eq__(self, other):
+        if isinstance(other, Decision):
+            return self.frame == other.frame
+        if isinstance(other, Frame):
+            return self.frame == other
+        return super().__eq__(other)

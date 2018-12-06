@@ -1,6 +1,6 @@
-from backend.models.agenda import Action, Agenda, Condition, Goal, Step, Trigger
+from backend.models.agenda import Action, Agenda, Condition, Decision, Goal, Step, Trigger
 from backend.models.graph import Frame, Graph, Literal, Network
-from backend.models.statement import Statement, VariableMap
+from backend.models.statement import Statement, StatementScope, VariableMap
 
 import unittest
 
@@ -208,7 +208,7 @@ class GoalTestCase(unittest.TestCase):
         f["PRIORITY"] = 0.5
 
         goal = Goal(f)
-        self.assertEqual(goal.priority(None), 0.5)
+        self.assertEqual(goal.priority(), 0.5)
         self.assertTrue(f["_PRIORITY"] == 0.5)
 
     def test_priority_calculation(self):
@@ -224,7 +224,7 @@ class GoalTestCase(unittest.TestCase):
         f["PRIORITY"] = statement
 
         goal = Goal(f)
-        self.assertEqual(goal.priority(None), 0.5)
+        self.assertEqual(goal.priority(), 0.5)
         self.assertTrue(f["_PRIORITY"] == 0.5)
 
     def test_priority(self):
@@ -232,7 +232,7 @@ class GoalTestCase(unittest.TestCase):
         f = graph.register("GOAL.1")
 
         goal = Goal(f)
-        self.assertEqual(0.0, goal.priority(None))
+        self.assertEqual(0.0, goal.priority())
         self.assertTrue(f["_PRIORITY"] == 0.0)
 
     def test_cached_priority(self):
@@ -241,7 +241,7 @@ class GoalTestCase(unittest.TestCase):
 
         goal = Goal(f)
         self.assertEqual(0.0, goal._cached_priority())
-        self.assertEqual(0.0, goal.priority(None))
+        self.assertEqual(0.0, goal.priority())
         self.assertEqual(0.0, goal._cached_priority())
 
     def test_resources_numeric(self):
@@ -251,7 +251,7 @@ class GoalTestCase(unittest.TestCase):
         f["RESOURCES"] = 0.5
 
         goal = Goal(f)
-        self.assertEqual(goal.resources(None), 0.5)
+        self.assertEqual(goal.resources(), 0.5)
         self.assertTrue(f["_RESOURCES"] == 0.5)
 
     def test_resources_calculation(self):
@@ -267,7 +267,7 @@ class GoalTestCase(unittest.TestCase):
         f["RESOURCES"] = statement
 
         goal = Goal(f)
-        self.assertEqual(goal.resources(None), 0.5)
+        self.assertEqual(goal.resources(), 0.5)
         self.assertTrue(f["_RESOURCES"] == 0.5)
 
     def test_resources(self):
@@ -275,7 +275,7 @@ class GoalTestCase(unittest.TestCase):
         f = graph.register("GOAL.1")
 
         goal = Goal(f)
-        self.assertEqual(1.0, goal.resources(None))
+        self.assertEqual(1.0, goal.resources())
         self.assertTrue(f["_RESOURCES"] == 1.0)
 
     def test_cached_resources(self):
@@ -284,7 +284,7 @@ class GoalTestCase(unittest.TestCase):
 
         goal = Goal(f)
         self.assertEqual(1.0, goal._cached_resources())
-        self.assertEqual(1.0, goal.resources(None))
+        self.assertEqual(1.0, goal.resources())
         self.assertEqual(1.0, goal._cached_resources())
 
     def test_assign_decision(self):
@@ -561,7 +561,7 @@ class ConditionTestCase(unittest.TestCase):
     def test_assess_if(self):
 
         class TestStatement(Statement):
-            def run(self, varmap: VariableMap):
+            def run(self, scope: StatementScope,  varmap: VariableMap):
                 return True
 
         graph = Statement.hierarchy()
@@ -579,11 +579,11 @@ class ConditionTestCase(unittest.TestCase):
         result2 = True
 
         class TestStatement1(Statement):
-            def run(self, varmap: VariableMap):
+            def run(self, scope: StatementScope, varmap: VariableMap):
                 return result1
 
         class TestStatement2(Statement):
-            def run(self, varmap: VariableMap):
+            def run(self, scope: StatementScope,  varmap: VariableMap):
                 return result2
 
         graph = Statement.hierarchy()
@@ -610,11 +610,11 @@ class ConditionTestCase(unittest.TestCase):
         result2 = True
 
         class TestStatement1(Statement):
-            def run(self, varmap: VariableMap):
+            def run(self, scope: StatementScope,  varmap: VariableMap):
                 return result1
 
         class TestStatement2(Statement):
-            def run(self, varmap: VariableMap):
+            def run(self, scope: StatementScope,  varmap: VariableMap):
                 return result2
 
         graph = Statement.hierarchy()
@@ -641,11 +641,11 @@ class ConditionTestCase(unittest.TestCase):
         result2 = True
 
         class TestStatement1(Statement):
-            def run(self, varmap: VariableMap):
+            def run(self, scope: StatementScope,  varmap: VariableMap):
                 return result1
 
         class TestStatement2(Statement):
-            def run(self, varmap: VariableMap):
+            def run(self, scope: StatementScope,  varmap: VariableMap):
                 return result2
 
         graph = Statement.hierarchy()
@@ -677,11 +677,11 @@ class ConditionTestCase(unittest.TestCase):
         result2 = True
 
         class TestStatement1(Statement):
-            def run(self, varmap: VariableMap):
+            def run(self, scope: StatementScope,  varmap: VariableMap):
                 return result1
 
         class TestStatement2(Statement):
-            def run(self, varmap: VariableMap):
+            def run(self, scope: StatementScope,  varmap: VariableMap):
                 return result2
 
         graph = Statement.hierarchy()
@@ -713,11 +713,11 @@ class ConditionTestCase(unittest.TestCase):
         result2 = True
 
         class TestStatement1(Statement):
-            def run(self, varmap: VariableMap):
+            def run(self, scope: StatementScope,  varmap: VariableMap):
                 return result1
 
         class TestStatement2(Statement):
-            def run(self, varmap: VariableMap):
+            def run(self, scope: StatementScope,  varmap: VariableMap):
                 return result2
 
         graph = Statement.hierarchy()
@@ -752,7 +752,7 @@ class ConditionTestCase(unittest.TestCase):
     def test_assess_with_varmap(self):
 
         class TestStatement(Statement):
-            def run(self, varmap: VariableMap):
+            def run(self, scope: StatementScope,  varmap: VariableMap):
                 return varmap.resolve("X")
 
         graph = Statement.hierarchy()
@@ -1048,13 +1048,11 @@ class StepTestCase(unittest.TestCase):
 
         self.assertEqual(out, ["X", "Y"])
 
-    def test_perform_with_has_outputs(self):
-        out = []
+    def test_perform_returns_outputs(self):
 
         class TestStatement(Statement):
-            def run(self, varmap: VariableMap, *args, **kwargs):
-                nonlocal out
-                out = kwargs["has_output"]
+            def run(self, scope: StatementScope(), varmap: VariableMap):
+                scope.outputs.append(123)
 
         graph = Statement.hierarchy()
 
@@ -1067,23 +1065,14 @@ class StepTestCase(unittest.TestCase):
         graph["STATEMENT"]["CLASSMAP"] = Literal(TestStatement)
         step["PERFORM"] = [statement]
 
-        Step(step).perform(VariableMap(graph.register("VARMAP")))
-        self.assertEqual([step], out)
-
-        Step(step).perform(VariableMap(graph.register("VARMAP")), action=action)
-        self.assertEqual([action, step], out)
-
-        Step(step).perform(VariableMap(graph.register("VARMAP")), action=action, goal=goal)
-        self.assertEqual([goal, action, step], out)
-
-        Step(step).perform(VariableMap(graph.register("VARMAP")), action=action, goal=goal, agent=agent)
-        self.assertEqual([agent, goal, action, step], out)
+        outputs = Step(step).perform(VariableMap(graph.register("VARMAP")))
+        self.assertEqual([123], outputs)
 
     def test_perform_with_variables(self):
         out = []
 
         class TestStatement(Statement):
-            def run(self, varmap: VariableMap, *args, **kwargs):
+            def run(self, scope: StatementScope(), varmap: VariableMap):
                 nonlocal out
                 out.append(varmap.resolve("X"))
 
@@ -1135,3 +1124,283 @@ class StepTestCase(unittest.TestCase):
         step = Step.build(graph, 1, [stmt1, stmt3])
 
         self.assertEqual([cap1, cap2], step.capabilities(None))
+
+
+class DecisionTestCase(unittest.TestCase):
+
+    def setUp(self):
+        self.n = Network()
+        self.g = self.n.register("TEST")
+
+    def test_goal(self):
+        goal = self.g.register("GOAL")
+
+        decision = self.g.register("DECISION")
+        decision["ON-GOAL"] = goal
+
+        self.assertEqual(goal, Decision(decision).goal())
+
+    def test_plan(self):
+        plan = self.g.register("PLAN")
+
+        decision = self.g.register("DECISION")
+        decision["ON-PLAN"] = plan
+
+        self.assertEqual(plan, Decision(decision).plan())
+
+    def test_step(self):
+        step = self.g.register("STEP")
+
+        decision = self.g.register("DECISION")
+        decision["ON-STEP"] = step
+
+        self.assertEqual(step, Decision(decision).step())
+
+    def test_outputs(self):
+        decision = self.g.register("DECISION")
+
+        self.assertEqual([], Decision(decision).outputs())
+
+        output1 = self.g.register("XMR", generate_index=True)
+        output2 = self.g.register("XMR", generate_index=True)
+
+        decision["HAS-OUTPUT"] += output1
+        decision["HAS-OUTPUT"] += output2
+
+        self.assertEqual([output1, output2], Decision(decision).outputs())
+
+    def test_priority(self):
+        decision = self.g.register("DECISION")
+
+        self.assertEqual(None, Decision(decision).priority())
+
+        decision["HAS-PRIORITY"] = 0.5
+
+        self.assertEqual(0.5, Decision(decision).priority())
+
+    def test_cost(self):
+        decision = self.g.register("DECISION")
+
+        self.assertEqual(None, Decision(decision).cost())
+
+        decision["HAS-COST"] = 0.5
+
+        self.assertEqual(0.5, Decision(decision).cost())
+
+    def test_requires(self):
+        decision = self.g.register("DECISION")
+
+        self.assertEqual([], Decision(decision).requires())
+
+        capability1 = self.g.register("CAPABILITY", generate_index=True)
+        capability2 = self.g.register("CAPABILITY", generate_index=True)
+
+        decision["REQUIRES"] += capability1
+        decision["REQUIRES"] += capability2
+
+        self.assertEqual([capability1, capability2], Decision(decision).requires())
+
+    def test_status(self):
+        decision = self.g.register("DECISION")
+
+        self.assertEqual(Decision.Status.PENDING, Decision(decision).status())
+
+        decision["STATUS"] = Decision.Status.SELECTED
+
+        self.assertEqual(Decision.Status.SELECTED, Decision(decision).status())
+
+    def test_effectors(self):
+        decision = self.g.register("DECISION")
+
+        self.assertEqual([], Decision(decision).effectors())
+
+        effector1 = self.g.register("EFFECTOR", generate_index=True)
+        effector2 = self.g.register("EFFECTOR", generate_index=True)
+
+        decision["HAS-EFFECTOR"] += effector1
+        decision["HAS-EFFECTOR"] += effector2
+
+        self.assertEqual([effector1, effector2], Decision(decision).effectors())
+
+    def test_callbacks(self):
+        decision = self.g.register("DECISION")
+
+        self.assertEqual([], Decision(decision).callbacks())
+
+        callback1 = self.g.register("CALLBACK", generate_index=True)
+        callback2 = self.g.register("CALLBACK", generate_index=True)
+
+        decision["HAS-CALLBACK"] += callback1
+        decision["HAS-CALLBACK"] += callback2
+
+        self.assertEqual([callback1, callback2], Decision(decision).callbacks())
+
+    def test_build(self):
+        goal = self.g.register("GOAL")
+        plan = self.g.register("PLAN")
+        step = self.g.register("STEP")
+
+        decision = Decision.build(self.g, goal, plan, step)
+
+        self.assertEqual(goal, decision.goal())
+        self.assertEqual(plan, decision.plan())
+        self.assertEqual(step, decision.step())
+        self.assertEqual([], decision.outputs())
+        self.assertEqual(None, decision.priority())
+        self.assertEqual(None, decision.cost())
+        self.assertEqual([], decision.requires())
+        self.assertEqual(Decision.Status.PENDING, decision.status())
+        self.assertEqual([], decision.callbacks())
+
+    def test_generate_outputs(self):
+        from backend.models.output import OutputXMRTemplate
+        from backend.models.statement import OutputXMRStatement
+
+        self.n.register(Statement.hierarchy())
+
+        agent = self.g.register("AGENT")
+        capability = self.g.register("CAPABILITY")
+
+        template = OutputXMRTemplate.build(self.n, "test-template", OutputXMRTemplate.Type.PHYSICAL, capability, [])
+        statement = OutputXMRStatement.instance(self.g, template, [], agent)
+        goal = Goal(self.g.register("GOAL"))
+        step = Step.build(self.g, 1, statement)
+
+        decision = Decision.build(self.g, goal, "TEST-PLAN", step)
+
+        self.assertEqual([], decision.outputs())
+
+        decision._generate_outputs()
+
+        self.assertEqual([self.n.lookup("TEST.XMR.1")], decision.outputs())
+
+    def test_calculate_priority(self):
+        definition = Goal.define(self.g, "TEST-GOAL", 1.0, 0.0, [], [], [])
+        goal = Goal.instance_of(self.g, definition, [])
+
+        decision = Decision.build(self.g, goal, "TEST.PLAN", "TEST.STEP")
+
+        self.assertIsNone(decision.priority())
+
+        decision._calculate_priority()
+
+        self.assertEqual(1.0, decision.priority())
+
+    def test_calculate_cost(self):
+        definition = Goal.define(self.g, "TEST-GOAL", 0.0, 1.0, [], [], [])
+        goal = Goal.instance_of(self.g, definition, [])
+
+        decision = Decision.build(self.g, goal, "TEST.PLAN", "TEST.STEP")
+
+        self.assertIsNone(decision.cost())
+
+        decision._calculate_cost()
+
+        self.assertEqual(1.0, decision.cost())
+
+    def test_inspect(self):
+        from unittest.mock import MagicMock
+
+        decision = Decision(None)
+        decision._generate_outputs = MagicMock()
+        decision._calculate_priority = MagicMock()
+        decision._calculate_cost = MagicMock()
+
+        decision.inspect()
+        decision._generate_outputs.assert_called_once()
+        decision._calculate_priority.assert_called_once()
+        decision._calculate_cost.assert_called_once()
+
+    def test_select(self):
+        decision = Decision.build(self.g, "TEST.GOAL", "TEST.PLAN", "TEST.STEP")
+        self.assertEqual(Decision.Status.PENDING, decision.status())
+
+        decision.select()
+        self.assertEqual(Decision.Status.SELECTED, decision.status())
+
+    def test_decline(self):
+        decision = Decision.build(self.g, "TEST.GOAL", "TEST.PLAN", "TEST.STEP")
+        self.assertEqual(Decision.Status.PENDING, decision.status())
+
+        decision.decline()
+        self.assertEqual(Decision.Status.DECLINED, decision.status())
+
+    def test_execute(self):
+        from backend.models.effectors import Capability, Effector
+        from backend.models.mps import MPRegistry, OutputMethod
+        from backend.models.output import OutputXMR, OutputXMRTemplate
+
+        out = False
+
+        class TestMP(OutputMethod):
+            def run(self):
+                nonlocal out
+                out = True
+
+        MPRegistry.register(TestMP)
+        capability = Capability.instance(self.g, "CAPABILITY", "TestMP")
+        output = OutputXMR.build(self.g, OutputXMRTemplate.Type.PHYSICAL, capability, "OUTPUT-XMR")
+
+        decision = Decision.build(self.g, "GOAL", "PLAN", "STEP")
+        decision.frame["HAS-OUTPUT"] += output.frame
+
+        effector = Effector.instance(self.g, Effector.Type.PHYSICAL, [capability])
+        effector.reserve(decision, output, capability)
+
+        decision.execute([effector])
+
+        self.assertTrue(out)
+        self.assertIn(effector, decision.effectors())
+        self.assertEqual(Decision.Status.EXECUTING, decision.status())
+
+    def test_creates_callback(self):
+        from backend.models.effectors import Callback, Capability, Effector
+        from backend.models.mps import MPRegistry, OutputMethod
+        from backend.models.output import OutputXMR, OutputXMRTemplate
+
+        class TestMP(OutputMethod):
+            def run(self): pass
+
+        MPRegistry.register(TestMP)
+        capability = Capability.instance(self.g, "CAPABILITY", "TestMP")
+        output = OutputXMR.build(self.g, OutputXMRTemplate.Type.PHYSICAL, capability, "OUTPUT-XMR")
+
+        decision = Decision.build(self.g, "GOAL", "PLAN", "STEP")
+        decision.frame["HAS-OUTPUT"] += output.frame
+
+        effector = Effector.instance(self.g, Effector.Type.PHYSICAL, [capability])
+        effector.reserve(decision, output, capability)
+
+        decision.execute([effector])
+
+        callback = self.g["CALLBACK.1"]
+        self.assertIn(callback, decision.callbacks())
+        self.assertEqual(decision, Callback(callback).decision())
+        self.assertEqual(effector, Callback(callback).effector())
+
+    def test_callback_received(self):
+        from backend.models.effectors import Callback, Capability, Effector
+        from backend.models.mps import MPRegistry, OutputMethod
+        from backend.models.output import OutputXMR, OutputXMRTemplate
+
+        class TestMP(OutputMethod):
+            def run(self): pass
+
+        MPRegistry.register(TestMP)
+        capability = Capability.instance(self.g, "CAPABILITY", "TestMP")
+        output = OutputXMR.build(self.g, OutputXMRTemplate.Type.PHYSICAL, capability, "OUTPUT-XMR")
+
+        decision = Decision.build(self.g, "GOAL", "PLAN", "STEP")
+        decision.frame["HAS-OUTPUT"] += output.frame
+
+        effector = Effector.instance(self.g, Effector.Type.PHYSICAL, [capability])
+        effector.reserve(decision, output, capability)
+
+        callback = Callback.build(self.g, decision, effector)
+
+        decision.frame["HAS-EFFECTOR"] = effector.frame
+        decision.frame["HAS-CALLBACK"] = callback.frame
+
+        decision.callback_received(callback)
+        self.assertNotIn(effector, decision.effectors())
+        self.assertNotIn(callback, decision.callbacks())

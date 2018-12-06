@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from backend.agent import Agent
     from backend.models.effectors import Callback, Capability
+    from backend.models.output import OutputXMR
     from backend.models.statement import CapabilityStatement, Statement
 
 import sys
@@ -18,7 +19,7 @@ class Registry(object):
     def has_mp(self, name: str) -> bool:
         return name in self._storage
 
-    def register(self, mp: 'AgentMethod', name: str=None):
+    def register(self, mp: Union['AgentMethod', 'OutputMethod'], name: str=None):
         if name is None:
             name = mp.__name__
 
@@ -36,6 +37,11 @@ class Registry(object):
         if mp not in self._storage:
             raise Exception("Unknown meaning procedure '" + mp + "'.")
         return self._storage[mp](agent, statement=statement, callback=callback)
+
+    def output(self, mp: str, output: 'OutputXMR', callback: 'Callback'):
+        if mp not in self._storage:
+            raise Exception("Unknown meaning procedure '" + mp + "'.")
+        self._storage[mp](output, callback)()
 
     def clear(self):
         self._storage = dict()
@@ -57,6 +63,19 @@ class AgentMethod(object):
 
     def __call__(self, *args, **kwargs):
         return self.run(*args, **kwargs)
+
+
+class OutputMethod(object):
+
+    def __init__(self, output: 'OutputXMR', callback: 'Callback'):
+        self.output = output
+        self.callback = callback
+
+    def run(self):
+        raise Exception("OutputMethod.run() must be implemented.")
+
+    def __call__(self, *args, **kwargs):
+        return self.run()
 
 
 class Executable(object):
