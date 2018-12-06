@@ -221,7 +221,7 @@ class AgentTestCase(unittest.TestCase):
         found_goal = False
 
         class TestStatement(Statement):
-            def run(self, varmap: VariableMap):
+            def run(self, varmap: VariableMap, *args, **kwargs):
                 nonlocal ran
                 ran = True
 
@@ -256,7 +256,7 @@ class AgentTestCase(unittest.TestCase):
     def test_idea_assess(self):
 
         class TestStatement(Statement):
-            def run(self, varmap: VariableMap):
+            def run(self, varmap: VariableMap, *args, **kwargs):
                 return True
 
         graph = self.agent.internal

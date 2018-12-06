@@ -323,14 +323,14 @@ class Action(object):
         results = sorted(results, key=lambda s: s.index())
         return results
 
-    def perform(self, varmap: VariableMap):
+    def perform(self, varmap: VariableMap, agent: Union[str, Identifier, Frame, 'Agent']=None, goal: Union[str, Identifier, Frame, Goal]=None):
         steps = self.steps()
         steps = list(filter(lambda s: s.is_pending(), steps))
 
         if len(steps) == 0:
             return
 
-        steps[0].perform(varmap)
+        steps[0].perform(varmap, agent=agent, goal=goal, action=self)
 
         steps = list(filter(lambda s: s.is_pending(), steps))
         if len(steps) == 0 and self.name() != "find something to do":
@@ -425,14 +425,44 @@ class Step(object):
             capabilities.extend(stmt.capabilities(varmap))
         return capabilities
 
-    def perform(self, varmap: VariableMap):
+    def perform(self, varmap: VariableMap, agent: Union[str, Identifier, Frame, 'Agent']=None, goal: Union[str, Identifier, Frame, Goal]=None, action: Union[str, Identifier, Frame, Action]=None):
         for statement in self.frame["PERFORM"]:
             statement = statement.resolve()
             if statement == Step.IDLE:
                 pass
             if isinstance(statement, Frame) and statement ^ "EXE.STATEMENT":
-                Statement.from_instance(statement).run(varmap)
+                Statement.from_instance(statement).run(varmap, has_output=self._build_has_output(agent=agent, goal=goal, action=action))
         self.frame["STATUS"] = Step.Status.FINISHED
+
+    def _build_has_output(self, agent: Union[str, Identifier, Frame, 'Agent']=None, goal: Union[str, Identifier, Frame, Goal]=None, action: Union[str, Identifier, Frame, Action]=None):
+        from backend.agent import Agent
+
+        has_output = []
+
+        if agent is not None:
+            if isinstance(agent, str):
+                agent = Identifier.parse(agent)
+            if isinstance(agent, Agent):
+                agent = agent.identity
+            has_output.append(agent)
+
+        if goal is not None:
+            if isinstance(goal, str):
+                goal = Identifier.parse(goal)
+            if isinstance(goal, Goal):
+                goal = goal.frame
+            has_output.append(goal)
+
+        if action is not None:
+            if isinstance(action, str):
+                action = Identifier.parse(action)
+            if isinstance(action, Action):
+                action = action.frame._identifier
+            has_output.append(action)
+
+        has_output.append(self.frame)
+
+        return has_output
 
     def __eq__(self, other):
         if isinstance(other, Step):

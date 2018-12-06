@@ -213,7 +213,7 @@ class GoalTestCase(unittest.TestCase):
 
     def test_priority_calculation(self):
         class TestStatement(Statement):
-            def run(self, varmap: VariableMap):
+            def run(self, varmap: VariableMap, *args, **kwargs):
                 return 0.5
 
         graph = Statement.hierarchy()
@@ -256,7 +256,7 @@ class GoalTestCase(unittest.TestCase):
 
     def test_resources_calculation(self):
         class TestStatement(Statement):
-            def run(self, varmap: VariableMap):
+            def run(self, varmap: VariableMap, *args, **kwargs):
                 return 0.5
 
         graph = Statement.hierarchy()
@@ -319,7 +319,7 @@ class GoalTestCase(unittest.TestCase):
     def test_assess(self):
 
         class TestStatement(Statement):
-            def run(self, varmap: VariableMap):
+            def run(self, varmap: VariableMap, *args, **kwargs):
                 return True
 
         graph = Statement.hierarchy()
@@ -786,7 +786,7 @@ class ActionTestCase(unittest.TestCase):
         result = True
 
         class TestStatement(Statement):
-            def run(self, varmap: VariableMap):
+            def run(self, varmap: VariableMap, *args, **kwargs):
                 return result
 
         graph = Statement.hierarchy()
@@ -805,7 +805,7 @@ class ActionTestCase(unittest.TestCase):
     def test_select_with_variable(self):
 
         class TestStatement(Statement):
-            def run(self, varmap: VariableMap):
+            def run(self, varmap: VariableMap, *args, **kwargs):
                 return varmap.resolve("X")
 
         graph = Statement.hierarchy()
@@ -861,7 +861,7 @@ class ActionTestCase(unittest.TestCase):
         out = None
 
         class TestStatement(Statement):
-            def run(self, varmap: VariableMap):
+            def run(self, varmap: VariableMap, *args, **kwargs):
                 nonlocal out
                 out = 123
 
@@ -884,7 +884,7 @@ class ActionTestCase(unittest.TestCase):
         out = 0
 
         class TestStatement(Statement):
-            def run(self, varmap: VariableMap):
+            def run(self, varmap: VariableMap, *args, **kwargs):
                 nonlocal out
                 out += 1
 
@@ -1030,7 +1030,7 @@ class StepTestCase(unittest.TestCase):
         out = []
 
         class TestStatement(Statement):
-            def run(self, varmap: VariableMap):
+            def run(self, varmap: VariableMap, *args, **kwargs):
                 nonlocal out
                 out.append(self.frame["LOCAL"][0].resolve().value)
 
@@ -1048,11 +1048,42 @@ class StepTestCase(unittest.TestCase):
 
         self.assertEqual(out, ["X", "Y"])
 
+    def test_perform_with_has_outputs(self):
+        out = []
+
+        class TestStatement(Statement):
+            def run(self, varmap: VariableMap, *args, **kwargs):
+                nonlocal out
+                out = kwargs["has_output"]
+
+        graph = Statement.hierarchy()
+
+        agent = graph.register("AGENT")
+        goal = graph.register("GOAL")
+        action = graph.register("ACTION")
+        step = graph.register("STEP")
+
+        statement = graph.register("STATEMENT", generate_index=True, isa="EXE.STATEMENT")
+        graph["STATEMENT"]["CLASSMAP"] = Literal(TestStatement)
+        step["PERFORM"] = [statement]
+
+        Step(step).perform(VariableMap(graph.register("VARMAP")))
+        self.assertEqual([step], out)
+
+        Step(step).perform(VariableMap(graph.register("VARMAP")), action=action)
+        self.assertEqual([action, step], out)
+
+        Step(step).perform(VariableMap(graph.register("VARMAP")), action=action, goal=goal)
+        self.assertEqual([goal, action, step], out)
+
+        Step(step).perform(VariableMap(graph.register("VARMAP")), action=action, goal=goal, agent=agent)
+        self.assertEqual([agent, goal, action, step], out)
+
     def test_perform_with_variables(self):
         out = []
 
         class TestStatement(Statement):
-            def run(self, varmap: VariableMap):
+            def run(self, varmap: VariableMap, *args, **kwargs):
                 nonlocal out
                 out.append(varmap.resolve("X"))
 

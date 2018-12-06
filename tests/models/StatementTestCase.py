@@ -817,7 +817,30 @@ class OutputXMRStatementTestCase(unittest.TestCase):
         self.assertIn("XMR#1", self.n)
         self.assertIsInstance(output, OutputXMR)
         self.assertIn(output.frame.name(), agent._graph)
+
+    def test_run_with_has_output(self):
+        from backend.models.output import OutputXMR, OutputXMRTemplate
+        from backend.models.statement import OutputXMRStatement
+
+        self.g.register("CAPABILITY")
+
+        template = OutputXMRTemplate.build(self.n, "test-template", OutputXMRTemplate.Type.PHYSICAL, "EXE.CAPABILITY",
+                                           [])
+        agent = self.g.register("AGENT")
+        test1 = self.g.register("TEST1")
+        test2 = self.g.register("TEST2")
+
+        stmt = OutputXMRStatement.instance(self.g, template, [], agent)
+
+        self.assertNotIn("XMR#1", self.n)
+
+        varmap = self.g.register("MY-VARMAP-TEST")
+        varmap = VariableMap(varmap)
+        output = stmt.run(varmap, has_output=[agent, test1, test2])
+
         self.assertEqual(output.frame, agent["HAS-OUTPUT"])
+        self.assertEqual(output.frame, test1["HAS-OUTPUT"])
+        self.assertEqual(output.frame, test2["HAS-OUTPUT"])
 
     def test_run_with_variables(self):
         from backend.models.output import OutputXMR, OutputXMRTemplate

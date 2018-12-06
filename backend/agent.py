@@ -220,7 +220,7 @@ class Agent(Network):
     def _execute(self):
         for action in self.agenda().action():
             goal = list(filter(lambda g: action.frame in g.frame["PLAN"], self.agenda().goals()))[0]
-            action.perform(goal)
+            action.perform(goal, agent=self, goal=goal)
         if "ACTION-TO-TAKE" in self.agenda().frame:
             del self.agenda().frame["ACTION-TO-TAKE"]
 
