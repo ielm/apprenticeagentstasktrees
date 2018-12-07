@@ -1,5 +1,5 @@
 from backend.contexts.LCTContext import LCTContext
-from backend.models.agenda import Agenda, Decision, Goal
+from backend.models.agenda import Agenda, Decision, Step
 from backend.models.effectors import Callback, Effector
 from backend.models.environment import Environment
 from backend.models.fr import FR
@@ -218,59 +218,81 @@ class Agent(Network):
             else:
                 decision.decline()
 
-    def _decision(self):
-        agenda = self.agenda()
-
-        priority_weight = self.identity["PRIORITY_WEIGHT"].singleton()
-        resources_weight = self.identity["RESOURCES_WEIGHT"].singleton()
-
-        goals = agenda.goals(pending=True, active=True)
-        for goal in goals:
-            _priority = goal.priority(self)
-            _resources = goal.resources(self)
-            _decision = (_priority * priority_weight) - (_resources * resources_weight)
-            goal.decision(decide=_decision)
-
-        ordered = sorted(goals, key=lambda g: g.decision(), reverse=True)
-        effectors = self.effectors()
-
-        for goal in ordered:
-            action = goal.plan()
-            capabilities = action.capabilities(goal)
-
-            assigned_effectors = []
-            for capability in capabilities:
-                for effector in filter(lambda e: e.is_free() and not e in assigned_effectors, effectors):
-                    if capability in effector.capabilities():
-                        assigned_effectors.append(effector)
-                        break
-
-            if len(capabilities) != len(assigned_effectors):
-                continue
-
-            goal.status(Goal.Status.ACTIVE)
-            agenda.prepare_action(action)
-
-            for i, effector in enumerate(assigned_effectors):
-                effector.reserve(goal, capabilities[i])
-
-        # TODO: this should be at the top; it is moved down here temporarily as the Jan2019 test case will need
-        # to be changed to handle triggers at the top (because, if a trigger creates a goal prior to decision,
-        # that goal may be selected and executed in that loop - in the case of 2019, this causes acknowledge input
-        # to always be one loop ahead - not actually a problem, but the test is too specific and will fail as a
-        # result); therefore, fix the test and move this to where it should be
-        agenda.fire_triggers()
+    # def _decision(self):
+    #     agenda = self.agenda()
+    #
+    #     priority_weight = self.identity["PRIORITY_WEIGHT"].singleton()
+    #     resources_weight = self.identity["RESOURCES_WEIGHT"].singleton()
+    #
+    #     goals = agenda.goals(pending=True, active=True)
+    #     for goal in goals:
+    #         _priority = goal.priority(self)
+    #         _resources = goal.resources(self)
+    #         _decision = (_priority * priority_weight) - (_resources * resources_weight)
+    #         goal.decision(decide=_decision)
+    #
+    #     ordered = sorted(goals, key=lambda g: g.decision(), reverse=True)
+    #     effectors = self.effectors()
+    #
+    #     for goal in ordered:
+    #         action = goal.plan()
+    #         capabilities = action.capabilities(goal)
+    #
+    #         assigned_effectors = []
+    #         for capability in capabilities:
+    #             for effector in filter(lambda e: e.is_free() and not e in assigned_effectors, effectors):
+    #                 if capability in effector.capabilities():
+    #                     assigned_effectors.append(effector)
+    #                     break
+    #
+    #         if len(capabilities) != len(assigned_effectors):
+    #             continue
+    #
+    #         goal.status(Goal.Status.ACTIVE)
+    #         agenda.prepare_action(action)
+    #
+    #         for i, effector in enumerate(assigned_effectors):
+    #             effector.reserve(goal, capabilities[i])
+    #
+    #     # TODO: this should be at the top; it is moved down here temporarily as the Jan2019 test case will need
+    #     # to be changed to handle triggers at the top (because, if a trigger creates a goal prior to decision,
+    #     # that goal may be selected and executed in that loop - in the case of 2019, this causes acknowledge input
+    #     # to always be one loop ahead - not actually a problem, but the test is too specific and will fail as a
+    #     # result); therefore, fix the test and move this to where it should be
+    #     agenda.fire_triggers()
 
     def _execute(self):
-        for action in self.agenda().action():
-            goal = list(filter(lambda g: action.frame in g.frame["PLAN"], self.agenda().goals()))[0]
-            action.perform(goal, agent=self, goal=goal)
-        if "ACTION-TO-TAKE" in self.agenda().frame:
-            del self.agenda().frame["ACTION-TO-TAKE"]
+        for decision in list(filter(lambda decision: decision.status() == Decision.Status.SELECTED, self.decisions())):
+            effectors = list(filter(lambda effector: effector.on_decision() == decision, self.effectors()))
+            decision.execute(effectors)
+
+    # def _execute(self):
+    #     for action in self.agenda().action():
+    #         goal = list(filter(lambda g: action.frame in g.frame["PLAN"], self.agenda().goals()))[0]
+    #         action.perform(goal, agent=self, goal=goal)
+    #     if "ACTION-TO-TAKE" in self.agenda().frame:
+    #         del self.agenda().frame["ACTION-TO-TAKE"]
 
     def _assess(self):
+        for decision in list(filter(lambda decision: decision.status() == Decision.Status.EXECUTING, self.decisions())):
+            if len(decision.callbacks()) == 0:
+                decision.frame["STATUS"] = Decision.Status.FINISHED
+                decision.step().frame["STATUS"] = Step.Status.FINISHED
+
+        for decision in list(filter(lambda decision: decision.status() != Decision.Status.EXECUTING and decision.status() != Decision.Status.FINISHED, self.decisions())):
+            self.identity["HAS-DECISION"] -= decision.frame
+            del decision.frame._graph[decision.frame.name()]
+
+            for output in decision.outputs():
+                del output.frame._graph[output.frame.name()]
+                del self[output.graph(self)._namespace]
+
         for active in self.agenda().goals():
             active.assess()
+
+    # def _assess(self):
+    #     for active in self.agenda().goals():
+    #         active.assess()
 
     def agenda(self):
         return Agenda(self.identity)

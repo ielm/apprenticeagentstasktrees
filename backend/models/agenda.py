@@ -327,18 +327,18 @@ class Action(object):
         results = sorted(results, key=lambda s: s.index())
         return results
 
-    def perform(self, varmap: VariableMap):
-        steps = self.steps()
-        steps = list(filter(lambda s: s.is_pending(), steps))
-
-        if len(steps) == 0:
-            return
-
-        steps[0].perform(varmap)
-
-        steps = list(filter(lambda s: s.is_pending(), steps))
-        if len(steps) == 0 and self.name() != "find something to do":
-            varmap.frame["EXECUTED"] = True
+    # def perform(self, varmap: VariableMap):
+    #     steps = self.steps()
+    #     steps = list(filter(lambda s: s.is_pending(), steps))
+    #
+    #     if len(steps) == 0:
+    #         return
+    #
+    #     steps[0].perform(varmap)
+    #
+    #     steps = list(filter(lambda s: s.is_pending(), steps))
+    #     if len(steps) == 0 and self.name() != "find something to do":
+    #         varmap.frame["EXECUTED"] = True
 
     def capabilities(self, varmap: VariableMap) -> List['Capability']:
         results = []
@@ -439,7 +439,7 @@ class Step(object):
                 scope = StatementScope()
                 Statement.from_instance(statement).run(scope, varmap)
                 outputs.extend(scope.outputs)
-        self.frame["STATUS"] = Step.Status.FINISHED
+        # self.frame["STATUS"] = Step.Status.FINISHED
 
         return outputs
 
