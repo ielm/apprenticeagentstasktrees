@@ -121,7 +121,8 @@ class VariableMap(object):
 class StatementScope(object):
 
     def __init__(self):
-        self.outputs = []
+        from backend.models.output import OutputXMR
+        self.outputs: List[OutputXMR] = []
 
 
 class StatementHierarchy(object):

@@ -233,6 +233,9 @@ class Goal(VariableMap):
                 return action
         raise Exception("No action was selected in the plan.")
 
+    def plans(self) -> List['Action']:
+        return list(map(lambda plan: Action(plan.resolve()), self.frame["PLAN"]))
+
     def reserved_effector(self) -> 'Effector':
         from backend.models.effectors import Effector
 
@@ -426,7 +429,7 @@ class Step(object):
             capabilities.extend(stmt.capabilities(varmap))
         return capabilities
 
-    def perform(self, varmap: VariableMap):
+    def perform(self, varmap: VariableMap) -> List['OutputXMR']:
         outputs = []
         for statement in self.frame["PERFORM"]:
             statement = statement.resolve()
@@ -629,6 +632,7 @@ class Decision(object):
 
     '''
     EXE.DECISION = {
+      ISA           ^ONT.MENTAL-OBJECT
       ON-GOAL       ^EXE.GOAL;
       ON-PLAN       ^EXE.ACTION;
       ON-STEP       ^EXE.STEP;
@@ -713,7 +717,7 @@ class Decision(object):
         self._calculate_cost()
 
     def _generate_outputs(self):
-        self.frame["HAS-OUTPUT"] = self.step().perform(self.goal())
+        self.frame["HAS-OUTPUT"] = list(map(lambda output: output.frame, self.step().perform(self.goal())))
 
     def _calculate_priority(self):
         self.frame["HAS-PRIORITY"] = self.goal().priority()

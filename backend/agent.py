@@ -1,11 +1,12 @@
 from backend.contexts.LCTContext import LCTContext
-from backend.models.agenda import Agenda, Goal
+from backend.models.agenda import Agenda, Decision, Goal
 from backend.models.effectors import Callback, Effector
 from backend.models.environment import Environment
 from backend.models.fr import FR
 from backend.models.graph import Frame, Graph, Identifier, Network
 from backend.models.mps import AgentMethod
 from backend.models.ontology import Ontology
+from backend.models.output import OutputXMR
 from backend.models.statement import Statement
 from backend.models.tmr import TMR
 from backend.models.vmr import VMR
@@ -174,6 +175,49 @@ class Agent(Network):
         else:
             self._logger.log("Input: " + registered_xMR.sentence)
 
+    def _decide(self):
+        agenda = self.agenda()
+        agenda.fire_triggers()
+
+        priority_weight = self.identity["PRIORITY_WEIGHT"].singleton()
+        resources_weight = self.identity["RESOURCES_WEIGHT"].singleton()
+
+        goals = agenda.goals(pending=True, active=True)
+        for goal in goals:
+            for plan in goal.plans():
+                step = list(filter(lambda step: step.is_pending(), plan.steps()))[0]
+                decision = Decision.build(self.internal, goal, plan, step)
+                self.identity["HAS-DECISION"] += decision.frame
+
+        decisions = self.decisions()
+        for decision in decisions:
+            decision.inspect()
+
+        decisions = sorted(decisions, key=lambda d: (d.priority() * priority_weight) - (d.cost() * resources_weight), reverse=True)
+        effectors = self.effectors()
+
+        selected_goals = []
+        for decision in decisions:
+            effector_map = {}
+
+            for output in decision.outputs():
+                candidate_effectors = list(effectors)
+                candidate_effectors = list(filter(lambda effector: effector.is_free(), candidate_effectors))
+                candidate_effectors = list(filter(lambda effector: output.capability() in effector.capabilities(), candidate_effectors))
+                candidate_effectors = list(filter(lambda effector: effector not in effector_map.values(), candidate_effectors))
+                if len(candidate_effectors) > 0:
+                    effector_map[output.frame.name()] = candidate_effectors[0]
+
+            if len(effector_map) == len(decision.outputs()) and decision.goal().frame.name() not in selected_goals:
+                selected_goals.append(decision.goal().frame.name())
+                decision.select()
+                for output in effector_map.keys():
+                    output = OutputXMR(self.lookup(output))
+                    effector = effector_map[output.frame.name()]
+                    effector.reserve(decision, output, output.capability())
+            else:
+                decision.decline()
+
     def _decision(self):
         agenda = self.agenda()
 
@@ -230,6 +274,9 @@ class Agent(Network):
 
     def agenda(self):
         return Agenda(self.identity)
+
+    def decisions(self) -> List[Decision]:
+        return list(map(lambda decision: Decision(decision.resolve()), self.identity["HAS-DECISION"]))
 
     def env(self):
         # Changed to env to avoid ambiguity with self.environment
