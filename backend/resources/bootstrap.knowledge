@@ -1,3 +1,4 @@
+@EXE.DECISION = {};
 @EXE.EFFECTOR = {};
 @EXE.CAPABILITY = {};
 @EXE.CALLBACK = {};

@@ -6,7 +6,7 @@ from backend.models.mps import AgentMethod
 from backend.models.output import OutputXMRTemplate
 from backend.models.path import Path
 from backend.models.query import AndQuery, ExactQuery, FillerQuery, FrameQuery, IdentifierQuery, LiteralQuery, NameQuery, NotQuery, OrQuery, SlotQuery
-from backend.models.statement import AddFillerStatement, AssignFillerStatement, AssignVariableStatement, CapabilityStatement, ExistsStatement, ForEachStatement, IsStatement, MakeInstanceStatement, MeaningProcedureStatement, OutputXMRStatement
+from backend.models.statement import AddFillerStatement, AssignFillerStatement, AssignVariableStatement, ExistsStatement, ForEachStatement, IsStatement, MakeInstanceStatement, MeaningProcedureStatement, OutputXMRStatement
 from backend.models.view import View
 
 import unittest
@@ -313,23 +313,6 @@ class AgendaGrammarTestCase(unittest.TestCase):
         parsed = Grammar.parse(self.agent, "SELF.mp1($var1, $var2)", start="mp_statement", agent=self.agent)
         self.assertEqual(statement, parsed)
 
-    def test_capability_statement(self):
-        self.agent.exe.register("TEST-CAPABILITY")
-
-        statement = CapabilityStatement.instance(self.agent.exe, "SELF.TEST-CAPABILITY", [], [])
-        parsed = Grammar.parse(self.agent, "CAPABILITY #SELF.TEST-CAPABILITY()", start="capability_statement", agent=self.agent)
-        self.assertEqual(statement, parsed)
-
-        statement = CapabilityStatement.instance(self.agent.exe, "SELF.TEST-CAPABILITY", [], [Literal("$var1"), Literal("$var2")])
-        parsed = Grammar.parse(self.agent, "CAPABILITY #SELF.TEST-CAPABILITY($var1, $var2)", start="capability_statement", agent=self.agent)
-        self.assertEqual(statement, parsed)
-
-        callback1 = AssignFillerStatement.instance(self.g, self.agentFrame, "SLOTA", 123)
-        callback2 = AssignFillerStatement.instance(self.g, self.agentFrame, "SLOTB", 456)
-        statement = CapabilityStatement.instance(self.agent.exe, "SELF.TEST-CAPABILITY", [callback1, callback2], [])
-        parsed = Grammar.parse(self.agent, "CAPABILITY #SELF.TEST-CAPABILITY() | THEN DO SELF[SLOTA] = 123 | THEN DO SELF[SLOTB] = 456", start="capability_statement", agent=self.agent)
-        self.assertEqual(statement, parsed)
-
     def test_output_statement(self):
         self.agent.exe.register("TEST")
         self.agent.exe.register("TEST-CAPABILITY")
@@ -385,7 +368,7 @@ class AgendaGrammarTestCase(unittest.TestCase):
         goal: Goal = Grammar.parse(self.agent, "DEFINE XYZ() AS GOAL IN SELF", start="define", agent=self.agent).goal
         self.assertTrue(goal.frame.name() in self.g)
         self.assertEqual(goal.name(), "XYZ")
-        self.assertEqual(goal.priority(self.agent), 0.5)
+        self.assertEqual(goal.priority(), 0.5)
 
         # A goal can be overwritten
         goal: Goal = Grammar.parse(self.agent, "DEFINE XYZ() AS GOAL IN SELF", start="define", agent=self.agent).goal

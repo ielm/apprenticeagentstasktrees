@@ -1,13 +1,11 @@
 from backend.models.agenda import Decision
 from backend.models.graph import Frame, Graph, Identifier, Literal, Network
 from backend.models.mps import MPRegistry
-from backend.models.statement import CapabilityStatement, Statement, VariableMap
 from enum import Enum
 from typing import Callable, List, Union
 
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from backend.agent import Agent
     from backend.models.output import OutputXMR
 
 
@@ -62,12 +60,6 @@ class Effector(object):
         status = self.frame["STATUS"].singleton()
         return status == Effector.Status.FREE or status == Effector.Status.FREE.name
 
-    # def effecting(self) -> Goal:
-    #     try:
-    #         return Goal(self.frame["EFFECTING"].singleton())
-    #     except Exception:
-    #         return None
-
     def capabilities(self) -> List["Capability"]:
         return list(map(lambda c: Capability(c.resolve()), self.frame["HAS-CAPABILITY"]))
 
@@ -110,32 +102,6 @@ class Effector(object):
         del self.frame["ON-OUTPUT"]
         del self.frame["ON-CAPABILITY"]
 
-    # def reserve(self, goal: Union[Frame, Goal], capability: Union[Frame, 'Capability']):
-    #     if isinstance(goal, Goal):
-    #         goal = goal.frame
-    #
-    #     if isinstance(capability, Capability):
-    #         capability = capability.frame
-    #
-    #     self.frame["STATUS"] = Effector.Status.OPERATING
-    #     self.frame["EFFECTING"] = goal
-    #     self.frame["USES"] = capability
-    #     goal["USES"] = [self.frame, capability]
-    #     capability["USED-BY"] = self.frame
-
-    # def release(self):
-    #     if self.is_free():
-    #         return
-    #
-    #     goal = self.frame["EFFECTING"].singleton()
-    #     capability = self.frame["USES"].singleton()
-    #
-    #     self.frame["STATUS"] = Effector.Status.FREE
-    #     del self.frame["EFFECTING"]
-    #     del self.frame["USES"]
-    #     del goal["USES"]
-    #     del capability["USED-BY"]
-
     def __eq__(self, other):
         if isinstance(other, Effector):
             return self.frame == other.frame
@@ -159,27 +125,11 @@ class Capability(object):
     def __init__(self, frame: Frame):
         self.frame = frame
 
-    # def run(self, agent: 'Agent', *args, statement: Statement=None, graph: Graph=None, callbacks: List[Union[Frame, CapabilityStatement]]=None, varmap: Union[Frame, VariableMap]=None, **kwargs) -> Callable:
-    #     if graph is None:
-    #         graph = self.frame._graph
-    #     if callbacks is None:
-    #         callbacks = []
-    #
-    #     cb = Callback.instance(graph, varmap, callbacks, capability=self)
-    #     kwargs["callback"] = cb
-    #
-    #     return MPRegistry.run(self.mp_name(), agent, *args, statement=statement, **kwargs)
-
     def run(self, output: 'OutputXMR', callback: 'Callback'):
         MPRegistry.output(self.mp_name(), output, callback)
 
     def mp_name(self) -> str:
         return self.frame["MP"].singleton()
-
-    # def used_by(self) -> Effector:
-    #     if len(self.frame["USED-BY"]) == 0:
-    #         return None
-    #     return Effector(self.frame["USED-BY"].singleton())
 
     def __eq__(self, other):
         if isinstance(other, Capability):
@@ -190,25 +140,6 @@ class Capability(object):
 
 
 class Callback(object):
-
-    # @classmethod
-    # def instance(cls, graph: Graph, varmap: Union[Frame, VariableMap], statements: List[Union[Frame, Statement]], capability: Union[Frame, Capability]):
-    #     frame = graph.register("CALLBACK", isa="EXE.CALLBACK", generate_index=True)
-    #
-    #     if isinstance(varmap, VariableMap):
-    #         varmap = varmap.frame
-    #     frame["VARMAP"] = varmap
-    #
-    #     if isinstance(capability, Capability):
-    #         capability = capability.frame
-    #     frame["CAPABILITY"] = capability
-    #
-    #     for statement in statements:
-    #         if isinstance(statement, Statement):
-    #             statement = statement.frame
-    #         frame["STATEMENT"] += statement
-    #
-    #     return Callback(frame)
 
     @classmethod
     def build(cls, graph: Graph, decision: Union[str, Identifier, Frame, Decision], effector: Union[str, Identifier, Frame, Effector]) -> 'Callback':
@@ -258,35 +189,6 @@ class Callback(object):
         self.effector().release()
         self.decision().callback_received(self)
         del self.frame._graph[str(self.frame._identifier)]
-
-    # def run(self):
-    #     varmap = self.varmap()
-    #     statements = self.statements()
-    #     for statement in statements:
-    #         statement.run(varmap)
-    #
-    #     capability = self.capability()
-    #     if capability is None:
-    #         return
-    #
-    #     used_by = capability.used_by()
-    #     if used_by is None:
-    #         return
-    #
-    #     used_by.release()
-    #
-    # def varmap(self) -> VariableMap:
-    #     return VariableMap(self.frame["VARMAP"].singleton())
-    #
-    # def statements(self) -> List[Statement]:
-    #     return list(map(lambda stmt: Statement.from_instance(stmt.resolve()), self.frame["STATEMENT"]))
-    #
-    # def capability(self) -> Capability:
-    #     capability = self.frame["CAPABILITY"].singleton()
-    #     if capability is None:
-    #         return None
-    #
-    #     return Capability(capability)
 
     def __eq__(self, other):
         if isinstance(other, Callback):

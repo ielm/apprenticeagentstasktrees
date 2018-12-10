@@ -191,15 +191,23 @@ class GoalTestCase(unittest.TestCase):
         self.assertFalse(Goal.Status.ABANDONED in f["STATUS"])
         self.assertTrue(Goal.Status.SATISFIED in f["STATUS"])
 
-    def test_executed(self):
-        graph = Graph("TEST")
-        f = graph.register("GOAL")
+    def test_executed_is_true_if_any_plan_is_complete(self):
+        g = Graph("TEST")
 
-        self.assertFalse(Goal(f).executed())
+        step1 = Step.build(g, 1, [])
+        step2 = Step.build(g, 1, [])
 
-        f["EXECUTED"] = True
+        action1 = Action.build(g, "test-action-1", Action.DEFAULT, [step1])
+        action2 = Action.build(g, "test-action-2", Action.DEFAULT, [step2])
 
-        self.assertTrue(Goal(f).executed())
+        goal = g.register("GOAL.1")
+        goal["PLAN"] = [action1.frame, action2.frame]
+
+        self.assertFalse(Goal(goal).executed())
+
+        step1.frame["STATUS"] = Step.Status.FINISHED
+
+        self.assertTrue(Goal(goal).executed())
 
     def test_priority_numeric(self):
 
@@ -340,44 +348,13 @@ class GoalTestCase(unittest.TestCase):
         Goal(goal).assess()
         self.assertTrue(Goal(goal).is_satisfied())
 
-    def test_assess_ignores_conditions_if_goal_is_using_effector(self):
-        from backend.models.effectors import Capability, Effector
-        from backend.models.statement import IsStatement
-
-        graph = Statement.hierarchy()
-        graph.register("EFFECTOR")
-        graph.register("MENTAL-EFFECTOR", isa="EXE.EFFECTOR")
-        target = graph.register("TARGET")
-        target["X"] = 1
-
-        # 1) Define a goal and make an instance of it; the goal's state is active, and it's condition will be satisfied
-        statement = IsStatement.instance(graph, target, "X", 1)
-        condition = Condition.build(graph, [statement], Goal.Status.SATISFIED)
-        definition = Goal.define(graph, "TEST", 0.5, 0.5, [], [condition], [])
-        goal = Goal.instance_of(graph, definition, [])
-        goal.status(Goal.Status.ACTIVE)
-
-        # 2) Create an effector and capability, and reserve them for the goal
-        capability = Capability.instance(graph, "CAP", "")
-        effector = Effector.instance(graph, Effector.Type.MENTAL, [capability])
-        effector.reserve(goal, capability)
-
-        # 3) The goal is active, the condition is satisified, but assessing the goal remains active (due to the effector)
-        self.assertTrue(goal.is_active())
-        self.assertTrue(condition.assess(None))
-        goal.assess()
-        self.assertTrue(goal.is_active())
-
-        # 4) Release the effector, and now the goal will assess using the condition
-        effector.release()
-        goal.assess()
-        self.assertTrue(goal.is_satisfied())
-
     def test_instance_of(self):
         graph = Graph("TEST")
         definition = graph.register("GOAL-DEF")
         action = graph.register("ACTION.1")
         condition = graph.register("CONDITION.1")
+
+        action["SELECT"] = Literal(Action.DEFAULT)
 
         definition["NAME"] = Literal("Test Goal")
         definition["PRIORITY"] = 0.5
@@ -554,7 +531,7 @@ class ConditionTestCase(unittest.TestCase):
 
         self.assertFalse(Condition(condition).assess(VariableMap(goal)))
 
-        goal["EXECUTED"] = True
+        goal["PLAN"] = graph.register("PLAN")
 
         self.assertTrue(Condition(condition).assess(VariableMap(goal)))
 
@@ -805,7 +782,7 @@ class ActionTestCase(unittest.TestCase):
     def test_select_with_variable(self):
 
         class TestStatement(Statement):
-            def run(self, varmap: VariableMap, *args, **kwargs):
+            def run(self, scope: StatementScope, varmap: VariableMap):
                 return varmap.resolve("X")
 
         graph = Statement.hierarchy()
@@ -856,150 +833,23 @@ class ActionTestCase(unittest.TestCase):
 
         self.assertEqual([Step(step1), Step(step2)], Action(action).steps())
 
-    def test_perform(self):
+    def test_executed(self):
+        g = Graph("TEST")
 
-        out = None
+        step1 = Step.build(g, 1, [])
+        step2 = Step.build(g, 2, [])
 
-        class TestStatement(Statement):
-            def run(self, varmap: VariableMap, *args, **kwargs):
-                nonlocal out
-                out = 123
+        action = Action.build(g, "test-action", Action.DEFAULT, [step1, step2])
 
-        graph = Statement.hierarchy()
-        action = graph.register("ACTION")
-        step = graph.register("STEP")
-        statement = graph.register("STATEMENT", generate_index=True, isa="EXE.STATEMENT")
-
-        graph["STATEMENT"]["CLASSMAP"] = Literal(TestStatement)
-        action["HAS-STEP"] = step
-        step["INDEX"] = 1
-        step["STATUS"] = Step.Status.PENDING
-        step["PERFORM"] = statement
-
-        Action(action).perform(VariableMap(graph.register("VARMAP")))
-        self.assertEqual(123, out)
-
-    def test_perform_only_runs_one_step(self):
-
-        out = 0
-
-        class TestStatement(Statement):
-            def run(self, varmap: VariableMap, *args, **kwargs):
-                nonlocal out
-                out += 1
-
-        graph = Statement.hierarchy()
-        action = graph.register("ACTION")
-        step1 = graph.register("STEP", generate_index=True)
-        step2 = graph.register("STEP", generate_index=True)
-        statement = graph.register("STATEMENT", generate_index=True, isa="EXE.STATEMENT")
-
-        graph["STATEMENT"]["CLASSMAP"] = Literal(TestStatement)
-        action["HAS-STEP"] = [step1, step2]
-        step1["INDEX"] = 1
-        step2["INDEX"] = 2
-        step1["STATUS"] = Step.Status.PENDING
-        step2["STATUS"] = Step.Status.PENDING
-        step1["PERFORM"] = statement
-        step2["PERFORM"] = statement
-
-        Action(action).perform(VariableMap(graph.register("VARMAP")))
-        self.assertEqual(1, out)
-
-    def test_perform_skips_finished_steps(self):
-        from backend.models.mps import AgentMethod, MPRegistry
-        from backend.models.statement import MeaningProcedureStatement
-
-        out = None
-
-        class TestMP(AgentMethod):
-            def run(self, var1):
-                nonlocal out
-                out = var1
-        MPRegistry.register(TestMP)
-
-        graph = Statement.hierarchy()
-        action = graph.register("ACTION")
-        step1 = graph.register("STEP", generate_index=True)
-        step2 = graph.register("STEP", generate_index=True)
-
-        statement1 = MeaningProcedureStatement.instance(graph, "TestMP", ["A"])
-        statement2 = MeaningProcedureStatement.instance(graph, "TestMP", ["B"])
-
-        action["HAS-STEP"] = [step1, step2]
-        step1["INDEX"] = 1
-        step2["INDEX"] = 2
-        step1["STATUS"] = Step.Status.FINISHED
-        step2["STATUS"] = Step.Status.PENDING
-        step1["PERFORM"] = statement1.frame
-        step2["PERFORM"] = statement2.frame
-
-        Action(action).perform(VariableMap(graph.register("VARMAP")))
-        self.assertEqual("B", out)
-
-    def test_perform_marks_goal_as_executed(self):
-        graph = Statement.hierarchy()
-        goal = graph.register("GOAL")
-        action = graph.register("ACTION")
-        step1 = graph.register("STEP", generate_index=True)
-        step2 = graph.register("STEP", generate_index=True)
-
-        action["HAS-STEP"] = [step1, step2]
-        step1["INDEX"] = 1
-        step2["INDEX"] = 2
-        step1["STATUS"] = Step.Status.PENDING
-        step2["STATUS"] = Step.Status.PENDING
-
-        self.assertFalse(Goal(goal).executed())
-
-        Action(action).perform(VariableMap(goal))
-        self.assertFalse(Goal(goal).executed())
-
-        Action(action).perform(VariableMap(goal))
-        self.assertTrue(Goal(goal).executed())
-
-    def test_capabilities(self):
-        from backend.models.effectors import Capability
-        from backend.models.statement import CapabilityStatement, ForEachStatement
-
-        graph = Statement.hierarchy()
-
-        cap1 = Capability.instance(graph, "CAPABILITY-A", "")
-        cap2 = Capability.instance(graph, "CAPABILITY-B", "")
-
-        stmt1 = CapabilityStatement.instance(graph, cap1, [], [])
-        stmt2 = CapabilityStatement.instance(graph, cap2, [], [])
-        stmt3 = ForEachStatement.instance(graph, None, "$var1", stmt2)
-
-        step = Step.build(graph, 1, [stmt1, stmt3])
-
-        action = Action.build(graph, "TEST", Action.DEFAULT, step)
-
-        self.assertEqual([cap1, cap2], action.capabilities(None))
-
-    def test_capabilities_for_only_the_next_step(self):
-        from backend.models.effectors import Capability
-        from backend.models.statement import CapabilityStatement, ForEachStatement
-
-        graph = Statement.hierarchy()
-
-        cap1 = Capability.instance(graph, "CAPABILITY-A", "")
-        cap2 = Capability.instance(graph, "CAPABILITY-B", "")
-
-        stmt1 = CapabilityStatement.instance(graph, cap1, [], [])
-        stmt2 = CapabilityStatement.instance(graph, cap2, [], [])
-        stmt3 = ForEachStatement.instance(graph, None, "$var1", stmt2)
-
-        step1 = Step.build(graph, 1, [stmt1])
-        step2 = Step.build(graph, 1, [stmt3])
-
-        action = Action.build(graph, "TEST", Action.DEFAULT, [step1, step2])
-
-        self.assertEqual([cap1], action.capabilities(None))
+        self.assertFalse(action.executed())
 
         step1.frame["STATUS"] = Step.Status.FINISHED
 
-        self.assertEqual([cap2], action.capabilities(None))
+        self.assertFalse(action.executed())
+
+        step2.frame["STATUS"] = Step.Status.FINISHED
+
+        self.assertTrue(action.executed())
 
 
 class StepTestCase(unittest.TestCase):
@@ -1098,32 +948,6 @@ class StepTestCase(unittest.TestCase):
         step["PERFORM"] = Literal(Step.IDLE)
 
         Step(step).perform(VariableMap(graph.register("VARMAP")))
-
-    def test_perform_updates_status(self):
-        graph = Graph("TEST")
-        step = graph.register("STEP")
-        step["STATUS"] = Step.Status.PENDING
-
-        self.assertFalse(Step(step).is_finished())
-        Step(step).perform(VariableMap(graph.register("VARMAP")))
-        self.assertTrue(Step(step).is_finished())
-
-    def test_capabilities(self):
-        from backend.models.effectors import Capability
-        from backend.models.statement import CapabilityStatement, ForEachStatement
-
-        graph = Statement.hierarchy()
-
-        cap1 = Capability.instance(graph, "CAPABILITY-A", "")
-        cap2 = Capability.instance(graph, "CAPABILITY-B", "")
-
-        stmt1 = CapabilityStatement.instance(graph, cap1, [], [])
-        stmt2 = CapabilityStatement.instance(graph, cap2, [], [])
-        stmt3 = ForEachStatement.instance(graph, None, "$var1", stmt2)
-
-        step = Step.build(graph, 1, [stmt1, stmt3])
-
-        self.assertEqual([cap1, cap2], step.capabilities(None))
 
 
 class DecisionTestCase(unittest.TestCase):

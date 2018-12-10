@@ -21,8 +21,9 @@ DEFINE UNDERSTAND-TMR($tmr)
     ACTION (understand TMR)
         SELECT DEFAULT
         STEP
-            DO CAPABILITY #EXE.LEARN-CAPABILITY($tmr)
-            | THEN DO $tmr[STATUS] = "UNDERSTOOD"
+            DO IDLE
+            // DO CAPABILITY #EXE.LEARN-CAPABILITY($tmr)
+            // | THEN DO $tmr[STATUS] = "UNDERSTOOD"
     WHEN $tmr[STATUS] == "UNDERSTOOD" THEN satisfied
 ;
 DEFINE ACKNOWLEDGE-INPUT($xmr)
@@ -83,4 +84,5 @@ DEFINE REACT-TO-VISUAL-INPUT($vmr)
         STEP
             DO SELF.react_to_visual_input($vmr)
             DO IDLE
+    WHEN EXECUTED THEN satisfied
 ;

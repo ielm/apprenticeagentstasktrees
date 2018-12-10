@@ -322,14 +322,6 @@ class GrammarTransformer(Transformer):
 
         return AssignVariableStatement.instance(self.agent.exe, variable, value)
 
-    def capability_statement(self, matches):
-        from backend.models.statement import CapabilityStatement, Statement
-        capability = matches[1]
-        callback = list(filter(lambda match: isinstance(match, Statement), matches))
-        params = list(map(lambda m: Literal(m) if isinstance(m, str) and m.startswith("$") else m, matches[2]))
-
-        return CapabilityStatement.instance(self.agent.exe, capability, callback, params)
-
     def exists_statement(self, matches):
         from backend.models.statement import ExistsStatement
 

@@ -66,26 +66,6 @@ class Agent(Network):
         agenda.logger(self._logger)
         agenda.process(self, tmr)
 
-    def idea(self, input):
-        print("PRE:")
-        print(self.internal)
-
-        self._input(input)
-        print("I:")
-        print(self.internal)
-
-        self._decision()
-        print("D:")
-        print(self.internal)
-
-        self._execute()
-        print("E:")
-        print(self.internal)
-
-        self._assess()
-        print("A:")
-        print(self.internal)
-
     class IDEA(object):
         D = 1
         E = 2
@@ -97,7 +77,7 @@ class Agent(Network):
         @classmethod
         def get_method(cls):
             if Agent.IDEA._stage == Agent.IDEA.D:
-                return Agent._decision
+                return Agent._decide
             if Agent.IDEA._stage == Agent.IDEA.E:
                 return Agent._execute
             if Agent.IDEA._stage == Agent.IDEA.A:
@@ -184,10 +164,11 @@ class Agent(Network):
 
         goals = agenda.goals(pending=True, active=True)
         for goal in goals:
-            for plan in goal.plans():
-                step = list(filter(lambda step: step.is_pending(), plan.steps()))[0]
-                decision = Decision.build(self.internal, goal, plan, step)
-                self.identity["HAS-DECISION"] += decision.frame
+            for plan in goal.plans():  # todo filter by plan can be selected
+                if plan.select(goal):
+                    step = list(filter(lambda step: step.is_pending(), plan.steps()))[0]
+                    decision = Decision.build(self.internal, goal, plan, step)
+                    self.identity["HAS-DECISION"] += decision.frame
 
         decisions = self.decisions()
         for decision in decisions:
@@ -218,60 +199,10 @@ class Agent(Network):
             else:
                 decision.decline()
 
-    # def _decision(self):
-    #     agenda = self.agenda()
-    #
-    #     priority_weight = self.identity["PRIORITY_WEIGHT"].singleton()
-    #     resources_weight = self.identity["RESOURCES_WEIGHT"].singleton()
-    #
-    #     goals = agenda.goals(pending=True, active=True)
-    #     for goal in goals:
-    #         _priority = goal.priority(self)
-    #         _resources = goal.resources(self)
-    #         _decision = (_priority * priority_weight) - (_resources * resources_weight)
-    #         goal.decision(decide=_decision)
-    #
-    #     ordered = sorted(goals, key=lambda g: g.decision(), reverse=True)
-    #     effectors = self.effectors()
-    #
-    #     for goal in ordered:
-    #         action = goal.plan()
-    #         capabilities = action.capabilities(goal)
-    #
-    #         assigned_effectors = []
-    #         for capability in capabilities:
-    #             for effector in filter(lambda e: e.is_free() and not e in assigned_effectors, effectors):
-    #                 if capability in effector.capabilities():
-    #                     assigned_effectors.append(effector)
-    #                     break
-    #
-    #         if len(capabilities) != len(assigned_effectors):
-    #             continue
-    #
-    #         goal.status(Goal.Status.ACTIVE)
-    #         agenda.prepare_action(action)
-    #
-    #         for i, effector in enumerate(assigned_effectors):
-    #             effector.reserve(goal, capabilities[i])
-    #
-    #     # TODO: this should be at the top; it is moved down here temporarily as the Jan2019 test case will need
-    #     # to be changed to handle triggers at the top (because, if a trigger creates a goal prior to decision,
-    #     # that goal may be selected and executed in that loop - in the case of 2019, this causes acknowledge input
-    #     # to always be one loop ahead - not actually a problem, but the test is too specific and will fail as a
-    #     # result); therefore, fix the test and move this to where it should be
-    #     agenda.fire_triggers()
-
     def _execute(self):
         for decision in list(filter(lambda decision: decision.status() == Decision.Status.SELECTED, self.decisions())):
             effectors = list(filter(lambda effector: effector.on_decision() == decision, self.effectors()))
             decision.execute(effectors)
-
-    # def _execute(self):
-    #     for action in self.agenda().action():
-    #         goal = list(filter(lambda g: action.frame in g.frame["PLAN"], self.agenda().goals()))[0]
-    #         action.perform(goal, agent=self, goal=goal)
-    #     if "ACTION-TO-TAKE" in self.agenda().frame:
-    #         del self.agenda().frame["ACTION-TO-TAKE"]
 
     def _assess(self):
         for decision in list(filter(lambda decision: decision.status() == Decision.Status.EXECUTING, self.decisions())):
@@ -287,12 +218,8 @@ class Agent(Network):
                 del output.frame._graph[output.frame.name()]
                 del self[output.graph(self)._namespace]
 
-        for active in self.agenda().goals():
+        for active in self.agenda().goals(pending=True, active=True):
             active.assess()
-
-    # def _assess(self):
-    #     for active in self.agenda().goals():
-    #         active.assess()
 
     def agenda(self):
         return Agenda(self.identity)
@@ -301,7 +228,6 @@ class Agent(Network):
         return list(map(lambda decision: Decision(decision.resolve()), self.identity["HAS-DECISION"]))
 
     def env(self):
-        # Changed to env to avoid ambiguity with self.environment
         return Environment(self.environment)
 
     def effectors(self) -> List[Effector]:
@@ -315,21 +241,14 @@ class Agent(Network):
         return list(inputs)
 
     def callback(self, callback: Union[str, Identifier, Frame, 'Callback']):
-        if isinstance(callback, Callback):
-            callback = callback.frame
-        if isinstance(callback, Frame):
-            callback = callback._identifier
-
-        if callback not in self.exe:
-            return
-
         if isinstance(callback, str):
-            callback = Callback(self.exe[callback])
+            callback = Identifier.parse(callback)
         if isinstance(callback, Identifier):
-            callback = Callback(self.exe[callback])
+            callback = callback.resolve(None, self)
+        if isinstance(callback, Frame):
+            callback = Callback(callback)
 
-        callback.run()
-        del self.exe[callback.frame.name()]
+        callback.received()
 
     def _bootstrap(self):
 

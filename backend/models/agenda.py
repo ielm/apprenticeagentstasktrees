@@ -110,7 +110,7 @@ class Goal(VariableMap):
         frame["PRIORITY"] = definition["PRIORITY"]
         frame["RESOURCES"] = definition["RESOURCES"]
         frame["STATUS"] = Goal.Status.PENDING
-        frame["PLAN"] = definition["PLAN"]
+        frame["PLAN"] = list(map(lambda plan: Action.instance_of(graph, plan.resolve()).frame, definition["PLAN"]))#definition["PLAN"]
         frame["WHEN"] = definition["WHEN"]
 
         super().instance_of(graph, definition, params, existing=frame)
@@ -150,12 +150,12 @@ class Goal(VariableMap):
         self.frame["STATUS"] = status
 
     def executed(self) -> bool:
-        return self.frame["EXECUTED"] == True
+        for plan in self.plans():
+            if plan.executed():
+                return True
+        return False
 
     def assess(self):
-        if self.reserved_effector() is not None:
-            return
-
         conditions = sorted(self.conditions(), key=lambda condition: condition.order())
         for condition in conditions:
             if condition.assess(self):
@@ -171,7 +171,7 @@ class Goal(VariableMap):
     def priority(self):
         try:
             stmt: Statement = Statement.from_instance(self.frame["PRIORITY"].singleton())
-            priority = stmt.run(self)
+            priority = stmt.run(StatementScope(), self)
 
             self.frame["_PRIORITY"] = priority
             return priority
@@ -196,7 +196,7 @@ class Goal(VariableMap):
     def resources(self):
         try:
             stmt: Statement = Statement.from_instance(self.frame["RESOURCES"].singleton())
-            resources = stmt.run(self)
+            resources = stmt.run(StatementScope(), self)
 
             self.frame["_RESOURCES"] = resources
             return resources
@@ -235,15 +235,6 @@ class Goal(VariableMap):
 
     def plans(self) -> List['Action']:
         return list(map(lambda plan: Action(plan.resolve()), self.frame["PLAN"]))
-
-    def reserved_effector(self) -> 'Effector':
-        from backend.models.effectors import Effector
-
-        for u in self.frame["USES"]:
-            u = u.resolve()
-            if u ^ "EXE.EFFECTOR":
-                return Effector(u)
-        return None
 
     def __eq__(self, other):
         if isinstance(other, Goal):
@@ -298,6 +289,14 @@ class Action(object):
 
         return Action(frame)
 
+    @classmethod
+    def instance_of(cls, graph: Graph, plan: Union[Frame, 'Action']) -> 'Action':
+
+        if isinstance(plan, Frame):
+            plan = Action(plan)
+
+        return Action.build(graph, plan.name(), plan.frame["SELECT"].singleton(), list(map(lambda step: Step.instance_of(graph, step).frame, plan.steps())))
+
     def __init__(self, frame: Frame):
         self.frame = frame
 
@@ -312,7 +311,7 @@ class Action(object):
         if "SELECT" in self.frame:
             select = self.frame["SELECT"].singleton()
             if isinstance(select, Frame) and select ^ "EXE.BOOLEAN-STATEMENT":
-                return Statement.from_instance(select).run(varmap)
+                return Statement.from_instance(select).run(StatementScope(), varmap)
         return False
 
     def is_default(self):
@@ -327,29 +326,11 @@ class Action(object):
         results = sorted(results, key=lambda s: s.index())
         return results
 
-    # def perform(self, varmap: VariableMap):
-    #     steps = self.steps()
-    #     steps = list(filter(lambda s: s.is_pending(), steps))
-    #
-    #     if len(steps) == 0:
-    #         return
-    #
-    #     steps[0].perform(varmap)
-    #
-    #     steps = list(filter(lambda s: s.is_pending(), steps))
-    #     if len(steps) == 0 and self.name() != "find something to do":
-    #         varmap.frame["EXECUTED"] = True
-
-    def capabilities(self, varmap: VariableMap) -> List['Capability']:
-        results = []
-
-        steps = self.steps()
-        steps = list(filter(lambda step: step.is_pending(), steps))
-
-        if len(steps) == 0:
-            return []
-
-        return steps[0].capabilities(varmap)
+    def executed(self) -> bool:
+        for step in self.steps():
+            if step.is_pending():
+                return False
+        return True
 
     def __eq__(self, other):
         if isinstance(other, Action):
@@ -402,6 +383,14 @@ class Step(object):
         frame["STATUS"] = Step.Status.PENDING
 
         return Step(frame)
+
+    @classmethod
+    def instance_of(cls, graph: Graph, step: Union[Frame, 'Step']) -> 'Step':
+
+        if isinstance(step, Frame):
+            step = Step(step)
+
+        return Step.build(graph, step.index(), list(map(lambda stmt: stmt.resolve(), step.frame["PERFORM"])))
 
     class Status(Enum):
         PENDING = "PENDING"
