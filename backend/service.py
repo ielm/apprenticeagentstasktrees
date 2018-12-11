@@ -8,7 +8,7 @@ from backend.agent import Agent
 from backend.models.effectors import Callback
 from backend.models.bootstrap import Bootstrap
 from backend.contexts.LCTContext import LCTContext
-from backend.models.agenda import Action, Goal
+from backend.models.agenda import Action, Decision, Goal
 from backend.models.grammar import Grammar
 from backend.models.graph import Frame, Identifier, Literal
 from backend.models.ontology import Ontology
@@ -172,9 +172,6 @@ class IIDEAConverter(object):
         return {
             "name": goal.name(),
             "id": goal.frame.name(),
-            "priority": goal._cached_priority(),
-            "resources": goal._cached_resources(),
-            "decision": round(goal.decision(), 3),
             "pending": goal.is_pending(),
             "active": goal.is_active(),
             "satisfied": goal.is_satisfied(),
@@ -200,8 +197,33 @@ class IIDEAConverter(object):
         return {
             "name": action.name(),
             "selected": action in agent.agenda().action() and goal.is_active(),
-            "current-step": len(list(filter(lambda step: step.is_finished(), action.steps()))),
-            "total-steps": len(action.steps())
+            "steps": list(map(lambda step: IIDEAConverter.convert_step(step), action.steps()))
+        }
+
+    @classmethod
+    def convert_step(cls, step):
+        return {
+            "name": "Step " + str(step.index()),
+            "finished": step.is_finished()
+        }
+
+    @classmethod
+    def decisions(cls):
+        return list(map(lambda d: IIDEAConverter.convert_decision(d), agent.decisions()))
+
+    @classmethod
+    def convert_decision(cls, decision: Decision):
+        return {
+            "goal": decision.goal().name(),
+            "plan": decision.plan().name(),
+            "step": "Step " + str(decision.step().index()),
+            "outputs": list(map(lambda output: output.frame.name(), decision.outputs())),
+            "priority": decision.priority(),
+            "cost": decision.cost(),
+            "requires": list(map(lambda required: required.frame.name(), decision.requires())),
+            "status": decision.status().name,
+            "effectors": list(map(lambda effector: effector.frame.name(), decision.effectors())),
+            "callbacks": list(map(lambda callback: callback.frame.name(), decision.callbacks()))
         }
 
     @classmethod
@@ -210,20 +232,35 @@ class IIDEAConverter(object):
 
     @classmethod
     def convert_effector(cls, effector):
+        effecting = None
+        for d in agent.decisions():
+            if effector in d.effectors():
+                effecting = d.goal().frame.name()
+
         return {
             "name": effector.frame.name(),
             "type": effector.type().name,
             "status": effector.is_free(),
-            "effecting": effector.effecting().frame.name() if effector.effecting() is not None else None,
+            "effecting": effecting,
             "capabilities": list(map(lambda c: IIDEAConverter.convert_capability(c, effector), effector.capabilities()))
         }
 
     @classmethod
     def convert_capability(cls, capability, wrt_effector):
+        selected = False
+        for d in agent.decisions():
+            if d.status() == Decision.Status.SELECTED or d.status() == Decision.Status.EXECUTING:
+                if capability in list(map(lambda output: output.capability(), d.outputs())):
+                    selected = True
+
+        callbacks = []
+        if wrt_effector.on_decision() is not None:
+            callbacks = list(map(lambda cb: cb.name(), wrt_effector.on_decision().callbacks()))
+
         return {
             "name": capability.frame.name(),
-            "selected": capability.used_by() == wrt_effector,
-            "callbacks": list(map(lambda cb: cb.name(), Callback.find(agent, wrt_effector, capability)))
+            "selected": selected,
+            "callbacks": callbacks
         }
 
     @classmethod
@@ -254,8 +291,9 @@ def iidea():
     effectors = IIDEAConverter.effectors()
     triggers = IIDEAConverter.triggers()
     logs = IIDEAConverter.logs()
+    decisions = IIDEAConverter.decisions()
 
-    return render_template("iidea.html", time=time, stage=stage, inputs=inputs, agenda=agenda, aj=json.dumps(agenda), effectors=effectors, ej=json.dumps(effectors), tj=json.dumps(triggers), lj=json.dumps(logs))
+    return render_template("iidea.html", time=time, stage=stage, inputs=inputs, agenda=agenda, aj=json.dumps(agenda), effectors=effectors, ej=json.dumps(effectors), tj=json.dumps(triggers), lj=json.dumps(logs), dj=json.dumps(decisions))
 
 
 @app.route("/iidea/advance", methods=["GET"])
@@ -268,7 +306,8 @@ def iidea_advance():
         "agenda": IIDEAConverter.agenda(),
         "effectors": IIDEAConverter.effectors(),
         "triggers": IIDEAConverter.triggers(),
-        "logs": IIDEAConverter.logs()
+        "logs": IIDEAConverter.logs(),
+        "decisions": IIDEAConverter.decisions()
     })
 
 
@@ -291,7 +330,8 @@ def iidea_input():
         "time": agent.IDEA.time(),
         "stage": agent.IDEA.stage(),
         "inputs": IIDEAConverter.inputs(),
-        "agenda": IIDEAConverter.agenda()
+        "agenda": IIDEAConverter.agenda(),
+        "decisions": IIDEAConverter.decisions()
     })
 
 
@@ -310,7 +350,8 @@ def iidea_observe():
         "time": agent.IDEA.time(),
         "stage": agent.IDEA.stage(),
         "inputs": IIDEAConverter.inputs(),
-        "agenda": IIDEAConverter.agenda()
+        "agenda": IIDEAConverter.agenda(),
+        "decisions": IIDEAConverter.decisions()
     })
 
 
@@ -331,7 +372,8 @@ def iidea_callback():
         "agenda": IIDEAConverter.agenda(),
         "effectors": IIDEAConverter.effectors(),
         "triggers": IIDEAConverter.triggers(),
-        "logs": IIDEAConverter.logs()
+        "logs": IIDEAConverter.logs(),
+        "decisions": IIDEAConverter.decisions()
     })
 
 

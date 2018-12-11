@@ -155,27 +155,6 @@ class Callback(object):
 
         return Callback(callback)
 
-    @classmethod
-    def find(cls, network: Network, effector: Union[str, Identifier, Frame, Effector], capability: Union[str, Identifier, Frame, Capability]):
-        if isinstance(effector, str):
-            effector = network.lookup(effector)
-        if isinstance(effector, Identifier):
-            effector = network.lookup(effector)
-        if isinstance(effector, Frame):
-            effector = Effector(effector)
-
-        if isinstance(capability, Capability):
-            capability = capability.frame
-
-        if effector.effecting() is None:
-            return []
-
-        results = network.search(Frame.q(network).isa("EXE.CALLBACK"))
-        results = filter(lambda r: r["VARMAP"] == effector.effecting().frame, results)
-        results = filter(lambda r: r["CAPABILITY"] == capability, results)
-
-        return list(results)
-
     def __init__(self, frame: Frame):
         self.frame = frame
 

@@ -35,6 +35,10 @@
             margin-left: 20px;
             font-size: small;
         }
+        .step {
+            margin-left: 20px;
+            font-size: small;
+        }
         .callback-button {
             padding-left: 4px;
             padding-right: 4px;
@@ -60,6 +64,7 @@
                 render_effectors(output["effectors"]);
                 render_triggers(output["triggers"]);
                 render_logs(output["logs"]);
+                render_decisions(output["decisions"]);
                 if (callback != null) {
                     callback();
                 }
@@ -90,6 +95,7 @@
                 render_time(output);
                 render_inputs(output["inputs"]);
                 render_agenda(output["agenda"]);
+                render_decisions(output["decisions"]);
                 $("#inputText").attr("placeholder", "Input Text");
                 $("#inputTextButton").prop("disabled", false);
             }).fail(function(error) {
@@ -115,6 +121,7 @@
                 render_time(output);
                 render_inputs(output["inputs"]);
                 render_agenda(output["agenda"]);
+                render_decisions(output["decisions"]);
             }).fail(function(error) {
                 console.log(error);
             });
@@ -138,6 +145,7 @@
                 render_effectors(output["effectors"]);
                 render_triggers(output["triggers"]);
                 render_logs(output["logs"]);
+                render_decisions(output["decisions"]);
             }).fail(function(error) {
                 console.log(error);
             });
@@ -288,6 +296,19 @@
                 $($(document).find("#logList")[0]).prepend($(rendered));
             }
         }
+
+        function render_decisions(decisions) {
+            $("#decisions").empty();
+
+            for (var i in decisions) {
+                var decision = decisions[i];
+
+                var template = document.getElementById('decision-template').innerHTML;
+                Mustache.parse(template, ["{|", "|}"]);
+                var rendered = Mustache.render(template, decision);
+                $($(document).find("#decisions")[0]).prepend($(rendered));
+            }
+        }
     </script>
 
     <script>
@@ -351,21 +372,42 @@
                     <div class="variable"><strong>{| var |}</strong> = {| value |}</div>
                 {| /params |}
             </div>
-            <div><strong>Priority:</strong> {| priority |}</div>
-            <div><strong>Resources:</strong> {| resources |}</div>
-            <div><strong>Decision:</strong> {| decision |}</div>
             <div>
                 <strong>Status:</strong>
                 <span class="badge badge-pill {| badge |}">{| status |}</span>
             </div>
             {|#plan|}
                 <div>
-                    <strong>Plan:</strong> {| name |} <span class="steps">step {| current-step |} of {| total-steps |}</span>
+                    <strong>Plan:</strong> {| name |}
                     {| #selected |}
                         <span class="badge badge-pill badge-info">selected</span>
                     {| /selected |}
+                    {|#steps|}
+                        <div class="step">
+                            {| #finished |}
+                                <i class="fas fa-check-circle"></i>
+                            {| /finished |}
+                            {| name |}
+                        </div>
+                    {|/steps|}
                 </div>
             {|/plan|}
+        </div>
+    </script>
+
+    <script id="decision-template" type="x-tmpl-mustache">
+        <div class="card">
+            <div class="card-header">
+                <span class="badge badge-pill badge-info">{| status |}</span>
+                {| goal |} > {| plan |} > {| step |}
+            </div>
+            <div class="card-body">
+                <div><strong>Priority:</strong> {| priority |}, <strong>Cost:</strong> {| cost |}</div>
+                <div><strong>Outputs:</strong> {| outputs |}</div>
+                <div><strong>Requires:</strong> {| requires |}</div>
+                <div><strong>Effectors:</strong> {| effectors |}</div>
+                <div><strong>Callbacks:</strong> {| callbacks |}</div>
+            </div>
         </div>
     </script>
 
@@ -434,7 +476,7 @@
     <div class="container">
         <div class="row" style="margin-top: 25px;">
             <div class="col-sm-8">
-                <div class="card">
+                <div class="card" style="margin-bottom: 25px;">
                     <div class="card-header">
                         Agenda
                         <div class="form-check float-right">
@@ -446,6 +488,14 @@
                     </div>
                     <div class="card-body">
                         <div id="agenda"></div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        Decisions
+                    </div>
+                    <div class="card-body">
+                        <div id="decisions"></div>
                     </div>
                 </div>
             </div>
