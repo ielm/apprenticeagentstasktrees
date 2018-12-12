@@ -49,6 +49,12 @@
             color: grey;
             font-size: xx-small;
         }
+        .decision {
+            margin-bottom: 20px;
+        }
+        .decision:last-child {
+            margin-bottom: 0px;
+        }
     </style>
 
     <script>
@@ -303,6 +309,14 @@
             for (var i in decisions) {
                 var decision = decisions[i];
 
+                if (decision.status == "SELECTED") {
+                    decision["style"] = "badge-info";
+                } else if (decision.status == "EXECUTING") {
+                    decision["style"] = "badge-success";
+                } else if (decision.status == "FINISHED") {
+                    decision["style"] = "badge-secondary";
+                }
+
                 var template = document.getElementById('decision-template').innerHTML;
                 Mustache.parse(template, ["{|", "|}"]);
                 var rendered = Mustache.render(template, decision);
@@ -396,9 +410,9 @@
     </script>
 
     <script id="decision-template" type="x-tmpl-mustache">
-        <div class="card">
+        <div class="card decision">
             <div class="card-header">
-                <span class="badge badge-pill badge-info">{| status |}</span>
+                <span class="badge badge-pill {| style |}">{| status |}</span>
                 {| goal |} > {| plan |} > {| step |}
             </div>
             <div class="card-body">
