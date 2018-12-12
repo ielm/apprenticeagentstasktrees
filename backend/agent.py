@@ -153,7 +153,7 @@ class Agent(Network):
 
         # If input is visual input, create VMR, else create tmr and continue
         if type == "VISUAL":
-            input = VMR(input, ontology=self.ontology)
+            input = VMR(input, ontology=self.ontology, agent=self)
         elif isinstance(input, dict):
             input = TMR(input, ontology=self.ontology)
 
@@ -170,6 +170,7 @@ class Agent(Network):
         self.identity["HAS-INPUT"] += xmr.frame
 
         if type == "VISUAL":
+            # input.update_environment(self)
             self._logger.log("Input: <<VMR INSTANCE HERE>>")
         else:
             self._logger.log("Input: " + registered_xMR.sentence)
@@ -234,6 +235,10 @@ class Agent(Network):
     def env(self):
         # Changed to env to avoid ambiguity with self.environment
         return Environment(self.environment)
+
+    def update_env(self):
+        # TODO - update environment on VMR input.
+        return
 
     def effectors(self) -> List[Effector]:
         return list(map(lambda e: Effector(e.resolve()), self.identity["HAS-EFFECTOR"]))

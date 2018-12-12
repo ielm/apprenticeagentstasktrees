@@ -172,23 +172,26 @@ class Jan2019Experiment(unittest.TestCase):
         agent._input(self.observations()["Screwdriver moves close"], type=XMR.Type.VISUAL.name)
 
         # 3c) TEST: The screwdriver is "close" to the agent
-        self.assertEqual(0.1, agent.env().distance("ENV.SCREWDRIVER.1"))
+        # TODO - Change test to reflect location changes
+        self.assertEqual(agent.env().graph['ENV.EPOCH.1']["LOCATION"][0].resolve()["RANGE"].singleton(), agent.env().location("ENV.SCREWDRIVER.1"))
 
         # 3d) IIDEA loop
         mock = self.iidea_loop(agent, mock=GetPhysicalObjectCapabilityMP)
 
         # 3e) TEST: An instance of ACKNOWLEDGE-INPUT with the correct VMR is on the agenda
-        self.assertGoalExists(agent, isa="EXE.ACKNOWLEDGE-INPUT", status=Goal.Status.PENDING, query=lambda goal: XMR(goal.resolve("$tmr")).graph(agent) == agent["VMR#2"])
+        self.assertGoalExists(agent, isa="EXE.ACKNOWLEDGE-INPUT", status=Goal.Status.PENDING, query=lambda goal: XMR(goal.resolve("$xmr")).graph(agent) == agent["VMR#2"])
 
         # 3f) TEST: The only PHYSICAL-EFFECTOR is reserved to PERFORM-COMPLEX-TASK (using capability GET(foot_bracket))
-        self.assertEffectorReserved(agent, "SELF.PHYSICAL-EFFECTOR.1", "SELF.PERFORM-COMPLEX-TASK.1",  "EXE.GET-CAPABILITY")
+        # TODO - call GetPhysicalObjectCapabilityMP with ENV.BRACKET.1
+        self.assertEffectorReserved(agent, "SELF.PHYSICAL-EFFECTOR.1", "SELF.GOAL.2",  "EXE.GET-CAPABILITY")
         mock.assert_called_once_with("ENV.BRACKET.1")
 
         # 3g) TEST: PERFORM-COMPLEX-TASK is still "active"
-        self.assertTrue(Goal(agent.internal["PERFORM-COMPLEX-TASK.1"]).is_active())
+        self.assertTrue(Goal(agent.internal["SELF.GOAL.2"]).is_active())
 
         # 3h) IIDEA loop
         self.iidea_loop(agent)
+        mock.assert_called_once_with(agent.lookup("ENV.SCREWDRIVER.1"))
 
         # 3i) TEST: An instance of REACT-TO-VISUAL-INPUT with the correct VMR is on the agenda
         self.assertGoalExists(agent, isa="EXE.REACT-TO-VISUAL-INPUT", status=Goal.Status.SATISFIED, query=lambda goal: XMR(goal.resolve("$vmr")).graph(agent) == agent["VMR#2"])

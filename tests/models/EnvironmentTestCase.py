@@ -12,7 +12,7 @@ class EnvironmentTestCase(unittest.TestCase):
         self.g.register("EPOCH")
 
         ont = self.n.register("ONT")
-        ont.register("SPATIAL-DISTANCE")
+        ont.register("SPATIAL-LOCATION")
 
     def test_advance(self):
         self.assertEqual(1, len(self.g.search(Frame.q(self.n).isa("ENV.EPOCH"))))
@@ -91,6 +91,7 @@ class EnvironmentTestCase(unittest.TestCase):
         self.assertNotIn(obj, self.g["EPOCH.3"]["CONTAINS"])
 
     def test_move(self):
+        # TODO - Change env.distance tests to env.location
         env = Environment(self.g)
         obj = self.g.register("TEST")
 

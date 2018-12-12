@@ -58,7 +58,7 @@
 @LT.TAKE.2 = {
     ISA @ONT.TAKE;
     AGENT @SELF.ROBOT.1;
-    THEME @LT.BRACKET.1;
+    THEME @LT.BRACKET.1
 };
 
 @LT.BRACKET.1 = {

@@ -122,6 +122,9 @@ class ReactToVisualInputMP(AgentMethod):
 class GetPhysicalObjectCapabilityMP(AgentMethod):
     def run(self, target: Frame):
         self.agent.logger().log("Executed GET(" + target._identifier.render() + ")")
+        # TODO - run with target -> [3d] call with ENV.BRACKET.1
+
+
         return
 
 

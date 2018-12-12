@@ -1,5 +1,5 @@
 from backend.models.graph import Identifier, Network
-from backend.models.vmr import VMR, VMRInstance
+from backend.models.vmr import VMR, Slice
 
 from pkgutil import get_data
 import json
