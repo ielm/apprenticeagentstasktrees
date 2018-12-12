@@ -194,7 +194,15 @@ class BootstrapDefineOutputXMRTemplate(Bootstrap):
 
     def __call__(self, *args, **kwargs):
         template = OutputXMRTemplate.build(self.network, self.name, self.type, self.capability, self.params)
-        template.set_root(self.root)
+        if self.root is not None:
+            r = self.root
+            if isinstance(r, str):
+                r = Identifier.parse(r)
+            if isinstance(r, Frame):
+                r = r._identifier
+            if r.graph == "OUT":
+                r.graph = template.graph._namespace
+            template.set_root(r)
 
         for frame in self.frames:
             frame.graph = template.graph._namespace
