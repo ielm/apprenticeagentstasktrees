@@ -1,5 +1,5 @@
 from backend.contexts.LCTContext import LCTContext
-from backend.models.agenda import Agenda, Decision, Step
+from backend.models.agenda import Agenda, Decision, Goal, Step
 from backend.models.effectors import Callback, Effector
 from backend.models.environment import Environment
 from backend.models.fr import FR
@@ -207,6 +207,8 @@ class Agent(Network):
                     effector.reserve(decision, output, output.capability())
             else:
                 decision.decline()
+        for goal in selected_goals:
+            Goal(self.lookup(goal)).status(Goal.Status.ACTIVE)
 
     def _execute(self):
         for decision in list(filter(lambda decision: decision.status() == Decision.Status.SELECTED, self.decisions())):
