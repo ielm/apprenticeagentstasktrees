@@ -199,7 +199,7 @@ class CapabilityTestCase(unittest.TestCase):
         capability = Capability(f)
         self.assertEqual("TestMP", capability.mp_name())
 
-        capability.run(None, None)
+        capability.run(None, None, None)
         self.assertTrue(out)
 
     # def test_capability_in_use_by_effector(self):
@@ -231,7 +231,7 @@ class CapabilityTestCase(unittest.TestCase):
         output = OutputXMR.build(self.g, OutputXMRTemplate.Type.PHYSICAL, capability, "TEST")
         callback = Callback.build(self.g, "DECISION", "EFFECTOR")
 
-        capability.run(output, callback)
+        capability.run(None, output, callback)
 
         self.assertEqual([output.frame, callback.frame], out)
 

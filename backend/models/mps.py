@@ -38,10 +38,10 @@ class Registry(object):
             raise Exception("Unknown meaning procedure '" + mp + "'.")
         return self._storage[mp](agent, statement=statement, callback=callback)
 
-    def output(self, mp: str, output: 'OutputXMR', callback: 'Callback'):
+    def output(self, mp: str, agent: 'Agent', output: 'OutputXMR', callback: 'Callback'):
         if mp not in self._storage:
             raise Exception("Unknown meaning procedure '" + mp + "'.")
-        self._storage[mp](output, callback)()
+        self._storage[mp](agent, output, callback)()
 
     def clear(self):
         self._storage = dict()
@@ -67,7 +67,8 @@ class AgentMethod(object):
 
 class OutputMethod(object):
 
-    def __init__(self, output: 'OutputXMR', callback: 'Callback'):
+    def __init__(self, agent: 'Agent', output: 'OutputXMR', callback: 'Callback'):
+        self.agent = agent
         self.output = output
         self.callback = callback
 

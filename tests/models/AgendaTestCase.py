@@ -1171,7 +1171,7 @@ class DecisionTestCase(unittest.TestCase):
         effector = Effector.instance(self.g, Effector.Type.PHYSICAL, [capability])
         effector.reserve(decision, output, capability)
 
-        decision.execute([effector])
+        decision.execute(None, [effector])
 
         self.assertTrue(out)
         self.assertIn(effector, decision.effectors())
@@ -1195,7 +1195,7 @@ class DecisionTestCase(unittest.TestCase):
         effector = Effector.instance(self.g, Effector.Type.PHYSICAL, [capability])
         effector.reserve(decision, output, capability)
 
-        decision.execute([effector])
+        decision.execute(None, [effector])
 
         callback = self.g["CALLBACK.1"]
         self.assertIn(callback, decision.callbacks())

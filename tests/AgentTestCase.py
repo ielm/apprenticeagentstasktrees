@@ -545,7 +545,7 @@ class AgentExecuteTestCase(unittest.TestCase):
 
         self.agent._execute()
 
-        mocked.assert_called_once_with([effector1])
+        mocked.assert_called_once_with(self.agent, [effector1])
 
     @patch.object(Decision, 'execute')
     def test_execute_only_runs_selected_decisions(self, mocked):
@@ -577,7 +577,7 @@ class AgentExecuteTestCase(unittest.TestCase):
 
         self.agent._execute()
 
-        mocked.assert_called_once_with([effector1])
+        mocked.assert_called_once_with(self.agent, [effector1])
 
     def test_execute_runs_multiple_decisions(self):
         from backend.models.mps import MPRegistry, OutputMethod

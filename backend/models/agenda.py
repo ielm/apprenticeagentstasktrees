@@ -714,7 +714,7 @@ class Decision(object):
     def _calculate_cost(self):
         self.frame["HAS-COST"] = self.goal().resources()
 
-    def execute(self, effectors: List['Effector']):
+    def execute(self, agent: 'Agent', effectors: List['Effector']):
         from backend.models.effectors import Callback
 
         self.frame["STATUS"] = Decision.Status.EXECUTING
@@ -726,7 +726,7 @@ class Decision(object):
             callback = Callback.build(self.frame._graph, self, effector)
             self.frame["HAS-CALLBACK"] += callback.frame
 
-            effector.on_capability().run(effector.on_output(), callback)
+            effector.on_capability().run(agent, effector.on_output(), callback)
 
     def callback_received(self, callback: 'Callback'):
         self.frame["HAS-EFFECTOR"] -= callback.effector().frame

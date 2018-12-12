@@ -6,6 +6,7 @@ from typing import Callable, List, Union
 
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
+    from backend.agent import Agent
     from backend.models.output import OutputXMR
 
 
@@ -125,8 +126,8 @@ class Capability(object):
     def __init__(self, frame: Frame):
         self.frame = frame
 
-    def run(self, output: 'OutputXMR', callback: 'Callback'):
-        MPRegistry.output(self.mp_name(), output, callback)
+    def run(self, agent: 'Agent', output: 'OutputXMR', callback: 'Callback'):
+        MPRegistry.output(self.mp_name(), agent, output, callback)
 
     def mp_name(self) -> str:
         return self.frame["MP"].singleton()

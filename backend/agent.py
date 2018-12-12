@@ -211,7 +211,7 @@ class Agent(Network):
     def _execute(self):
         for decision in list(filter(lambda decision: decision.status() == Decision.Status.SELECTED, self.decisions())):
             effectors = list(filter(lambda effector: effector.on_decision() == decision, self.effectors()))
-            decision.execute(effectors)
+            decision.execute(self, effectors)
 
     def _assess(self):
         for decision in list(filter(lambda decision: decision.status() == Decision.Status.EXECUTING, self.decisions())):
