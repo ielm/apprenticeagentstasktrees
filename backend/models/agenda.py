@@ -679,7 +679,7 @@ class Decision(object):
 
     def requires(self) -> List['Capability']:
         from backend.models.effectors import Capability
-        return list(map(lambda capability: Capability(capability.resolve()), self.frame["REQUIRES"]))
+        return list(map(lambda output: Capability(output.capability()), self.outputs()))
 
     def status(self) -> 'Decision.Status':
         if "STATUS" not in self.frame:

@@ -1019,8 +1019,14 @@ class DecisionTestCase(unittest.TestCase):
         capability1 = self.g.register("CAPABILITY", generate_index=True)
         capability2 = self.g.register("CAPABILITY", generate_index=True)
 
-        decision["REQUIRES"] += capability1
-        decision["REQUIRES"] += capability2
+        output1 = self.g.register("OUTPUT-XMR", generate_index=True)
+        output2 = self.g.register("OUTPUT-XMR", generate_index=True)
+
+        output1["REQUIRES"] = capability1
+        output2["REQUIRES"] = capability2
+
+        decision["HAS-OUTPUT"] += output1
+        decision["HAS-OUTPUT"] += output2
 
         self.assertEqual([capability1, capability2], Decision(decision).requires())
 
