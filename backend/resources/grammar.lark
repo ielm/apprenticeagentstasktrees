@@ -27,7 +27,8 @@ output_xmr_template_include: INCLUDE declare_knowledge*
 
 slot: NAME
 facet: (SEM | DEFAULT | VALUE | NOT)
-filler: ("@" identifier | literal)
+filler: ("@" identifier | literal | filler_argument)
+filler_argument: argument
 
 ADD: "add"i
 BOOTSTRAPDELIMITER: ";"

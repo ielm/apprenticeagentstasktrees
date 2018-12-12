@@ -151,6 +151,9 @@ class GrammarTransformer(Transformer):
     def filler(self, matches):
         return matches[0]
 
+    def filler_argument(self, matches):
+        return Literal(matches[0])
+
     # Statements and executables
 
     def define(self, matches):

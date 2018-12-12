@@ -681,7 +681,7 @@ class OutputXMRTemplateGrammarTestCase(unittest.TestCase):
 
             @OUT.POSSESSION-EVENT.1 = {
                 AGENT  @SELF;
-                THEME  "$var1";
+                THEME  $var1;
                 OTHER  @OUT.OBJECT.1;
             }
             
