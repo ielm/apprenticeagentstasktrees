@@ -322,6 +322,12 @@
                 var rendered = Mustache.render(template, decision);
                 $($(document).find("#decisions")[0]).prepend($(rendered));
             }
+
+            if ($("#hideFinishedCheckBox").is(":checked")) {
+                $(".decision-FINISHED").hide();
+            } else {
+                $(".decision-FINISHED").show();
+            }
         }
     </script>
 
@@ -352,6 +358,13 @@
                     $(".goal-satisfied").show();
                 }
             });
+            $("#hideFinishedCheckBox").on("click", function() {
+                if ($("#hideFinishedCheckBox").is(":checked")) {
+                    $(".decision-FINISHED").hide();
+                } else {
+                    $(".decision-FINISHED").show();
+                }
+            });
             $(document).on("click", ".callback-button", function(e) {
                 var id = $(e.currentTarget).data("callback");
                 callback(id);
@@ -374,6 +387,9 @@
 
             var logs = JSON.parse({{lj|tojson}});
             render_logs(logs);
+
+            var decisions = JSON.parse({{dj|tojson}});
+            render_decisions(decisions);
         });
     </script>
 
@@ -410,7 +426,7 @@
     </script>
 
     <script id="decision-template" type="x-tmpl-mustache">
-        <div class="card decision">
+        <div class="card decision decision-{| status |}">
             <div class="card-header">
                 <span class="badge badge-pill {| style |}">{| status |}</span>
                 {| goal |} > {| plan |} > {| step |}
@@ -507,6 +523,12 @@
                 <div class="card">
                     <div class="card-header">
                         Decisions
+                        <div class="form-check float-right">
+                            <input class="form-check-input" type="checkbox" value="" id="hideFinishedCheckBox">
+                            <label class="form-check-label" for="hideFinishedCheckBox">
+                                Hide finished?
+                            </label>
+                        </div>
                     </div>
                     <div class="card-body">
                         <div id="decisions"></div>
