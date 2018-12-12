@@ -549,6 +549,12 @@ class GrammarTransformer(Transformer):
     def vmr(self, matches):
         return "VMR#" + str(matches[0])
 
+    def xmr(self, matches):
+        return "XMR#" + str(matches[0])
+
+    def xmr_template(self, matches):
+        return "XMR-TEMPLATE#" + str(matches[0])
+
     def name(self, matches):
         return str(matches[0])
 

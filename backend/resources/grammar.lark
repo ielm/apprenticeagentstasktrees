@@ -165,9 +165,11 @@ double: INTEGER "." INTEGER
 string: ("\"") STRING ("\"")
 
 identifier: (graph ".")? name ("." instance)?
-graph: (GRAPH | tmr | vmr)
+graph: (GRAPH | tmr | vmr | xmr | xmr_template)
 tmr: "TMR" "#" INTEGER
 vmr: "VMR" "#" INTEGER
+xmr: "XMR" "#" INTEGER
+xmr_template: "XMR-TEMPLATE" "#" INTEGER
 name: NAME
 instance: INSTANCE
 

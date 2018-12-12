@@ -125,6 +125,9 @@ class OutputXMRTemplate(object):
         return self.anchor()["ROOT"].singleton()
 
     def set_root(self, root: Union[str, Identifier, Frame]):
+        if isinstance(root, str):
+            root = Identifier.parse(root)
+
         anchor = self.anchor()
         anchor["ROOT"] = root
 

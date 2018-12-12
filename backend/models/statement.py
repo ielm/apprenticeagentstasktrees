@@ -354,7 +354,7 @@ class AssignVariableStatement(Statement):
     @classmethod
     def instance(cls, graph: Graph, variable: str, value: Any):
         frame = graph.register("ASSIGNVARIABLE-STATEMENT", isa="EXE.ASSIGNVARIABLE-STATEMENT", generate_index=True)
-        frame["TO"] = variable
+        frame["TO"] = Literal(variable)
         frame["ASSIGN"] = value
 
         return AssignVariableStatement(frame)

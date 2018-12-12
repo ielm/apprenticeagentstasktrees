@@ -32,6 +32,8 @@ class GrammarTestCase(unittest.TestCase):
         self.assertEqual("WM", Grammar.parse(self.n, "WM", start="graph"))
         self.assertEqual("TmR", Grammar.parse(self.n, "TmR", start="graph"))
         self.assertEqual("TMR#123456", Grammar.parse(self.n, "TMR#123456", start="graph"))
+        self.assertEqual("XMR#123456", Grammar.parse(self.n, "XMR#123456", start="graph"))
+        self.assertEqual("XMR-TEMPLATE#123456", Grammar.parse(self.n, "XMR-TEMPLATE#123456", start="graph"))
 
     def test_parse_identifier(self):
         self.assertEqual(Identifier("WM", "EVENT", instance=1), Grammar.parse(self.n, "WM.EVENT.1", start="identifier"))
