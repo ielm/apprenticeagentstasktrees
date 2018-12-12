@@ -217,6 +217,7 @@ class AgendaGrammarTestCase(unittest.TestCase):
 
         # A simple identifier is also a valid statement instance
         self.assertEqual(instance, Grammar.parse(self.agent, "#SELF.FRAME.1", start="statement_instance", agent=self.agent))
+        self.assertEqual(instance, Grammar.parse(self.agent, "@SELF.FRAME.1", start="statement_instance", agent=self.agent))
 
         # Any variable can also be used
         self.assertEqual("$var1", Grammar.parse(self.agent, "$var1", start="statement_instance", agent=self.agent))
@@ -307,12 +308,18 @@ class AgendaGrammarTestCase(unittest.TestCase):
         self.assertEqual(statement, parsed)
 
     def test_mp_statement(self):
+        self.agent.exe.register("TEST")
+
         statement = MeaningProcedureStatement.instance(self.g, "mp1", [])
         parsed = Grammar.parse(self.agent, "SELF.mp1()", start="mp_statement", agent=self.agent)
         self.assertEqual(statement, parsed)
 
         statement = MeaningProcedureStatement.instance(self.g, "mp1", ["$var1", "$var2"])
         parsed = Grammar.parse(self.agent, "SELF.mp1($var1, $var2)", start="mp_statement", agent=self.agent)
+        self.assertEqual(statement, parsed)
+
+        statement = MeaningProcedureStatement.instance(self.g, "mp1", [123, Identifier.parse("SELF.TEST")])
+        parsed = Grammar.parse(self.agent, "SELF.mp1(123, @SELF.TEST)", start="mp_statement", agent=self.agent)
         self.assertEqual(statement, parsed)
 
     def test_output_statement(self):

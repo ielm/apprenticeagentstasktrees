@@ -78,10 +78,10 @@ exists_statement: EXISTS logical_slot_query
 foreach_statement: FOR EACH ARGUMENT IN logical_slot_query ("|" statement)*
 is_statement: statement_instance "[" NAME "]" EQUALS EQUALS literal
 make_instance_statement: "@" (graph | special_agent_graph) ":" identifier arguments
-mp_statement: SELF "." MP arguments
+mp_statement: SELF "." MP output_arguments
 output_statement: OUTPUT NAME output_arguments BY statement_instance
 
-statement_instance: (SELF | "#" identifier | make_instance_statement | argument)
+statement_instance: (SELF | ("#" | "@") identifier | make_instance_statement | argument)
 special_agent_graph: "AGENT." (INTERNAL | EXE | ONTOLOGY | WM | LT) "!"
 arguments: "(" (argument ("," argument)*)? ")"
 argument: ARGUMENT
