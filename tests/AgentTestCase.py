@@ -241,6 +241,31 @@ class AgentDecideTestCase(unittest.TestCase):
         self.assertIn(("goal", "EXE.GOAL.1", "action-1", 1), decisions)
         self.assertNotIn(("goal", "EXE.GOAL.1", "action-2", 1), decisions)
 
+    def test_decide_only_creates_decisions_that_do_not_yet_exist(self):
+        step = Step.build(self.g, 1, [])
+        plan1 = Action.build(self.g, "action-1", Action.DEFAULT, [step])
+        plan2 = Action.build(self.g, "action-2", Action.DEFAULT, [step])
+        definition = Goal.define(self.g, "goal", 0.5, 0.5, [plan1, plan2], [], [])
+
+        goal = Goal.instance_of(self.g, definition, [])
+
+        self.agent.agenda().add_goal(goal)
+
+        self.assertEqual(0, len(self.agent.decisions()))
+
+        decision = Decision.build(self.agent.internal, goal, plan1, step)
+        self.agent.identity["HAS-DECISION"] += decision.frame
+
+        self.assertEqual(1, len(self.agent.decisions()))
+
+        self.agent._decide()
+
+        self.assertEqual(2, len(self.agent.decisions()))
+
+        decisions = list(map(lambda decision: (decision.goal().name(), str(decision.goal().frame._identifier), decision.plan().name(), decision.step().index()), self.agent.decisions()))
+        self.assertIn(("goal", "EXE.GOAL.1", "action-1", 1), decisions)
+        self.assertIn(("goal", "EXE.GOAL.1", "action-2", 1), decisions)
+
     def test_decide_inspects_decisions(self):
         step = Step.build(self.g, 1, [])
         plan = Action.build(self.g, "action-1", Action.DEFAULT, [step])

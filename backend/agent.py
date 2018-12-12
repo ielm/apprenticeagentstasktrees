@@ -167,10 +167,19 @@ class Agent(Network):
             for plan in goal.plans():  # todo filter by plan can be selected
                 if plan.select(goal):
                     step = list(filter(lambda step: step.is_pending(), plan.steps()))[0]
+
+                    existing_decisions = self.decisions()
+                    existing_decisions = filter(lambda d: d.goal().frame._identifier == goal.frame._identifier, existing_decisions)
+                    existing_decisions = filter(lambda d: d.plan() == plan, existing_decisions)
+                    existing_decisions = filter(lambda d: d.step() == step, existing_decisions)
+
+                    if len(list(existing_decisions)) > 0:
+                        continue
+
                     decision = Decision.build(self.internal, goal, plan, step)
                     self.identity["HAS-DECISION"] += decision.frame
 
-        decisions = self.decisions()
+        decisions = list(filter(lambda decision: decision.status() == Decision.Status.PENDING, self.decisions()))
         for decision in decisions:
             decision.inspect()
 

@@ -255,7 +255,7 @@ class IIDEAConverter(object):
 
         callbacks = []
         if wrt_effector.on_decision() is not None:
-            callbacks = list(map(lambda cb: cb.name(), wrt_effector.on_decision().callbacks()))
+            callbacks = list(map(lambda cb: cb.frame.name(), wrt_effector.on_decision().callbacks()))
 
         return {
             "name": capability.frame.name(),
