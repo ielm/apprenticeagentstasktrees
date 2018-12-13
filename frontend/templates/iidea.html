@@ -55,6 +55,9 @@
         .decision:last-child {
             margin-bottom: 0px;
         }
+        .decision-breadcrumbs {
+            font-size: small;
+        }
     </style>
 
     <script>
@@ -429,7 +432,7 @@
         <div class="card decision decision-{| status |}">
             <div class="card-header">
                 <span class="badge badge-pill {| style |}">{| status |}</span>
-                {| goal |} > {| plan |} > {| step |}
+                <span class="decision-breadcrumbs">{| goal |} > {| plan |} > {| step |}</span>
             </div>
             <div class="card-body">
                 <div><strong>Priority:</strong> {| priority |}, <strong>Cost:</strong> {| cost |}</div>
