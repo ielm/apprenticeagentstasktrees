@@ -233,9 +233,8 @@ class IIDEAConverter(object):
     @classmethod
     def convert_effector(cls, effector):
         effecting = None
-        for d in agent.decisions():
-            if effector in d.effectors():
-                effecting = d.goal().frame.name()
+        if not effector.is_free():
+            effecting = effector.on_decision().goal().frame.name()
 
         return {
             "name": effector.frame.name(),
@@ -249,13 +248,13 @@ class IIDEAConverter(object):
     def convert_capability(cls, capability, wrt_effector):
         selected = False
         for d in agent.decisions():
-            if d.status() == Decision.Status.SELECTED or d.status() == Decision.Status.EXECUTING:
+            if d.status() == Decision.Status.EXECUTING:
                 if capability in list(map(lambda output: output.capability(), d.outputs())):
                     selected = True
 
         callbacks = []
         if wrt_effector.on_decision() is not None:
-            callbacks = list(map(lambda cb: cb.frame.name(), wrt_effector.on_decision().callbacks()))
+            callbacks = list(map(lambda cb: {"name": cb.frame.name(), "waiting": cb.status() == Callback.Status.WAITING}, wrt_effector.on_decision().callbacks()))
 
         return {
             "name": capability.frame.name(),

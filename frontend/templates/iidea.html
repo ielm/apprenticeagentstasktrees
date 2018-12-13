@@ -472,7 +472,12 @@
                             {| name |}
 
                             {| #callbacks |}
-                                <button type="button" class="btn btn-primary btn-sm callback-button" data-callback="{| . |}"><i class="fas fa-undo-alt" style="font-size: smaller"></i></button>
+                                {| #waiting |}
+                                    <button type="button" class="btn btn-primary btn-sm callback-button" data-callback="{| name |}"><i class="fas fa-undo-alt" style="font-size: smaller"></i></button>
+                                {| /waiting |}
+                                {| ^waiting |}
+                                    <button disabled type="button" class="btn btn-secondary btn-sm callback-button" data-callback="{| name |}"><i class="fas fa-undo-alt" style="font-size: smaller"></i></button>
+                                {| /waiting |}
                             {| /callbacks |}
                         {| /capabilities |}
                     </td>

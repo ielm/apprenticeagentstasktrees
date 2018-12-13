@@ -142,6 +142,10 @@ class Capability(object):
 
 class Callback(object):
 
+    class Status(Enum):
+        WAITING = "WAITING"
+        RECEIVED = "RECEIVED"
+
     @classmethod
     def build(cls, graph: Graph, decision: Union[str, Identifier, Frame, Decision], effector: Union[str, Identifier, Frame, Effector]) -> 'Callback':
         if isinstance(decision, Decision):
@@ -153,6 +157,7 @@ class Callback(object):
         callback = graph.register("CALLBACK", isa="EXE.CALLBACK", generate_index=True)
         callback["FOR-DECISION"] = decision
         callback["FOR-EFFECTOR"] = effector
+        callback["STATUS"] = Callback.Status.WAITING
 
         return Callback(callback)
 
@@ -165,7 +170,15 @@ class Callback(object):
     def effector(self) -> Effector:
         return Effector(self.frame["FOR-EFFECTOR"].singleton())
 
+    def status(self) -> 'Callback.Status':
+        if "STATUS" not in self.frame:
+            return Callback.Status.WAITING
+        return self.frame["STATUS"].singleton()
+
     def received(self):
+        self.frame["STATUS"] = Callback.Status.RECEIVED
+
+    def process(self):
         self.effector().release()
         self.decision().callback_received(self)
         del self.frame._graph[str(self.frame._identifier)]

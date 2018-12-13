@@ -161,8 +161,8 @@ class AgentTestCase(unittest.TestCase):
         # Fire the callback
         self.agent.callback(callback.frame._identifier)
 
-        # Did it fire? And has the callback been removed?
-        self.assertNotIn(callback.frame.name(), self.agent.exe)
+        # Is the callback marked as received?
+        self.assertEqual(Callback.Status.RECEIVED, callback.status())
 
 
 class AgentDecideTestCase(unittest.TestCase):
@@ -650,6 +650,55 @@ class AgentAssessTestCase(unittest.TestCase):
         self.agent.exe.register("TEST-CAPABILITY", isa="EXE.CAPABILITY")
 
         self.g = self.agent.exe
+
+    def test_assess_processes_all_received_callbacks(self):
+        from backend.agent import Callback
+
+        # First, minimally define a goal
+        definition = self.agent.exe.register("GOAL-DEFINITION")
+        definition["WITH"] += Literal("$var1")
+        params = [1]
+        goal = VariableMap.instance_of(self.agent.exe, definition, params)
+
+        # Now define a capability statement with two callbacks
+        capability = Capability.instance(self.agent.exe, "CAPABILITY", "TestMP")
+        effector1 = Effector.instance(self.agent.exe, Effector.Type.PHYSICAL, [capability])
+        effector2 = Effector.instance(self.agent.exe, Effector.Type.PHYSICAL, [capability])
+
+        decision1 = Decision.build(self.agent.exe, goal.frame, "PLAN", "STEP")
+        decision2 = Decision.build(self.agent.exe, goal.frame, "PLAN", "STEP")
+
+        decision1.frame["HAS-EFFECTOR"] = effector1.frame
+        decision2.frame["HAS-EFFECTOR"] = effector2.frame
+
+        callback1 = Callback.build(self.agent.exe, decision1, effector1)
+        callback2 = Callback.build(self.agent.exe, decision2, effector2)
+
+        self.agent.identity["HAS-DECISION"] += decision1.frame
+        self.agent.identity["HAS-DECISION"] += decision2.frame
+
+        # Load the callbacks directly into the agent (this is "after" the capability statement has been executed)
+        effector1.reserve(decision1, "OUTPUT", capability)
+        effector2.reserve(decision2, "OUTPUT", capability)
+        decision1.frame["HAS-CALLBACK"] += callback1.frame
+        decision2.frame["HAS-CALLBACK"] += callback2.frame
+
+        # Set one of the callbacks to be received
+        callback1.received()
+
+        # Assess, and check that only one of the callbacks has been processed
+        self.agent._assess()
+
+        self.assertTrue(effector1.is_free())
+        self.assertNotIn(callback1, decision1.callbacks())
+        self.assertNotIn(effector1, decision1.effectors())
+        self.assertNotIn(callback1.frame._identifier, self.agent.exe)
+
+        self.assertFalse(effector2.is_free())
+        self.assertIn(callback2, decision2.callbacks())
+        self.assertIn(effector2, decision2.effectors())
+        self.assertIn(callback2.frame._identifier, self.agent.exe)
+
 
     def test_assess_marks_executing_decisions_as_finished_if_no_callbacks_remain(self):
         step = Step.build(self.g, 1, [])

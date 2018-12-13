@@ -102,7 +102,6 @@ class EffectorTestCase(unittest.TestCase):
         self.assertEqual(output, effector.on_output())
         self.assertEqual(capability, effector.on_capability())
 
-
     def test_release(self):
         from backend.models.agenda import Decision
         from backend.models.output import OutputXMR, OutputXMRTemplate
@@ -126,52 +125,6 @@ class EffectorTestCase(unittest.TestCase):
         self.assertIsNone(effector.on_decision())
         self.assertIsNone(effector.on_output())
         self.assertIsNone(effector.on_capability())
-
-    # def test_effector_effecting(self):
-    #     f1 = self.g.register("TEST-EFFECTOR", isa="EXE.EFFECTOR")
-    #     f2 = self.g.register("GOAL")
-    #
-    #     self.assertIsNone(Effector(f1).effecting())
-    #
-    #     f1["EFFECTING"] = f2
-    #     self.assertEqual(Effector(f1).effecting(), Goal(f2))
-    #
-    # def test_effector_reserve_with_capability(self):
-    #     f1 = self.g.register("EFFECTOR", isa="EXE.EFFECTOR")
-    #     f2 = self.g.register("GOAL", isa="EXE.GOAL")
-    #     f3 = self.g.register("CAPABILITY", isa="EXE.CAPABILITY")
-    #
-    #     goal = Goal(f2)
-    #     capability = Capability(f3)
-    #
-    #     effector = Effector(f1)
-    #     effector.reserve(goal, capability)
-    #
-    #     self.assertFalse(effector.is_free())
-    #     self.assertEqual(effector.effecting(), goal)
-    #     self.assertTrue(effector.frame in goal.frame["USES"])
-    #     self.assertTrue(capability.frame in goal.frame["USES"])
-    #     self.assertTrue(capability.frame in effector.frame["USES"])
-    #     self.assertTrue(effector.frame in capability.frame["USED-BY"])
-    #
-    # def test_effector_release_with_capability(self):
-    #     f1 = self.g.register("EFFECTOR", isa="EXE.EFFECTOR")
-    #     f2 = self.g.register("GOAL", isa="EXE.GOAL")
-    #     f3 = self.g.register("CAPABILITY", isa="EXE.CAPABILITY")
-    #
-    #     goal = Goal(f2)
-    #     capability = Capability(f3)
-    #
-    #     effector = Effector(f1)
-    #     effector.reserve(goal, capability)
-    #     effector.release()
-    #
-    #     self.assertTrue(effector.is_free())
-    #     self.assertIsNone(effector.effecting())
-    #     self.assertFalse(effector.frame in goal.frame["USES"])
-    #     self.assertFalse(capability.frame in goal.frame["USES"])
-    #     self.assertFalse(capability.frame in effector.frame["USES"])
-    #     self.assertFalse(effector.frame in capability.frame["USED-BY"])
 
 
 class CapabilityTestCase(unittest.TestCase):
@@ -202,16 +155,6 @@ class CapabilityTestCase(unittest.TestCase):
         capability.run(None, None, None)
         self.assertTrue(out)
 
-    # def test_capability_in_use_by_effector(self):
-    #     f1 = self.g.register("CAPABILITY")
-    #     f2 = self.g.register("EFFECTOR")
-    #
-    #     capability = Capability(f1)
-    #     self.assertIsNone(capability.used_by())
-    #
-    #     f1["USED-BY"] = f2
-    #     self.assertEqual(Effector(f2), capability.used_by())
-
     def test_run(self):
         from backend.models.mps import OutputMethod
         from backend.models.output import OutputXMR, OutputXMRTemplate
@@ -234,48 +177,6 @@ class CapabilityTestCase(unittest.TestCase):
         capability.run(None, output, callback)
 
         self.assertEqual([output.frame, callback.frame], out)
-
-    # def test_run(self):
-    #     result = 0
-    #
-    #     class TestMP(AgentMethod):
-    #         def run(self, var1):
-    #             nonlocal result
-    #             result = var1
-    #
-    #     MPRegistry.register(TestMP)
-    #
-    #     f = self.g.register("CAPABILITY")
-    #     f["MP"] = Literal(TestMP.__name__)
-    #
-    #     capability = Capability(f)
-    #     capability.run(None, 5)
-    #
-    #     self.assertEqual(5, result)
-
-    # def test_run_with_callbacks(self):
-    #     from backend.models.statement import Statement
-    #     self.n.register(Statement.hierarchy())
-    #
-    #     class TestMP(AgentMethod):
-    #         def run(self, var1):
-    #             pass
-    #
-    #     MPRegistry.register(TestMP)
-    #
-    #     stmt1 = self.g.register("SOME-STATEMENT.1", isa="EXE.STATEMENT")
-    #     stmt2 = self.g.register("SOME-STATEMENT.2", isa="EXE.STATEMENT")
-    #     varmap = self.g.register("SOME-VARIABLE-MAP")
-    #
-    #     f = self.g.register("CAPABILITY")
-    #     f["MP"] = Literal(TestMP.__name__)
-    #
-    #     capability = Capability(f)
-    #     capability.run(None, 5, graph=self.g, callbacks=[stmt1, stmt2], varmap=varmap)
-    #
-    #     callback = Callback(self.g["CALLBACK.1"])
-    #     self.assertEqual([stmt1, stmt2], callback.statements())
-    #     self.assertEqual(varmap, callback.varmap())
 
 
 class CallbackTestCase(unittest.TestCase):
@@ -300,6 +201,12 @@ class CallbackTestCase(unittest.TestCase):
 
         self.assertEqual(effector, Callback(callback).effector())
 
+    def test_status(self):
+        callback = self.g.register("CALLBACK")
+        callback["STATUS"] = Callback.Status.WAITING
+
+        self.assertEqual(Callback.Status.WAITING, Callback(callback).status())
+
     def test_build(self):
         decision = self.g.register("DECISION")
         effector = self.g.register("EFFECTOR")
@@ -308,8 +215,19 @@ class CallbackTestCase(unittest.TestCase):
 
         self.assertEqual(decision, callback.decision())
         self.assertEqual(effector, callback.effector())
+        self.assertEqual(Callback.Status.WAITING, callback.status())
 
     def test_received(self):
+        callback = self.g.register("CALLBACK")
+        callback["STATUS"] = Callback.Status.WAITING
+
+        self.assertEqual(Callback.Status.WAITING, Callback(callback).status())
+
+        Callback(callback).received()
+
+        self.assertEqual(Callback.Status.RECEIVED, Callback(callback).status())
+
+    def test_process(self):
         from backend.models.agenda import Decision
 
         decision = Decision.build(self.g, "GOAL", "PLAN", "STEP")
@@ -331,7 +249,7 @@ class CallbackTestCase(unittest.TestCase):
         self.assertIn(effector, decision.effectors())
         self.assertIn(callback, decision.callbacks())
 
-        callback.received()
+        callback.process()
 
         self.assertNotIn(callback.frame._identifier, self.g)
         self.assertNotEqual(decision, effector.on_decision())
@@ -339,79 +257,3 @@ class CallbackTestCase(unittest.TestCase):
         self.assertNotEqual(capability, effector.on_capability())
         self.assertNotIn(effector, decision.effectors())
         self.assertNotIn(callback, decision.callbacks())
-
-    # def test_varmap(self):
-    #     definition = self.g.register("VARMAP-DEFINITION")
-    #     varmap = VariableMap.instance_of(self.g, definition, [])
-    #     callback = Callback.instance(self.g, varmap, [], None)
-    #
-    #     self.assertEqual(varmap, callback.varmap())
-    #
-    # def test_statements(self):
-    #     from backend.models.statement import Statement
-    #     self.n.register(Statement.hierarchy())
-    #
-    #     stmt1 = self.g.register("STATEMENT", isa="EXE.STATEMENT", generate_index=True)
-    #     stmt2 = self.g.register("STATEMENT", isa="EXE.STATEMENT", generate_index=True)
-    #     callback = Callback.instance(self.g, None, [stmt1, stmt2], None)
-    #
-    #     self.assertEqual([Statement(stmt1), Statement(stmt2)], callback.statements())
-    #
-    # def test_capability(self):
-    #     capability = self.g.register("CAPABILITY")
-    #     callback = Callback.instance(self.g, None, [], capability)
-    #
-    #     self.assertEqual(Capability(capability), callback.capability())
-    #
-    # def test_callback_runs_statements(self):
-    #     # 1) Define a meaning procedure and associated statement
-    #     result = 0
-    #
-    #     class TestMP(AgentMethod):
-    #         def run(self, var1):
-    #             nonlocal result
-    #             result += var1
-    #
-    #     self.mp = TestMP
-    #     MPRegistry.clear()
-    #     MPRegistry.register(self.mp)
-    #
-    #     from backend.models.statement import MeaningProcedureStatement, Statement
-    #     self.n.register(Statement.hierarchy())
-    #
-    #     stmt1 = MeaningProcedureStatement.instance(self.g, self.mp.__name__, ["$var1"])
-    #     stmt2 = MeaningProcedureStatement.instance(self.g, self.mp.__name__, ["$var1"])
-    #
-    #     definition = self.g.register("DEFINITION")
-    #     definition["WITH"] = Literal("$var1")
-    #     varmap = VariableMap.instance_of(self.g, definition, [5])
-    #
-    #     # 2) Setup the callback
-    #     callback = Callback.instance(self.g, varmap, [stmt1, stmt2], None)
-    #     callback.run()
-    #
-    #     self.assertEqual(10, result)
-    #
-    # def test_callback_clears_usages(self):
-    #     f1 = self.g.register("EFFECTOR", isa="EXE.EFFECTOR")
-    #     f2 = self.g.register("GOAL", isa="EXE.GOAL")
-    #     f3 = self.g.register("CAPABILITY", isa="EXE.CAPABILITY")
-    #
-    #     goal = Goal(f2)
-    #     capability = Capability(f3)
-    #
-    #     effector = Effector(f1)
-    #     effector.reserve(goal, capability)
-    #
-    #     callback = Callback.instance(self.g, None, [], capability)
-    #
-    #     self.assertFalse(effector.is_free())
-    #
-    #     callback.run()
-    #
-    #     self.assertTrue(effector.is_free())
-    #     self.assertIsNone(effector.effecting())
-    #     self.assertFalse(effector.frame in goal.frame["USES"])
-    #     self.assertFalse(capability.frame in goal.frame["USES"])
-    #     self.assertFalse(capability.frame in effector.frame["USES"])
-    #     self.assertFalse(effector.frame in capability.frame["USED-BY"])

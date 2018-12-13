@@ -216,6 +216,11 @@ class Agent(Network):
             decision.execute(self, effectors)
 
     def _assess(self):
+        for decision in self.decisions():
+            for callback in decision.callbacks():
+                if callback.status() == Callback.Status.RECEIVED:
+                    callback.process()
+
         for decision in list(filter(lambda decision: decision.status() == Decision.Status.EXECUTING, self.decisions())):
             if len(decision.callbacks()) == 0:
                 decision.frame["STATUS"] = Decision.Status.FINISHED
