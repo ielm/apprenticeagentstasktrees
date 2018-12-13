@@ -85,10 +85,3 @@ DEFINE REACT-TO-VISUAL-INPUT($vmr)
             DO IDLE
     WHEN EXECUTED THEN satisfied
 ;
-
-DEFINE GET-PHYSICAL-OBJECT($target)
-    AS GOAL
-    IN EXE
-    PRIORITY SELF.prioritize_learning($target)
-    RESOURCES SELF.evaluate_resources($target)
-    ACTION (react to visual input)
