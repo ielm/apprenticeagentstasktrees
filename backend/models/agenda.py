@@ -411,13 +411,6 @@ class Step(object):
     def is_finished(self) -> bool:
         return self.frame["STATUS"].singleton() == Step.Status.FINISHED
 
-    def capabilities(self, varmap: VariableMap) -> List['Capability']:
-        do: List[Statement] = list(map(lambda do: Statement.from_instance(do), filter(lambda do: do != Step.IDLE, map(lambda do: do.resolve(), self.frame["PERFORM"]))))
-        capabilities = []
-        for stmt in do:
-            capabilities.extend(stmt.capabilities(varmap))
-        return capabilities
-
     def perform(self, varmap: VariableMap) -> List['OutputXMR']:
         outputs = []
         for statement in self.frame["PERFORM"]:
@@ -428,7 +421,6 @@ class Step(object):
                 scope = StatementScope()
                 Statement.from_instance(statement).run(scope, varmap)
                 outputs.extend(scope.outputs)
-        # self.frame["STATUS"] = Step.Status.FINISHED
 
         return outputs
 
