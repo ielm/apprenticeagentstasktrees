@@ -613,7 +613,7 @@ class Decision(object):
 
     '''
     EXE.DECISION = {
-      ISA           ^ONT.MENTAL-OBJECT
+      ISA           ^ONT.MENTAL-OBJECT;
       ON-GOAL       ^EXE.GOAL;
       ON-PLAN       ^EXE.ACTION;
       ON-STEP       ^EXE.STEP;
@@ -621,7 +621,8 @@ class Decision(object):
       HAS-PRIORITY? Literal(dbl);
       HAS-COST?     Literal(dbl);
       REQUIRES*     ^EXE.CAPABILITY;
-      STATUS        Literal(str[PENDING | SELECTED | DECLINED | EXECUTING | FINISHED])
+      STATUS        Literal(str[PENDING | SELECTED | DECLINED | EXECUTING | FINISHED]);
+      HAS-EFFECTOR* ^EXE.EFFECTOR;
       HAS-CALLBACK* ^EXE.CALLBACK;
     }
     '''
