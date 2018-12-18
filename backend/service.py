@@ -8,7 +8,7 @@ from backend.agent import Agent
 from backend.models.effectors import Callback
 from backend.models.bootstrap import Bootstrap
 from backend.contexts.LCTContext import LCTContext
-from backend.models.agenda import Action, Decision, Goal
+from backend.models.agenda import Decision, Goal, Plan
 from backend.models.grammar import Grammar
 from backend.models.graph import Frame, Identifier, Literal
 from backend.models.ontology import Ontology
@@ -176,7 +176,7 @@ class IIDEAConverter(object):
             "active": goal.is_active(),
             "satisfied": goal.is_satisfied(),
             "abandoned": goal.is_abandoned(),
-            "plan": list(map(lambda action: IIDEAConverter.convert_action(action.resolve(), goal), goal.frame["PLAN"])),
+            "plan": list(map(lambda plan: IIDEAConverter.convert_plan(plan.resolve(), goal), goal.frame["PLAN"])),
             "params": list(map(lambda variable: {"var": variable, "value": IIDEAConverter.convert_value(goal.resolve(variable))}, goal.variables()))
         }
 
@@ -191,13 +191,13 @@ class IIDEAConverter(object):
         return value
 
     @classmethod
-    def convert_action(cls, action, goal):
-        action = Action(action)
+    def convert_plan(cls, plan, goal):
+        plan = Plan(plan)
 
         return {
-            "name": action.name(),
-            "selected": action in agent.agenda().action() and goal.is_active(),
-            "steps": list(map(lambda step: IIDEAConverter.convert_step(step), action.steps()))
+            "name": plan.name(),
+            "selected": plan in agent.agenda().plan() and goal.is_active(),
+            "steps": list(map(lambda step: IIDEAConverter.convert_step(step), plan.steps()))
         }
 
     @classmethod

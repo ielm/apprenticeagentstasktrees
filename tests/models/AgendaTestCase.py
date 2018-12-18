@@ -1,4 +1,4 @@
-from backend.models.agenda import Action, Agenda, Condition, Decision, Goal, Step, Trigger
+from backend.models.agenda import Agenda, Condition, Decision, Goal, Plan, Step, Trigger
 from backend.models.graph import Frame, Graph, Literal, Network
 from backend.models.statement import Statement, StatementScope, VariableMap
 
@@ -41,32 +41,32 @@ class AgendaTestCase(unittest.TestCase):
 
         self.assertEqual(agenda.goals(pending=True), [Goal(g1), Goal(g2)])
 
-    def test_prepare_action(self):
+    def test_prepare_plan(self):
         graph = Graph("TEST")
         f1 = graph.register("AGENDA.1")
-        a1 = graph.register("ACTION.1")
-        a2 = graph.register("ACTION.2")
+        a1 = graph.register("PLAN.1")
+        a2 = graph.register("PLAN.2")
 
         agenda = Agenda(f1)
 
-        agenda.prepare_action(a1)
-        self.assertEqual(len(f1["ACTION-TO-TAKE"]), 1)
-        self.assertEqual(f1["ACTION-TO-TAKE"][0].resolve(), a1)
+        agenda.prepare_plan(a1)
+        self.assertEqual(len(f1["PLAN-TO-TAKE"]), 1)
+        self.assertEqual(f1["PLAN-TO-TAKE"][0].resolve(), a1)
 
-        agenda.prepare_action(Action(a2))
-        self.assertEqual(len(f1["ACTION-TO-TAKE"]), 2)
-        self.assertEqual(f1["ACTION-TO-TAKE"][0].resolve(), a1)
-        self.assertEqual(f1["ACTION-TO-TAKE"][1].resolve(), a2)
+        agenda.prepare_plan(Plan(a2))
+        self.assertEqual(len(f1["PLAN-TO-TAKE"]), 2)
+        self.assertEqual(f1["PLAN-TO-TAKE"][0].resolve(), a1)
+        self.assertEqual(f1["PLAN-TO-TAKE"][1].resolve(), a2)
 
-    def test_action(self):
+    def test_plan(self):
         graph = Graph("TEST")
         f1 = graph.register("AGENDA.1")
-        a1 = graph.register("ACTION.1")
+        a1 = graph.register("PLAN.1")
 
-        f1["ACTION-TO-TAKE"] = a1
+        f1["PLAN-TO-TAKE"] = a1
 
         agenda = Agenda(f1)
-        self.assertEqual([a1], agenda.action())
+        self.assertEqual([a1], agenda.plan())
 
     def test_triggers(self):
         n = Network()
@@ -197,11 +197,11 @@ class GoalTestCase(unittest.TestCase):
         step1 = Step.build(g, 1, [])
         step2 = Step.build(g, 1, [])
 
-        action1 = Action.build(g, "test-action-1", Action.DEFAULT, [step1])
-        action2 = Action.build(g, "test-action-2", Action.DEFAULT, [step2])
+        plan1 = Plan.build(g, "test-plan-1", Plan.DEFAULT, [step1])
+        plan2 = Plan.build(g, "test-plan-2", Plan.DEFAULT, [step2])
 
         goal = g.register("GOAL.1")
-        goal["PLAN"] = [action1.frame, action2.frame]
+        goal["PLAN"] = [plan1.frame, plan2.frame]
 
         self.assertFalse(Goal(goal).executed())
 
@@ -315,14 +315,14 @@ class GoalTestCase(unittest.TestCase):
     def test_plan(self):
         graph = Graph("TEST")
         goal = graph.register("GOAL.1")
-        action1 = graph.register("ACTION.1")
-        action2 = graph.register("ACTION.2")
+        plan1 = graph.register("PLAN.1")
+        plan2 = graph.register("PLAN.2")
 
-        goal["PLAN"] = [action1, action2]
-        action2["SELECT"] = Literal(Action.DEFAULT)
+        goal["PLAN"] = [plan1, plan2]
+        plan2["SELECT"] = Literal(Plan.DEFAULT)
 
-        self.assertEqual(Goal(goal).plan(), action2)
-        self.assertIsInstance(Goal(goal).plan(), Action)
+        self.assertEqual(Goal(goal).plan(), plan2)
+        self.assertIsInstance(Goal(goal).plan(), Plan)
 
     def test_assess(self):
 
@@ -351,14 +351,14 @@ class GoalTestCase(unittest.TestCase):
     def test_instance_of(self):
         graph = Graph("TEST")
         definition = graph.register("GOAL-DEF")
-        action = graph.register("ACTION.1")
+        plan = graph.register("PLAN.1")
         condition = graph.register("CONDITION.1")
 
-        action["SELECT"] = Literal(Action.DEFAULT)
+        plan["SELECT"] = Literal(Plan.DEFAULT)
 
         definition["NAME"] = Literal("Test Goal")
         definition["PRIORITY"] = 0.5
-        definition["PLAN"] = action
+        definition["PLAN"] = plan
         definition["WHEN"] = condition
         definition["WITH"] = Literal("VAR_X")
 
@@ -367,7 +367,7 @@ class GoalTestCase(unittest.TestCase):
 
         self.assertEqual(goal.name(), "Test Goal")
         self.assertTrue(goal.frame["PRIORITY"] == 0.5)
-        self.assertTrue(goal.frame["PLAN"] == action)
+        self.assertTrue(goal.frame["PLAN"] == plan)
         self.assertTrue(goal.frame["WHEN"] == condition)
         self.assertTrue(goal.frame["WITH"] == "VAR_X")
         self.assertEqual(1, len(goal.frame["_WITH"]))
@@ -749,14 +749,14 @@ class ConditionTestCase(unittest.TestCase):
         self.assertTrue(Condition(c).assess(VariableMap(vm)))
 
 
-class ActionTestCase(unittest.TestCase):
+class PlanTestCase(unittest.TestCase):
 
     def test_name(self):
         graph = Graph("TEST")
-        action = graph.register("ACTION.1")
-        action["NAME"] = Literal("Test Action")
+        plan = graph.register("PLAN.1")
+        plan["NAME"] = Literal("Test Plan")
 
-        self.assertEqual(Action(action).name(), "Test Action")
+        self.assertEqual(Plan(plan).name(), "Test Plan")
 
     def test_select(self):
 
@@ -767,17 +767,17 @@ class ActionTestCase(unittest.TestCase):
                 return result
 
         graph = Statement.hierarchy()
-        action = graph.register("ACTION.1")
+        plan = graph.register("PLAN.1")
         statement = graph.register("BOOLEAN-STATEMENT.1", isa="EXE.BOOLEAN-STATEMENT")
 
-        action["SELECT"] = statement
+        plan["SELECT"] = statement
         graph["BOOLEAN-STATEMENT"]["CLASSMAP"] = Literal(TestStatement)
 
-        self.assertTrue(Action(action).select(None))
+        self.assertTrue(Plan(plan).select(None))
 
         result = False
 
-        self.assertFalse(Action(action).select(None))
+        self.assertFalse(Plan(plan).select(None))
 
     def test_select_with_variable(self):
 
@@ -788,37 +788,37 @@ class ActionTestCase(unittest.TestCase):
         graph = Statement.hierarchy()
         varmap = graph.register("VARMAP.1")
         variable = graph.register("VARIABLE.1")
-        action = graph.register("ACTION.1")
+        plan = graph.register("PLAN.1")
         statement = graph.register("BOOLEAN-STATEMENT.1", isa="EXE.BOOLEAN-STATEMENT")
 
         varmap["_WITH"] = variable
         variable["NAME"] = Literal("X")
         variable["VALUE"] = True
-        action["SELECT"] = statement
+        plan["SELECT"] = statement
         graph["BOOLEAN-STATEMENT"]["CLASSMAP"] = Literal(TestStatement)
 
-        self.assertTrue(Action(action).select(VariableMap(varmap)))
+        self.assertTrue(Plan(plan).select(VariableMap(varmap)))
 
     def test_select_when_default(self):
         graph = Statement.hierarchy()
-        action = graph.register("ACTION.1")
-        action["SELECT"] = Literal(Action.DEFAULT)
+        plan = graph.register("PLAN.1")
+        plan["SELECT"] = Literal(Plan.DEFAULT)
 
-        self.assertTrue(Action(action).select(None))
+        self.assertTrue(Plan(plan).select(None))
 
     def test_is_default(self):
         graph = Statement.hierarchy()
-        action = graph.register("ACTION.1")
+        plan = graph.register("PLAN.1")
 
-        self.assertFalse(Action(action).is_default())
+        self.assertFalse(Plan(plan).is_default())
 
-        action["SELECT"] = Literal(Action.DEFAULT)
+        plan["SELECT"] = Literal(Plan.DEFAULT)
 
-        self.assertTrue(Action(action).is_default())
+        self.assertTrue(Plan(plan).is_default())
 
     def test_steps(self):
         graph = Statement.hierarchy()
-        action = graph.register("ACTION.1")
+        plan = graph.register("PLAN.1")
 
         step1 = graph.register("STEP", generate_index=True)
         step2 = graph.register("STEP", generate_index=True)
@@ -826,12 +826,12 @@ class ActionTestCase(unittest.TestCase):
         step1["INDEX"] = 1
         step2["INDEX"] = 2
 
-        self.assertEqual([], Action(action).steps())
+        self.assertEqual([], Plan(plan).steps())
 
-        action["HAS-STEP"] += step2
-        action["HAS-STEP"] += step1
+        plan["HAS-STEP"] += step2
+        plan["HAS-STEP"] += step1
 
-        self.assertEqual([Step(step1), Step(step2)], Action(action).steps())
+        self.assertEqual([Step(step1), Step(step2)], Plan(plan).steps())
 
     def test_executed(self):
         g = Graph("TEST")
@@ -839,17 +839,17 @@ class ActionTestCase(unittest.TestCase):
         step1 = Step.build(g, 1, [])
         step2 = Step.build(g, 2, [])
 
-        action = Action.build(g, "test-action", Action.DEFAULT, [step1, step2])
+        plan = Plan.build(g, "test-plan", Plan.DEFAULT, [step1, step2])
 
-        self.assertFalse(action.executed())
+        self.assertFalse(plan.executed())
 
         step1.frame["STATUS"] = Step.Status.FINISHED
 
-        self.assertFalse(action.executed())
+        self.assertFalse(plan.executed())
 
         step2.frame["STATUS"] = Step.Status.FINISHED
 
-        self.assertTrue(action.executed())
+        self.assertTrue(plan.executed())
 
 
 class StepTestCase(unittest.TestCase):
@@ -908,7 +908,7 @@ class StepTestCase(unittest.TestCase):
 
         agent = graph.register("AGENT")
         goal = graph.register("GOAL")
-        action = graph.register("ACTION")
+        plan = graph.register("PLAN")
         step = graph.register("STEP")
 
         statement = graph.register("STATEMENT", generate_index=True, isa="EXE.STATEMENT")

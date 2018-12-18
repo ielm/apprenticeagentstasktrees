@@ -160,7 +160,7 @@ class GrammarTransformer(Transformer):
         return matches[1]
 
     def goal(self, matches):
-        from backend.models.agenda import Action, Condition, Goal
+        from backend.models.agenda import Condition, Goal, Plan
         from backend.models.bootstrap import BoostrapGoal
 
         name = str(matches[0])
@@ -169,7 +169,7 @@ class GrammarTransformer(Transformer):
 
         priority = matches[6]
         resources = matches[7]
-        plan = list(filter(lambda match: isinstance(match, Action), matches))
+        plan = list(filter(lambda match: isinstance(match, Plan), matches))
         conditions = list(filter(lambda match: isinstance(match, Condition), matches))
 
         condition_order = 1
@@ -210,8 +210,8 @@ class GrammarTransformer(Transformer):
         if str(matches[0]).upper() == "SATISFIED":
             return Goal.Status.SATISFIED
 
-    def action(self, matches):
-        from backend.models.agenda import Action
+    def plan(self, matches):
+        from backend.models.agenda import Plan
         name = matches[1]
         select = matches[2]
         steps = matches[3:]
@@ -219,24 +219,24 @@ class GrammarTransformer(Transformer):
         for i, v in enumerate(steps):
             v.frame["INDEX"] = i + 1
 
-        return Action.build(self.agent.exe, name, select, steps)
+        return Plan.build(self.agent.exe, name, select, steps)
 
-    def action_selection(self, matches):
-        from backend.models.agenda import Action
+    def plan_selection(self, matches):
+        from backend.models.agenda import Plan
         select = matches[1]
         if str(select) == "DEFAULT":
-            select = Action.DEFAULT
+            select = Plan.DEFAULT
         elif str(select) == "IF":
             select = matches[2]
 
         return select
 
-    def action_step(self, matches):
+    def plan_step(self, matches):
         from backend.models.agenda import Step
         return Step.build(self.agent.exe, -1, matches[1:])
 
 
-    def action_do(self, matches):
+    def plan_do(self, matches):
         from backend.models.agenda import Step
         perform = matches[1]
 

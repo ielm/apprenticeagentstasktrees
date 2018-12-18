@@ -51,15 +51,15 @@ VERBAL: "verbal"i
 // Statements and executables
 
 define: DEFINE goal
-goal: NAME arguments AS GOAL IN GRAPH priority resources (action)* (condition)*
+goal: NAME arguments AS GOAL IN GRAPH priority resources (plan)* (condition)*
 priority: (PRIORITY (double | mp_statement))?
 resources: (RESOURCES (double | mp_statement))?
 goal_status: (PENDING | ACTIVE | ABANDONED | SATISFIED)
 
-action: ACTION "(" ACTION_NAME ")" action_selection action_step+
-action_selection: SELECT (DEFAULT | IF boolean_statement)
-action_step: STEP action_do+
-action_do: DO (statement | IDLE)
+plan: PLAN "(" PLAN_NAME ")" plan_selection plan_step+
+plan_selection: SELECT (DEFAULT | IF boolean_statement)
+plan_step: STEP plan_do+
+plan_do: DO (statement | IDLE)
 
 condition: WHEN (condition_and | condition_or | condition_nand | condition_nor | condition_not | condition_on) THEN goal_status
 condition_and: boolean_statement (AND boolean_statement)*
@@ -90,7 +90,6 @@ output_arguments: "(" (output_argument ("," output_argument)*)? ")"
 output_argument: (argument | literal | statement_instance)
 
 ABANDONED: "abandoned"i
-ACTION: "action"i
 ACTIVE: "active"i
 AS: "as"i
 BY: "by"i
@@ -114,6 +113,7 @@ NOR: "nor"i
 ONTOLOGY: "ontology"i
 OUTPUT: "output"i
 PENDING: "pending"i
+PLAN: "plan"i
 PRIORITY: "priority"i
 RESOURCES: "resources"i
 SATISFIED: "satisfied"i
@@ -123,9 +123,9 @@ STEP: "step"i
 WHEN: "when"i
 WM: "wm"i
 
-ACTION_NAME: /(?!True|False)[a-zA-Z\.\*\_\- ]+/i
 ARGUMENT: /\$[a-zA-Z0-9]+/
 MP: /[a-zA-Z0-9\_]+/
+PLAN_NAME: /(?!True|False)[a-zA-Z\.\*\_\- ]+/i
 
 // Views and querying
 

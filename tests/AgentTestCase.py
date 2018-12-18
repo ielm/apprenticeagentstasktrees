@@ -1,5 +1,5 @@
 from backend.agent import Agent
-from backend.models.agenda import Action, Decision, Goal, Step, Trigger
+from backend.models.agenda import Decision, Goal, Plan, Step, Trigger
 from backend.models.effectors import Capability, Effector
 from backend.models.graph import Literal, Network
 from backend.models.ontology import Ontology
@@ -194,8 +194,8 @@ class AgentDecideTestCase(unittest.TestCase):
 
     def test_decide_creates_decisions(self):
         step = Step.build(self.g, 1, [])
-        plan1 = Action.build(self.g, "action-1", Action.DEFAULT, [step])
-        plan2 = Action.build(self.g, "action-2", Action.DEFAULT, [step])
+        plan1 = Plan.build(self.g, "plan-1", Plan.DEFAULT, [step])
+        plan2 = Plan.build(self.g, "plan-2", Plan.DEFAULT, [step])
         definition = Goal.define(self.g, "goal-1", 0.5, 0.5, [plan1, plan2], [], [])
 
         goal1 = Goal.instance_of(self.g, definition, [])
@@ -212,10 +212,10 @@ class AgentDecideTestCase(unittest.TestCase):
 
         decisions = list(map(lambda decision: (decision.goal().name(), str(decision.goal().frame._identifier), decision.plan().name(), decision.step().index()), self.agent.decisions()))
 
-        self.assertIn(("goal-1", "EXE.GOAL.1", "action-1", 1), decisions)
-        self.assertIn(("goal-1", "EXE.GOAL.1", "action-2", 1), decisions)
-        self.assertIn(("goal-1", "EXE.GOAL.2", "action-1", 1), decisions)
-        self.assertIn(("goal-1", "EXE.GOAL.2", "action-2", 1), decisions)
+        self.assertIn(("goal-1", "EXE.GOAL.1", "plan-1", 1), decisions)
+        self.assertIn(("goal-1", "EXE.GOAL.1", "plan-2", 1), decisions)
+        self.assertIn(("goal-1", "EXE.GOAL.2", "plan-1", 1), decisions)
+        self.assertIn(("goal-1", "EXE.GOAL.2", "plan-2", 1), decisions)
 
     def test_decide_only_creates_decisions_for_selectable_plans(self):
         from backend.models.graph import Frame
@@ -223,8 +223,8 @@ class AgentDecideTestCase(unittest.TestCase):
         stmt = ExistsStatement.instance(self.g, Frame.q(self.n).f("DNE", 123))
 
         step = Step.build(self.g, 1, [])
-        plan1 = Action.build(self.g, "action-1", Action.DEFAULT, [step])
-        plan2 = Action.build(self.g, "action-2", stmt, [step])
+        plan1 = Plan.build(self.g, "plan-1", Plan.DEFAULT, [step])
+        plan2 = Plan.build(self.g, "plan-2", stmt, [step])
         definition = Goal.define(self.g, "goal", 0.5, 0.5, [plan1, plan2], [], [])
 
         goal = Goal.instance_of(self.g, definition, [])
@@ -238,13 +238,13 @@ class AgentDecideTestCase(unittest.TestCase):
         self.assertEqual(1, len(self.agent.decisions()))
 
         decisions = list(map(lambda decision: (decision.goal().name(), str(decision.goal().frame._identifier), decision.plan().name(), decision.step().index()), self.agent.decisions()))
-        self.assertIn(("goal", "EXE.GOAL.1", "action-1", 1), decisions)
-        self.assertNotIn(("goal", "EXE.GOAL.1", "action-2", 1), decisions)
+        self.assertIn(("goal", "EXE.GOAL.1", "plan-1", 1), decisions)
+        self.assertNotIn(("goal", "EXE.GOAL.1", "plan-2", 1), decisions)
 
     def test_decide_only_creates_decisions_that_do_not_yet_exist(self):
         step = Step.build(self.g, 1, [])
-        plan1 = Action.build(self.g, "action-1", Action.DEFAULT, [step])
-        plan2 = Action.build(self.g, "action-2", Action.DEFAULT, [step])
+        plan1 = Plan.build(self.g, "plan-1", Plan.DEFAULT, [step])
+        plan2 = Plan.build(self.g, "plan-2", Plan.DEFAULT, [step])
         definition = Goal.define(self.g, "goal", 0.5, 0.5, [plan1, plan2], [], [])
 
         goal = Goal.instance_of(self.g, definition, [])
@@ -263,12 +263,12 @@ class AgentDecideTestCase(unittest.TestCase):
         self.assertEqual(2, len(self.agent.decisions()))
 
         decisions = list(map(lambda decision: (decision.goal().name(), str(decision.goal().frame._identifier), decision.plan().name(), decision.step().index()), self.agent.decisions()))
-        self.assertIn(("goal", "EXE.GOAL.1", "action-1", 1), decisions)
-        self.assertIn(("goal", "EXE.GOAL.1", "action-2", 1), decisions)
+        self.assertIn(("goal", "EXE.GOAL.1", "plan-1", 1), decisions)
+        self.assertIn(("goal", "EXE.GOAL.1", "plan-2", 1), decisions)
 
     def test_decide_inspects_decisions(self):
         step = Step.build(self.g, 1, [])
-        plan = Action.build(self.g, "action-1", Action.DEFAULT, [step])
+        plan = Plan.build(self.g, "plan-1", Plan.DEFAULT, [step])
         definition = Goal.define(self.g, "goal-1", 0.5, 0.5, [plan], [], [])
 
         goal = Goal.instance_of(self.g, definition, [])
@@ -283,7 +283,7 @@ class AgentDecideTestCase(unittest.TestCase):
 
     def test_decide_selects_decisions(self):
         step = Step.build(self.g, 1, [])
-        plan = Action.build(self.g, "action-1", Action.DEFAULT, [step])
+        plan = Plan.build(self.g, "plan-1", Plan.DEFAULT, [step])
         definition = Goal.define(self.g, "goal-1", 0.5, 0.5, [plan], [], [])
 
         goal = Goal.instance_of(self.g, definition, [])
@@ -299,7 +299,7 @@ class AgentDecideTestCase(unittest.TestCase):
         statement = OutputXMRStatement.instance(self.g, template, [], self.agent.identity)
 
         step = Step.build(self.g, 1, [statement])
-        plan = Action.build(self.g, "action-1", Action.DEFAULT, [step])
+        plan = Plan.build(self.g, "plan-1", Plan.DEFAULT, [step])
         definition = Goal.define(self.g, "goal-1", 0.5, 0.5, [plan], [], [])
 
         goal = Goal.instance_of(self.g, definition, [])
@@ -319,7 +319,7 @@ class AgentDecideTestCase(unittest.TestCase):
         statement = OutputXMRStatement.instance(self.g, template, [], self.agent.identity)
 
         step = Step.build(self.g, 1, [statement])
-        plan = Action.build(self.g, "action-1", Action.DEFAULT, [step])
+        plan = Plan.build(self.g, "plan-1", Plan.DEFAULT, [step])
         definition = Goal.define(self.g, "goal-1", 0.5, 0.5, [plan], [], [])
 
         goal = Goal.instance_of(self.g, definition, [])
@@ -343,7 +343,7 @@ class AgentDecideTestCase(unittest.TestCase):
         statement = OutputXMRStatement.instance(self.g, template, [], self.agent.identity)
 
         step = Step.build(self.g, 1, [statement])
-        plan = Action.build(self.g, "action-1", Action.DEFAULT, [step])
+        plan = Plan.build(self.g, "plan-1", Plan.DEFAULT, [step])
         definition = Goal.define(self.g, "goal-1", 0.5, 0.5, [plan], [], [])
 
         goal1 = Goal.instance_of(self.g, definition, [])
@@ -379,7 +379,7 @@ class AgentDecideTestCase(unittest.TestCase):
         statement2 = OutputXMRStatement.instance(self.g, template, [], self.agent.identity)
 
         step = Step.build(self.g, 1, [statement1, statement2])
-        plan = Action.build(self.g, "action-1", Action.DEFAULT, [step])
+        plan = Plan.build(self.g, "plan-1", Plan.DEFAULT, [step])
         definition = Goal.define(self.g, "goal-1", 0.5, 0.5, [plan], [], [])
 
         goal = Goal.instance_of(self.g, definition, [])
@@ -413,7 +413,7 @@ class AgentDecideTestCase(unittest.TestCase):
         statement = OutputXMRStatement.instance(self.g, template, [], self.agent.identity)
 
         step = Step.build(self.g, 1, [statement])
-        plan = Action.build(self.g, "action-1", Action.DEFAULT, [step])
+        plan = Plan.build(self.g, "plan-1", Plan.DEFAULT, [step])
         definition = Goal.define(self.g, "goal-1", 0.5, 0.5, [plan], [], [])
 
         goal1 = Goal.instance_of(self.g, definition, [])
@@ -436,7 +436,7 @@ class AgentDecideTestCase(unittest.TestCase):
         statement = OutputXMRStatement.instance(self.g, template, [], self.agent.identity)
 
         step = Step.build(self.g, 1, [statement])
-        plan = Action.build(self.g, "action-1", Action.DEFAULT, [step])
+        plan = Plan.build(self.g, "plan-1", Plan.DEFAULT, [step])
         definition1 = Goal.define(self.g, "goal-1", 1.0, 0.5, [plan], [], [])
         definition2 = Goal.define(self.g, "goal-1", 0.0, 0.5, [plan], [], [])
 
@@ -464,8 +464,8 @@ class AgentDecideTestCase(unittest.TestCase):
         statement = OutputXMRStatement.instance(self.g, template, [], self.agent.identity)
 
         step = Step.build(self.g, 1, [statement])
-        plan1 = Action.build(self.g, "action-1", Action.DEFAULT, [step])
-        plan2 = Action.build(self.g, "action-2", Action.DEFAULT, [step])
+        plan1 = Plan.build(self.g, "plan-1", Plan.DEFAULT, [step])
+        plan2 = Plan.build(self.g, "plan-2", Plan.DEFAULT, [step])
         definition = Goal.define(self.g, "goal-1", 1.0, 0.5, [plan1, plan2], [], [])
 
         goal = Goal.instance_of(self.g, definition, [])
@@ -530,7 +530,7 @@ class AgentExecuteTestCase(unittest.TestCase):
         statement = OutputXMRStatement.instance(self.g, template, [], self.agent.identity)
 
         step = Step.build(self.g, 1, [statement])
-        plan = Action.build(self.g, "action-1", Action.DEFAULT, [step])
+        plan = Plan.build(self.g, "plan-1", Plan.DEFAULT, [step])
         definition = Goal.define(self.g, "goal-1", 1.0, 0.5, [plan], [], [])
         goal = Goal.instance_of(self.g, definition, [])
 
@@ -559,7 +559,7 @@ class AgentExecuteTestCase(unittest.TestCase):
         statement = OutputXMRStatement.instance(self.g, template, [], self.agent.identity)
 
         step = Step.build(self.g, 1, [statement])
-        plan = Action.build(self.g, "action-1", Action.DEFAULT, [step])
+        plan = Plan.build(self.g, "plan-1", Plan.DEFAULT, [step])
         definition = Goal.define(self.g, "goal-1", 1.0, 0.5, [plan], [], [])
         goal = Goal.instance_of(self.g, definition, [])
 
@@ -600,7 +600,7 @@ class AgentExecuteTestCase(unittest.TestCase):
         statement = OutputXMRStatement.instance(self.g, template, [], self.agent.identity)
 
         step = Step.build(self.g, 1, [statement])
-        plan = Action.build(self.g, "action-1", Action.DEFAULT, [step])
+        plan = Plan.build(self.g, "plan-1", Plan.DEFAULT, [step])
         definition = Goal.define(self.g, "goal-1", 1.0, 0.5, [plan], [], [])
         goal = Goal.instance_of(self.g, definition, [])
 
