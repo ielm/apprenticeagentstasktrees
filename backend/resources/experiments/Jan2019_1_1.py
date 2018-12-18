@@ -114,11 +114,6 @@ class PerformComplexTaskMP(AgentMethod):
         return capabilities
 
 
-class ReactToVisualInputMP(AgentMethod):
-    def run(self, input_tmr):
-        return
-
-
 class GetPhysicalObjectCapabilityMP(AgentMethod):
     def run(self, target: Frame):
         self.agent.logger().log("Executed GET(" + target._identifier.render() + ")")
@@ -133,3 +128,23 @@ class SpeakCapabilityMP(AgentMethod):
 class ReactToVisualInputMP(AgentMethod):
     def run(self, vmr):
         return
+
+
+class UnderstandInputMP(AgentMethod):
+    def run(self, tmr_frame):
+        tmr = self.agent[tmr_frame["REFERS-TO-GRAPH"].singleton()]
+        agenda = self.agent.context.default_understanding()
+        agenda.logger(self.agent._logger)
+        agenda.process(self.agent, tmr)
+        if self.callback is not None:
+            self.agent.callback(self.callback)
+
+
+class PrioritizeLearningMP(AgentMethod):
+    def run(self, tmr_frame):
+        return 0.75
+
+
+class EvalResourcesMP(AgentMethod):
+    def run(self, tmr_frame):
+        return 0.5

@@ -453,7 +453,7 @@ def bootstrap():
         Bootstrap.bootstrap_resource(agent, package, resource)
         return redirect("/bootstrap", code=302)
 
-    resources = Bootstrap.list_resources("backend.resources") + Bootstrap.list_resources("backend.resources.experiments")
+    resources = Bootstrap.list_resources("backend.resources") + Bootstrap.list_resources("backend.resources.experiments") + Bootstrap.list_resources("backend.resources.example")
     resources = map(lambda r: {"resource": r, "loaded": r[0] + "." + r[1] in Bootstrap.loaded}, resources)
 
     return render_template("bootstrap.html", resources=resources)

@@ -12,7 +12,7 @@ from backend.models.tmr import TMR
 from backend.models.vmr import VMR
 from backend.models.xmr import XMR
 from backend.utils.AgentLogger import AgentLogger, CachedAgentLogger
-from typing import List, Union
+from typing import Any, List, Union
 
 
 class Agent(Network):
@@ -111,6 +111,11 @@ class Agent(Network):
         def time(cls) -> int:
             return Agent.IDEA._time
 
+        @classmethod
+        def reset(cls):
+            Agent.IDEA._stage = Agent.IDEA.D
+            Agent.IDEA._time = 1
+
     def iidea(self, input=None):
         """
         (I)ndependent (I)nput, (D)ecide + (E)xecute + (A)ssess
@@ -159,12 +164,12 @@ class Agent(Network):
         agenda = self.agenda()
         agenda.fire_triggers()
 
-        priority_weight = self.identity["PRIORITY_WEIGHT"].singleton()
-        resources_weight = self.identity["RESOURCES_WEIGHT"].singleton()
+        priority_weight = self.preference("PRIORITY_WEIGHT", 0.5)
+        resources_weight = self.preference("RESOURCES_WEIGHT", 0.5)
 
         goals = agenda.goals(pending=True, active=True)
         for goal in goals:
-            for plan in goal.plans():  # todo filter by plan can be selected
+            for plan in goal.plans():
                 if plan.select(goal):
                     step = list(filter(lambda step: step.is_pending(), plan.steps()))[0]
 
@@ -266,68 +271,11 @@ class Agent(Network):
 
         callback.received()
 
+    def preference(self, property: str, default: Any):
+        if property in self.identity:
+            return self.identity[property].singleton()
+        return default
+
     def _bootstrap(self):
-
         from backend.models.bootstrap import Bootstrap
-        Bootstrap.bootstrap_resource(self, "backend.resources", "bootstrap.mps")
-        Bootstrap.bootstrap_resource(self, "backend.resources", "bootstrap.knowledge")
-        Bootstrap.bootstrap_resource(self, "backend.resources", "goals.aa")
-
-        from backend.models.agenda import Trigger
-        from backend.models.graph import Literal
-        query = Frame.q(self).isa("EXE.INPUT-TMR").f("STATUS", Literal("RECEIVED"))
-        self.agenda().add_trigger(Trigger.build(self.internal, query, self.exe["ACKNOWLEDGE-INPUT"]))
-
-        # API declared versions of the two goal definitions
-
-        # graph = self["EXE"]
-
-        # goal1 = Goal.define(graph, "FIND-SOMETHING-TO-DO", 0.1, [
-        #     Action.build(graph,
-        #                  "acknowledge input",
-        #                  ExistsStatement.instance(graph, Query.parse(self, "WHERE (@^ EXE.INPUT-TMR AND ACKNOWLEDGED = False)")),
-        #                  ForEachStatement.instance(graph, Query.parse(self, "WHERE (@^ EXE.INPUT-TMR AND ACKNOWLEDGED = False)"), "$tmr",  [
-        #                      AddFillerStatement.instance(graph, self.identity, "HAS-GOAL",
-        #                                                  MakeInstanceStatement.instance(graph, "SELF", "EXE.UNDERSTAND-TMR", ["$tmr"])),
-        #                      AssignFillerStatement.instance(graph, "$tmr", "ACKNOWLEDGED", True)
-        #                      ])
-        #                  ),
-        #     Action.build(graph, "idle", Action.DEFAULT, Action.IDLE)
-        # ], [], [])
-
-        # goal2 = Goal.define(graph, "UNDERSTAND-TMR", 0.9, [
-        #     Action.build(graph,
-        #                  "understand",
-        #                  Action.DEFAULT,
-        #                  [
-        #                      MeaningProcedureStatement.instance(graph, "understand_input", ["$tmr"]),
-        #                      AssignFillerStatement.instance(graph, "$tmr", "STATUS", Literal("UNDERSTOOD"))
-        #                  ])
-        # ], [
-        #     Condition.build(graph,
-        #                     [IsStatement.instance(graph, "$tmr", "STATUS", Literal("UNDERSTOOD"))],
-        #                     Goal.Status.SATISFIED)
-        # ], ["$tmr"])
-
-
-class UnderstandInputMP(AgentMethod):
-    def run(self, tmr_frame):
-        tmr = self.agent[tmr_frame["REFERS-TO-GRAPH"].singleton()]
-        agenda = self.agent.context.default_understanding()
-        agenda.logger(self.agent._logger)
-        agenda.process(self.agent, tmr)
-        if self.callback is not None:
-            self.agent.callback(self.callback)
-
-
-class PrioritizeLearningMP(AgentMethod):
-    def run(self, tmr_frame):
-        return 0.75
-
-
-class EvalResourcesMP(AgentMethod):
-    def run(self, tmr_frame):
-        return 0.5
-
-
-from backend.resources.AgentMP import AcknowledgeInputMP, DecideOnLanguageInputMP
+        Bootstrap.bootstrap_resource(self, "backend.resources", "exe.knowledge")

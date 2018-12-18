@@ -164,6 +164,11 @@ class AgentTestCase(unittest.TestCase):
         # Is the callback marked as received?
         self.assertEqual(Callback.Status.RECEIVED, callback.status())
 
+    def test_preferences(self):
+        self.assertEqual(0.5, self.agent.preference("TEST-PREFERENCE", 0.5))
+        self.agent.identity["TEST-PREFERENCE"] = 0.6
+        self.assertEqual(0.6, self.agent.preference("TEST-PREFERENCE", 0.5))
+
 
 class AgentDecideTestCase(unittest.TestCase):
 

@@ -14,7 +14,7 @@ from unittest.mock import patch
 import json
 import unittest
 
-from backend.resources.AgentMP import GetPhysicalObjectCapabilityMP, SpeakCapabilityMP
+from backend.resources.experiments.Jan2019_1_1 import GetPhysicalObjectCapabilityMP, SpeakCapabilityMP
 
 
 class Jan2019Experiment(unittest.TestCase):
@@ -100,10 +100,10 @@ class Jan2019Experiment(unittest.TestCase):
         #######
 
         # Pa) Load LTM with the chair building instructions
-        Bootstrap.bootstrap_resource(agent, "backend.resources", "chair.knowledge")
+        Bootstrap.bootstrap_resource(agent, "backend.resources.experiments", "chair.knowledge")
 
         # Pb) There is an instance of "Jake", who is known, present, and taught the robot the chair instructions
-        Bootstrap.bootstrap_resource(agent, "backend.resources.experiments", "Jan2019.1-1.knowledge")
+        Bootstrap.bootstrap_resource(agent, "backend.resources.experiments", "Jan2019_1_1.knowledge")
 
         #######
 
