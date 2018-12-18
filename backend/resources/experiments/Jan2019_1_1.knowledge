@@ -105,10 +105,10 @@ DEFINE FIND-SOMETHING-TO-DO()
     PRIORITY 0.1
     RESOURCES 0.3
     PLAN (find something to do)
-        SELECT IF EXISTS (@^ EXE.INPUT-TMR AND STATUS = "RECEIVED")
+        SELECT IF EXISTS (@^ @EXE.INPUT-TMR AND STATUS = "RECEIVED")
         STEP
-            DO FOR EACH $tmr IN (@^ EXE.INPUT-TMR AND STATUS = "RECEIVED")
-            | SELF[HAS-GOAL] += @SELF:EXE.ACKNOWLEDGE-INPUT($tmr)
+            DO FOR EACH $tmr IN (@^ @EXE.INPUT-TMR AND STATUS = "RECEIVED")
+            | SELF[HAS-GOAL] += @SELF:@EXE.ACKNOWLEDGE-INPUT($tmr)
     PLAN (idle)
         SELECT DEFAULT
         STEP
@@ -123,7 +123,7 @@ DEFINE UNDERSTAND-TMR($tmr)
         SELECT DEFAULT
         STEP
             DO IDLE
-            // DO CAPABILITY #EXE.LEARN-CAPABILITY($tmr)
+            // DO CAPABILITY @EXE.LEARN-CAPABILITY($tmr)
             // | THEN DO $tmr[STATUS] = "UNDERSTOOD"
     WHEN $tmr[STATUS] == "UNDERSTOOD" THEN satisfied
 ;
@@ -135,12 +135,12 @@ DEFINE ACKNOWLEDGE-INPUT($xmr)
     PLAN (decide on language input)
         SELECT IF $xmr[TYPE] == "LANGUAGE"
         STEP
-            DO SELF[HAS-GOAL] += @SELF:EXE.DECIDE-ON-LANGUAGE-INPUT($xmr)
+            DO SELF[HAS-GOAL] += @SELF:@EXE.DECIDE-ON-LANGUAGE-INPUT($xmr)
             DO $xmr[STATUS] = "ACKNOWLEDGED"
     PLAN (react to visual input)
         SELECT IF $xmr[TYPE] == "VISUAL"
         STEP
-            DO SELF[HAS-GOAL] += @SELF:EXE.REACT-TO-VISUAL-INPUT($xmr)
+            DO SELF[HAS-GOAL] += @SELF:@EXE.REACT-TO-VISUAL-INPUT($xmr)
             DO $xmr[STATUS] = "ACKNOWLEDGED"
     WHEN $xmr[STATUS] == "ACKNOWLEDGED" OR $xmr[STATUS] == "IGNORED" THEN satisfied
 ;

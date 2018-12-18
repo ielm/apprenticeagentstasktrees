@@ -7,27 +7,27 @@ bootstrap: ((declare_knowledge | append_knowledge | define | register_mp | add_t
 declare_knowledge: "@" graph "." name (declare_knowledge_instance)? "=" "{" (declare_knowledge_element (BOOTSTRAPDELIMITER declare_knowledge_element)*)? (BOOTSTRAPDELIMITER)? "}"
 declare_knowledge_instance: "." (instance | GENERATE_INSTANCE)
 declare_knowledge_element: (declare_isa_knowledge | declare_property_knowledge)
-declare_isa_knowledge: DISA "@" identifier
+declare_isa_knowledge: DISA identifier
 declare_property_knowledge: slot (facet)? filler
 
-append_knowledge: "@" identifier "+=" "{" (append_knowledge_element (BOOTSTRAPDELIMITER append_knowledge_element)*)? (BOOTSTRAPDELIMITER)? "}"
+append_knowledge: identifier "+=" "{" (append_knowledge_element (BOOTSTRAPDELIMITER append_knowledge_element)*)? (BOOTSTRAPDELIMITER)? "}"
 append_knowledge_element: (append_property_knowledge)
 append_property_knowledge: slot (facet)? filler
 
 register_mp: REGISTER MP agent_method (AS NAME)?
 agent_method: MODULE "." CLASS
 
-add_trigger: ADD TRIGGER TO "@" identifier INSTANTIATE "@" identifier WHEN logical_slot_query
+add_trigger: ADD TRIGGER TO identifier INSTANTIATE identifier WHEN logical_slot_query
 
 output_xmr_template: DEFINE NAME arguments AS TEMPLATE output_xmr_template_type output_xmr_template_requires (output_xmr_template_root)? output_xmr_template_include
 output_xmr_template_type: TYPE (VERBAL | PHYSICAL | MENTAL)
-output_xmr_template_requires: REQUIRES "@" identifier
-output_xmr_template_root: ROOT "@" identifier
+output_xmr_template_requires: REQUIRES identifier
+output_xmr_template_root: ROOT identifier
 output_xmr_template_include: INCLUDE declare_knowledge*
 
 slot: NAME
 facet: (SEM | DEFAULT | VALUE | NOT)
-filler: ("@" identifier | literal | filler_argument)
+filler: (identifier | literal | filler_argument)
 filler_argument: argument
 
 ADD: "add"i
@@ -74,7 +74,7 @@ boolean_statement: (exists_statement | is_statement)
 
 add_filler_statement: statement_instance "[" NAME "]" "+=" (statement_instance | literal)
 assign_filler_statement: statement_instance "[" NAME "]" "=" (statement_instance | literal)
-assign_variable_statement: ARGUMENT "=" (literal | "#" identifier | ARGUMENT | statement)
+assign_variable_statement: ARGUMENT "=" (literal | identifier | ARGUMENT | statement)
 exists_statement: EXISTS logical_slot_query
 foreach_statement: FOR EACH ARGUMENT IN logical_slot_query ("|" statement)*
 is_statement: statement_instance "[" NAME "]" EQUALS EQUALS literal
@@ -82,7 +82,7 @@ make_instance_statement: "@" (graph | special_agent_graph) ":" identifier argume
 mp_statement: SELF "." MP output_arguments
 output_statement: OUTPUT NAME output_arguments BY statement_instance
 
-statement_instance: (SELF | ("#" | "@") identifier | make_instance_statement | argument)
+statement_instance: (SELF | identifier | make_instance_statement | argument)
 special_agent_graph: "AGENT." (INTERNAL | EXE | ONTOLOGY | WM | LT) "!"
 arguments: "(" (argument ("," argument)*)? ")"
 argument: ARGUMENT
@@ -165,7 +165,7 @@ integer: INTEGER
 double: INTEGER "." INTEGER
 string: ("\"") STRING ("\"")
 
-identifier: (graph ".")? name ("." instance)?
+identifier: "@" (graph ".")? name ("." instance)?
 graph: (GRAPH | tmr | vmr | xmr | xmr_template)
 tmr: "TMR" "#" INTEGER
 vmr: "VMR" "#" INTEGER

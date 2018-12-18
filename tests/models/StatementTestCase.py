@@ -420,7 +420,7 @@ class ExistsStatementTestCase(unittest.TestCase):
     def test_run(self):
         stmt = self.g.register("TEST", isa="EXE.EXISTS-STATEMENT")
 
-        stmt["FIND"] = Query.parse(self.g._network, "WHERE @ ^ EXE.EXISTS-STATEMENT")
+        stmt["FIND"] = Query.parse(self.g._network, "WHERE @ ^ @EXE.EXISTS-STATEMENT")
         self.assertTrue(Statement.from_instance(stmt).run(StatementScope(), None))
 
         stmt["FIND"] = Query.parse(self.g._network, "WHERE abc=123")

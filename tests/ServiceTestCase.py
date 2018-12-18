@@ -27,7 +27,7 @@ class ServiceTestCase(unittest.TestCase):
         f1 = g.register("TEST.FRAME.1")
         f2 = g.register("TEST.FRAME.2")
 
-        response = self.app.post("/view", data="VIEW TEST SHOW FRAMES WHERE @=TEST.FRAME.1")
+        response = self.app.post("/view", data="VIEW TEST SHOW FRAMES WHERE @=@TEST.FRAME.1")
         self.assertEqual(json.loads(response.data), [{"type": "Frame", "graph": "TEST", "name": "FRAME.1", "relations": [], "attributes": []}])
 
     def test_graph_to_json_types(self):
