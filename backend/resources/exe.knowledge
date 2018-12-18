@@ -14,3 +14,58 @@
 @EXE.MENTAL-EFFECTOR = {
     ISA @EXE.EFFECTOR
 };
+
+@EXE.STATEMENT = {};
+
+@EXE.RETURNING-STATEMENT = {
+    ISA @EXE.STATEMENT;
+};
+
+@EXE.BOOLEAN-STATEMENT = {
+    ISA @EXE.RETURNING-STATEMENT;
+};
+
+@EXE.ADDFILLER-STATEMENT = {
+    ISA @EXE.STATEMENT;
+    CLASSMAP "backend.models.statement.AddFillerStatement";
+};
+
+@EXE.ASSIGNFILLER-STATEMENT = {
+    ISA @EXE.STATEMENT;
+    CLASSMAP "backend.models.statement.AssignFillerStatement";
+};
+
+@EXE.ASSIGNVARIABLE-STATEMENT = {
+    ISA @EXE.STATEMENT;
+    CLASSMAP "backend.models.statement.AssignVariableStatement";
+};
+
+@EXE.EXISTS-STATEMENT = {
+    ISA @EXE.BOOLEAN-STATEMENT;
+    CLASSMAP "backend.models.statement.ExistsStatement";
+};
+
+@EXE.FOREACH-STATEMENT = {
+    ISA @EXE.STATEMENT;
+    CLASSMAP "backend.models.statement.ForEachStatement";
+};
+
+@EXE.IS-STATEMENT = {
+    ISA @EXE.BOOLEAN-STATEMENT;
+    CLASSMAP "backend.models.statement.IsStatement";
+};
+
+@EXE.MAKEINSTANCE-STATEMENT = {
+    ISA @EXE.RETURNING-STATEMENT;
+    CLASSMAP "backend.models.statement.MakeInstanceStatement";
+};
+
+@EXE.MP-STATEMENT = {
+    ISA @EXE.RETURNING-STATEMENT;
+    CLASSMAP "backend.models.statement.MeaningProcedureStatement";
+};
+
+@EXE.OUTPUTXMR-STATEMENT = {
+    ISA @EXE.RETURNING-STATEMENT;
+    CLASSMAP "backend.models.statement.OutputXMRStatement";
+};

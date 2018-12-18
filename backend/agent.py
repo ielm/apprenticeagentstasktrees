@@ -31,7 +31,7 @@ class Agent(Network):
         if ontology is None:
             raise Exception("NYI, Default Ontology Required")
 
-        self.exe = self.register(Statement.hierarchy())
+        self.exe = self.register("EXE")
         self.ontology = self.register(ontology)
 
         self.internal = self.register(FR("SELF", self.ontology))

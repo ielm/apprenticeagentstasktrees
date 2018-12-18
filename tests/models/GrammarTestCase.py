@@ -1,4 +1,5 @@
 from backend.agent import Agent
+from backend.models.bootstrap import Bootstrap
 from backend.models.agenda import Condition, Goal, Plan, Step
 from backend.models.grammar import Grammar
 from backend.models.graph import Identifier, Literal, Network
@@ -176,10 +177,9 @@ class AgendaGrammarTestCase(unittest.TestCase):
 
     class TestAgent(Agent):
         def __init__(self, g, agent):
-            from backend.models.statement import StatementHierarchy
             Network.__init__(self)
             self.register(g)
-            self.register(StatementHierarchy().build())
+            self.register("EXE")
 
             self.exe = g
             self.internal = g
@@ -297,6 +297,8 @@ class AgendaGrammarTestCase(unittest.TestCase):
         self.assertEqual(statement, parsed)
 
     def test_foreach_statement(self):
+        Bootstrap.bootstrap_resource(self.agent, "backend.resources", "exe.knowledge")
+
         query = SlotQuery(self.agent, AndQuery(self.agent, [NameQuery(self.agent, "THEME"), FillerQuery(self.agent, LiteralQuery(self.agent, 123))]))
         statement = ForEachStatement.instance(self.g, query, "$var", AddFillerStatement.instance(self.g, "$var", "SLOT", 456))
         parsed = Grammar.parse(self.agent, "FOR EACH $var IN THEME = 123 | $var[SLOT] += 456", start="foreach_statement", agent=self.agent)
@@ -333,6 +335,7 @@ class AgendaGrammarTestCase(unittest.TestCase):
         self.assertEqual(statement, parsed)
 
     def test_plan(self):
+        Bootstrap.bootstrap_resource(self.agent, "backend.resources", "exe.knowledge")
 
         plan = Plan.build(self.g, "testplan", Plan.DEFAULT, Step.build(self.g, 1, Step.IDLE))
         parsed = Grammar.parse(self.agent, "PLAN (testplan) SELECT DEFAULT STEP DO IDLE", start="plan", agent=self.agent)
@@ -354,6 +357,8 @@ class AgendaGrammarTestCase(unittest.TestCase):
         self.assertEqual(plan, parsed)
 
     def test_condition(self):
+        Bootstrap.bootstrap_resource(self.agent, "backend.resources", "exe.knowledge")
+
         query = SlotQuery(self.agent, AndQuery(self.agent, [NameQuery(self.agent, "THEME"), FillerQuery(self.agent, LiteralQuery(self.agent, 123))]))
 
         condition = Condition.build(self.g, [ExistsStatement.instance(self.g, query)], Goal.Status.SATISFIED, logic=Condition.Logic.AND, order=1)
@@ -373,6 +378,8 @@ class AgendaGrammarTestCase(unittest.TestCase):
         self.assertEqual(condition, parsed)
 
     def test_define_goal(self):
+        Bootstrap.bootstrap_resource(self.agent, "backend.resources", "exe.knowledge")
+
         # A goal has a name and a destination graph, and a default priority
         goal: Goal = Grammar.parse(self.agent, "DEFINE XYZ() AS GOAL IN SELF", start="define", agent=self.agent).goal
         self.assertTrue(goal.frame.name() in self.g)
@@ -427,6 +434,8 @@ class AgendaGrammarTestCase(unittest.TestCase):
         self.assertEqual(goal, parsed)
 
     def test_find_something_to_do(self):
+        Bootstrap.bootstrap_resource(self.agent, "backend.resources", "exe.knowledge")
+
         graph = self.g
         goal1 = Goal.define(graph, "FIND-SOMETHING-TO-DO", 0.1, 0.5, [
             Plan.build(graph,

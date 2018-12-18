@@ -175,8 +175,7 @@ class AgentDecideTestCase(unittest.TestCase):
     def setUp(self):
 
         class TestableAgent(Agent):
-            def _bootstrap(self):
-                pass
+            pass
 
         self.n = Network()
         self.ontology = self.n.register(Ontology("ONT"))
