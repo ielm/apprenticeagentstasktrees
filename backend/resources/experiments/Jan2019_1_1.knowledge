@@ -1,0 +1,189 @@
+REGISTER MP backend.resources.experiments.Jan2019_1_1.UnderstandInputMP AS understand_input;
+REGISTER MP backend.resources.experiments.Jan2019_1_1.PrioritizeLearningMP AS prioritize_learning;
+REGISTER MP backend.resources.experiments.Jan2019_1_1.EvalResourcesMP AS evaluate_resources;
+REGISTER MP backend.resources.experiments.Jan2019_1_1.FindSomethingToDoMP AS find_something_to_do;
+REGISTER MP backend.resources.experiments.Jan2019_1_1.AcknowledgeInputMP AS acknowledge_input;
+REGISTER MP backend.resources.experiments.Jan2019_1_1.DecideOnLanguageInputMP AS decide_on_language_input;
+REGISTER MP backend.resources.experiments.Jan2019_1_1.RespondToQueryMP AS respond_to_query;
+REGISTER MP backend.resources.experiments.Jan2019_1_1.PerformComplexTaskMP AS perform_complex_task;
+REGISTER MP backend.resources.experiments.Jan2019_1_1.PrintTMR AS print_tmr;
+REGISTER MP backend.resources.experiments.Jan2019_1_1.AddGoalMP AS add_goal;
+REGISTER MP backend.resources.experiments.Jan2019_1_1.ReactToVisualInputMP AS react_to_visual_input;
+REGISTER MP backend.resources.experiments.Jan2019_1_1.GetPhysicalObjectCapabilityMP as get_physical_object;
+REGISTER MP backend.resources.experiments.Jan2019_1_1.ReactToVisualInputMP as react_to_visual_input;
+
+@EXE.GET-CAPABILITY = {
+    ISA @EXE.CAPABILITY;
+    MP  "get_physical_object";
+};
+
+@EXE.LEARN-CAPABILITY = {
+    ISA @EXE.CAPABILITY;
+    MP  "understand_input";
+};
+
+@EXE.SPEAK-CAPABILITY = {
+    ISA @EXE.CAPABILITY;
+    MP  "speak";
+};
+
+@SELF.PHYSICAL-EFFECTOR.1 = {
+    ISA @EXE.PHYSICAL-EFFECTOR;
+    HAS-CAPABILITY @EXE.GET-CAPABILITY;
+    STATUS "FREE";
+};
+
+@SELF.MENTAL-EFFECTOR.1 = {
+    ISA @EXE.MENTAL-EFFECTOR;
+    HAS-CAPABILITY @EXE.LEARN-CAPABILITY;
+    STATUS "FREE";
+};
+
+@SELF.VERBAL-EFFECTOR.1 = {
+    ISA @EXE.VERBAL-EFFECTOR;
+    HAS-CAPABILITY @EXE.SPEAK-CAPABILITY;
+    STATUS "FREE";
+};
+
+@SELF.ROBOT.1 += {
+    PRIORITY_WEIGHT 1.5;
+    RESOURCES_WEIGHT 0.25;
+    HAS-EFFECTOR @SELF.PHYSICAL-EFFECTOR.1;
+    HAS-EFFECTOR @SELF.MENTAL-EFFECTOR.1;
+    HAS-EFFECTOR @SELF.VERBAL-EFFECTOR.1;
+};
+
+@LT.HUMAN.1 = {
+    ISA @ONT.HUMAN;
+    HAS-NAME "Jake";
+};
+
+@ENV.HUMAN.1 = {
+    ISA @ONT.HUMAN;
+    RESOLVED-TO @LT.HUMAN.1;
+};
+
+@LT.TEACH.1 = {
+    ISA @ONT.TEACH;
+    AGENT @LT.HUMAN.1;
+    BENEFICIARY @SELF.ROBOT.1;
+    THEME @LT.BUILD.1;
+};
+
+@ENV.SCREWDRIVER.1 = {
+    ISA @ONT.SCREWDRIVER;
+};
+
+@ENV.BRACKET.1 = {
+    ISA @ONT.BRACKET;
+};
+
+@ENV.EPOCH = {};
+
+@ENV.EPOCH.1 = {
+    TIME 0;
+    CONTAINS @ENV.HUMAN.1;
+    CONTAINS @ENV.SCREWDRIVER.1;
+    CONTAINS @ENV.BRACKET.1;
+    DISTANCE @ENV.SPATIAL-DISTANCE.1;
+    DISTANCE @ENV.SPATIAL-DISTANCE.2;
+};
+
+@ENV.SPATIAL-DISTANCE.1 = {
+    DOMAIN @ENV.SCREWDRIVER.1;
+    RANGE 1.0;
+};
+
+@ENV.SPATIAL-DISTANCE.2 = {
+    DOMAIN @ENV.BRACKET.1;
+    RANGE 1.0;
+};
+
+DEFINE FIND-SOMETHING-TO-DO()
+    AS GOAL
+    IN EXE
+    PRIORITY 0.1
+    RESOURCES 0.3
+    PLAN (find something to do)
+        SELECT IF EXISTS (@^ @EXE.INPUT-TMR AND STATUS = "RECEIVED")
+        STEP
+            DO FOR EACH $tmr IN (@^ @EXE.INPUT-TMR AND STATUS = "RECEIVED")
+            | SELF[HAS-GOAL] += @SELF:@EXE.ACKNOWLEDGE-INPUT($tmr)
+    PLAN (idle)
+        SELECT DEFAULT
+        STEP
+            DO IDLE
+;
+DEFINE UNDERSTAND-TMR($tmr)
+    AS GOAL
+    IN EXE
+    PRIORITY SELF.prioritize_learning()
+    RESOURCES SELF.evaluate_resources()
+    PLAN (understand TMR)
+        SELECT DEFAULT
+        STEP
+            DO IDLE
+            // DO CAPABILITY @EXE.LEARN-CAPABILITY($tmr)
+            // | THEN DO $tmr[STATUS] = "UNDERSTOOD"
+    WHEN $tmr[STATUS] == "UNDERSTOOD" THEN satisfied
+;
+DEFINE ACKNOWLEDGE-INPUT($xmr)
+    AS GOAL
+    IN EXE
+    PRIORITY SELF.prioritize_learning($xmr)
+    RESOURCES SELF.evaluate_resources($xmr)
+    PLAN (decide on language input)
+        SELECT IF $xmr[TYPE] == "LANGUAGE"
+        STEP
+            DO SELF[HAS-GOAL] += @SELF:@EXE.DECIDE-ON-LANGUAGE-INPUT($xmr)
+            DO $xmr[STATUS] = "ACKNOWLEDGED"
+    PLAN (react to visual input)
+        SELECT IF $xmr[TYPE] == "VISUAL"
+        STEP
+            DO SELF[HAS-GOAL] += @SELF:@EXE.REACT-TO-VISUAL-INPUT($xmr)
+            DO $xmr[STATUS] = "ACKNOWLEDGED"
+    WHEN $xmr[STATUS] == "ACKNOWLEDGED" OR $xmr[STATUS] == "IGNORED" THEN satisfied
+;
+DEFINE DECIDE-ON-LANGUAGE-INPUT($tmr)
+//  TODO - return $task from decide_on_language_input and create PERFORM-COMPLEX-TASK from goal definition
+    AS GOAL
+    IN EXE
+    PRIORITY SELF.prioritize_learning($tmr)
+    RESOURCES SELF.evaluate_resources($tmr)
+    PLAN (decide on language input)
+        SELECT DEFAULT
+        STEP
+            DO SELF.decide_on_language_input($tmr)
+//        DO SELF[STATUS] = "SATISFIED"
+    // TODO - insert WHEN condition for goal satisfaction
+    WHEN EXECUTED THEN satisfied
+;
+DEFINE RESPOND-TO-QUERY($tmr)
+    AS GOAL
+    IN EXE
+    PRIORITY SELF.prioritize_learning($tmr)
+    RESOURCES SELF.evaluate_resources($tmr)
+;
+DEFINE PERFORM-COMPLEX-TASK($task)
+    AS GOAL
+    IN EXE
+    PRIORITY SELF.prioritize_learning($task)
+    RESOURCES SELF.evaluate_resources($task)
+    PLAN (perform complex task)
+        SELECT DEFAULT
+        STEP
+            DO SELF.perform_complex_task($task)
+            DO IDLE
+;
+DEFINE REACT-TO-VISUAL-INPUT($vmr)
+    AS GOAL
+    IN EXE
+    PRIORITY SELF.prioritize_learning($vmr)
+    RESOURCES SELF.evaluate_resources($vmr)
+    PLAN (react to visual input)
+        SELECT DEFAULT
+        STEP
+            DO SELF.react_to_visual_input($vmr)
+            DO IDLE
+    WHEN EXECUTED THEN satisfied
+;
