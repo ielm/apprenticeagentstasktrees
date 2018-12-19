@@ -16,29 +16,14 @@ from backend.models.xmr import XMR
 from backend.utils.AgentLogger import CachedAgentLogger
 from backend.utils.YaleUtils import format_learned_event_yale, input_to_tmrs
 
+from pkgutil import get_data
+
 app = Flask(__name__, template_folder="../frontend/templates/")
 CORS(app)
 
 
-# n = Network()
-# ontology = n.register(Ontology.init_default())
 agent = Agent(ontology=Ontology.init_default())
 agent.logger().enable()
-
-# TEST HACK
-from pkgutil import get_data
-# agent.input(json.loads(get_data("tests.resources", "DemoMay2018_Analyses.json"))[0])
-# agent.input(json.loads(get_data("tests.resources", "DemoMay2018_Analyses.json"))[1])
-# agent.input(json.loads(get_data("tests.resources", "DemoMay2018_Analyses.json"))[2])
-# agent.input(json.loads(get_data("tests.resources", "DemoMay2018_Analyses.json"))[3])
-# agent.input(json.loads(get_data("tests.resources", "DemoMay2018_Analyses.json"))[4])
-# agent.input(json.loads(get_data("tests.resources", "DemoMay2018_Analyses.json"))[5])
-# agent.input(json.loads(get_data("tests.resources", "DemoMay2018_Analyses.json"))[6])
-# agent.input(json.loads(get_data("tests.resources", "DemoMay2018_Analyses.json"))[7])
-# agent.input(json.loads(get_data("tests.resources", "DemoMay2018_Analyses.json"))[8])
-# agent.input(json.loads(get_data("tests.resources", "DemoMay2018_Analyses.json"))[9])
-# agent.input(json.loads(get_data("tests.resources", "DemoMay2018_Analyses.json"))[10])
-# agent.input(json.loads(get_data("tests.resources", "DemoMay2018_Analyses.json"))[11])
 
 
 def graph_to_json(graph):
