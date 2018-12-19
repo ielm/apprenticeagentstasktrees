@@ -37,12 +37,22 @@ class RecallTaskFromLongTermMemoryUnderstandingProcessor(UnderstandingProcessor)
             raise HeuristicException()
 
         for result in results:
+            id_map = {}
             temp = FR("TEMP", agent.ontology)
             for instance in agent.lt_memory.search(Frame.q(agent).f(LCTContext.FROM_CONTEXT, result[LCTContext.FROM_CONTEXT][0])):
-                temp[Identifier(None, instance._identifier.name, instance=instance._identifier.instance)] = instance
+                id_map[instance._identifier.render()] = instance._identifier.render(graph=False)
+                id = Identifier(None, instance._identifier.name, instance=instance._identifier.instance)
+                temp[id] = instance
+
+            for instance in temp:
+                for slot in temp[instance]:
+                    for filler in temp[instance][slot]:
+                        if isinstance(filler._value, Identifier) and filler._value.render() in id_map:
+                            filler._value = id_map[filler._value.render()]
+
             id_map = agent.wo_memory.import_fr(temp)
 
-            agent.wo_memory[id_map[result._identifier.render(graph=False)]][self.context.DOING] = True
+            agent.wo_memory[id_map[result._identifier.render()]][self.context.DOING] = True
 
 
 # Assuming a currently doing task, finds any preconditions for that task and makes them into actions on the agent queue.

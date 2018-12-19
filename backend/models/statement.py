@@ -1,12 +1,12 @@
-# from backend.models.effectors import Callback, Capability
 from backend.models.graph import Filler, Frame, Graph, Identifier, Literal
 from backend.models.mps import MPRegistry
 from backend.models.query import Query
+from pydoc import locate
 from typing import Any, List, Union
 
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from backend.models.effectors import Capability
+    from backend.models.output import OutputXMR, OutputXMRTemplate
 
 
 class Variable(object):
@@ -106,6 +106,9 @@ class VariableMap(object):
                 return var
         raise Exception("Variable '" + name + "' is not defined in this mapping.")
 
+    def variables(self) -> List[str]:
+        return list(map(lambda v: v.resolve().value, self.frame["WITH"]))
+
     def __eq__(self, other):
         if isinstance(other, VariableMap):
             return self.frame == other.frame
@@ -114,85 +117,28 @@ class VariableMap(object):
         return super().__eq__(other)
 
 
-class StatementHierarchy(object):
+class StatementScope(object):
 
     def __init__(self):
-        self._cache = None
-
-    def __call__(self, *args, **kwargs) -> Graph:
-        if self._cache is None:
-            self._cache = self.build()
-        return self._cache
-
-    def build(self) -> Graph:
-        '''
-        STATEMENT (hierarchy)
-            RETURNING-STATEMENT
-                BOOLEAN-STATEMENT
-                    EXISTS-STATEMENT
-                    IS-STATEMENT
-                MAKEINSTANCE-STATEMENT
-                QUERY-STATEMENT
-                SLOT-STATEMENT
-                MP-STATEMENT
-            NONRETURNING-STATEMENT
-                FOREACH-STATEMENT
-                ADDFILLER-STATEMENT
-                ASSIGNFILLER-STATEMENT
-        '''
-
-        hierarchy = Graph("EXE")
-        hierarchy.register("STATEMENT")
-        hierarchy.register("RETURNING-STATEMENT", isa="EXE.STATEMENT")
-        hierarchy.register("BOOLEAN-STATEMENT", isa="EXE.RETURNING-STATEMENT")
-        hierarchy.register("EXISTS-STATEMENT", isa="EXE.BOOLEAN-STATEMENT")
-        hierarchy.register("IS-STATEMENT", isa="EXE.BOOLEAN-STATEMENT")
-        hierarchy.register("MAKEINSTANCE-STATEMENT", isa="EXE.RETURNING-STATEMENT")
-        hierarchy.register("QUERY-STATEMENT", isa="EXE.RETURNING-STATEMENT")
-        hierarchy.register("SLOT-STATEMENT", isa="EXE.RETURNING-STATEMENT")
-        hierarchy.register("MP-STATEMENT", isa="EXE.RETURNING-STATEMENT")
-        hierarchy.register("CAPABILITY-STATEMENT", isa="EXE.RETURNING-STATEMENT")
-        hierarchy.register("NONRETURNING-STATEMENT", isa="EXE.STATEMENT")
-        hierarchy.register("FOREACH-STATEMENT", isa="EXE.NONRETURNING-STATEMENT")
-        hierarchy.register("ADDFILLER-STATEMENT", isa="EXE.NONRETURNING-STATEMENT")
-        hierarchy.register("ASSIGNFILLER-STATEMENT", isa="EXE.NONRETURNING-STATEMENT")
-
-        hierarchy["STATEMENT"]["CLASSMAP"] = Literal(Statement)
-        hierarchy["ADDFILLER-STATEMENT"]["CLASSMAP"] = Literal(AddFillerStatement)
-        hierarchy["ASSIGNFILLER-STATEMENT"]["CLASSMAP"] = Literal(AssignFillerStatement)
-        hierarchy["EXISTS-STATEMENT"]["CLASSMAP"] = Literal(ExistsStatement)
-        hierarchy["FOREACH-STATEMENT"]["CLASSMAP"] = Literal(ForEachStatement)
-        hierarchy["IS-STATEMENT"]["CLASSMAP"] = Literal(IsStatement)
-        hierarchy["MAKEINSTANCE-STATEMENT"]["CLASSMAP"] = Literal(MakeInstanceStatement)
-        hierarchy["MP-STATEMENT"]["CLASSMAP"] = Literal(MeaningProcedureStatement)
-        hierarchy["CAPABILITY-STATEMENT"]["CLASSMAP"] = Literal(CapabilityStatement)
-
-        return hierarchy
-
-    def concept_for_statement(self, statement: 'Statement'):
-        root: Frame = self()["STATEMENT"]
-        for frame in self():
-            if frame ^ root and frame["CLASSMAP"] == statement.__class__:
-                return frame
-        raise Exception("Unknown statement type: '" + str(statement.__class__) + "'.")
+        from backend.models.output import OutputXMR
+        self.outputs: List[OutputXMR] = []
 
 
 class Statement(object):
 
     @classmethod
-    def hierarchy(cls):
-        return StatementHierarchy().build()
-
-    @classmethod
     def from_instance(cls, frame: Frame) -> 'Statement':
         definition = frame.parents()[0].resolve(frame._graph, network=frame._network)
-        return definition["CLASSMAP"][0].resolve().value(frame)
+        clazz = definition["CLASSMAP"][0].resolve().value
+        if isinstance(clazz, str):
+            clazz = locate(definition["CLASSMAP"][0].resolve().value)
+        return clazz(frame)
 
     def __init__(self, frame: Frame):
         self.frame = frame
 
-    def run(self, varmap: VariableMap) -> Any:
-        raise Exception("Statement.run(varmap) must be implemented.")
+    def run(self, scope: StatementScope, varmap: VariableMap) -> Any:
+        raise Exception("Statement.run(scope, varmap) must be implemented.")
 
     def _resolve_param(self, param: Any, varmap: VariableMap):
         if isinstance(param, Filler):
@@ -216,9 +162,6 @@ class Statement(object):
 
         return param
 
-    def capabilities(self) -> List['Capability']:
-        return []
-
     def __eq__(self, other):
         if isinstance(other, Statement):
             return self.frame == other.frame
@@ -241,7 +184,7 @@ class AddFillerStatement(Statement):
 
         return AddFillerStatement(frame)
 
-    def run(self, varmap: VariableMap):
+    def run(self, scope: StatementScope, varmap: VariableMap):
         to: Any = self.frame["TO"][0].resolve()
         slot: str = self.frame["SLOT"][0].resolve().value
         value: Any = self.frame["ADD"][0].resolve()
@@ -267,7 +210,7 @@ class AddFillerStatement(Statement):
             except: pass
         if isinstance(value, Frame):
             if value ^ "EXE.RETURNING-STATEMENT":
-                value = Statement.from_instance(value).run(varmap)
+                value = Statement.from_instance(value).run(StatementScope(), varmap)
 
         for frame in to:
             frame[slot] += value
@@ -303,7 +246,7 @@ class AssignFillerStatement(Statement):
 
         return AssignFillerStatement(frame)
 
-    def run(self, varmap: VariableMap):
+    def run(self, scope: StatementScope, varmap: VariableMap):
         to: Any = self.frame["TO"][0].resolve()
         slot: str = self.frame["SLOT"][0].resolve().value
         value: Any = self.frame["ASSIGN"][0].resolve()
@@ -321,15 +264,13 @@ class AssignFillerStatement(Statement):
         if isinstance(to, Frame):
             to = [to]
 
-        if isinstance(value, Literal):
-            value = value.value
-        if isinstance(value, str):
+        if isinstance(value, Literal) and isinstance(value.value, str):
             try:
-                value = varmap.resolve(value)
+                value = varmap.resolve(value.value)
             except: pass
         if isinstance(value, Frame):
             if value ^ "EXE.RETURNING-STATEMENT":
-                value = Statement.from_instance(value).run(varmap)
+                value = Statement.from_instance(value).run(StatementScope(), varmap)
 
         for frame in to:
             frame[slot] = value
@@ -342,6 +283,39 @@ class AssignFillerStatement(Statement):
         return super().__eq__(other)
 
 
+class AssignVariableStatement(Statement):
+
+    @classmethod
+    def instance(cls, graph: Graph, variable: str, value: Any):
+        frame = graph.register("ASSIGNVARIABLE-STATEMENT", isa="EXE.ASSIGNVARIABLE-STATEMENT", generate_index=True)
+        frame["TO"] = Literal(variable)
+        frame["ASSIGN"] = value
+
+        return AssignVariableStatement(frame)
+
+    def run(self, scope: StatementScope, varmap: VariableMap):
+        variable = self.frame["TO"].singleton()
+        value = self.frame["ASSIGN"].singleton()
+
+        if isinstance(value, str):
+            try:
+                value = varmap.resolve(value)
+            except: pass
+
+        if isinstance(value, Statement) and value.frame ^ "EXE.RETURNING-STATEMENT":
+            value = value.run(StatementScope(), varmap)
+
+        if isinstance(value, Frame) and value ^ "EXE.RETURNING-STATEMENT":
+            value = Statement.from_instance(value).run(StatementScope(), varmap)
+
+        Variable.instance(self.frame._graph, variable, value, varmap)
+
+    def __eq__(self, other):
+        if isinstance(other, AssignVariableStatement):
+            return self.frame["TO"] == other.frame["TO"] and self.frame["ASSIGN"] == other.frame["ASSIGN"]
+        return super().__eq__(other)
+
+
 class ExistsStatement(Statement):
 
     @classmethod
@@ -351,7 +325,7 @@ class ExistsStatement(Statement):
 
         return ExistsStatement(frame)
 
-    def run(self, varmap: VariableMap) -> bool:
+    def run(self, scope: StatementScope, varmap: VariableMap) -> bool:
         query = self.frame["FIND"][0].resolve().value
         results = self.frame._graph._network.search(query)
         return len(results) > 0
@@ -378,7 +352,7 @@ class ForEachStatement(Statement):
 
         return ForEachStatement(frame)
 
-    def run(self, varmap: VariableMap):
+    def run(self, scope: StatementScope, varmap: VariableMap):
         query: Query = self.frame["FROM"].singleton()
         variable: str = self.frame["ASSIGN"].singleton()
         do: List[Statement] = list(map(lambda stmt: Statement.from_instance(stmt.resolve()), self.frame["DO"]))
@@ -392,14 +366,7 @@ class ForEachStatement(Statement):
         for frame in self.frame._graph._network.search(query):
             var.set_value(frame)
             for stmt in do:
-                stmt.run(varmap)
-
-    def capabilities(self) -> List['Capability']:
-        do: List[Statement] = list(map(lambda stmt: Statement.from_instance(stmt.resolve()), self.frame["DO"]))
-        capabilities = []
-        for stmt in do:
-            capabilities.extend(stmt.capabilities())
-        return capabilities
+                stmt.run(scope, varmap)
 
     def __eq__(self, other):
         if isinstance(other, ForEachStatement):
@@ -421,7 +388,7 @@ class IsStatement(Statement):
 
         return IsStatement(frame)
 
-    def run(self, varmap: VariableMap):
+    def run(self, scope: StatementScope, varmap: VariableMap):
         domain = self.frame["DOMAIN"][0].resolve()
         slot: str = self.frame["SLOT"][0].resolve().value
         filler = self.frame["FILLER"][0].resolve()
@@ -463,7 +430,7 @@ class MakeInstanceStatement(Statement):
 
         return MakeInstanceStatement(frame)
 
-    def run(self, varmap: VariableMap):
+    def run(self, scope: StatementScope, varmap: VariableMap):
         graph: str = self.frame["IN"][0].resolve().value
         of: Frame = self.frame["OF"][0].resolve()
         params: List[Any] = list(map(lambda param: param.resolve().value, self.frame["PARAMS"]))
@@ -500,13 +467,12 @@ class MeaningProcedureStatement(Statement):
 
         return MeaningProcedureStatement(frame)
 
-    def run(self, varmap: VariableMap):
+    def run(self, scope: StatementScope, varmap: VariableMap):
         mp: str = self.frame["CALLS"][0].resolve().value
 
         params = list(map(lambda param: self._resolve_param(param, varmap), self.frame["PARAMS"]))
-        params.insert(0, self)
 
-        result = MPRegistry.run(mp, *params)
+        result = MPRegistry.run(mp, self.frame._graph._network, *params, statement=self, varmap=varmap)
         return result
 
     def __eq__(self, other):
@@ -516,61 +482,55 @@ class MeaningProcedureStatement(Statement):
         return super().__eq__(other)
 
 
-class CapabilityStatement(Statement):
+class OutputXMRStatement(Statement):
 
     @classmethod
-    def instance(cls, graph: Graph, capability: Union[str, Identifier, Frame, 'Capability'], callback: List[Union[str, Identifier, Frame, Statement]], params: List[Any]) -> 'CapabilityStatement':
-        from backend.models.effectors import Capability
+    def instance(cls, graph: Graph, template: Union[str, Graph, 'OutputXMRTemplate'], params: List[Any], agent: Union[str, Identifier, Frame]):
+        from backend.models.output import OutputXMRTemplate
 
-        frame = graph.register("CAPABILITY-STATEMENT", isa="EXE.CAPABILITY-STATEMENT", generate_index=True)
+        frame = graph.register("OUTPUTXMR-STATEMENT", isa="EXE.OUTPUTXMR-STATEMENT", generate_index=True)
 
-        if isinstance(capability, str):
-            capability = Identifier.parse(capability)
-        if isinstance(capability, Capability):
-            capability = capability.frame
-        if isinstance(capability, Frame):
-            capability = capability._identifier
-        frame["CAPABILITY"] = capability
+        if isinstance(template, Graph):
+            template = OutputXMRTemplate(template)
+        if isinstance(template, OutputXMRTemplate):
+            template = template.name()
 
-        for cb in callback:
-            if isinstance(cb, str):
-                cb = Identifier.parse(cb)
-            if isinstance(cb, Statement):
-                cb = cb.frame
-            if isinstance(cb, Frame):
-                cb = cb._identifier
-            frame["CALLBACK"] += cb
-
+        frame["TEMPLATE"] = Literal(template)
         frame["PARAMS"] = params
+        frame["AGENT"] = agent
 
-        return CapabilityStatement(frame)
+        return OutputXMRStatement(frame)
 
-    def run(self, varmap: VariableMap):
-        from backend.models.effectors import Capability
+    def template(self) -> 'OutputXMRTemplate':
+        from backend.models.output import OutputXMRTemplate
 
-        capability: Capability = Capability(self.frame["CAPABILITY"].singleton())
+        return OutputXMRTemplate.lookup(self.frame._graph._network, self.frame["TEMPLATE"].singleton())
 
-        params = list(map(lambda param: self._resolve_param(param, varmap), self.frame["PARAMS"]))
-        params.insert(0, self)
+    def params(self) -> List[Any]:
+        return list(map(lambda param: param._value, self.frame["PARAMS"]))
 
-        result = capability.run(*params, graph=self.frame._graph, callbacks=self.callbacks(), varmap=varmap)
-        return result
+    def agent(self) -> Frame:
+        return self.frame["AGENT"].singleton()
 
-    def callbacks(self) -> List[Statement]:
-        return list(map(lambda cb: Statement.from_instance(cb.resolve()), self.frame["CALLBACK"]))
+    def run(self, scope: StatementScope, varmap: VariableMap) -> 'OutputXMR':
+        agent = self.agent()
+        network = self.frame._graph._network
+        graph = agent._graph
 
-    def capabilities(self) -> List['Capability']:
-        from backend.models.effectors import Capability
+        params = self.params()
+        params = list(map(lambda param: self._resolve_param(param, varmap), params))
 
-        return [Capability(self.frame["CAPABILITY"].singleton())]
+        output = self.template().create(network, graph, params)
+        scope.outputs.append(output)
+
+        return output
 
     def __eq__(self, other):
-        if isinstance(other, CapabilityStatement):
-            other = other.frame
+        if isinstance(other, OutputXMRStatement):
+            return self.template() == other.template() and \
+                self.params() == other.params() and \
+                self.agent() == other.agent()
+        elif isinstance(other, Frame):
+            return self.frame == other
 
-        if isinstance(other, Frame):
-            return self.frame["CAPABILITY"] == other["CAPABILITY"] and \
-                    list(map(lambda frame: Statement.from_instance(frame.resolve()), other["CALLBACK"])) == list(map(lambda frame: Statement.from_instance(frame.resolve()), self.frame["CALLBACK"])) and \
-                    self.frame["PARAMS"] == other["PARAMS"]
-        else:
-            return super().__eq__(other)
+        return super().__eq__(other)

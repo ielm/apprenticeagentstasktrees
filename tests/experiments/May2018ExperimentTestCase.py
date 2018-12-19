@@ -3,6 +3,8 @@ from backend.models.graph import Network
 from backend.models.ontology import Ontology
 from backend.utils.FRUtils import format_pretty_htn
 
+from pkgutil import get_data
+
 import json, os, unittest
 
 
@@ -12,15 +14,8 @@ class ExperimentTestCase(unittest.TestCase):
         self.n = Network()
         self.ontology = self.n.register(Ontology.init_default())
 
-    def resource(self, fp):
-        r = None
-        with open(fp) as f:
-            r = json.load(f)
-        return r
-
     def test_input(self):
-        file = os.path.abspath(__package__) + "/resources/DemoMay2018_Analyses.json"
-        demo = self.resource(file)
+        demo = json.loads(get_data("tests.resources", "DemoMay2018_Analyses.json").decode('ascii'))
 
         input = [
             demo[0],  # We will build a chair.
@@ -57,13 +52,11 @@ class ExperimentTestCase(unittest.TestCase):
 
         print(agent.wo_memory)
 
-        with open(os.path.abspath(__package__) + "/resources/AgentTestCase_TestInputExpectedOutput.txt", 'r') as expected:
-            expected = expected.read()
-            self.assertEqual(expected, format_pretty_htn(agent.wo_memory, agent.wo_memory["WM.BUILD.1"], indent=1))
+        expected = get_data("tests.resources", "AgentTestCase_TestInputExpectedOutput.txt").decode('ascii')
+        self.assertEqual(expected, format_pretty_htn(agent.wo_memory, agent.wo_memory["WM.BUILD.1"], indent=1))
 
     def test_ltm(self):
-        file = os.path.abspath(__package__) + "/resources/DemoMay2018_Analyses.json"
-        demo = self.resource(file)
+        demo = json.loads(get_data("tests.resources", "DemoMay2018_Analyses.json").decode('ascii'))
 
         agent = Agent(ontology=self.ontology)
         agent.logger().disable()

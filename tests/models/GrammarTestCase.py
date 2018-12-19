@@ -1,10 +1,13 @@
 from backend.agent import Agent
-from backend.models.agenda import Action, Condition, Goal
+from backend.models.bootstrap import Bootstrap
+from backend.models.agenda import Condition, Goal, Plan, Step
 from backend.models.grammar import Grammar
 from backend.models.graph import Identifier, Literal, Network
+from backend.models.mps import AgentMethod
+from backend.models.output import OutputXMRTemplate
 from backend.models.path import Path
 from backend.models.query import AndQuery, ExactQuery, FillerQuery, FrameQuery, IdentifierQuery, LiteralQuery, NameQuery, NotQuery, OrQuery, SlotQuery
-from backend.models.statement import AddFillerStatement, AssignFillerStatement, CapabilityStatement, ExistsStatement, ForEachStatement, IsStatement, MakeInstanceStatement, MeaningProcedureStatement
+from backend.models.statement import AddFillerStatement, AssignFillerStatement, AssignVariableStatement, ExistsStatement, ForEachStatement, IsStatement, MakeInstanceStatement, MeaningProcedureStatement, OutputXMRStatement
 from backend.models.view import View
 
 import unittest
@@ -30,12 +33,14 @@ class GrammarTestCase(unittest.TestCase):
         self.assertEqual("WM", Grammar.parse(self.n, "WM", start="graph"))
         self.assertEqual("TmR", Grammar.parse(self.n, "TmR", start="graph"))
         self.assertEqual("TMR#123456", Grammar.parse(self.n, "TMR#123456", start="graph"))
+        self.assertEqual("XMR#123456", Grammar.parse(self.n, "XMR#123456", start="graph"))
+        self.assertEqual("XMR-TEMPLATE#123456", Grammar.parse(self.n, "XMR-TEMPLATE#123456", start="graph"))
 
     def test_parse_identifier(self):
-        self.assertEqual(Identifier("WM", "EVENT", instance=1), Grammar.parse(self.n, "WM.EVENT.1", start="identifier"))
-        self.assertEqual(Identifier(None, "EVENT", instance=1), Grammar.parse(self.n, "EVENT.1", start="identifier"))
-        self.assertEqual(Identifier("WM", "EVENT"), Grammar.parse(self.n, "WM.EVENT", start="identifier"))
-        self.assertEqual(Identifier(None, "EVENT"), Grammar.parse(self.n, "EVENT", start="identifier"))
+        self.assertEqual(Identifier("WM", "EVENT", instance=1), Grammar.parse(self.n, "@WM.EVENT.1", start="identifier"))
+        self.assertEqual(Identifier(None, "EVENT", instance=1), Grammar.parse(self.n, "@EVENT.1", start="identifier"))
+        self.assertEqual(Identifier("WM", "EVENT"), Grammar.parse(self.n, "@WM.EVENT", start="identifier"))
+        self.assertEqual(Identifier(None, "EVENT"), Grammar.parse(self.n, "@EVENT", start="identifier"))
         with self.assertRaises(Exception):
             Grammar.parse(self.n, "True", start="identifier")
         with self.assertRaises(Exception):
@@ -70,23 +75,23 @@ class GrammarTestCase(unittest.TestCase):
         self.assertEqual(LiteralQuery(self.n, 123), Grammar.parse(self.n, "= 123", start="literal_query"))
 
     def test_parse_identifier_query(self):
-        self.assertEqual(IdentifierQuery(self.n, "WM.HUMAN.1", IdentifierQuery.Comparator.EQUALS), Grammar.parse(self.n, "=WM.HUMAN.1", start="identifier_query"))
-        self.assertEqual(IdentifierQuery(self.n, "WM.HUMAN.1", IdentifierQuery.Comparator.EQUALS), Grammar.parse(self.n, "= WM.HUMAN.1", start="identifier_query"))
-        self.assertEqual(IdentifierQuery(self.n, "WM.HUMAN.1", IdentifierQuery.Comparator.EQUALS, set=False), Grammar.parse(self.n, "=! WM.HUMAN.1", start="identifier_query"))
-        self.assertEqual(IdentifierQuery(self.n, "WM.HUMAN.1", IdentifierQuery.Comparator.ISA), Grammar.parse(self.n, "^WM.HUMAN.1", start="identifier_query"))
-        self.assertEqual(IdentifierQuery(self.n, "WM.HUMAN.1", IdentifierQuery.Comparator.ISA), Grammar.parse(self.n, "^ WM.HUMAN.1", start="identifier_query"))
-        self.assertEqual(IdentifierQuery(self.n, "WM.HUMAN.1", IdentifierQuery.Comparator.ISA, set=False), Grammar.parse(self.n, "^! WM.HUMAN.1", start="identifier_query"))
-        self.assertEqual(IdentifierQuery(self.n, "WM.HUMAN.1", IdentifierQuery.Comparator.ISPARENT), Grammar.parse(self.n, "^.WM.HUMAN.1", start="identifier_query"))
-        self.assertEqual(IdentifierQuery(self.n, "WM.HUMAN.1", IdentifierQuery.Comparator.ISPARENT), Grammar.parse(self.n, "^. WM.HUMAN.1", start="identifier_query"))
-        self.assertEqual(IdentifierQuery(self.n, "WM.HUMAN.1", IdentifierQuery.Comparator.ISPARENT, set=False), Grammar.parse(self.n, "^.! WM.HUMAN.1", start="identifier_query"))
-        self.assertEqual(IdentifierQuery(self.n, "WM.HUMAN.1", IdentifierQuery.Comparator.SUBCLASSES), Grammar.parse(self.n, ">WM.HUMAN.1", start="identifier_query"))
-        self.assertEqual(IdentifierQuery(self.n, "WM.HUMAN.1", IdentifierQuery.Comparator.SUBCLASSES), Grammar.parse(self.n, "> WM.HUMAN.1", start="identifier_query"))
-        self.assertEqual(IdentifierQuery(self.n, "WM.HUMAN.1", IdentifierQuery.Comparator.SUBCLASSES, set=False), Grammar.parse(self.n, ">! WM.HUMAN.1", start="identifier_query"))
-        self.assertEqual(IdentifierQuery(self.n, "WM.HUMAN.1", IdentifierQuery.Comparator.SUBCLASSES, from_concept=True), Grammar.parse(self.n, "~> WM.HUMAN.1", start="identifier_query"))
+        self.assertEqual(IdentifierQuery(self.n, "WM.HUMAN.1", IdentifierQuery.Comparator.EQUALS), Grammar.parse(self.n, "=@WM.HUMAN.1", start="identifier_query"))
+        self.assertEqual(IdentifierQuery(self.n, "WM.HUMAN.1", IdentifierQuery.Comparator.EQUALS), Grammar.parse(self.n, "= @WM.HUMAN.1", start="identifier_query"))
+        self.assertEqual(IdentifierQuery(self.n, "WM.HUMAN.1", IdentifierQuery.Comparator.EQUALS, set=False), Grammar.parse(self.n, "=! @WM.HUMAN.1", start="identifier_query"))
+        self.assertEqual(IdentifierQuery(self.n, "WM.HUMAN.1", IdentifierQuery.Comparator.ISA), Grammar.parse(self.n, "^@WM.HUMAN.1", start="identifier_query"))
+        self.assertEqual(IdentifierQuery(self.n, "WM.HUMAN.1", IdentifierQuery.Comparator.ISA), Grammar.parse(self.n, "^ @WM.HUMAN.1", start="identifier_query"))
+        self.assertEqual(IdentifierQuery(self.n, "WM.HUMAN.1", IdentifierQuery.Comparator.ISA, set=False), Grammar.parse(self.n, "^! @WM.HUMAN.1", start="identifier_query"))
+        self.assertEqual(IdentifierQuery(self.n, "WM.HUMAN.1", IdentifierQuery.Comparator.ISPARENT), Grammar.parse(self.n, "^.@WM.HUMAN.1", start="identifier_query"))
+        self.assertEqual(IdentifierQuery(self.n, "WM.HUMAN.1", IdentifierQuery.Comparator.ISPARENT), Grammar.parse(self.n, "^. @WM.HUMAN.1", start="identifier_query"))
+        self.assertEqual(IdentifierQuery(self.n, "WM.HUMAN.1", IdentifierQuery.Comparator.ISPARENT, set=False), Grammar.parse(self.n, "^.! @WM.HUMAN.1", start="identifier_query"))
+        self.assertEqual(IdentifierQuery(self.n, "WM.HUMAN.1", IdentifierQuery.Comparator.SUBCLASSES), Grammar.parse(self.n, ">@WM.HUMAN.1", start="identifier_query"))
+        self.assertEqual(IdentifierQuery(self.n, "WM.HUMAN.1", IdentifierQuery.Comparator.SUBCLASSES), Grammar.parse(self.n, "> @WM.HUMAN.1", start="identifier_query"))
+        self.assertEqual(IdentifierQuery(self.n, "WM.HUMAN.1", IdentifierQuery.Comparator.SUBCLASSES, set=False), Grammar.parse(self.n, ">! @WM.HUMAN.1", start="identifier_query"))
+        self.assertEqual(IdentifierQuery(self.n, "WM.HUMAN.1", IdentifierQuery.Comparator.SUBCLASSES, from_concept=True), Grammar.parse(self.n, "~> @WM.HUMAN.1", start="identifier_query"))
 
     def test_parse_filler_query(self):
         self.assertEqual(FillerQuery(self.n, LiteralQuery(self.n, 123)), Grammar.parse(self.n, "=123", start="filler_query"))
-        self.assertEqual(FillerQuery(self.n, IdentifierQuery(self.n, "WM.HUMAN.1", IdentifierQuery.Comparator.EQUALS)), Grammar.parse(self.n, "=WM.HUMAN.1", start="filler_query"))
+        self.assertEqual(FillerQuery(self.n, IdentifierQuery(self.n, "WM.HUMAN.1", IdentifierQuery.Comparator.EQUALS)), Grammar.parse(self.n, "=@WM.HUMAN.1", start="filler_query"))
 
     def test_parse_slot_query(self):
         nq = NameQuery(self.n, "THEME")
@@ -128,12 +133,12 @@ class GrammarTestCase(unittest.TestCase):
         self.assertEqual(FrameQuery(self.n, NotQuery(self.n, sq1)), Grammar.parse(self.n, "WHERE NOT (THEME = 123)", start="frame_query"))
         self.assertEqual(FrameQuery(self.n, ExactQuery(self.n, [sq1, sq2])), Grammar.parse(self.n, "WHERE EXACTLY (THEME = 123 AND THEME = 456)", start="frame_query"))
         self.assertEqual(FrameQuery(self.n, ExactQuery(self.n, [sq1, sq2])), Grammar.parse(self.n, "WHERE exactly (THEME = 123 AND THEME = 456)", start="frame_query"))
-        self.assertEqual(FrameQuery(self.n, iq), Grammar.parse(self.n, "WHERE @ =WM.HUMAN.1", start="frame_query"))
-        self.assertEqual(FrameQuery(self.n, AndQuery(self.n, [iq, sq1])), Grammar.parse(self.n, "WHERE (@ =WM.HUMAN.1 AND THEME = 123)", start="frame_query"))
-        self.assertEqual(FrameQuery(self.n, OrQuery(self.n, [iq, sq1])), Grammar.parse(self.n, "WHERE (@ =WM.HUMAN.1 OR THEME = 123)", start="frame_query"))
-        self.assertEqual(FrameQuery(self.n, NotQuery(self.n, iq)), Grammar.parse(self.n, "WHERE NOT (@ =WM.HUMAN.1)", start="frame_query"))
-        self.assertEqual(FrameQuery(self.n, NotQuery(self.n, iq)), Grammar.parse(self.n, "WHERE NOT @ =WM.HUMAN.1", start="frame_query"))
-        self.assertEqual(FrameQuery(self.n, IdentifierQuery(self.n, "ONT.EVENT", IdentifierQuery.Comparator.ISA)), Grammar.parse(self.n, "WHERE @^ONT.EVENT", start="frame_query"))
+        self.assertEqual(FrameQuery(self.n, iq), Grammar.parse(self.n, "WHERE @ =@WM.HUMAN.1", start="frame_query"))
+        self.assertEqual(FrameQuery(self.n, AndQuery(self.n, [iq, sq1])), Grammar.parse(self.n, "WHERE (@ =@WM.HUMAN.1 AND THEME = 123)", start="frame_query"))
+        self.assertEqual(FrameQuery(self.n, OrQuery(self.n, [iq, sq1])), Grammar.parse(self.n, "WHERE (@ =@WM.HUMAN.1 OR THEME = 123)", start="frame_query"))
+        self.assertEqual(FrameQuery(self.n, NotQuery(self.n, iq)), Grammar.parse(self.n, "WHERE NOT (@ =@WM.HUMAN.1)", start="frame_query"))
+        self.assertEqual(FrameQuery(self.n, NotQuery(self.n, iq)), Grammar.parse(self.n, "WHERE NOT @ =@WM.HUMAN.1", start="frame_query"))
+        self.assertEqual(FrameQuery(self.n, IdentifierQuery(self.n, "ONT.EVENT", IdentifierQuery.Comparator.ISA)), Grammar.parse(self.n, "WHERE @^@ONT.EVENT", start="frame_query"))
 
     def test_parse_view_graph(self):
         g1 = self.n.register("TEST")
@@ -145,8 +150,8 @@ class GrammarTestCase(unittest.TestCase):
     def test_parse_view_graph_with_query(self):
         g = self.n.register("TEST")
         query = FrameQuery(self.n, IdentifierQuery(self.n, "TEST.FRAME.1", IdentifierQuery.Comparator.EQUALS))
-        self.assertEqual(View(self.n, g, query=query), Grammar.parse(self.n, "VIEW TEST SHOW FRAMES WHERE @=TEST.FRAME.1"))
-        self.assertEqual(View(self.n, g, query=query), Grammar.parse(self.n, "view TEST show frames where @=TEST.FRAME.1"))
+        self.assertEqual(View(self.n, g, query=query), Grammar.parse(self.n, "VIEW TEST SHOW FRAMES WHERE @=@TEST.FRAME.1"))
+        self.assertEqual(View(self.n, g, query=query), Grammar.parse(self.n, "view TEST show frames where @=@TEST.FRAME.1"))
 
     def test_parse_follow(self):
         self.assertEqual(Path().to("REL"), Grammar.parse(self.n, "[REL]->", start="path"))
@@ -156,10 +161,10 @@ class GrammarTestCase(unittest.TestCase):
         self.assertEqual(Path().to("REL1").to("REL2"), Grammar.parse(self.n, "[REL1]-> THEN [REL2]->", start="path"))
         self.assertEqual(Path().to("REL", recursive=True), Grammar.parse(self.n, "[REL*]->", start="path"))
         self.assertEqual(Path().to("REL", recursive=True), Grammar.parse(self.n, "[REL *]->", start="path"))
-        self.assertEqual(Path().to("REL", query=FrameQuery(self.n, IdentifierQuery(self.n, "TEST.FRAME.1", IdentifierQuery.Comparator.EQUALS))), Grammar.parse(self.n, "[REL]->TO @ = TEST.FRAME.1", start="path"))
-        self.assertEqual(Path().to("REL", query=FrameQuery(self.n, IdentifierQuery(self.n, "TEST.FRAME.1", IdentifierQuery.Comparator.EQUALS))), Grammar.parse(self.n, "[REL]-> TO @ = TEST.FRAME.1", start="path"))
-        self.assertEqual(Path().to("REL", query=FrameQuery(self.n, IdentifierQuery(self.n, "TEST.FRAME.1", IdentifierQuery.Comparator.EQUALS))).to("OTHER"), Grammar.parse(self.n, "[REL]-> TO @ = TEST.FRAME.1 [OTHER]->", start="path"))
-        self.assertEqual(Path().to("REL", query=FrameQuery(self.n, IdentifierQuery(self.n, "TEST.FRAME.1", IdentifierQuery.Comparator.EQUALS))).to("OTHER"), Grammar.parse(self.n, "[REL]-> TO @ = TEST.FRAME.1 THEN [OTHER]->", start="path"))
+        self.assertEqual(Path().to("REL", query=FrameQuery(self.n, IdentifierQuery(self.n, "TEST.FRAME.1", IdentifierQuery.Comparator.EQUALS))), Grammar.parse(self.n, "[REL]->TO @ = @TEST.FRAME.1", start="path"))
+        self.assertEqual(Path().to("REL", query=FrameQuery(self.n, IdentifierQuery(self.n, "TEST.FRAME.1", IdentifierQuery.Comparator.EQUALS))), Grammar.parse(self.n, "[REL]-> TO @ = @TEST.FRAME.1", start="path"))
+        self.assertEqual(Path().to("REL", query=FrameQuery(self.n, IdentifierQuery(self.n, "TEST.FRAME.1", IdentifierQuery.Comparator.EQUALS))).to("OTHER"), Grammar.parse(self.n, "[REL]-> TO @ = @TEST.FRAME.1 [OTHER]->", start="path"))
+        self.assertEqual(Path().to("REL", query=FrameQuery(self.n, IdentifierQuery(self.n, "TEST.FRAME.1", IdentifierQuery.Comparator.EQUALS))).to("OTHER"), Grammar.parse(self.n, "[REL]-> TO @ = @TEST.FRAME.1 THEN [OTHER]->", start="path"))
 
     def test_parse_view_graph_with_path(self):
         g = self.n.register("TEST")
@@ -172,10 +177,9 @@ class AgendaGrammarTestCase(unittest.TestCase):
 
     class TestAgent(Agent):
         def __init__(self, g, agent):
-            from backend.models.statement import StatementHierarchy
             Network.__init__(self)
             self.register(g)
-            self.register(StatementHierarchy().build())
+            self.register("EXE")
 
             self.exe = g
             self.internal = g
@@ -199,20 +203,20 @@ class AgendaGrammarTestCase(unittest.TestCase):
         self.assertEqual(self.agentFrame, Grammar.parse(self.agent, "SELF", start="statement_instance", agent=self.agent))
 
         # An instance can be created on a specified graph (by name); here "SELF" is the graph name, and TEST.MYCONCEPT is an identifier to make an instance of
-        self.assertEqual(MakeInstanceStatement.instance(self.g, self.g._namespace, concept, []), Grammar.parse(self.agent, "@SELF:SELF.MYCONCEPT()", start="statement_instance", agent=self.agent))
+        self.assertEqual(MakeInstanceStatement.instance(self.g, self.g._namespace, concept, []), Grammar.parse(self.agent, "@SELF:@SELF.MYCONCEPT()", start="statement_instance", agent=self.agent))
 
         # Graph names don't need to be known; a few have unique identifiers, but must be followed by the "!" to be
         # registered as such;  AGENT.INTERNAL, AGENT.EXE, AGENT.ONTOLOGY, AGENT.WM, and AGENT.LT are valid
-        self.assertEqual(MakeInstanceStatement.instance(self.g, self.g._namespace, concept, []), Grammar.parse(self.agent, "@AGENT.INTERNAL!:SELF.MYCONCEPT()", start="statement_instance", agent=self.agent))
+        self.assertEqual(MakeInstanceStatement.instance(self.g, self.g._namespace, concept, []), Grammar.parse(self.agent, "@AGENT.INTERNAL!:@SELF.MYCONCEPT()", start="statement_instance", agent=self.agent))
 
         # If a fully qualified identifier is not provided, the agent's EXE graph will be assumed
-        self.assertEqual(MakeInstanceStatement.instance(self.g, self.g._namespace, concept, []), Grammar.parse(self.agent, "@SELF:MYCONCEPT()", start="statement_instance", agent=self.agent))
+        self.assertEqual(MakeInstanceStatement.instance(self.g, self.g._namespace, concept, []), Grammar.parse(self.agent, "@SELF:@MYCONCEPT()", start="statement_instance", agent=self.agent))
 
         # New instances can include arguments
-        self.assertEqual(MakeInstanceStatement.instance(self.g, self.g._namespace, concept, ["$arg1", "$arg2"]), Grammar.parse(self.agent, "@SELF:SELF.MYCONCEPT($arg1, $arg2)", start="statement_instance", agent=self.agent))
+        self.assertEqual(MakeInstanceStatement.instance(self.g, self.g._namespace, concept, ["$arg1", "$arg2"]), Grammar.parse(self.agent, "@SELF:@SELF.MYCONCEPT($arg1, $arg2)", start="statement_instance", agent=self.agent))
 
         # A simple identifier is also a valid statement instance
-        self.assertEqual(instance, Grammar.parse(self.agent, "#SELF.FRAME.1", start="statement_instance", agent=self.agent))
+        self.assertEqual(instance, Grammar.parse(self.agent, "@SELF.FRAME.1", start="statement_instance", agent=self.agent))
 
         # Any variable can also be used
         self.assertEqual("$var1", Grammar.parse(self.agent, "$var1", start="statement_instance", agent=self.agent))
@@ -220,14 +224,14 @@ class AgendaGrammarTestCase(unittest.TestCase):
     def test_is_statement(self):
         f = self.g.register("FRAME")
 
-        self.assertEqual(IsStatement.instance(self.g, f, "SLOT", 123), Grammar.parse(self.agent, "#SELF.FRAME[SLOT] == 123", start="is_statement", agent=self.agent))
+        self.assertEqual(IsStatement.instance(self.g, f, "SLOT", 123), Grammar.parse(self.agent, "@SELF.FRAME[SLOT] == 123", start="is_statement", agent=self.agent))
 
     def test_make_instance_statement(self):
         concept = self.g.register("MYCONCEPT")
-        self.assertEqual(MakeInstanceStatement.instance(self.g, self.g._namespace, concept, []), Grammar.parse(self.agent, "@SELF:SELF.MYCONCEPT()", start="make_instance_statement", agent=self.agent))
-        self.assertEqual(MakeInstanceStatement.instance(self.g, self.g._namespace, concept, []), Grammar.parse(self.agent, "@AGENT.INTERNAL!:SELF.MYCONCEPT()", start="make_instance_statement", agent=self.agent))
-        self.assertEqual(MakeInstanceStatement.instance(self.g, self.g._namespace, concept, []), Grammar.parse(self.agent, "@SELF:MYCONCEPT()", start="make_instance_statement", agent=self.agent))
-        self.assertEqual(MakeInstanceStatement.instance(self.g, self.g._namespace, concept, ["$arg1", "$arg2"]), Grammar.parse(self.agent, "@SELF:SELF.MYCONCEPT($arg1, $arg2)", start="make_instance_statement", agent=self.agent))
+        self.assertEqual(MakeInstanceStatement.instance(self.g, self.g._namespace, concept, []), Grammar.parse(self.agent, "@SELF:@SELF.MYCONCEPT()", start="make_instance_statement", agent=self.agent))
+        self.assertEqual(MakeInstanceStatement.instance(self.g, self.g._namespace, concept, []), Grammar.parse(self.agent, "@AGENT.INTERNAL!:@SELF.MYCONCEPT()", start="make_instance_statement", agent=self.agent))
+        self.assertEqual(MakeInstanceStatement.instance(self.g, self.g._namespace, concept, []), Grammar.parse(self.agent, "@SELF:@MYCONCEPT()", start="make_instance_statement", agent=self.agent))
+        self.assertEqual(MakeInstanceStatement.instance(self.g, self.g._namespace, concept, ["$arg1", "$arg2"]), Grammar.parse(self.agent, "@SELF:@SELF.MYCONCEPT($arg1, $arg2)", start="make_instance_statement", agent=self.agent))
 
     def test_add_filler_statement(self):
         f = self.g.register("FRAME")
@@ -237,11 +241,11 @@ class AgendaGrammarTestCase(unittest.TestCase):
         self.assertEqual(statement, parsed)
 
         statement = AddFillerStatement.instance(self.g, self.agentFrame, "SLOT", f)
-        parsed = Grammar.parse(self.agent, "SELF[SLOT] += #SELF.FRAME", start="add_filler_statement", agent=self.agent)
+        parsed = Grammar.parse(self.agent, "SELF[SLOT] += @SELF.FRAME", start="add_filler_statement", agent=self.agent)
         self.assertEqual(statement, parsed)
 
         statement = AddFillerStatement.instance(self.g, f, "SLOT", 123)
-        parsed = Grammar.parse(self.agent, "#SELF.FRAME[SLOT] += 123", start="add_filler_statement", agent=self.agent)
+        parsed = Grammar.parse(self.agent, "@SELF.FRAME[SLOT] += 123", start="add_filler_statement", agent=self.agent)
         self.assertEqual(statement, parsed)
 
     def test_assign_filler_statement(self):
@@ -252,11 +256,38 @@ class AgendaGrammarTestCase(unittest.TestCase):
         self.assertEqual(statement, parsed)
 
         statement = AssignFillerStatement.instance(self.g, self.agentFrame, "SLOT", f)
-        parsed = Grammar.parse(self.agent, "SELF[SLOT] = #SELF.FRAME", start="assign_filler_statement", agent=self.agent)
+        parsed = Grammar.parse(self.agent, "SELF[SLOT] = @SELF.FRAME", start="assign_filler_statement", agent=self.agent)
         self.assertEqual(statement, parsed)
 
         statement = AssignFillerStatement.instance(self.g, f, "SLOT", 123)
-        parsed = Grammar.parse(self.agent, "#SELF.FRAME[SLOT] = 123", start="assign_filler_statement", agent=self.agent)
+        parsed = Grammar.parse(self.agent, "@SELF.FRAME[SLOT] = 123", start="assign_filler_statement", agent=self.agent)
+        self.assertEqual(statement, parsed)
+
+    def test_assign_variable_statement(self):
+        f = self.g.register("FRAME")
+
+        statement = AssignVariableStatement.instance(self.g, "$var1", 123)
+        parsed = Grammar.parse(self.agent, "$var1 = 123", start="assign_variable_statement", agent=self.agent)
+        self.assertEqual(statement, parsed)
+
+        statement = AssignVariableStatement.instance(self.g, "$var1", Literal("test"))
+        parsed = Grammar.parse(self.agent, "$var1 = \"test\"", start="assign_variable_statement", agent=self.agent)
+        self.assertEqual(statement, parsed)
+
+        statement = AssignVariableStatement.instance(self.g, "$var1", f)
+        parsed = Grammar.parse(self.agent, "$var1 = @SELF.FRAME", start="assign_variable_statement", agent=self.agent)
+        self.assertEqual(statement, parsed)
+
+        statement = AssignVariableStatement.instance(self.g, "$var1", Literal("$var2"))
+        parsed = Grammar.parse(self.agent, "$var1 = $var2", start="assign_variable_statement", agent=self.agent)
+        self.assertEqual(statement, parsed)
+
+        statement = AssignVariableStatement.instance(self.g, "$var1", MeaningProcedureStatement.instance(self.g, "TestMP", []))
+        parsed = Grammar.parse(self.agent, "$var1 = SELF.TestMP()", start="assign_variable_statement", agent=self.agent)
+        self.assertEqual(statement, parsed)
+
+        statement = AssignVariableStatement.instance(self.g, "$var1", ExistsStatement.instance(self.g, IdentifierQuery(self.agent, "EXE.TEST.1", IdentifierQuery.Comparator.EQUALS)))
+        parsed = Grammar.parse(self.agent, "$var1 = EXISTS @ = @EXE.TEST.1", start="assign_variable_statement", agent=self.agent)
         self.assertEqual(statement, parsed)
 
     def test_exists_statement(self):
@@ -265,6 +296,8 @@ class AgendaGrammarTestCase(unittest.TestCase):
         self.assertEqual(statement, parsed)
 
     def test_foreach_statement(self):
+        Bootstrap.bootstrap_resource(self.agent, "backend.resources", "exe.knowledge")
+
         query = SlotQuery(self.agent, AndQuery(self.agent, [NameQuery(self.agent, "THEME"), FillerQuery(self.agent, LiteralQuery(self.agent, 123))]))
         statement = ForEachStatement.instance(self.g, query, "$var", AddFillerStatement.instance(self.g, "$var", "SLOT", 456))
         parsed = Grammar.parse(self.agent, "FOR EACH $var IN THEME = 123 | $var[SLOT] += 456", start="foreach_statement", agent=self.agent)
@@ -276,6 +309,8 @@ class AgendaGrammarTestCase(unittest.TestCase):
         self.assertEqual(statement, parsed)
 
     def test_mp_statement(self):
+        self.agent.exe.register("TEST")
+
         statement = MeaningProcedureStatement.instance(self.g, "mp1", [])
         parsed = Grammar.parse(self.agent, "SELF.mp1()", start="mp_statement", agent=self.agent)
         self.assertEqual(statement, parsed)
@@ -284,40 +319,45 @@ class AgendaGrammarTestCase(unittest.TestCase):
         parsed = Grammar.parse(self.agent, "SELF.mp1($var1, $var2)", start="mp_statement", agent=self.agent)
         self.assertEqual(statement, parsed)
 
-    def test_capability_statement(self):
+        statement = MeaningProcedureStatement.instance(self.g, "mp1", [123, Identifier.parse("SELF.TEST")])
+        parsed = Grammar.parse(self.agent, "SELF.mp1(123, @SELF.TEST)", start="mp_statement", agent=self.agent)
+        self.assertEqual(statement, parsed)
+
+    def test_output_statement(self):
+        self.agent.exe.register("TEST")
         self.agent.exe.register("TEST-CAPABILITY")
 
-        statement = CapabilityStatement.instance(self.agent.exe, "SELF.TEST-CAPABILITY", [], [])
-        parsed = Grammar.parse(self.agent, "CAPABILITY #SELF.TEST-CAPABILITY()", start="capability_statement", agent=self.agent)
+        template = OutputXMRTemplate.build(self.agent, "test-xmr", OutputXMRTemplate.Type.PHYSICAL, "SELF.TEST-CAPABILITY", ["$var1", "$var2", "$var3", "$var4"])
+
+        statement = OutputXMRStatement.instance(self.agent.exe, template, [1, Literal("abc"), Literal("$var1"), Identifier.parse("SELF.TEST")], self.agent.identity)
+        parsed = Grammar.parse(self.agent, "OUTPUT test-xmr(1, \"abc\", $var1, @SELF.TEST) BY SELF", start="output_statement", agent=self.agent)
         self.assertEqual(statement, parsed)
 
-        statement = CapabilityStatement.instance(self.agent.exe, "SELF.TEST-CAPABILITY", [], ["$var1", "$var2"])
-        parsed = Grammar.parse(self.agent, "CAPABILITY #SELF.TEST-CAPABILITY($var1, $var2)", start="capability_statement", agent=self.agent)
-        self.assertEqual(statement, parsed)
+    def test_plan(self):
+        Bootstrap.bootstrap_resource(self.agent, "backend.resources", "exe.knowledge")
 
-        callback1 = AssignFillerStatement.instance(self.g, self.agentFrame, "SLOTA", 123)
-        callback2 = AssignFillerStatement.instance(self.g, self.agentFrame, "SLOTB", 456)
-        statement = CapabilityStatement.instance(self.agent.exe, "SELF.TEST-CAPABILITY", [callback1, callback2], [])
-        parsed = Grammar.parse(self.agent, "CAPABILITY #SELF.TEST-CAPABILITY() | THEN DO SELF[SLOTA] = 123 | THEN DO SELF[SLOTB] = 456", start="capability_statement", agent=self.agent)
-        self.assertEqual(statement, parsed)
-
-    def test_action(self):
-
-        action = Action.build(self.g, "testaction", Action.DEFAULT, Action.IDLE)
-        parsed = Grammar.parse(self.agent, "ACTION (testaction) SELECT DEFAULT DO IDLE", start="action", agent=self.agent)
-        self.assertEqual(action, parsed)
+        plan = Plan.build(self.g, "testplan", Plan.DEFAULT, Step.build(self.g, 1, Step.IDLE))
+        parsed = Grammar.parse(self.agent, "PLAN (testplan) SELECT DEFAULT STEP DO IDLE", start="plan", agent=self.agent)
+        self.assertEqual(plan, parsed)
 
         query = SlotQuery(self.agent, AndQuery(self.agent, [NameQuery(self.agent, "THEME"), FillerQuery(self.agent, LiteralQuery(self.agent, 123))]))
-        action = Action.build(self.g, "testaction", ExistsStatement.instance(self.g, query), Action.IDLE)
-        parsed = Grammar.parse(self.agent, "ACTION (testaction) SELECT IF EXISTS THEME = 123 DO IDLE", start="action", agent=self.agent)
-        self.assertEqual(action, parsed)
+        plan = Plan.build(self.g, "testplan", ExistsStatement.instance(self.g, query), Step.build(self.g, 1, Step.IDLE))
+        parsed = Grammar.parse(self.agent, "PLAN (testplan) SELECT IF EXISTS THEME = 123 STEP DO IDLE", start="plan", agent=self.agent)
+        self.assertEqual(plan, parsed)
 
         statement = MeaningProcedureStatement.instance(self.g, "mp1", [])
-        action = Action.build(self.g, "testaction", Action.DEFAULT, [statement, statement])
-        parsed = Grammar.parse(self.agent, "ACTION (testaction) SELECT DEFAULT DO SELF.mp1() DO SELF.mp1()", start="action", agent=self.agent)
-        self.assertEqual(action, parsed)
+        plan = Plan.build(self.g, "testplan", Plan.DEFAULT, Step.build(self.g, 1, [statement, statement]))
+        parsed = Grammar.parse(self.agent, "PLAN (testplan) SELECT DEFAULT STEP DO SELF.mp1() DO SELF.mp1()", start="plan", agent=self.agent)
+        self.assertEqual(plan, parsed)
+
+        statement = MeaningProcedureStatement.instance(self.g, "mp1", [])
+        plan = Plan.build(self.g, "testplan", Plan.DEFAULT, [Step.build(self.g, 1, [statement]), Step.build(self.g, 2, [statement])])
+        parsed = Grammar.parse(self.agent, "PLAN (testplan) SELECT DEFAULT STEP DO SELF.mp1() STEP DO SELF.mp1()", start="plan", agent=self.agent)
+        self.assertEqual(plan, parsed)
 
     def test_condition(self):
+        Bootstrap.bootstrap_resource(self.agent, "backend.resources", "exe.knowledge")
+
         query = SlotQuery(self.agent, AndQuery(self.agent, [NameQuery(self.agent, "THEME"), FillerQuery(self.agent, LiteralQuery(self.agent, 123))]))
 
         condition = Condition.build(self.g, [ExistsStatement.instance(self.g, query)], Goal.Status.SATISFIED, logic=Condition.Logic.AND, order=1)
@@ -332,12 +372,18 @@ class AgendaGrammarTestCase(unittest.TestCase):
         parsed = Grammar.parse(self.agent, "WHEN EXISTS THEME = 123 OR EXISTS THEME = 123 THEN satisfied", start="condition", agent=self.agent)
         self.assertEqual(condition, parsed)
 
+        condition = Condition.build(self.g, [], Goal.Status.SATISFIED, on=Condition.On.EXECUTED)
+        parsed = Grammar.parse(self.agent, "WHEN EXECUTED THEN satisfied", start="condition", agent=self.agent)
+        self.assertEqual(condition, parsed)
+
     def test_define_goal(self):
+        Bootstrap.bootstrap_resource(self.agent, "backend.resources", "exe.knowledge")
+
         # A goal has a name and a destination graph, and a default priority
         goal: Goal = Grammar.parse(self.agent, "DEFINE XYZ() AS GOAL IN SELF", start="define", agent=self.agent).goal
         self.assertTrue(goal.frame.name() in self.g)
         self.assertEqual(goal.name(), "XYZ")
-        self.assertEqual(goal.priority(self.agent), 0.5)
+        self.assertEqual(goal.priority(), 0.5)
 
         # A goal can be overwritten
         goal: Goal = Grammar.parse(self.agent, "DEFINE XYZ() AS GOAL IN SELF", start="define", agent=self.agent).goal
@@ -370,11 +416,11 @@ class AgendaGrammarTestCase(unittest.TestCase):
         parsed: Goal = Grammar.parse(self.agent, "DEFINE XYZ() AS GOAL IN SELF RESOURCES SELF.mp1()", start="define", agent=self.agent).goal
         self.assertEqual(goal.frame["RESOURCES"].singleton()["CALLS"].singleton(), parsed.frame["RESOURCES"].singleton()["CALLS"].singleton())
 
-        # A goal can have plans (actions)
-        a1: Action = Action.build(self.g, "action_a", Action.DEFAULT, Action.IDLE)
-        a2: Action = Action.build(self.g, "action_b", Action.DEFAULT, Action.IDLE)
+        # A goal can have plans (plans)
+        a1: Plan = Plan.build(self.g, "plan_a", Plan.DEFAULT, Step.build(self.g, 1, Step.IDLE))
+        a2: Plan = Plan.build(self.g, "plan_b", Plan.DEFAULT, Step.build(self.g, 1, Step.IDLE))
         goal: Goal = Goal.define(self.g, "XYZ", 0.5, 0.5, [a1, a2], [], [])
-        parsed: Goal = Grammar.parse(self.agent, "DEFINE XYZ() AS GOAL IN SELF ACTION (action_a) SELECT DEFAULT DO IDLE ACTION (action_b) SELECT DEFAULT DO IDLE", start="define", agent=self.agent).goal
+        parsed: Goal = Grammar.parse(self.agent, "DEFINE XYZ() AS GOAL IN SELF PLAN (plan_a) SELECT DEFAULT STEP DO IDLE PLAN (plan_b) SELECT DEFAULT STEP DO IDLE", start="define", agent=self.agent).goal
         self.assertEqual(goal, parsed)
 
         # A goal can have conditions (which are ordered as written)
@@ -387,26 +433,25 @@ class AgendaGrammarTestCase(unittest.TestCase):
         self.assertEqual(goal, parsed)
 
     def test_find_something_to_do(self):
+        Bootstrap.bootstrap_resource(self.agent, "backend.resources", "exe.knowledge")
+
         graph = self.g
         goal1 = Goal.define(graph, "FIND-SOMETHING-TO-DO", 0.1, 0.5, [
-            Action.build(graph,
+            Plan.build(graph,
                          "acknowledge input",
-                         ExistsStatement.instance(graph, Grammar.parse(self.agent,
-                                                                     "(@^ SELF.INPUT-TMR AND ACKNOWLEDGED = False)", start="logical_slot_query")),
-                         ForEachStatement.instance(graph, Grammar.parse(self.agent,
-                                                                      "(@^ SELF.INPUT-TMR AND ACKNOWLEDGED = False)", start="logical_slot_query"),
-                                                   "$tmr", [
-                                                       AddFillerStatement.instance(graph, self.agent.identity, "HAS-GOAL",
-                                                                                   MakeInstanceStatement.instance(graph,
-                                                                                                                  "SELF",
-                                                                                                                  "SELF.UNDERSTAND-TMR",
-                                                                                                                  [
-                                                                                                                      "$tmr"])),
-                                                       AssignFillerStatement.instance(graph, "$tmr", "ACKNOWLEDGED",
-                                                                                      True)
-                                                   ])
-                         ),
-            Action.build(graph, "idle", Action.DEFAULT, Action.IDLE)
+                         ExistsStatement.instance(graph, Grammar.parse(self.agent, "(@^ @SELF.INPUT-TMR AND ACKNOWLEDGED = False)", start="logical_slot_query")),
+                         Step.build(graph, 1,
+                                    ForEachStatement.instance(
+                                        graph,
+                                        Grammar.parse(self.agent, "(@^ @SELF.INPUT-TMR AND ACKNOWLEDGED = False)", start="logical_slot_query"),
+                                        "$tmr",
+                                        [
+                                            AddFillerStatement.instance(graph, self.agent.identity, "HAS-GOAL",
+                                                                        MakeInstanceStatement.instance(graph, "SELF", "SELF.UNDERSTAND-TMR", ["$tmr"])),
+                                           AssignFillerStatement.instance(graph, "$tmr", "ACKNOWLEDGED", True)
+                                        ])
+                         )),
+            Plan.build(graph, "idle", Plan.DEFAULT, [Step.build(graph, 1, Step.IDLE), Step.build(graph, 2, Step.IDLE)])
         ], [], [])
 
         script = '''
@@ -414,14 +459,18 @@ class AgendaGrammarTestCase(unittest.TestCase):
             AS GOAL
             IN SELF
             PRIORITY 0.1
-            ACTION (acknowledge input)
-                SELECT IF EXISTS (@^ SELF.INPUT-TMR AND ACKNOWLEDGED = FALSE)
-                DO FOR EACH $tmr IN (@^ SELF.INPUT-TMR AND ACKNOWLEDGED = FALSE)
-                | SELF[HAS-GOAL] += @SELF:SELF.UNDERSTAND-TMR($tmr)
-                | $tmr[ACKNOWLEDGED] = True
-            ACTION (idle)
+            PLAN (acknowledge input)
+                SELECT IF EXISTS (@^ @SELF.INPUT-TMR AND ACKNOWLEDGED = FALSE)
+                STEP
+                    DO FOR EACH $tmr IN (@^ @SELF.INPUT-TMR AND ACKNOWLEDGED = FALSE)
+                    | SELF[HAS-GOAL] += @SELF:@SELF.UNDERSTAND-TMR($tmr)
+                    | $tmr[ACKNOWLEDGED] = True
+            PLAN (idle)
                 SELECT DEFAULT
-                DO IDLE
+                STEP
+                    DO IDLE
+                STEP
+                    DO IDLE
         '''
 
         parsed: Goal = Grammar.parse(self.agent, script, start="define", agent=self.agent).goal
@@ -430,26 +479,23 @@ class AgendaGrammarTestCase(unittest.TestCase):
 
 class BootstrapGrammarTestCase(unittest.TestCase):
 
-    class TestAgent(Agent):
-        def __init__(self, g, agent):
-            from backend.models.statement import StatementHierarchy
-            Network.__init__(self)
-            self.register(g)
-            self.register(StatementHierarchy().build())
-
-            self.exe = g
-            self.internal = g
-            self.ontology = g
-            self.wo_memory = g
-            self.lt_memory = g
-            self.identity = agent
-
     def setUp(self):
         from backend.models.graph import Graph
         self.g = Graph("SELF")
         self.agentFrame = self.g.register("AGENT")
 
         self.agent = AgendaGrammarTestCase.TestAgent(self.g, self.agentFrame)
+
+    def test_bootstrap_comments(self):
+        input = '''
+        // A comment
+        @SELF.AGENT += {myslot 123}; // More comments
+        @SELF.AGENT += {myslot 123}; // More comments
+        @SELF.AGENT += {myslot 123};
+        '''
+
+        bootstrap = Grammar.parse(self.agent, input, start="bootstrap", agent=self.agent)
+        self.assertEqual(3, len(bootstrap))
 
     def test_bootstrap_multiple(self):
         from backend.models.bootstrap import Bootstrap
@@ -520,3 +566,126 @@ class BootstrapGrammarTestCase(unittest.TestCase):
         bootstrap = BootstrapAppendKnowledge(self.agent, "SELF.FRAME", properties=[BootstrapTriple("MYPROP", Identifier.parse("ONT.ALL"), facet="SEM")])
         parsed = Grammar.parse(self.agent, "@SELF.FRAME += {MYPROP SEM @ONT.ALL}", start="append_knowledge", agent=self.agent)
         self.assertEqual(bootstrap, parsed)
+
+    def test_register_mp(self):
+        from backend.models.bootstrap import BootstrapRegisterMP
+
+        bootstrap = BootstrapRegisterMP(TestAgentMethod)
+        parsed = Grammar.parse(self.agent, "REGISTER MP tests.models.GrammarTestCase.TestAgentMethod", start="register_mp", agent=self.agent)
+        self.assertEqual(bootstrap, parsed)
+
+        bootstrap = BootstrapRegisterMP(TestAgentMethod, name="TestMP")
+        parsed = Grammar.parse(self.agent, "REGISTER MP tests.models.GrammarTestCase.TestAgentMethod AS TestMP", start="register_mp", agent=self.agent)
+        self.assertEqual(bootstrap, parsed)
+
+    def test_add_trigger(self):
+        from backend.models.bootstrap import BootstrapAddTrigger
+
+        query = SlotQuery(self.agent, AndQuery(self.agent, [NameQuery(self.agent, "THEME"), FillerQuery(self.agent, LiteralQuery(self.agent, 123))]))
+
+        bootstrap = BootstrapAddTrigger(self.agent, "SELF.AGENDA.1", "EXE.MYGOAL.1", query)
+        parsed = Grammar.parse(self.agent, "ADD TRIGGER TO @SELF.AGENDA.1 INSTANTIATE @EXE.MYGOAL.1 WHEN THEME = 123", start="add_trigger", agent=self.agent)
+        self.assertEqual(bootstrap, parsed)
+
+
+class OutputXMRTemplateGrammarTestCase(unittest.TestCase):
+
+    def setUp(self):
+        from backend.models.graph import Graph
+        self.g = Graph("SELF")
+        self.agentFrame = self.g.register("AGENT")
+
+        self.agent = AgendaGrammarTestCase.TestAgent(self.g, self.agentFrame)
+        self.n = self.agent
+
+    def test_parse_type(self):
+        type = OutputXMRTemplate.Type.PHYSICAL
+        parsed = Grammar.parse(self.n, "TYPE PHYSICAL", start="output_xmr_template_type")
+        self.assertEqual(type, parsed)
+
+        type = OutputXMRTemplate.Type.MENTAL
+        parsed = Grammar.parse(self.n, "TYPE MENTAL", start="output_xmr_template_type")
+        self.assertEqual(type, parsed)
+
+        type = OutputXMRTemplate.Type.VERBAL
+        parsed = Grammar.parse(self.n, "TYPE VERBAL", start="output_xmr_template_type")
+        self.assertEqual(type, parsed)
+
+    def test_parse_requires(self):
+        requires = Identifier("EXE", "TEST-CAPABILITY")
+        parsed = Grammar.parse(self.n, "REQUIRES @EXE.TEST-CAPABILITY", start="output_xmr_template_requires")
+        self.assertEqual(requires, parsed)
+
+        requires = Identifier("EXE", "TEST-CAPABILITY", instance=1)
+        parsed = Grammar.parse(self.n, "REQUIRES @EXE.TEST-CAPABILITY.1", start="output_xmr_template_requires")
+        self.assertEqual(requires, parsed)
+
+    def test_parse_root(self):
+        requires = Identifier("OUT", "TEST-ROOT")
+        parsed = Grammar.parse(self.n, "ROOT @OUT.TEST-ROOT", start="output_xmr_template_root")
+        self.assertEqual(requires, parsed)
+
+        requires = Identifier("OUT", "TEST-ROOT", instance=1)
+        parsed = Grammar.parse(self.n, "ROOT @OUT.TEST-ROOT.1", start="output_xmr_template_root")
+        self.assertEqual(requires, parsed)
+
+    def test_parse_include(self):
+        from backend.models.bootstrap import BootstrapDeclareKnowledge, BootstrapTriple
+
+        property1 = BootstrapTriple("MYPROP", Identifier.parse("ONT.ALL"))
+        property2 = BootstrapTriple("OTHERPROP", Literal("$var1"))
+        property3 = BootstrapTriple("AGENT", self.agent.identity._identifier)
+
+        include = [BootstrapDeclareKnowledge(self.n, "OUT", "MYFRAME", index=1, properties=[property1, property2])]
+        parsed = Grammar.parse(self.n, "INCLUDE @OUT.MYFRAME.1 = {MYPROP @ONT.ALL; OTHERPROP \"$var1\"}", start="output_xmr_template_include", agent=self.agent)
+        self.assertEqual(include, parsed)
+
+        include = [BootstrapDeclareKnowledge(self.n, "OUT", "MYFRAME", index=1), BootstrapDeclareKnowledge(self.n, "OUT", "MYFRAME", index=2)]
+        parsed = Grammar.parse(self.n, "INCLUDE @OUT.MYFRAME.1 = {} @OUT.MYFRAME.2 = {}", start="output_xmr_template_include", agent=self.agent)
+        self.assertEqual(include, parsed)
+
+        include = [BootstrapDeclareKnowledge(self.n, "OUT", "MYFRAME", index=1, properties=[property3])]
+        parsed = Grammar.parse(self.n, "INCLUDE @OUT.MYFRAME.1 = {AGENT @SELF}", start="output_xmr_template_include", agent=self.agent)
+        self.assertEqual(include, parsed)
+
+    def test_parse_template(self):
+        from backend.models.bootstrap import BootstrapDeclareKnowledge, BootstrapDefineOutputXMRTemplate, BootstrapTriple
+
+        input = '''
+        DEFINE get-item-template($var1, $var2) AS TEMPLATE
+            TYPE PHYSICAL
+            REQUIRES @EXE.GET-CAPABILITY
+            ROOT @OUT.POSSESSION-EVENT.1
+
+            INCLUDE
+
+            @OUT.POSSESSION-EVENT.1 = {
+                AGENT  @SELF;
+                THEME  $var1;
+                OTHER  @OUT.OBJECT.1;
+            }
+            
+            @OUT.OBJECT.1 = {}
+        '''
+
+        name = "get-item-template"
+        type = OutputXMRTemplate.Type.PHYSICAL
+        capability = "EXE.GET-CAPABILITY"
+        params = ["$var1", "$var2"]
+        root = "OUT.POSSESSION-EVENT.1"
+
+        property1 = BootstrapTriple("AGENT", Identifier.parse("SELF.AGENT"))
+        property2 = BootstrapTriple("THEME", Literal("$var1"))
+        property3 = BootstrapTriple("OTHER", Identifier.parse("OUT.OBJECT.1"))
+        frames = [
+            BootstrapDeclareKnowledge(self.n, "OUT", "POSSESSION-EVENT", index=1, properties=[property1, property2, property3]),
+            BootstrapDeclareKnowledge(self.n, "OUT", "OBJECT", index=1)
+        ]
+
+        bootstrap = BootstrapDefineOutputXMRTemplate(self.n, name, type, capability, params, root, frames)
+        parsed = Grammar.parse(self.n, input, start="output_xmr_template", agent=self.agent)
+        self.assertEqual(bootstrap, parsed)
+
+
+class TestAgentMethod(AgentMethod):
+    pass

@@ -42,6 +42,12 @@ class GrammarTransformer(Transformer):
         isa = list(filter(lambda m: isinstance(m, Identifier), matches))
         properties = list(filter(lambda m: isinstance(m, BootstrapTriple), matches))
 
+        for p in properties:
+            if isinstance(p.filler, Identifier) and p.filler.name == "SELF" and p.filler.graph is None and p.filler.instance is None:
+                p.filler.graph = self.agent.identity._identifier.graph
+                p.filler.name = self.agent.identity._identifier.name
+                p.filler.instance = self.agent.identity._identifier.instance
+
         return BootstrapDeclareKnowledge(self.network, graph, name, index=index, isa=isa, properties=properties)
 
     def declare_knowledge_instance(self, matches):
@@ -82,6 +88,60 @@ class GrammarTransformer(Transformer):
 
         return BootstrapTriple(slot, filler, facet=facet)
 
+    def register_mp(self, matches):
+        from backend.models.bootstrap import BootstrapRegisterMP
+
+        mp = matches[2]
+        name = None if len(matches) == 3 else str(matches[4])
+
+        return BootstrapRegisterMP(mp, name=name)
+
+    def agent_method(self, matches):
+        import sys
+        __import__(matches[0])
+        return getattr(sys.modules[matches[0]], matches[1])
+
+    def add_trigger(self, matches):
+        from backend.models.bootstrap import BootstrapAddTrigger
+
+        agenda = matches[3]
+        definition = matches[5]
+        query = matches[7]
+
+        return BootstrapAddTrigger(self.agent, agenda, definition, query)
+
+    def output_xmr_template(self, matches):
+        from backend.models.bootstrap import BootstrapDeclareKnowledge, BootstrapDefineOutputXMRTemplate
+
+        name = str(matches[1])
+        params = matches[2]
+        type = matches[5]
+        capability = matches[6]
+        root = None
+        include = []
+
+        if isinstance(matches[7], Identifier):
+            root = matches[7]
+            include = matches[8]
+        else:
+            include = matches[7]
+
+        return BootstrapDefineOutputXMRTemplate(self.network, name, type, capability, params, root, include)
+
+    def output_xmr_template_type(self, matches):
+        from backend.models.output import OutputXMRTemplate
+
+        return OutputXMRTemplate.Type[matches[1]]
+
+    def output_xmr_template_requires(self, matches):
+        return matches[1]
+
+    def output_xmr_template_root(self, matches):
+        return matches[1]
+
+    def output_xmr_template_include(self, matches):
+        return matches[1:]
+
     def slot(self, matches):
         return str(matches[0])
 
@@ -91,13 +151,16 @@ class GrammarTransformer(Transformer):
     def filler(self, matches):
         return matches[0]
 
+    def filler_argument(self, matches):
+        return Literal(matches[0])
+
     # Statements and executables
 
     def define(self, matches):
         return matches[1]
 
     def goal(self, matches):
-        from backend.models.agenda import Action, Condition, Goal
+        from backend.models.agenda import Condition, Goal, Plan
         from backend.models.bootstrap import BoostrapGoal
 
         name = str(matches[0])
@@ -106,7 +169,7 @@ class GrammarTransformer(Transformer):
 
         priority = matches[6]
         resources = matches[7]
-        plan = list(filter(lambda match: isinstance(match, Action), matches))
+        plan = list(filter(lambda match: isinstance(match, Plan), matches))
         conditions = list(filter(lambda match: isinstance(match, Condition), matches))
 
         condition_order = 1
@@ -147,41 +210,56 @@ class GrammarTransformer(Transformer):
         if str(matches[0]).upper() == "SATISFIED":
             return Goal.Status.SATISFIED
 
-    def action(self, matches):
-        from backend.models.agenda import Action
+    def plan(self, matches):
+        from backend.models.agenda import Plan
         name = matches[1]
         select = matches[2]
-        perform = matches[3:]
+        steps = matches[3:]
 
-        return Action.build(self.agent.exe, name, select, perform)
+        for i, v in enumerate(steps):
+            v.frame["INDEX"] = i + 1
 
-    def action_selection(self, matches):
-        from backend.models.agenda import Action
+        return Plan.build(self.agent.exe, name, select, steps)
+
+    def plan_selection(self, matches):
+        from backend.models.agenda import Plan
         select = matches[1]
         if str(select) == "DEFAULT":
-            select = Action.DEFAULT
+            select = Plan.DEFAULT
         elif str(select) == "IF":
             select = matches[2]
 
         return select
 
-    def action_do(self, matches):
-        from backend.models.agenda import Action
+    def plan_step(self, matches):
+        from backend.models.agenda import Step
+        return Step.build(self.agent.exe, -1, matches[1:])
+
+
+    def plan_do(self, matches):
+        from backend.models.agenda import Step
         perform = matches[1]
 
         if str(perform) == "IDLE":
-            perform = Action.IDLE
+            perform = Step.IDLE
 
         return perform
 
     def condition(self, matches):
-        from backend.models.agenda import Condition, Goal
+        from backend.models.agenda import Condition
 
-        statements = matches[1][1]
+        if isinstance(matches[1], Condition.On):
+            on = matches[1]
+            statements = []
+            logic = Condition.Logic.AND.value
+        else:
+            on = None
+            statements = matches[1][1]
+            logic = matches[1][0]
+
         status = matches[3]
-        logic = matches[1][0]
 
-        return Condition.build(self.agent.exe, statements, status, logic=logic)
+        return Condition.build(self.agent.exe, statements, status, logic=logic, on=on)
 
     def condition_and(self, matches):
         from backend.models.agenda import Condition
@@ -213,6 +291,11 @@ class GrammarTransformer(Transformer):
 
         return Condition.Logic.NOT, list(filter(lambda match: isinstance(match, Statement), matches))
 
+    def condition_on(self, matches):
+        from backend.models.agenda import Condition
+
+        return Condition.On[str(matches[0])]
+
     def statement(self, matches):
         return matches[0]
 
@@ -235,13 +318,12 @@ class GrammarTransformer(Transformer):
 
         return AssignFillerStatement.instance(self.agent.exe, domain, slot, filler)
 
-    def capability_statement(self, matches):
-        from backend.models.statement import CapabilityStatement, Statement
-        capability = matches[1]
-        callback = list(filter(lambda match: isinstance(match, Statement), matches))
-        params = matches[2]
+    def assign_variable_statement(self, matches):
+        from backend.models.statement import AssignVariableStatement
+        variable = str(matches[0])
+        value = matches[2]
 
-        return CapabilityStatement.instance(self.agent.exe, capability, callback, params)
+        return AssignVariableStatement.instance(self.agent.exe, variable, value)
 
     def exists_statement(self, matches):
         from backend.models.statement import ExistsStatement
@@ -264,7 +346,9 @@ class GrammarTransformer(Transformer):
     def mp_statement(self, matches):
         from backend.models.statement import MeaningProcedureStatement
 
-        return MeaningProcedureStatement.instance(self.agent.exe, matches[1], matches[2])
+        params = list(map(lambda m: Literal(m) if isinstance(m, str) and m.startswith("$") else m, matches[2]))
+
+        return MeaningProcedureStatement.instance(self.agent.exe, matches[1], params)
 
     def statement_instance(self, matches):
         if isinstance(matches[0], Identifier):
@@ -284,11 +368,27 @@ class GrammarTransformer(Transformer):
 
         return MakeInstanceStatement.instance(self.agent.exe, in_graph, of, params)
 
+    def output_statement(self, matches):
+        from backend.models.statement import OutputXMRStatement
+
+        template = matches[1]
+        params = matches[2]
+        agent = matches[4]
+
+        return OutputXMRStatement.instance(self.agent.exe, template, params, agent)
+
     def arguments(self, matches):
         return matches
 
     def argument(self, matches):
         return str(matches[0])
+
+    def output_arguments(self, matches):
+        from backend.models.graph import Frame
+        return list(map(lambda match: Literal(match) if not isinstance(match, Frame) else match, matches))
+
+    def output_argument(self, matches):
+        return matches[0]
 
     def special_agent_graph(self, matches):
         name = str(matches[0]).upper()
@@ -448,6 +548,15 @@ class GrammarTransformer(Transformer):
 
     def tmr(self, matches):
         return "TMR#" + str(matches[0])
+
+    def vmr(self, matches):
+        return "VMR#" + str(matches[0])
+
+    def xmr(self, matches):
+        return "XMR#" + str(matches[0])
+
+    def xmr_template(self, matches):
+        return "XMR-TEMPLATE#" + str(matches[0])
 
     def name(self, matches):
         return str(matches[0])

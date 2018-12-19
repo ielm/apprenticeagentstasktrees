@@ -1,3 +1,4 @@
+import datetime
 import json
 import requests
 
@@ -6,7 +7,97 @@ from uuid import UUID
 
 from backend.config import ontosem_service
 from backend.models.fr import FRInstance
+from backend.models.graph import Graph, Literal
 from backend.models.ontology import Ontology
+
+
+def bootstrap(input: dict, graph: Graph):
+    types = {
+        "dowel": {"IS-A": "DOWEL"},
+        "seat": {"IS-A": "SEAT"},
+        "back": {"IS-A": "BACK-OF-OBJECT"},
+        "front-bracket": {"IS-A": "BRACKET", "SIDE-FB": Literal("FRONT")},
+        "foot-bracket": {"IS-A": "BRACKET", "SIDE-TB": Literal("BOTTOM")},
+        "back-bracket": {"IS-A": "BRACKET", "SIDE-FB": Literal("BACK")},
+        "top-bracket": {"IS-A": "BRACKET", "SIDE-TB": Literal("TOP")},
+    }
+
+    for key in input.keys():
+        if key == "faces":
+            for name in input[key]:
+                human = graph.register("HUMAN", isa="ONT.HUMAN", generate_index=True)
+                human["HAS-NAME"] = Literal(name)
+        else:
+            type = types[input[key]]
+            frame = graph.register(type["IS-A"], isa="ONT." + type["IS-A"], generate_index=True)
+            frame["visual-object-id"] = int(key)
+            for slot in type.keys():
+                if slot != "IS-A":
+                    frame[slot] += type[slot]
+
+
+def visual_input(input: dict, graph: Graph) -> dict:
+    locations = {
+        "storage-1": "STORAGE.1",
+        "storage-2": "STORAGE.2",
+        "workspace": "WORKSPACE.1"
+    }
+
+    contains = {}
+
+    for human in filter(lambda f: graph[f] ^ "ONT.HUMAN", graph):
+        human = graph[human]
+        if human["HAS-NAME"].singleton() in input["faces"]:
+            contains[human._identifier.render(graph=False)] = {
+                "_refers_to": "",
+                "_identifier": human["HAS-NAME"].singleton(),
+                "_in": "ENVIRONMENT.1",
+                "LOCATION": "HERE"
+            }
+        else:
+            contains[human._identifier.render(graph=False)] = {
+                "_refers_to": "",
+                "_identifier": human["HAS-NAME"].singleton(),
+                "_in": "ENVIRONMENT.1",
+                "LOCATION": "NOT-HERE"
+            }
+
+    for object in filter(lambda f: "visual-object-id" in graph[f], graph):
+        object = graph[object]
+        if object["visual-object-id"].singleton() in input["storage-1"]:
+            contains[object._identifier.render(graph=False)] = {
+                "_refers_to": "",
+                "_in": "ENVIRONMENT.1",
+                "LOCATION": locations["storage-1"]
+            }
+        elif object["visual-object-id"].singleton() in input["storage-2"]:
+            contains[object._identifier.render(graph=False)] = {
+                "_refers_to": "",
+                "_in": "ENVIRONMENT.1",
+                "LOCATION": locations["storage-2"]
+            }
+        else:
+            contains[object._identifier.render(graph=False)] = {
+                "_refers_to": "",
+                "_in": "ENVIRONMENT.1",
+                "LOCATION": locations["workspace"]
+            }
+
+    results = {
+        "slices": {
+            "SLICE.1": {
+                "ENVIRONMENT.1": {
+                    "_refers_to": "@" + graph._namespace,
+                    "contains": contains
+                },
+                "_timestamp": datetime.datetime.now()
+            }
+        }
+    }
+
+    return results
+
+
 
 
 def format_learned_event_yale(event: FRInstance, ontology: Ontology) -> dict:

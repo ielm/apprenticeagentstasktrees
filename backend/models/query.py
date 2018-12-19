@@ -39,6 +39,9 @@ class AndQuery(Query):
 
         return reduce(lambda x, y: x and y, map(lambda query: query.compare(other), self.queries))
 
+    def __str__(self):
+        return "(" + " and ".join(list(map(lambda q: str(q), self.queries))) + ")"
+
     def __eq__(self, other):
         if not isinstance(other, AndQuery):
             return super().__eq__(other)
@@ -56,6 +59,9 @@ class OrQuery(Query):
             return False
 
         return reduce(lambda x, y: x or y, map(lambda query: query.compare(other), self.queries))
+
+    def __str__(self):
+        return "(" + " or ".join(list(map(lambda q: str(q), self.queries))) + ")"
 
     def __eq__(self, other):
         if not isinstance(other, OrQuery):
@@ -114,6 +120,9 @@ class NotQuery(Query):
     def compare(self, other) -> bool:
         return not self.query.compare(other)
 
+    def __str__(self):
+        return "not " + str(self.query)
+
     def __eq__(self, other):
         if not isinstance(other, NotQuery):
             return super().__eq__(other)
@@ -128,6 +137,9 @@ class FrameQuery(Query):
 
     def compare(self, other: Frame) -> bool:
         return self.subquery.compare(other)
+
+    def __str__(self):
+        return str(self.subquery)
 
     def __eq__(self, other):
         if not isinstance(other, FrameQuery):
@@ -215,7 +227,7 @@ class SimpleFrameQuery(FrameQuery):
         if isinstance(filler, Filler):
             filler = filler._value
 
-        vq = IdentifierQuery(self.network, filler, IdentifierQuery.Comparator.ISA)
+        vq = FillerQuery(self.network, IdentifierQuery(self.network, filler, IdentifierQuery.Comparator.ISA))
 
         self._append(SlotQuery(self.network, AndQuery(self.network, [NameQuery(self.network, slot), vq])))
         return self
@@ -259,6 +271,14 @@ class SlotQuery(Query):
             return False
         return self._contains(slot, q)
 
+    def __str__(self):
+        if isinstance(self.subquery, AndQuery) and len(self.subquery.queries) == 2 and isinstance(self.subquery.queries[0], NameQuery) and isinstance(self.subquery.queries[1], FillerQuery):
+            slot = str(self.subquery.queries[0]).replace("*slot is ", "")
+            filler = str(self.subquery.queries[1]).replace("*value ", "")
+            return slot + " " + filler
+
+        return str(self.subquery)
+
     def __eq__(self, other):
         if not isinstance(other, SlotQuery):
             return super().__eq__(other)
@@ -273,6 +293,9 @@ class NameQuery(Query):
 
     def compare(self, other: Slot) -> bool:
         return other._name == self.name
+
+    def __str__(self):
+        return "*slot is " + self.name
 
     def __eq__(self, other):
         if not isinstance(other, NameQuery):
@@ -295,6 +318,9 @@ class FillerQuery(Query):
 
         return self.query.compare(other._value)
 
+    def __str__(self):
+        return str(self.query)
+
     def __eq__(self, other):
         if not isinstance(other, FillerQuery):
             return super().__eq__(other)
@@ -309,6 +335,9 @@ class LiteralQuery(Query):
 
     def compare(self, other) -> bool:
         return self.value == other
+
+    def __str__(self):
+        return "*value = " + str(self.value)
 
     def __eq__(self, other):
         if not isinstance(other, LiteralQuery):
@@ -373,6 +402,25 @@ class IdentifierQuery(Query):
             return self.identifier.resolve(None, self.network) ^ other.resolve(None, self.network)
 
         return False
+
+    def __str__(self):
+        operator = ""
+        if self.comparator == IdentifierQuery.Comparator.EQUALS:
+            operator = "="
+        if self.comparator == IdentifierQuery.Comparator.ISA:
+            operator = "^"
+        if self.comparator == IdentifierQuery.Comparator.ISPARENT:
+            operator = "^."
+        if self.comparator == IdentifierQuery.Comparator.SUBCLASSES:
+            operator = ">"
+
+        if not self.set:
+            operator = operator + "!"
+
+        if self.from_concept:
+            operator = "~" + operator
+
+        return "*value " + operator + " " + str(self.identifier)
 
     def __eq__(self, other):
         if not isinstance(other, IdentifierQuery):
