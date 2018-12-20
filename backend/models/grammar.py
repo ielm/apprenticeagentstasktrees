@@ -33,12 +33,59 @@ class GrammarTransformer(Transformer):
         from backend.models.bootstrap import Bootstrap
         return list(filter(lambda match: isinstance(match, Bootstrap), matches))
 
-    def knowledge(self, matches):
-        from backend.models.bootstrap import BootstrapKnowledge
+    def declare_knowledge(self, matches):
+        from backend.models.bootstrap import BootstrapDeclareKnowledge, BootstrapTriple
 
-        return BootstrapKnowledge(self.network, matches[0], matches[1], matches[2])
+        graph = matches[0]
+        name = matches[1]
+        index = False if str(matches[2]) == "=" else matches[2]
+        isa = list(filter(lambda m: isinstance(m, Identifier), matches))
+        properties = list(filter(lambda m: isinstance(m, BootstrapTriple), matches))
+
+        return BootstrapDeclareKnowledge(self.network, graph, name, index=index, isa=isa, properties=properties)
+
+    def declare_knowledge_instance(self, matches):
+        if isinstance(matches[0], int):
+            return matches[0]
+        return True
+
+    def declare_knowledge_element(self, matches):
+        return matches[0]
+
+    def declare_isa_knowledge(self, matches):
+        return matches[1]
+
+    def declare_property_knowledge(self, matches):
+        from backend.models.bootstrap import BootstrapTriple
+        slot = matches[0]
+        facet = matches[1] if len(matches) == 3 else None
+        filler = matches[-1]
+
+        return BootstrapTriple(slot, filler, facet=facet)
+
+    def append_knowledge(self, matches):
+        from backend.models.bootstrap import BootstrapAppendKnowledge, BootstrapTriple
+
+        identifier = matches[0]
+        properties = list(filter(lambda m: isinstance(m, BootstrapTriple), matches))
+
+        return BootstrapAppendKnowledge(self.network, identifier, properties)
+
+    def append_knowledge_element(self, matches):
+        return matches[0]
+
+    def append_property_knowledge(self, matches):
+        from backend.models.bootstrap import BootstrapTriple
+        slot = matches[0]
+        facet = matches[1] if len(matches) == 3 else None
+        filler = matches[-1]
+
+        return BootstrapTriple(slot, filler, facet=facet)
 
     def slot(self, matches):
+        return str(matches[0])
+
+    def facet(self, matches):
         return str(matches[0])
 
     def filler(self, matches):
@@ -187,6 +234,14 @@ class GrammarTransformer(Transformer):
         filler = matches[3]
 
         return AssignFillerStatement.instance(self.agent.exe, domain, slot, filler)
+
+    def capability_statement(self, matches):
+        from backend.models.statement import CapabilityStatement, Statement
+        capability = matches[1]
+        callback = list(filter(lambda match: isinstance(match, Statement), matches))
+        params = matches[2]
+
+        return CapabilityStatement.instance(self.agent.exe, capability, callback, params)
 
     def exists_statement(self, matches):
         from backend.models.statement import ExistsStatement

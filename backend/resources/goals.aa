@@ -19,7 +19,7 @@ DEFINE UNDERSTAND-TMR($tmr)
     RESOURCES 0.5
     ACTION (understand)
         SELECT DEFAULT
-        DO SELF.understand_input($tmr)
-        DO $tmr[STATUS] = "UNDERSTOOD"
+        DO CAPABILITY #EXE.LEARN-CAPABILITY($tmr)
+        | THEN DO $tmr[STATUS] = "UNDERSTOOD"
     WHEN $tmr[STATUS] == "UNDERSTOOD" THEN satisfied
 ;

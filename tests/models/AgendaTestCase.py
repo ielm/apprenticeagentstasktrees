@@ -54,8 +54,9 @@ class AgendaTestCase(unittest.TestCase):
         self.assertEqual(f1["ACTION-TO-TAKE"][0].resolve(), a1)
 
         agenda.prepare_action(Action(a2))
-        self.assertEqual(len(f1["ACTION-TO-TAKE"]), 1)
-        self.assertEqual(f1["ACTION-TO-TAKE"][0].resolve(), a2)
+        self.assertEqual(len(f1["ACTION-TO-TAKE"]), 2)
+        self.assertEqual(f1["ACTION-TO-TAKE"][0].resolve(), a1)
+        self.assertEqual(f1["ACTION-TO-TAKE"][1].resolve(), a2)
 
     def test_action(self):
         graph = Graph("TEST")
@@ -65,8 +66,7 @@ class AgendaTestCase(unittest.TestCase):
         f1["ACTION-TO-TAKE"] = a1
 
         agenda = Agenda(f1)
-        self.assertEqual(a1, agenda.action())
-        self.assertEqual(Action, agenda.action().__class__)
+        self.assertEqual([a1], agenda.action())
 
 
 class GoalTestCase(unittest.TestCase):
@@ -272,6 +272,39 @@ class GoalTestCase(unittest.TestCase):
 
         Goal(goal).assess()
         self.assertTrue(Goal(goal).is_satisfied())
+
+    def test_assess_ignores_conditions_if_goal_is_using_effector(self):
+        from backend.models.effectors import Capability, Effector
+        from backend.models.statement import IsStatement
+
+        graph = Statement.hierarchy()
+        graph.register("EFFECTOR")
+        graph.register("MENTAL-EFFECTOR", isa="EXE.EFFECTOR")
+        target = graph.register("TARGET")
+        target["X"] = 1
+
+        # 1) Define a goal and make an instance of it; the goal's state is active, and it's condition will be satisfied
+        statement = IsStatement.instance(graph, target, "X", 1)
+        condition = Condition.build(graph, [statement], Goal.Status.SATISFIED)
+        definition = Goal.define(graph, "TEST", 0.5, 0.5, [], [condition], [])
+        goal = Goal.instance_of(graph, definition, [])
+        goal.status(Goal.Status.ACTIVE)
+
+        # 2) Create an effector and capability, and reserve them for the goal
+        capability = Capability.instance(graph, "CAP", "")
+        effector = Effector.instance(graph, Effector.Type.MENTAL, [capability])
+        effector.reserve(goal, capability)
+
+        # 3) The goal is active, the condition is satisified, but assessing the goal remains active (due to the effector)
+        self.assertTrue(goal.is_active())
+        self.assertTrue(condition.assess(None))
+        goal.assess()
+        self.assertTrue(goal.is_active())
+
+        # 4) Release the effector, and now the goal will assess using the condition
+        effector.release()
+        goal.assess()
+        self.assertTrue(goal.is_satisfied())
 
     def test_instance_of(self):
         graph = Graph("TEST")
@@ -661,3 +694,20 @@ class ActionTestCase(unittest.TestCase):
         action["PERFORM"] = Literal(Action.IDLE)
 
         Action(action).perform(None)
+
+    def test_capabilities(self):
+        from backend.models.effectors import Capability
+        from backend.models.statement import CapabilityStatement, ForEachStatement
+
+        graph = Statement.hierarchy()
+
+        cap1 = Capability.instance(graph, "CAPABILITY-A", "")
+        cap2 = Capability.instance(graph, "CAPABILITY-B", "")
+
+        stmt1 = CapabilityStatement.instance(graph, cap1, [], [])
+        stmt2 = CapabilityStatement.instance(graph, cap2, [], [])
+        stmt3 = ForEachStatement.instance(graph, None, "$var1", stmt2)
+
+        action = Action.build(graph, "TEST", Action.DEFAULT, [stmt1, stmt3])
+
+        self.assertEqual([cap1, cap2], action.capabilities())

@@ -26,6 +26,9 @@ class Registry(object):
             raise Exception("Unknown meaning procedure '" + mp + "'.")
         return self._storage[mp](*args, **kwargs)
 
+    def clear(self):
+        self._storage = dict()
+
 
 class Executable(object):
 
