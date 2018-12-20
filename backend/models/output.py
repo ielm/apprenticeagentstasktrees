@@ -12,7 +12,7 @@ class OutputXMR(object):
         FINISHED = "FINISHED"
 
     @classmethod
-    def build(cls, graph: Graph, type: 'OutputXMRTemplate.Type', capability: Union[str, Identifier, Frame, Capability], refers_to: str, root: Union[str, Identifier, Frame]=None) -> 'OutputXMR':
+    def build(cls, graph: Graph, type: 'OutputXMRTemplate.Type', capability: Union[str, Identifier, Frame, Capability], refers_to: str, root: Union[str, Identifier, Frame] = None) -> 'OutputXMR':
         xmr = graph.register("XMR", generate_index=True)
 
         if isinstance(capability, Capability):

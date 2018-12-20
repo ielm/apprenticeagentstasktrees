@@ -133,6 +133,7 @@ class Agent(Network):
             return
 
         # If input is visual input, create VMR, else create tmr and continue
+        # TODO - input type should always be included, whether VISUAL or LANGUGE
         if type == "VISUAL":
             input = VMR(input, ontology=self.ontology)
         elif isinstance(input, dict):

@@ -110,7 +110,7 @@ class Goal(VariableMap):
         frame["PRIORITY"] = definition["PRIORITY"]
         frame["RESOURCES"] = definition["RESOURCES"]
         frame["STATUS"] = Goal.Status.PENDING
-        frame["PLAN"] = list(map(lambda plan: Action.instance_of(graph, plan.resolve()).frame, definition["PLAN"]))#definition["PLAN"]
+        frame["PLAN"] = list(map(lambda plan: Action.instance_of(graph, plan.resolve()).frame, definition["PLAN"]))  # definition["PLAN"]
         frame["WHEN"] = definition["WHEN"]
 
         super().instance_of(graph, definition, params, existing=frame)

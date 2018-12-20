@@ -370,7 +370,7 @@ class Frame(object):
         return self.isa(other)
 
     def __str__(self):
-        return str(self._identifier) + " = " +str(self._storage)
+        return str(self._identifier) + " = " + str(self._storage)
 
     def __repr__(self):
         return str(self)
