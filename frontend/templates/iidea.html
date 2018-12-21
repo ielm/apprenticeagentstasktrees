@@ -25,6 +25,39 @@
         .goal-contents {
             padding-left: 25px;
         }
+        .trigger {
+            padding-bottom: 10px;
+        }
+        .trigger:last-child {
+            padding-bottom: 0px;
+        }
+        .variable {
+            margin-left: 20px;
+            font-size: small;
+        }
+        .step {
+            margin-left: 20px;
+            font-size: small;
+        }
+        .callback-button {
+            padding-left: 4px;
+            padding-right: 4px;
+            padding-top: 0px;
+            padding-bottom: 0px;
+        }
+        .steps {
+            color: grey;
+            font-size: xx-small;
+        }
+        .decision {
+            margin-bottom: 20px;
+        }
+        .decision:last-child {
+            margin-bottom: 0px;
+        }
+        .decision-breadcrumbs {
+            font-size: small;
+        }
     </style>
 
     <script>
@@ -38,6 +71,9 @@
                 render_inputs(output["inputs"]);
                 render_agenda(output["agenda"]);
                 render_effectors(output["effectors"]);
+                render_triggers(output["triggers"]);
+                render_logs(output["logs"]);
+                render_decisions(output["decisions"]);
                 if (callback != null) {
                     callback();
                 }
@@ -47,16 +83,28 @@
         }
 
         function input() {
+            var source = null;
+            if ($("#custom-source-radio").is(':checked')) {
+                source = $("#custom-source-input").val();
+            }
+
+            var data = {
+                input: $("#inputText").val(),
+                source: source,
+                type: "LANGUAGE"
+            };
+
             $.ajax({
                 url: "/iidea/input",
                 method: "POST",
-                data: $("#inputText").val(),
-                contentType: "text/plain"
+                data: JSON.stringify(data),
+                contentType: "application/json",
             }).done(function(data) {
                 var output = JSON.parse(data);
                 render_time(output);
                 render_inputs(output["inputs"]);
                 render_agenda(output["agenda"]);
+                render_decisions(output["decisions"]);
                 $("#inputText").attr("placeholder", "Input Text");
                 $("#inputTextButton").prop("disabled", false);
             }).fail(function(error) {
@@ -67,6 +115,49 @@
             $("#inputTextButton").prop("disabled", true);
             $("#inputText").attr("placeholder", "Analyzing...");
             $("#inputText").val("");
+        }
+
+        function observe() {
+            var observation = $("#observations").val();
+
+            $.ajax({
+                url: "/iidea/observe",
+                method: "POST",
+                data: JSON.stringify({"observation": observation}),
+                contentType: "application/json",
+            }).done(function(data) {
+                var output = JSON.parse(data);
+                render_time(output);
+                render_inputs(output["inputs"]);
+                render_agenda(output["agenda"]);
+                render_decisions(output["decisions"]);
+            }).fail(function(error) {
+                console.log(error);
+            });
+        }
+
+        function callback(callback) {
+            var data = {
+                "callback-id": callback
+            };
+
+            $.ajax({
+                url: "/iidea/callback",
+                method: "POST",
+                data: JSON.stringify(data),
+                contentType: "application/json",
+            }).done(function(data) {
+                var output = JSON.parse(data);
+                render_time(output);
+                render_inputs(output["inputs"]);
+                render_agenda(output["agenda"]);
+                render_effectors(output["effectors"]);
+                render_triggers(output["triggers"]);
+                render_logs(output["logs"]);
+                render_decisions(output["decisions"]);
+            }).fail(function(error) {
+                console.log(error);
+            });
         }
 
         function start() {
@@ -152,6 +243,12 @@
                 var rendered = Mustache.render(template, goal);
                 $($(document).find("#agenda")[0]).prepend($(rendered));
             }
+
+            if ($("#hideSatisfiedCheckBox").is(":checked")) {
+                $(".goal-satisfied").hide();
+            } else {
+                $(".goal-satisfied").show();
+            }
         }
 
         function render_effectors(effectors) {
@@ -178,6 +275,63 @@
                 });
             }
         }
+
+        function render_triggers(triggers) {
+            $("#triggerList").empty();
+
+            for (var i in triggers) {
+                var trigger = triggers[i];
+
+                var template = document.getElementById('trigger-template').innerHTML;
+                Mustache.parse(template, ["{|", "|}"]);
+                var rendered = Mustache.render(template, trigger);
+                $($(document).find("#triggerList")[0]).prepend($(rendered));
+            }
+
+            $(function () {
+                $('[data-toggle="tooltip"]').tooltip();
+            });
+        }
+
+        function render_logs(logs) {
+            $("#logList").empty();
+
+            for (var i in logs) {
+                var log = logs[i];
+
+                var template = document.getElementById('log-template').innerHTML;
+                Mustache.parse(template, ["{|", "|}"]);
+                var rendered = Mustache.render(template, {"log": log});
+                $($(document).find("#logList")[0]).prepend($(rendered));
+            }
+        }
+
+        function render_decisions(decisions) {
+            $("#decisions").empty();
+
+            for (var i in decisions) {
+                var decision = decisions[i];
+
+                if (decision.status == "SELECTED") {
+                    decision["style"] = "badge-info";
+                } else if (decision.status == "EXECUTING") {
+                    decision["style"] = "badge-success";
+                } else if (decision.status == "FINISHED") {
+                    decision["style"] = "badge-secondary";
+                }
+
+                var template = document.getElementById('decision-template').innerHTML;
+                Mustache.parse(template, ["{|", "|}"]);
+                var rendered = Mustache.render(template, decision);
+                $($(document).find("#decisions")[0]).prepend($(rendered));
+            }
+
+            if ($("#hideFinishedCheckBox").is(":checked")) {
+                $(".decision-FINISHED").hide();
+            } else {
+                $(".decision-FINISHED").show();
+            }
+        }
     </script>
 
     <script>
@@ -188,11 +342,35 @@
             $("#inputTextButton").on("click", function() {
                 input();
             });
+            $("#observationButton").on("click", function() {
+                observe();
+            });
             $("#start-button").on("click", function() {
                 start();
             });
             $("#pause-button").on("click", function() {
                 pause();
+            });
+            $("#custom-source-input").on("keyup", function() {
+                $("#custom-source-radio").prop("checked", true);
+            });
+            $("#hideSatisfiedCheckBox").on("click", function() {
+                if ($("#hideSatisfiedCheckBox").is(":checked")) {
+                    $(".goal-satisfied").hide();
+                } else {
+                    $(".goal-satisfied").show();
+                }
+            });
+            $("#hideFinishedCheckBox").on("click", function() {
+                if ($("#hideFinishedCheckBox").is(":checked")) {
+                    $(".decision-FINISHED").hide();
+                } else {
+                    $(".decision-FINISHED").show();
+                }
+            });
+            $(document).on("click", ".callback-button", function(e) {
+                var id = $(e.currentTarget).data("callback");
+                callback(id);
             });
             $(function () {
                 $('[data-toggle="tooltip"]').tooltip();
@@ -204,17 +382,29 @@
             var agenda = JSON.parse('{{ aj|safe }}');
             render_agenda(agenda);
 
-            var effectors = JSON.parse('{{ ae|safe }}');
+            var effectors = JSON.parse('{{ ej|safe }}');
             render_effectors(effectors);
+
+            var triggers = JSON.parse('{{ tj|safe }}');
+            render_triggers(triggers);
+
+            var logs = JSON.parse({{lj|tojson}});
+            render_logs(logs);
+
+            var decisions = JSON.parse({{dj|tojson}});
+            render_decisions(decisions);
         });
     </script>
 
     <script id="goal-template" type="x-tmpl-mustache">
-        <div>{| name |} <span class="goal-id">({| id |})</span></div>
-        <div class="goal-contents">
-            <div><strong>Priority:</strong> {| priority |}</div>
-            <div><strong>Resources:</strong> {| resources |}</div>
-            <div><strong>Decision:</strong> {| decision |}</div>
+        <div class="goal-{| status |}">{| name |} <span class="goal-id">({| id |})</span></div>
+        <div class="goal-contents goal-{| status |}">
+            <div>
+                <strong>Variables:</strong>
+                {| #params |}
+                    <div class="variable"><strong>{| var |}</strong> = {| value |}</div>
+                {| /params |}
+            </div>
             <div>
                 <strong>Status:</strong>
                 <span class="badge badge-pill {| badge |}">{| status |}</span>
@@ -225,8 +415,32 @@
                     {| #selected |}
                         <span class="badge badge-pill badge-info">selected</span>
                     {| /selected |}
+                    {|#steps|}
+                        <div class="step">
+                            {| #finished |}
+                                <i class="fas fa-check-circle"></i>
+                            {| /finished |}
+                            {| name |}
+                        </div>
+                    {|/steps|}
                 </div>
             {|/plan|}
+        </div>
+    </script>
+
+    <script id="decision-template" type="x-tmpl-mustache">
+        <div class="card decision decision-{| status |}">
+            <div class="card-header">
+                <span class="badge badge-pill {| style |}">{| status |}</span>
+                <span class="decision-breadcrumbs">{| goal |} > {| plan |} > {| step |}</span>
+            </div>
+            <div class="card-body">
+                <div><strong>Priority:</strong> {| priority |}, <strong>Cost:</strong> {| cost |}</div>
+                <div><strong>Outputs:</strong> {| outputs |}</div>
+                <div><strong>Requires:</strong> {| requires |}</div>
+                <div><strong>Effectors:</strong> {| effectors |}</div>
+                <div><strong>Callbacks:</strong> {| callbacks |}</div>
+            </div>
         </div>
     </script>
 
@@ -259,6 +473,15 @@
                             {| /selected |}
 
                             {| name |}
+
+                            {| #callbacks |}
+                                {| #waiting |}
+                                    <button type="button" class="btn btn-primary btn-sm callback-button" data-callback="{| name |}"><i class="fas fa-undo-alt" style="font-size: smaller"></i></button>
+                                {| /waiting |}
+                                {| ^waiting |}
+                                    <button disabled type="button" class="btn btn-secondary btn-sm callback-button" data-callback="{| name |}"><i class="fas fa-undo-alt" style="font-size: smaller"></i></button>
+                                {| /waiting |}
+                            {| /callbacks |}
                         {| /capabilities |}
                     </td>
                 </tr>
@@ -266,18 +489,57 @@
         </div>
     </script>
 
+    <script id="trigger-template" type="x-tmpl-mustache">
+        <div class="trigger">
+            <i class="fas fa-eye" data-toggle="tooltip" data-placement="top" title="{| triggered-on |}"></i> Trigger {| goal |} when {| query |}
+        </div>
+    </script>
+
+    <script id="log-template" type="x-tmpl-mustache">
+        <div class="log">
+            {| log |}
+        </div>
+    </script>
+
 </head>
 <body>
+
+    {% include 'nav.html' %}
+    <script>
+        $(document).ready(function() {
+            $("#nav-agenda").addClass("active");
+        });
+    </script>
 
     <div class="container">
         <div class="row" style="margin-top: 25px;">
             <div class="col-sm-8">
-                <div class="card">
+                <div class="card" style="margin-bottom: 25px;">
                     <div class="card-header">
                         Agenda
+                        <div class="form-check float-right">
+                            <input class="form-check-input" type="checkbox" value="" id="hideSatisfiedCheckBox">
+                            <label class="form-check-label" for="hideSatisfiedCheckBox">
+                                Hide satisfied?
+                            </label>
+                        </div>
                     </div>
                     <div class="card-body">
                         <div id="agenda"></div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        Decisions
+                        <div class="form-check float-right">
+                            <input class="form-check-input" type="checkbox" value="" id="hideFinishedCheckBox">
+                            <label class="form-check-label" for="hideFinishedCheckBox">
+                                Hide finished?
+                            </label>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div id="decisions"></div>
                     </div>
                 </div>
             </div>
@@ -294,7 +556,7 @@
                 </div>
                 <div class="card" style="margin-bottom: 25px;">
                     <div class="card-header">
-                        Input
+                        Inputs and Observations
                     </div>
                     <div class="card-body">
                         <div class="input-group mb-3">
@@ -312,9 +574,29 @@
                                 <option value="Release the dowel."></option>
                                 <option value="We have assembled a front leg."></option>
                                 <option value="We finished assembling the chair."></option>
+                                <option value="Let's build a chair."></option>
                             </datalist>
                             <div class="input-group-append">
                                 <button id="inputTextButton" class="btn btn-sm btn-primary" type="button">Input</button>
+                            </div>
+                        </div>
+                        <div class="input-group mb-3">
+                            <select class="custom-select custom-select-sm" id="observations">
+                                <option value="Jake leaves">Jake leaves</option>
+                            </select>
+                            <div class="input-group-append">
+                                <button id="observationButton" class="btn btn-sm btn-primary" type="button">Observe</button>
+                            </div>
+                        </div>
+                        <div class="input-group mb-3">
+                            <div class="custom-control custom-radio custom-control-inline">
+                                <input type="radio" id="no-source-radio" name="source-radio" class="custom-control-input" checked>
+                                <label class="custom-control-label" for="no-source-radio">No Source</label>
+                            </div>
+                            <div class="custom-control custom-radio custom-control-inline">
+                                <input type="radio" id="custom-source-radio" name="source-radio" class="custom-control-input">
+                                <label class="custom-control-label" for="custom-source-radio"></label>
+                                <input id="custom-source-input" type="text" class="form-control form-control-sm" placeholder="Source ID" value="LT.HUMAN.1">
                             </div>
                         </div>
                         <hr>
@@ -345,6 +627,22 @@
                     </div>
                     <div class="card-body">
                         <div id="effectorList"></div>
+                    </div>
+                </div>
+                <div class="card" style="margin-bottom: 25px;">
+                    <div class="card-header">
+                        Triggers
+                    </div>
+                    <div class="card-body">
+                        <div id="triggerList"></div>
+                    </div>
+                </div>
+                <div class="card" style="margin-bottom: 25px;">
+                    <div class="card-header">
+                        Logs
+                    </div>
+                    <div class="card-body">
+                        <div id="logList"></div>
                     </div>
                 </div>
             </div>
