@@ -1,7 +1,6 @@
-from backend.models.graph import Graph, Frame, Identifier
-from backend.models.ontology import Ontology
+from backend.models.graph import Graph, Frame
 from backend.utils.AtomicCounter import AtomicCounter
-from typing import List, Type, Union
+from backend.models.agenda import Step, Action
 
 
 class ComplexTask(Graph):
@@ -30,19 +29,25 @@ class ComplexTask(Graph):
             complex_task = ComplexTask(task, task.name())
             self.complex_tasks.append(complex_task)
 
-            for subtask in complex_task.actions():
+            for subtask in complex_task.subtasks():
                 self.add_task(subtask)
 
             # for subtask in task["HAS-EVENT-AS-PART"]:
                 # self.add_task(subtask.resolve())
 
-    def actions(self):
-        actions = []
+    def subtasks(self):
+        subtasks = []
 
         for item in self._storage:
-            actions.append(self._storage[item])
+            subtasks.append(self._storage[item])
 
-        return actions
+        return subtasks
+
+    def step(self, step, index, statement=None):
+        # for subtask in self.subtasks():
+        #     Create Step from subtask
+        step = Step.build(self, index, step)
+        return step
 
     def plan(self):
         """
@@ -50,9 +55,18 @@ class ComplexTask(Graph):
 
         :return:
         """
+        index = 0
 
+        steps = []
 
-        return
+        for subtask in self.subtasks():
+            s = self.step(subtask, index)
+            index += 1
+            steps.append(s)
+
+        # TODO - Create Plan (Action Object) from steps and return Plan
+
+        return steps
 
 
 class ActionableTask(Frame):
