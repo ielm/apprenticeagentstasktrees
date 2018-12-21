@@ -1,5 +1,8 @@
-from backend.models.bootstrap import BootstrapAppendKnowledge, BootstrapDeclareKnowledge, BootstrapTriple
-from backend.models.graph import Identifier, Literal, Network
+from backend.models.agenda import Agenda
+from backend.models.bootstrap import BootstrapAddTrigger, BootstrapAppendKnowledge, BootstrapDeclareKnowledge, BootstrapDefineOutputXMRTemplate, BootstrapRegisterMP, BootstrapTriple
+from backend.models.graph import Frame, Identifier, Literal, Network
+from backend.models.mps import AgentMethod, MPRegistry
+from backend.models.output import OutputXMRTemplate
 
 import unittest
 
@@ -154,3 +157,84 @@ class BootstrapAppendKnowledgeTestCase(unittest.TestCase):
         boot()
 
         self.assertTrue(frame["MYSLOT"] == Identifier.parse("ONT.ALL"))
+
+
+class BootstrapRegisterMPTestCase(unittest.TestCase):
+
+    def setUp(self):
+        self.n = Network()
+        self.g = self.n.register("TEST")
+        MPRegistry.clear()
+
+        class MP(AgentMethod):
+            def run(self):
+                return True
+
+        self.mp = MP
+
+    def test_call(self):
+        boot = BootstrapRegisterMP(self.mp)
+        boot()
+
+        self.assertTrue(MPRegistry.has_mp(self.mp.__name__))
+        self.assertTrue(MPRegistry.run(self.mp.__name__, None))
+
+    def test_call_with_name(self):
+        boot = BootstrapRegisterMP(self.mp, name="TestMP")
+        boot()
+
+        self.assertTrue(MPRegistry.has_mp("TestMP"))
+        self.assertTrue(MPRegistry.run("TestMP", None))
+
+
+class BootstrapAddTriggerTestCase(unittest.TestCase):
+
+    def setUp(self):
+        self.n = Network()
+        self.g = self.n.register("TEST")
+
+    def test_call(self):
+        agenda = self.g.register("AGENDA")
+        definition = self.g.register("DEFINITION")
+        query = Frame.q(self.n).id("TEST.SOMETHING.123")
+
+        boot = BootstrapAddTrigger(self.n, agenda, definition, query)
+        boot()
+
+        self.assertEqual(1, len(Agenda(agenda).triggers()))
+        self.assertEqual(definition, Agenda(agenda).triggers()[0].definition())
+        self.assertEqual(query, Agenda(agenda).triggers()[0].query())
+
+
+class BootstrapDefineOutputXMRTemplateTestCase(unittest.TestCase):
+
+    def setUp(self):
+        self.n = Network()
+        self.g = self.n.register("TEST")
+        self.capability = self.g.register("CAPABILITY")
+
+    def test_call(self):
+        name = "Test Name"
+        type = OutputXMRTemplate.Type.PHYSICAL
+        capability = self.capability
+        params = ["$var1", "$var2"]
+        root = "OUT.EVENT.1"
+        frames = [
+            BootstrapDeclareKnowledge(self.n, "OUT", "EVENT", index=1, properties=[BootstrapTriple("THEME", Identifier.parse("OUT.OBJECT.1"))]),
+            BootstrapDeclareKnowledge(self.n, "OUT", "OBJECT", index=1, properties=[BootstrapTriple("PROP", Literal("$var1"))])
+        ]
+
+        boot = BootstrapDefineOutputXMRTemplate(self.n, name, type, capability, params, root, frames)
+        boot()
+
+        template = self.n["XMR-TEMPLATE#1"]
+        event = template["XMR-TEMPLATE#1.EVENT.1"]
+        object = template["XMR-TEMPLATE#1.OBJECT.1"]
+
+        self.assertEqual(object, event["THEME"])
+        self.assertEqual("$var1", object["PROP"])
+
+        self.assertEqual("Test Name", OutputXMRTemplate(template).name())
+        self.assertEqual(OutputXMRTemplate.Type.PHYSICAL, OutputXMRTemplate(template).type())
+        self.assertEqual("TEST.CAPABILITY", OutputXMRTemplate(template).capability().name())
+        self.assertEqual(["$var1", "$var2"], OutputXMRTemplate(template).params())

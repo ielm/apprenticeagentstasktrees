@@ -62,7 +62,8 @@ class TMR(Graph):
                 for filler in slot:
                     if isinstance(filler._value, Identifier) and filler._value.graph is None and not filler._value.render() in self:
                         filler._value.graph = self.ontology
-
+                    elif isinstance(filler._value, Identifier) and filler._value.graph is None:
+                        filler._value.graph = namespace
 
     def __setitem__(self, key, value):
         if not isinstance(value, TMRInstance):
@@ -164,13 +165,16 @@ class TMRInstance(Frame):
                     and key in ontology \
                     and (ontology[key] ^ ontology["RELATION"] or ontology[key] ^ ontology["ONTOLOGY-SLOT"]):
                 value = _properties[original_key]
-                value = re.sub(r"-([0-9]+)$", ".\\1", value)
-                identifier = Identifier.parse(value)
+                if not isinstance(value, list):
+                    value = [value]
+                for v in value:
+                    v = re.sub(r"-([0-9]+)$", ".\\1", v)
+                    identifier = Identifier.parse(v)
 
-                if identifier.graph is None and identifier.instance is None:
-                    identifier.graph = ontology._namespace
+                    if identifier.graph is None and identifier.instance is None:
+                        identifier.graph = ontology._namespace
 
-                self[key] += identifier
+                    self[key] += identifier
             else:
                 self[key] += Literal(_properties[original_key])
 

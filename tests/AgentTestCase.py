@@ -1,11 +1,15 @@
-from backend.agent import Agent, Capability, Effector
-from backend.models.agenda import Action, Goal
+from backend.agent import Agent
+from backend.models.agenda import Decision, Goal, Plan, Step, Trigger
+from backend.models.effectors import Capability, Effector
 from backend.models.graph import Literal, Network
 from backend.models.ontology import Ontology
-from backend.models.statement import CapabilityStatement, Statement, VariableMap
+from backend.models.output import OutputXMRTemplate
+from backend.models.statement import OutputXMRStatement, VariableMap
 from backend.models.tmr import TMR
+from backend.models.xmr import XMR
 
 import unittest
+from unittest.mock import patch
 
 
 class AgentTestCase(unittest.TestCase):
@@ -50,232 +54,43 @@ class AgentTestCase(unittest.TestCase):
             }]
         }
 
+    def test_decisions(self):
+        f1 = self.agent.exe.register("DECISION", generate_index=True)
+        f2 = self.agent.exe.register("DECISION", generate_index=True)
+
+        self.agent.identity["HAS-DECISION"] += f1
+        self.agent.identity["HAS-DECISION"] += f2
+
+        self.assertTrue(f1 in self.agent.decisions())
+        self.assertTrue(f2 in self.agent.decisions())
+
     def test_idea_input(self):
-        self.assertEqual(5, len(self.agent))
+        self.assertEqual(6, len(self.agent))
         self.assertEqual(0, len(self.agent.input_memory))
 
         self.agent._input()
-        self.assertEqual(5, len(self.agent))
+        self.assertEqual(6, len(self.agent))
         self.assertEqual(0, len(self.agent.input_memory))
 
         tmr = self.tmr()
         self.agent._input(input=tmr)
-        self.assertEqual(6, len(self.agent))
+        self.assertEqual(7, len(self.agent))
         self.assertIn("TMR#1", self.agent)
         self.assertEqual(1, len(self.agent.pending_inputs()))
         self.assertEqual(tmr["sentence"], self.agent.pending_inputs()[0].sentence)
 
-    def test_idea_decision(self):
-        graph = self.agent.internal
-        definition = graph.register("GOAL")
-        action = graph.register("ACTION")
+        tmr = self.tmr()
+        source = self.agent.lt_memory.register("HUMAN")
+        self.agent._input(input=tmr, source=source)
+        self.assertEqual(8, len(self.agent))
+        self.assertIn("TMR#2", self.agent)
+        self.assertTrue(self.agent.internal["XMR.2"]["SOURCE"] == source)
 
-        definition["PRIORITY"] = 0.5
-        definition["RESOURCES"] = 0.5
-        definition["PLAN"] = action
-        action["SELECT"] = Literal(Action.DEFAULT)
-
-        goal = Goal.instance_of(graph, definition, [])
-        self.agent.agenda().add_goal(goal)
-        self.agent._decision()
-
-        self.assertTrue(goal.is_active())
-        self.assertEqual(0.5, goal.priority(None))
-        self.assertEqual(0.5, goal.resources(None))
-        self.assertEqual(0.625, goal.decision(None))
-        self.assertTrue(self.agent.identity["ACTION-TO-TAKE"] == action)
-
-    def test_idea_decision_reserves_effectors(self):
-        graph = self.agent.internal
-
-        # 1) Define and assign a capability and effector
-        capability = Capability.instance(graph, "CAP-A", "")
-        effector = Effector.instance(graph, Effector.Type.MENTAL, [capability])
-        self.agent.identity["HAS-EFFECTOR"] += effector.frame
-
-        # 2) Define and instance a goal that needs the capability
-        stmt = CapabilityStatement.instance(graph, capability, [], [])
-        action = Action.build(graph, "ACTION", Action.DEFAULT, stmt)
-        definition = Goal.define(graph, "TEST", 0.5, 0.5, [action], [], [])
-        goal = Goal.instance_of(graph, definition, [])
-        self.agent.agenda().add_goal(goal)
-
-        # 3) Decide on the next task; the effector should then be reserved
-        self.assertTrue(effector.is_free())
-        self.agent._decision()
-        self.assertFalse(effector.is_free())
-
-    def test_idea_decision_reserves_multiple_effectors(self):
-        graph = self.agent.internal
-
-        # 1) Define and assign two capabilities and effectors
-        capability1 = Capability.instance(graph, "CAP-A", "")
-        capability2 = Capability.instance(graph, "CAP-B", "")
-        effector1 = Effector.instance(graph, Effector.Type.MENTAL, [capability1])
-        effector2 = Effector.instance(graph, Effector.Type.MENTAL, [capability2])
-        self.agent.identity["HAS-EFFECTOR"] += effector1.frame
-        self.agent.identity["HAS-EFFECTOR"] += effector2.frame
-
-        # 2) Define and instance a goal that needs both capabilities
-        stmt1 = CapabilityStatement.instance(graph, capability1, [], [])
-        stmt2 = CapabilityStatement.instance(graph, capability2, [], [])
-        action = Action.build(graph, "ACTION", Action.DEFAULT, [stmt1, stmt2])
-        definition = Goal.define(graph, "TEST", 0.5, 0.5, [action], [], [])
-        goal = Goal.instance_of(graph, definition, [])
-        self.agent.agenda().add_goal(goal)
-
-        # 3) Decide on the next task; the effectors should then be reserved
-        self.assertTrue(effector1.is_free())
-        self.assertTrue(effector2.is_free())
-        self.agent._decision()
-        self.assertFalse(effector1.is_free())
-        self.assertFalse(effector2.is_free())
-
-    def test_idea_decision_reserves_effectors_in_decision_order(self):
-        graph = self.agent.internal
-
-        # 1) Define and assign a capability and effector
-        capability = Capability.instance(graph, "CAP-A", "")
-        effector = Effector.instance(graph, Effector.Type.MENTAL, [capability])
-        self.agent.identity["HAS-EFFECTOR"] += effector.frame
-
-        # 2) Define and instance two goals that needs the capability (with different weights)
-        stmt = CapabilityStatement.instance(graph, capability, [], [])
-        action1 = Action.build(graph, "ACTION", Action.DEFAULT, stmt)
-        action2 = Action.build(graph, "ACTION", Action.DEFAULT, stmt)
-        definition1 = Goal.define(graph, "TEST", 0.5, 0.5, [action1], [], [])
-        definition2 = Goal.define(graph, "TEST", 1.0, 0.1, [action2], [], [])
-        goal1 = Goal.instance_of(graph, definition1, [])
-        goal2 = Goal.instance_of(graph, definition2, [])
-        self.agent.agenda().add_goal(goal1)
-        self.agent.agenda().add_goal(goal2)
-
-        # 3) Decide on the next task; goal2 should be selected and goal1 should not be
-        self.assertFalse(goal1.is_active())
-        self.assertFalse(goal2.is_active())
-        self.agent._decision()
-        self.assertFalse(goal1.is_active())
-        self.assertTrue(goal2.is_active())
-
-    def test_idea_decision_activates_multiple_goals_if_capabilities_exist(self):
-        graph = self.agent.internal
-
-        # 1) Define and assign two capabilities and effectors
-        capability1 = Capability.instance(graph, "CAP-A", "")
-        capability2 = Capability.instance(graph, "CAP-B", "")
-        effector1 = Effector.instance(graph, Effector.Type.MENTAL, [capability1])
-        effector2 = Effector.instance(graph, Effector.Type.MENTAL, [capability2])
-        self.agent.identity["HAS-EFFECTOR"] += effector1.frame
-        self.agent.identity["HAS-EFFECTOR"] += effector2.frame
-
-        # 2) Define and instance two goals that needs different capabilities
-        stmt1 = CapabilityStatement.instance(graph, capability1, [], [])
-        stmt2 = CapabilityStatement.instance(graph, capability2, [], [])
-        action1 = Action.build(graph, "ACTION", Action.DEFAULT, stmt1)
-        action2 = Action.build(graph, "ACTION", Action.DEFAULT, stmt2)
-        definition1 = Goal.define(graph, "TEST", 0.5, 0.5, [action1], [], [])
-        definition2 = Goal.define(graph, "TEST", 0.5, 0.5, [action2], [], [])
-        goal1 = Goal.instance_of(graph, definition1, [])
-        goal2 = Goal.instance_of(graph, definition2, [])
-        self.agent.agenda().add_goal(goal1)
-        self.agent.agenda().add_goal(goal2)
-
-        # 3) Decide on the next task; both goals should be made active
-        self.assertFalse(goal1.is_active())
-        self.assertFalse(goal2.is_active())
-        self.agent._decision()
-        self.assertTrue(goal1.is_active())
-        self.assertTrue(goal2.is_active())
-
-    def test_idea_decision_activates_goals_with_no_capability_requirements(self):
-        graph = self.agent.internal
-
-        # 1) Define and instance a goal that needs no capability
-        action = Action.build(graph, "ACTION", Action.DEFAULT, Action.IDLE)
-        definition = Goal.define(graph, "TEST", 0.5, 0.5, [action], [], [])
-        goal = Goal.instance_of(graph, definition, [])
-        self.agent.agenda().add_goal(goal)
-
-        # 2) Decide on the next task; the goal should be made active
-        self.assertFalse(goal.is_active())
-        self.agent._decision()
-        self.assertTrue(goal.is_active())
-
-    def test_idea_execute(self):
-        ran = False
-        found_goal = False
-
-        class TestStatement(Statement):
-            def run(self, varmap: VariableMap):
-                nonlocal ran
-                ran = True
-
-                nonlocal found_goal
-                if varmap.frame["MARKER"] == 123:
-                    found_goal = True
-
-        graph = self.agent.internal
-        action = graph.register("ACTION")
-        statement = graph.register("STATEMENT", isa="EXE.STATEMENT")
-        goal = graph.register("GOAL")
-
-        action["PERFORM"] = statement
-        Goal(goal).status(Goal.Status.ACTIVE)
-        self.agent.lookup("EXE.STATEMENT")["CLASSMAP"] = Literal(TestStatement)
-        self.agent.identity["ACTION-TO-TAKE"] = action
-        self.agent.agenda().add_goal(goal)
-        goal["MARKER"] = 123
-
-        self.agent._execute()
-        self.assertTrue(ran)
-        self.assertTrue(found_goal)
-        self.assertNotIn("ACTION-TO-TAKE", self.agent.identity)
-
-    def test_idea_assess(self):
-
-        class TestStatement(Statement):
-            def run(self, varmap: VariableMap):
-                return True
-
-        graph = self.agent.internal
-        definition = graph.register("GOAL")
-        condition = graph.register("CONDITION")
-        statement = graph.register("STATEMENT", isa="EXE.BOOLEAN-STATEMENT")
-
-        definition["PRIORITY"] = 0.5
-        definition["WHEN"] = condition
-        condition["IF"] = statement
-        condition["STATUS"] = Goal.Status.SATISFIED
-
-        self.agent.lookup("EXE.BOOLEAN-STATEMENT")["CLASSMAP"] = Literal(TestStatement)
-
-        goal = Goal.instance_of(graph, definition, [])
-        goal.status(Goal.Status.ACTIVE)
-        self.agent.agenda().add_goal(goal)
-
-        self.agent._assess()
-        self.assertTrue(goal.is_satisfied())
-
-    def test_idea(self):
-        agent = Agent(ontology=Ontology.init_default("ONT"))
-        agent.logger().enable()
-
-        import json
-        import os
-
-        def resource(fp):
-            r = None
-            with open(fp) as f:
-                r = json.load(f)
-            return r
-
-        file = os.path.abspath(__package__) + "/resources/DemoMay2018_Analyses.json"
-        demo = resource(file)
-        tmr = demo[0]  # We will build a chair.
-
-        agent.idea(None)
-        agent.idea(tmr)
-        agent.idea(None)
+        tmr = self.tmr()
+        self.agent._input(input=tmr, type="LANGUAGE")
+        self.assertEqual(9, len(self.agent))
+        self.assertIn("TMR#3", self.agent)
+        self.assertTrue(self.agent.internal["XMR.3"]["TYPE"] == XMR.Type.LANGUAGE.value)
 
     def test_iidea(self):
         agent = Agent(ontology=Ontology.init_default("ONT"))
@@ -325,33 +140,692 @@ class AgentTestCase(unittest.TestCase):
 
     def test_callback(self):
         from backend.agent import Callback
-        from backend.models.mps import MPRegistry
-        from backend.models.statement import CapabilityStatement, MeaningProcedureStatement
 
-        # First, declare a testable Meaning Procedure to run
-        result = 0
-        def TestMp(statement, var1, callback=None):
-            nonlocal result
-            result += var1
-        MPRegistry.register(TestMp)
-
-        # Next, minimally define a goal
+        # First, minimally define a goal
         definition = self.agent.exe.register("GOAL-DEFINITION")
         definition["WITH"] += Literal("$var1")
         params = [1]
         goal = VariableMap.instance_of(self.agent.exe, definition, params)
 
         # Now define a capability statement with a callback
-        capability = Capability.instance(self.agent.exe, "CAPABILITY", TestMp.__name__)
-        callback = [MeaningProcedureStatement.instance(self.agent.exe, TestMp.__name__, ["$var1"])]
-        statement = CapabilityStatement.instance(self.agent.exe, capability, callback, ["$var1"])
+        capability = Capability.instance(self.agent.exe, "CAPABILITY", "TestMP")
+        effector = Effector.instance(self.agent.exe, Effector.Type.PHYSICAL, [capability])
+
+        decision = Decision.build(self.agent.exe, goal.frame, "PLAN", "STEP")
+        callback = Callback.build(self.agent.exe, decision, effector)
 
         # Load the callback directly into the agent (this is "after" the capability statement has been executed)
-        cbi = Callback.instance(self.agent.exe, goal, [statement], capability)
+        effector.reserve(decision, "OUTPUT", capability)
+        decision.frame["HAS-CALLBACK"] += callback.frame
 
         # Fire the callback
-        self.agent.callback(cbi.frame._identifier)
+        self.agent.callback(callback.frame._identifier)
 
-        # Did it fire? And has the callback been removed?
-        self.assertEqual(result, 1)
-        self.assertNotIn(cbi.frame.name(), self.agent.exe)
+        # Is the callback marked as received?
+        self.assertEqual(Callback.Status.RECEIVED, callback.status())
+
+    def test_preferences(self):
+        self.assertEqual(0.5, self.agent.preference("TEST-PREFERENCE", 0.5))
+        self.agent.identity["TEST-PREFERENCE"] = 0.6
+        self.assertEqual(0.6, self.agent.preference("TEST-PREFERENCE", 0.5))
+
+
+class AgentDecideTestCase(unittest.TestCase):
+
+    def setUp(self):
+
+        class TestableAgent(Agent):
+            pass
+
+        self.n = Network()
+        self.ontology = self.n.register(Ontology("ONT"))
+
+        self.ontology.register("ALL")
+        self.ontology.register("OBJECT", isa="ONT.ALL")
+        self.ontology.register("EVENT", isa="ONT.ALL")
+        self.ontology.register("PROPERTY", isa="ONT.ALL")
+        self.ontology.register("FASTEN", isa="ONT.EVENT")
+        self.ontology.register("ASSEMBLE", isa="ONT.EVENT")
+
+        self.agent = TestableAgent(ontology=self.ontology)
+
+        self.agent.identity["PRIORITY_WEIGHT"] = 1.5
+        self.agent.identity["RESOURCES_WEIGHT"] = 0.25
+
+        self.agent.exe.register("TEST-CAPABILITY", isa="EXE.CAPABILITY")
+
+        self.g = self.agent.exe
+
+    def test_decide_creates_decisions(self):
+        step = Step.build(self.g, 1, [])
+        plan1 = Plan.build(self.g, "plan-1", Plan.DEFAULT, [step])
+        plan2 = Plan.build(self.g, "plan-2", Plan.DEFAULT, [step])
+        definition = Goal.define(self.g, "goal-1", 0.5, 0.5, [plan1, plan2], [], [])
+
+        goal1 = Goal.instance_of(self.g, definition, [])
+        goal2 = Goal.instance_of(self.g, definition, [])
+
+        self.agent.agenda().add_goal(goal1)
+        self.agent.agenda().add_goal(goal2)
+
+        self.assertEqual(0, len(self.agent.decisions()))
+
+        self.agent._decide()
+
+        self.assertEqual(4, len(self.agent.decisions()))
+
+        decisions = list(map(lambda decision: (decision.goal().name(), str(decision.goal().frame._identifier), decision.plan().name(), decision.step().index()), self.agent.decisions()))
+
+        self.assertIn(("goal-1", "EXE.GOAL.1", "plan-1", 1), decisions)
+        self.assertIn(("goal-1", "EXE.GOAL.1", "plan-2", 1), decisions)
+        self.assertIn(("goal-1", "EXE.GOAL.2", "plan-1", 1), decisions)
+        self.assertIn(("goal-1", "EXE.GOAL.2", "plan-2", 1), decisions)
+
+    def test_decide_only_creates_decisions_for_selectable_plans(self):
+        from backend.models.graph import Frame
+        from backend.models.statement import ExistsStatement
+        stmt = ExistsStatement.instance(self.g, Frame.q(self.n).f("DNE", 123))
+
+        step = Step.build(self.g, 1, [])
+        plan1 = Plan.build(self.g, "plan-1", Plan.DEFAULT, [step])
+        plan2 = Plan.build(self.g, "plan-2", stmt, [step])
+        definition = Goal.define(self.g, "goal", 0.5, 0.5, [plan1, plan2], [], [])
+
+        goal = Goal.instance_of(self.g, definition, [])
+
+        self.agent.agenda().add_goal(goal)
+
+        self.assertEqual(0, len(self.agent.decisions()))
+
+        self.agent._decide()
+
+        self.assertEqual(1, len(self.agent.decisions()))
+
+        decisions = list(map(lambda decision: (decision.goal().name(), str(decision.goal().frame._identifier), decision.plan().name(), decision.step().index()), self.agent.decisions()))
+        self.assertIn(("goal", "EXE.GOAL.1", "plan-1", 1), decisions)
+        self.assertNotIn(("goal", "EXE.GOAL.1", "plan-2", 1), decisions)
+
+    def test_decide_only_creates_decisions_that_do_not_yet_exist(self):
+        step = Step.build(self.g, 1, [])
+        plan1 = Plan.build(self.g, "plan-1", Plan.DEFAULT, [step])
+        plan2 = Plan.build(self.g, "plan-2", Plan.DEFAULT, [step])
+        definition = Goal.define(self.g, "goal", 0.5, 0.5, [plan1, plan2], [], [])
+
+        goal = Goal.instance_of(self.g, definition, [])
+
+        self.agent.agenda().add_goal(goal)
+
+        self.assertEqual(0, len(self.agent.decisions()))
+
+        decision = Decision.build(self.agent.internal, goal, plan1, step)
+        self.agent.identity["HAS-DECISION"] += decision.frame
+
+        self.assertEqual(1, len(self.agent.decisions()))
+
+        self.agent._decide()
+
+        self.assertEqual(2, len(self.agent.decisions()))
+
+        decisions = list(map(lambda decision: (decision.goal().name(), str(decision.goal().frame._identifier), decision.plan().name(), decision.step().index()), self.agent.decisions()))
+        self.assertIn(("goal", "EXE.GOAL.1", "plan-1", 1), decisions)
+        self.assertIn(("goal", "EXE.GOAL.1", "plan-2", 1), decisions)
+
+    def test_decide_inspects_decisions(self):
+        step = Step.build(self.g, 1, [])
+        plan = Plan.build(self.g, "plan-1", Plan.DEFAULT, [step])
+        definition = Goal.define(self.g, "goal-1", 0.5, 0.5, [plan], [], [])
+
+        goal = Goal.instance_of(self.g, definition, [])
+        self.agent.agenda().add_goal(goal)
+
+        self.agent._decide()
+
+        decision = self.agent.decisions()[0]
+        self.assertEqual(0.5, decision.priority())
+        self.assertEqual(0.5, decision.cost())
+        self.assertEqual(0, len(decision.outputs()))
+
+    def test_decide_selects_decisions(self):
+        step = Step.build(self.g, 1, [])
+        plan = Plan.build(self.g, "plan-1", Plan.DEFAULT, [step])
+        definition = Goal.define(self.g, "goal-1", 0.5, 0.5, [plan], [], [])
+
+        goal = Goal.instance_of(self.g, definition, [])
+        self.agent.agenda().add_goal(goal)
+
+        self.agent._decide()
+
+        decision = self.agent.decisions()[0]
+        self.assertEqual(Decision.Status.SELECTED, decision.status())
+
+    def test_decide_declines_decisions(self):
+        template = OutputXMRTemplate.build(self.agent, "template", OutputXMRTemplate.Type.PHYSICAL, "EXE.TEST-CAPABILITY", [])
+        statement = OutputXMRStatement.instance(self.g, template, [], self.agent.identity)
+
+        step = Step.build(self.g, 1, [statement])
+        plan = Plan.build(self.g, "plan-1", Plan.DEFAULT, [step])
+        definition = Goal.define(self.g, "goal-1", 0.5, 0.5, [plan], [], [])
+
+        goal = Goal.instance_of(self.g, definition, [])
+        self.agent.agenda().add_goal(goal)
+
+        self.agent._decide()
+
+        decision = self.agent.decisions()[0]
+        self.assertEqual(Decision.Status.DECLINED, decision.status())
+
+    def test_decide_reserves_effectors(self):
+        capability = Capability.instance(self.g, "TEST-CAPABILITY", "")
+        effector = Effector.instance(self.g, Effector.Type.PHYSICAL, [capability])
+        self.agent.identity["HAS-EFFECTOR"] += effector.frame
+
+        template = OutputXMRTemplate.build(self.agent, "template", OutputXMRTemplate.Type.PHYSICAL, capability, [])
+        statement = OutputXMRStatement.instance(self.g, template, [], self.agent.identity)
+
+        step = Step.build(self.g, 1, [statement])
+        plan = Plan.build(self.g, "plan-1", Plan.DEFAULT, [step])
+        definition = Goal.define(self.g, "goal-1", 0.5, 0.5, [plan], [], [])
+
+        goal = Goal.instance_of(self.g, definition, [])
+        self.agent.agenda().add_goal(goal)
+
+        self.agent._decide()
+
+        self.assertFalse(effector.is_free())
+        self.assertEqual(self.agent.decisions()[0], effector.on_decision())
+        self.assertEqual(capability, effector.on_capability())
+        self.assertEqual(self.agent.decisions()[0].outputs()[0], effector.on_output())
+
+    def test_decide_reserves_multiple_effectors_for_separate_decisions(self):
+        capability = Capability.instance(self.g, "TEST-CAPABILITY", "")
+        effector1 = Effector.instance(self.g, Effector.Type.PHYSICAL, [capability])
+        effector2 = Effector.instance(self.g, Effector.Type.PHYSICAL, [capability])
+        self.agent.identity["HAS-EFFECTOR"] += effector1.frame
+        self.agent.identity["HAS-EFFECTOR"] += effector2.frame
+
+        template = OutputXMRTemplate.build(self.agent, "template", OutputXMRTemplate.Type.PHYSICAL, capability, [])
+        statement = OutputXMRStatement.instance(self.g, template, [], self.agent.identity)
+
+        step = Step.build(self.g, 1, [statement])
+        plan = Plan.build(self.g, "plan-1", Plan.DEFAULT, [step])
+        definition = Goal.define(self.g, "goal-1", 0.5, 0.5, [plan], [], [])
+
+        goal1 = Goal.instance_of(self.g, definition, [])
+        goal2 = Goal.instance_of(self.g, definition, [])
+        self.agent.agenda().add_goal(goal1)
+        self.agent.agenda().add_goal(goal2)
+
+        self.agent._decide()
+
+        self.assertFalse(effector1.is_free())
+        self.assertFalse(effector2.is_free())
+
+        self.assertIn(effector1.on_decision(), self.agent.decisions())
+        self.assertIn(effector2.on_decision(), self.agent.decisions())
+        self.assertNotEqual(effector1.on_decision(), effector2.on_decision())
+
+        self.assertEqual(capability, effector1.on_capability())
+        self.assertEqual(capability, effector2.on_capability())
+
+        self.assertIn(effector1.on_output(), [self.agent.decisions()[0].outputs()[0], self.agent.decisions()[1].outputs()[0]])
+        self.assertIn(effector2.on_output(), [self.agent.decisions()[0].outputs()[0], self.agent.decisions()[1].outputs()[0]])
+        self.assertNotEqual(effector1.on_output(), effector2.on_output())
+
+    def test_decide_reserves_multiple_effectors_for_single_decision(self):
+        capability = Capability.instance(self.g, "TEST-CAPABILITY", "")
+        effector1 = Effector.instance(self.g, Effector.Type.PHYSICAL, [capability])
+        effector2 = Effector.instance(self.g, Effector.Type.PHYSICAL, [capability])
+        self.agent.identity["HAS-EFFECTOR"] += effector1.frame
+        self.agent.identity["HAS-EFFECTOR"] += effector2.frame
+
+        template = OutputXMRTemplate.build(self.agent, "template", OutputXMRTemplate.Type.PHYSICAL, capability, [])
+        statement1 = OutputXMRStatement.instance(self.g, template, [], self.agent.identity)
+        statement2 = OutputXMRStatement.instance(self.g, template, [], self.agent.identity)
+
+        step = Step.build(self.g, 1, [statement1, statement2])
+        plan = Plan.build(self.g, "plan-1", Plan.DEFAULT, [step])
+        definition = Goal.define(self.g, "goal-1", 0.5, 0.5, [plan], [], [])
+
+        goal = Goal.instance_of(self.g, definition, [])
+        self.agent.agenda().add_goal(goal)
+
+        self.agent._decide()
+
+        self.assertEqual(1, len(self.agent.decisions()))
+
+        self.assertFalse(effector1.is_free())
+        self.assertFalse(effector2.is_free())
+
+        self.assertEqual(effector1.on_decision(), self.agent.decisions()[0])
+        self.assertEqual(effector2.on_decision(), self.agent.decisions()[0])
+
+        self.assertEqual(capability, effector1.on_capability())
+        self.assertEqual(capability, effector2.on_capability())
+
+        self.assertIn(effector1.on_output(), self.agent.decisions()[0].outputs())
+        self.assertIn(effector2.on_output(), self.agent.decisions()[0].outputs())
+        self.assertNotEqual(effector1.on_output(), effector2.on_output())
+
+    def test_decide_selects_multiple_decisions_if_possible(self):
+        capability = Capability.instance(self.g, "TEST-CAPABILITY", "")
+        effector1 = Effector.instance(self.g, Effector.Type.PHYSICAL, [capability])
+        effector2 = Effector.instance(self.g, Effector.Type.PHYSICAL, [capability])
+        self.agent.identity["HAS-EFFECTOR"] += effector1.frame
+        self.agent.identity["HAS-EFFECTOR"] += effector2.frame
+
+        template = OutputXMRTemplate.build(self.agent, "template", OutputXMRTemplate.Type.PHYSICAL, capability, [])
+        statement = OutputXMRStatement.instance(self.g, template, [], self.agent.identity)
+
+        step = Step.build(self.g, 1, [statement])
+        plan = Plan.build(self.g, "plan-1", Plan.DEFAULT, [step])
+        definition = Goal.define(self.g, "goal-1", 0.5, 0.5, [plan], [], [])
+
+        goal1 = Goal.instance_of(self.g, definition, [])
+        goal2 = Goal.instance_of(self.g, definition, [])
+        self.agent.agenda().add_goal(goal1)
+        self.agent.agenda().add_goal(goal2)
+
+        self.agent._decide()
+
+        self.assertEqual(2, len(self.agent.decisions()))
+        self.assertEqual(Decision.Status.SELECTED, self.agent.decisions()[0].status())
+        self.assertEqual(Decision.Status.SELECTED, self.agent.decisions()[1].status())
+
+    def test_decide_selects_decisions_in_decision_order(self):
+        capability = Capability.instance(self.g, "TEST-CAPABILITY", "")
+        effector = Effector.instance(self.g, Effector.Type.PHYSICAL, [capability])
+        self.agent.identity["HAS-EFFECTOR"] += effector.frame
+
+        template = OutputXMRTemplate.build(self.agent, "template", OutputXMRTemplate.Type.PHYSICAL, capability, [])
+        statement = OutputXMRStatement.instance(self.g, template, [], self.agent.identity)
+
+        step = Step.build(self.g, 1, [statement])
+        plan = Plan.build(self.g, "plan-1", Plan.DEFAULT, [step])
+        definition1 = Goal.define(self.g, "goal-1", 1.0, 0.5, [plan], [], [])
+        definition2 = Goal.define(self.g, "goal-1", 0.0, 0.5, [plan], [], [])
+
+        goal1 = Goal.instance_of(self.g, definition1, [])
+        goal2 = Goal.instance_of(self.g, definition2, [])
+
+        self.agent.agenda().add_goal(goal2)
+        self.agent.agenda().add_goal(goal1)
+
+        self.agent._decide()
+
+        if self.agent.decisions()[0].goal() == goal1:
+            self.assertEqual(Decision.Status.SELECTED, self.agent.decisions()[0].status())
+            self.assertEqual(Decision.Status.DECLINED, self.agent.decisions()[1].status())
+        else:
+            self.assertEqual(Decision.Status.SELECTED, self.agent.decisions()[1].status())
+            self.assertEqual(Decision.Status.DECLINED, self.agent.decisions()[0].status())
+
+    def test_decide_only_pursues_one_plan_per_goal(self):
+        capability = Capability.instance(self.g, "TEST-CAPABILITY", "")
+        effector = Effector.instance(self.g, Effector.Type.PHYSICAL, [capability])
+        self.agent.identity["HAS-EFFECTOR"] += effector.frame
+
+        template = OutputXMRTemplate.build(self.agent, "template", OutputXMRTemplate.Type.PHYSICAL, capability, [])
+        statement = OutputXMRStatement.instance(self.g, template, [], self.agent.identity)
+
+        step = Step.build(self.g, 1, [statement])
+        plan1 = Plan.build(self.g, "plan-1", Plan.DEFAULT, [step])
+        plan2 = Plan.build(self.g, "plan-2", Plan.DEFAULT, [step])
+        definition = Goal.define(self.g, "goal-1", 1.0, 0.5, [plan1, plan2], [], [])
+
+        goal = Goal.instance_of(self.g, definition, [])
+
+        self.agent.agenda().add_goal(goal)
+
+        self.agent._decide()
+
+        self.assertEqual(2, len(self.agent.decisions()))
+        self.assertEqual(1, len(list(filter(lambda decision: decision.status() == Decision.Status.SELECTED, self.agent.decisions()))))
+        self.assertEqual(1, len(list(filter(lambda decision: decision.status() == Decision.Status.DECLINED, self.agent.decisions()))))
+
+    @patch.object(Trigger, 'fire')
+    def test_decide_runs_triggers(self, mocked):
+        trigger1 = Trigger.build(self.g, None, None)
+        trigger2 = Trigger.build(self.g, None, None)
+
+        self.agent.agenda().add_trigger(trigger1)
+        self.agent.agenda().add_trigger(trigger2)
+
+        self.agent._decide()
+
+        self.assertEqual(2, mocked.call_count)
+
+
+class AgentExecuteTestCase(unittest.TestCase):
+
+    def setUp(self):
+
+        class TestableAgent(Agent):
+            def _bootstrap(self):
+                pass
+
+        self.n = Network()
+        self.ontology = self.n.register(Ontology("ONT"))
+
+        self.ontology.register("ALL")
+        self.ontology.register("OBJECT", isa="ONT.ALL")
+        self.ontology.register("EVENT", isa="ONT.ALL")
+        self.ontology.register("PROPERTY", isa="ONT.ALL")
+        self.ontology.register("FASTEN", isa="ONT.EVENT")
+        self.ontology.register("ASSEMBLE", isa="ONT.EVENT")
+
+        self.agent = TestableAgent(ontology=self.ontology)
+
+        self.agent.identity["PRIORITY_WEIGHT"] = 1.5
+        self.agent.identity["RESOURCES_WEIGHT"] = 0.25
+
+        self.agent.exe.register("TEST-CAPABILITY", isa="EXE.CAPABILITY")
+
+        self.g = self.agent.exe
+
+    @patch.object(Decision, 'execute')
+    def test_execute_provides_correct_effectors(self, mocked):
+        capability = Capability.instance(self.g, "TEST-CAPABILITY", "")
+        effector1 = Effector.instance(self.g, Effector.Type.PHYSICAL, [capability])
+        effector2 = Effector.instance(self.g, Effector.Type.PHYSICAL, [capability])
+        self.agent.identity["HAS-EFFECTOR"] += effector1.frame
+        self.agent.identity["HAS-EFFECTOR"] += effector2.frame
+
+        template = OutputXMRTemplate.build(self.agent, "template", OutputXMRTemplate.Type.PHYSICAL, capability, [])
+        statement = OutputXMRStatement.instance(self.g, template, [], self.agent.identity)
+
+        step = Step.build(self.g, 1, [statement])
+        plan = Plan.build(self.g, "plan-1", Plan.DEFAULT, [step])
+        definition = Goal.define(self.g, "goal-1", 1.0, 0.5, [plan], [], [])
+        goal = Goal.instance_of(self.g, definition, [])
+
+        decision = Decision.build(self.g, goal, plan, step)
+        decision.select()
+        self.agent.identity["HAS-DECISION"] += decision.frame
+
+        output = template.create(self.agent, self.agent.exe, [])
+        self.agent.identity["HAS-OUTPUT"] += output.frame
+
+        effector1.reserve(decision, output, capability)
+
+        self.agent._execute()
+
+        mocked.assert_called_once_with(self.agent, [effector1])
+
+    @patch.object(Decision, 'execute')
+    def test_execute_only_runs_selected_decisions(self, mocked):
+        capability = Capability.instance(self.g, "TEST-CAPABILITY", "")
+        effector1 = Effector.instance(self.g, Effector.Type.PHYSICAL, [capability])
+        effector2 = Effector.instance(self.g, Effector.Type.PHYSICAL, [capability])
+        self.agent.identity["HAS-EFFECTOR"] += effector1.frame
+        self.agent.identity["HAS-EFFECTOR"] += effector2.frame
+
+        template = OutputXMRTemplate.build(self.agent, "template", OutputXMRTemplate.Type.PHYSICAL, capability, [])
+        statement = OutputXMRStatement.instance(self.g, template, [], self.agent.identity)
+
+        step = Step.build(self.g, 1, [statement])
+        plan = Plan.build(self.g, "plan-1", Plan.DEFAULT, [step])
+        definition = Goal.define(self.g, "goal-1", 1.0, 0.5, [plan], [], [])
+        goal = Goal.instance_of(self.g, definition, [])
+
+        decision1 = Decision.build(self.g, goal, plan, step)
+        decision2 = Decision.build(self.g, goal, plan, step)
+        decision1.select()
+        self.agent.identity["HAS-DECISION"] += decision1.frame
+        self.agent.identity["HAS-DECISION"] += decision2.frame
+
+        output = template.create(self.agent, self.agent.exe, [])
+        self.agent.identity["HAS-OUTPUT"] += output.frame
+
+        effector1.reserve(decision1, output, capability)
+        effector2.reserve(decision2, output, capability)
+
+        self.agent._execute()
+
+        mocked.assert_called_once_with(self.agent, [effector1])
+
+    def test_execute_runs_multiple_decisions(self):
+        from backend.models.mps import MPRegistry, OutputMethod
+
+        out = []
+        class TestMP(OutputMethod):
+            def run(self):
+                nonlocal out
+                out.append(self.output)
+
+        MPRegistry.register(TestMP)
+
+        capability = Capability.instance(self.g, "TEST-CAPABILITY", TestMP)
+        effector1 = Effector.instance(self.g, Effector.Type.PHYSICAL, [capability])
+        effector2 = Effector.instance(self.g, Effector.Type.PHYSICAL, [capability])
+        self.agent.identity["HAS-EFFECTOR"] += effector1.frame
+        self.agent.identity["HAS-EFFECTOR"] += effector2.frame
+
+        template = OutputXMRTemplate.build(self.agent, "template", OutputXMRTemplate.Type.PHYSICAL, capability, [])
+        statement = OutputXMRStatement.instance(self.g, template, [], self.agent.identity)
+
+        step = Step.build(self.g, 1, [statement])
+        plan = Plan.build(self.g, "plan-1", Plan.DEFAULT, [step])
+        definition = Goal.define(self.g, "goal-1", 1.0, 0.5, [plan], [], [])
+        goal = Goal.instance_of(self.g, definition, [])
+
+        decision1 = Decision.build(self.g, goal, plan, step)
+        decision2 = Decision.build(self.g, goal, plan, step)
+        decision1.select()
+        decision2.select()
+        self.agent.identity["HAS-DECISION"] += decision1.frame
+        self.agent.identity["HAS-DECISION"] += decision2.frame
+
+        output1 = template.create(self.agent, self.agent.exe, [])
+        output2 = template.create(self.agent, self.agent.exe, [])
+        self.agent.identity["HAS-OUTPUT"] += output1.frame
+        self.agent.identity["HAS-OUTPUT"] += output2.frame
+
+        effector1.reserve(decision1, output1, capability)
+        effector2.reserve(decision2, output2, capability)
+
+        self.agent._execute()
+
+        self.assertEqual([output1, output2], out)
+
+
+class AgentAssessTestCase(unittest.TestCase):
+
+    def setUp(self):
+
+        class TestableAgent(Agent):
+            def _bootstrap(self):
+                pass
+
+        self.n = Network()
+        self.ontology = self.n.register(Ontology("ONT"))
+
+        self.ontology.register("ALL")
+        self.ontology.register("OBJECT", isa="ONT.ALL")
+        self.ontology.register("EVENT", isa="ONT.ALL")
+        self.ontology.register("PROPERTY", isa="ONT.ALL")
+        self.ontology.register("FASTEN", isa="ONT.EVENT")
+        self.ontology.register("ASSEMBLE", isa="ONT.EVENT")
+
+        self.agent = TestableAgent(ontology=self.ontology)
+
+        self.agent.identity["PRIORITY_WEIGHT"] = 1.5
+        self.agent.identity["RESOURCES_WEIGHT"] = 0.25
+
+        self.agent.exe.register("TEST-CAPABILITY", isa="EXE.CAPABILITY")
+
+        self.g = self.agent.exe
+
+    def test_assess_processes_all_received_callbacks(self):
+        from backend.agent import Callback
+
+        # First, minimally define a goal
+        definition = self.agent.exe.register("GOAL-DEFINITION")
+        definition["WITH"] += Literal("$var1")
+        params = [1]
+        goal = VariableMap.instance_of(self.agent.exe, definition, params)
+
+        # Now define a capability statement with two callbacks
+        capability = Capability.instance(self.agent.exe, "CAPABILITY", "TestMP")
+        effector1 = Effector.instance(self.agent.exe, Effector.Type.PHYSICAL, [capability])
+        effector2 = Effector.instance(self.agent.exe, Effector.Type.PHYSICAL, [capability])
+
+        decision1 = Decision.build(self.agent.exe, goal.frame, "PLAN", "STEP")
+        decision2 = Decision.build(self.agent.exe, goal.frame, "PLAN", "STEP")
+
+        decision1.frame["HAS-EFFECTOR"] = effector1.frame
+        decision2.frame["HAS-EFFECTOR"] = effector2.frame
+
+        callback1 = Callback.build(self.agent.exe, decision1, effector1)
+        callback2 = Callback.build(self.agent.exe, decision2, effector2)
+
+        self.agent.identity["HAS-DECISION"] += decision1.frame
+        self.agent.identity["HAS-DECISION"] += decision2.frame
+
+        # Load the callbacks directly into the agent (this is "after" the capability statement has been executed)
+        effector1.reserve(decision1, "OUTPUT", capability)
+        effector2.reserve(decision2, "OUTPUT", capability)
+        decision1.frame["HAS-CALLBACK"] += callback1.frame
+        decision2.frame["HAS-CALLBACK"] += callback2.frame
+
+        # Set one of the callbacks to be received
+        callback1.received()
+
+        # Assess, and check that only one of the callbacks has been processed
+        self.agent._assess()
+
+        self.assertTrue(effector1.is_free())
+        self.assertNotIn(callback1, decision1.callbacks())
+        self.assertNotIn(effector1, decision1.effectors())
+        self.assertNotIn(callback1.frame._identifier, self.agent.exe)
+
+        self.assertFalse(effector2.is_free())
+        self.assertIn(callback2, decision2.callbacks())
+        self.assertIn(effector2, decision2.effectors())
+        self.assertIn(callback2.frame._identifier, self.agent.exe)
+
+
+    def test_assess_marks_executing_decisions_as_finished_if_no_callbacks_remain(self):
+        step = Step.build(self.g, 1, [])
+
+        decision1 = Decision.build(self.g, "GOAL", "PLAN", step)
+        decision2 = Decision.build(self.g, "GOAL", "PLAN", step)
+
+        decision2.frame["HAS-CALLBACK"] = self.g.register("CALLBACK")
+
+        decision1.frame["STATUS"] = Decision.Status.EXECUTING
+        decision2.frame["STATUS"] = Decision.Status.EXECUTING
+
+        self.agent.identity["HAS-DECISION"] += decision1.frame
+        self.agent.identity["HAS-DECISION"] += decision2.frame
+
+        self.agent._assess()
+
+        self.assertEqual(Decision.Status.FINISHED, decision1.status())
+        self.assertEqual(Decision.Status.EXECUTING, decision2.status())
+
+    def test_assess_removes_all_non_executing_non_finished_decisions(self):
+        step = Step.build(self.g, 1, [])
+
+        decision1 = Decision.build(self.g, "GOAL", "PLAN", step)
+        decision2 = Decision.build(self.g, "GOAL", "PLAN", step)
+        decision3 = Decision.build(self.g, "GOAL", "PLAN", step)
+        decision4 = Decision.build(self.g, "GOAL", "PLAN", step)
+        decision5 = Decision.build(self.g, "GOAL", "PLAN", step)
+
+        decision2.frame["HAS-CALLBACK"] = self.g.register("CALLBACK")
+
+        decision1.frame["STATUS"] = Decision.Status.EXECUTING
+        decision2.frame["STATUS"] = Decision.Status.EXECUTING
+        decision3.frame["STATUS"] = Decision.Status.SELECTED
+        decision4.frame["STATUS"] = Decision.Status.DECLINED
+        decision5.frame["STATUS"] = Decision.Status.PENDING
+
+        self.agent.identity["HAS-DECISION"] += decision1.frame
+        self.agent.identity["HAS-DECISION"] += decision2.frame
+        self.agent.identity["HAS-DECISION"] += decision3.frame
+        self.agent.identity["HAS-DECISION"] += decision4.frame
+        self.agent.identity["HAS-DECISION"] += decision5.frame
+
+        self.agent._assess()
+
+        self.assertIn(decision1, self.agent.decisions())
+        self.assertIn(decision2, self.agent.decisions())
+        self.assertNotIn(decision3, self.agent.decisions())
+        self.assertNotIn(decision4, self.agent.decisions())
+        self.assertNotIn(decision5, self.agent.decisions())
+
+    def test_assess_removes_any_output_xmrs_associated_with_removed_decisions(self):
+        from backend.models.output import OutputXMR
+
+        step = Step.build(self.g, 1, [])
+
+        decision1 = Decision.build(self.g, "GOAL", "PLAN", step)
+        decision2 = Decision.build(self.g, "GOAL", "PLAN", step)
+
+        decision1.frame["STATUS"] = Decision.Status.FINISHED
+        decision2.frame["STATUS"] = Decision.Status.DECLINED
+
+        output1 = OutputXMR.build(self.g, OutputXMRTemplate.Type.PHYSICAL, "CAPABILITY", "XMR#1")
+        output2 = OutputXMR.build(self.g, OutputXMRTemplate.Type.PHYSICAL, "CAPABILITY", "XMR#2")
+
+        decision1.frame["HAS-OUTPUT"] = output1.frame
+        decision2.frame["HAS-OUTPUT"] = output2.frame
+
+        self.agent.identity["HAS-DECISION"] += decision1.frame
+        self.agent.identity["HAS-DECISION"] += decision2.frame
+
+        self.agent.register("XMR#1")
+        self.agent.register("XMR#2")
+
+        self.agent._assess()
+
+        self.assertIn("XMR#1", self.agent)
+        self.assertNotIn("XMR#2", self.agent)
+
+        self.assertIn(output1.frame.name(), self.g)
+        self.assertNotIn(output2.frame.name(), self.g)
+
+    def test_assess_marks_step_as_finished_if_decision_is_finished(self):
+        step1 = Step.build(self.g, 1, [])
+        step2 = Step.build(self.g, 1, [])
+
+        decision1 = Decision.build(self.g, "GOAL", "PLAN", step1)
+        decision2 = Decision.build(self.g, "GOAL", "PLAN", step2)
+
+        decision1.frame["STATUS"] = Decision.Status.EXECUTING
+        decision2.frame["STATUS"] = Decision.Status.DECLINED
+
+        self.agent.identity["HAS-DECISION"] += decision1.frame
+        self.agent.identity["HAS-DECISION"] += decision2.frame
+
+        self.assertEqual(Step.Status.PENDING, step1.status())
+        self.assertEqual(Step.Status.PENDING, step2.status())
+
+        self.agent._assess()
+
+        self.assertEqual(Step.Status.FINISHED, step1.status())
+        self.assertEqual(Step.Status.PENDING, step2.status())
+
+    def test_assess_calls_assess_on_all_non_satisfied_goals(self):
+        from backend.models.agenda import Condition
+
+        definition = Goal.define(self.g, "test-goal", 0.5, 0.5, [], [Condition.build(self.g, [], Goal.Status.SATISFIED, on=Condition.On.EXECUTED)], [])
+
+        goal1 = Goal.instance_of(self.g, definition, [])
+        goal2 = Goal.instance_of(self.g, definition, [])
+
+        goal1.status(status=Goal.Status.ACTIVE)
+        goal2.status(status=Goal.Status.ACTIVE)
+
+        self.agent.agenda().add_goal(goal1)
+        self.agent.agenda().add_goal(goal2)
+
+        self.assertTrue(goal1.is_active())
+        self.assertTrue(goal2.is_active())
+
+        goal1.frame["PLAN"] = self.g.register("PLAN")
+
+        self.agent._assess()
+
+        self.assertTrue(goal1.is_satisfied())
+        self.assertTrue(goal2.is_active())

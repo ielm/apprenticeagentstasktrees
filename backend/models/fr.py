@@ -87,9 +87,6 @@ class FR(Graph):
                     for f in ambiguous_fillers: f._metadata = {"ambiguities": ids}
 
     def _resolve_log_wrapper(self, heuristic, instance, results, tmr=None):
-        # print(instance._identifier.render(graph=False))
-        if instance._identifier == "TMR#11.ASSEMBLE.1":
-            print(instance._identifier.render(graph=False))
         input_results = copy.deepcopy(results)
         heuristic(self).resolve(instance, results, tmr=tmr)
 
@@ -119,7 +116,7 @@ class FR(Graph):
         self.heuristics = resolve_heuristics
 
         filtered_graph = {k: other_fr[k] for k in filter(lambda k: status[k], other_fr.keys())}
-        filtered_graph = {Identifier.parse(k).render(graph=False): filtered_graph[k] for k in filtered_graph}
+        filtered_graph = {Identifier.parse(k).render(): filtered_graph[k] for k in filtered_graph}
 
         resolves = self.resolve_tmr(filtered_graph)
         self.heuristics = backup_heuristics
@@ -145,12 +142,8 @@ class FR(Graph):
     # where more than one implies ambiguity.
     def resolve_instance(self, frame, resolves, tmr=None):
         # TODO: currently this resolves everything to None unless found in the input resolves object
-
         results = dict()
-        results[frame._identifier.render(graph=False)] = None
-
-        # For every slot in the current frame, try looking up the slot in the ontology
-        # If the slot is found in the ontology, create a results[x] entry for it and set it to NONE
+        results[frame._identifier.render()] = None
         for slot in frame:
             if slot == frame._ISA_type():
                 continue
@@ -162,14 +155,12 @@ class FR(Graph):
                         results[filler._value.render()] = None
             except Exception: pass
 
-        # If we've already figured out the results of a slot (resolves argument), copy the known
-        # results into the currently being processed results
         for id in results:
             if id in resolves:
                 results[id] = resolves[id]
 
         for heuristic in self.heuristics:
-            if results[frame._identifier.render(graph=False)] is None:
+            if results[frame._identifier.render()] is None:
                 self._resolve_log_wrapper(heuristic, frame, results, tmr=tmr)
 
         return results
@@ -211,7 +202,7 @@ class FR(Graph):
                 resolves[id] = {self.register(self.ontology[id]._identifier.name, isa=self.ontology[id], generate_index=True).name()}
 
         for instance in tmr:
-            for resolved in resolves[tmr[instance]._identifier.render(graph=False)]:
+            for resolved in resolves[tmr[instance]._identifier.render()]:
                 self.populate(resolved, tmr[instance], resolves)
 
     def __str__(self):
@@ -239,6 +230,9 @@ class FRInstance(Frame):
 
     def lemmas(self):
         lemmas = []
+        if len(self[FRInstance.ATTRIBUTED_TO]) == 0:
+            return list(map(lambda p: p.name, self.parents()))
+
         for tmr_instance in self[FRInstance.ATTRIBUTED_TO]:
             tmr_instance = tmr_instance.resolve()
             lemma = " ".join(map(lambda ti: tmr_instance._graph.syntax.index[str(ti)]["lemma"], tmr_instance.token_index))

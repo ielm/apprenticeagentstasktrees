@@ -28,7 +28,7 @@ class ParseQueryTestCase(unittest.TestCase):
         f = g.register("GRAPH.FRAME.1")
         f["SLOT"] = 123
 
-        q = Query.parse(n, "SHOW FRAMES WHERE (@=GRAPH.FRAME.1 AND SLOT=123)")
+        q = Query.parse(n, "SHOW FRAMES WHERE (@=@GRAPH.FRAME.1 AND SLOT=123)")
         result = g.search(q)
         self.assertEqual(result, [f])
 

@@ -1,39 +1,30 @@
 import json
 import traceback
-from flask import Flask, request, abort, render_template, send_from_directory
+from flask import Flask, redirect, request, abort, render_template, send_from_directory
 from flask_cors import CORS
 
 
 from backend.agent import Agent
+from backend.models.effectors import Callback
+from backend.models.bootstrap import Bootstrap
 from backend.contexts.LCTContext import LCTContext
-from backend.models.agenda import Action, Goal
+from backend.models.agenda import Decision, Goal, Plan
 from backend.models.grammar import Grammar
-from backend.models.graph import Frame, Identifier, Network
+from backend.models.graph import Frame, Identifier, Literal
 from backend.models.ontology import Ontology
+from backend.models.xmr import XMR
+from backend.utils.AgentLogger import CachedAgentLogger
 from backend.utils.YaleUtils import format_learned_event_yale, input_to_tmrs
+
+from pkgutil import get_data
 
 app = Flask(__name__, template_folder="../frontend/templates/")
 CORS(app)
 
 
-# n = Network()
-# ontology = n.register(Ontology.init_default())
 agent = Agent(ontology=Ontology.init_default())
+agent.logger().enable()
 
-# TEST HACK
-from pkgutil import get_data
-# agent.input(json.loads(get_data("tests.resources", "DemoMay2018_Analyses.json"))[0])
-# agent.input(json.loads(get_data("tests.resources", "DemoMay2018_Analyses.json"))[1])
-# agent.input(json.loads(get_data("tests.resources", "DemoMay2018_Analyses.json"))[2])
-# agent.input(json.loads(get_data("tests.resources", "DemoMay2018_Analyses.json"))[3])
-# agent.input(json.loads(get_data("tests.resources", "DemoMay2018_Analyses.json"))[4])
-# agent.input(json.loads(get_data("tests.resources", "DemoMay2018_Analyses.json"))[5])
-# agent.input(json.loads(get_data("tests.resources", "DemoMay2018_Analyses.json"))[6])
-# agent.input(json.loads(get_data("tests.resources", "DemoMay2018_Analyses.json"))[7])
-# agent.input(json.loads(get_data("tests.resources", "DemoMay2018_Analyses.json"))[8])
-# agent.input(json.loads(get_data("tests.resources", "DemoMay2018_Analyses.json"))[9])
-# agent.input(json.loads(get_data("tests.resources", "DemoMay2018_Analyses.json"))[10])
-# agent.input(json.loads(get_data("tests.resources", "DemoMay2018_Analyses.json"))[11])
 
 def graph_to_json(graph):
     frames = []
@@ -148,13 +139,7 @@ class IIDEAConverter(object):
 
     @classmethod
     def convert_input(cls, input):
-        status = "received"
-        if input["ACKNOWLEDGED"] == True:
-            status = "acknowledged"
-        if input["STATUS"] == "UNDERSTOOD":
-            status = "understood"
-        if input["STATUS"] == "IGNORED":
-            status = "ignored"
+        status = XMR(input).status().value.lower()
 
         return {
             "name": input["REFERS-TO-GRAPH"][0].resolve().value,
@@ -172,23 +157,58 @@ class IIDEAConverter(object):
         return {
             "name": goal.name(),
             "id": goal.frame.name(),
-            "priority": goal._cached_priority(),
-            "resources": goal._cached_resources(),
-            "decision": round(goal.decision(), 3),
             "pending": goal.is_pending(),
             "active": goal.is_active(),
             "satisfied": goal.is_satisfied(),
             "abandoned": goal.is_abandoned(),
-            "plan": list(map(lambda action: IIDEAConverter.convert_action(action.resolve(), goal), goal.frame["PLAN"]))
+            "plan": list(map(lambda plan: IIDEAConverter.convert_plan(plan.resolve(), goal), goal.frame["PLAN"])),
+            "params": list(map(lambda variable: {"var": variable, "value": IIDEAConverter.convert_value(goal.resolve(variable))}, goal.variables()))
         }
 
     @classmethod
-    def convert_action(cls, action, goal):
-        action = Action(action)
+    def convert_value(cls, value):
+        if isinstance(value, Literal):
+            return value.value
+        if isinstance(value, Frame):
+            return value._identifier.render()
+        if isinstance(value, Identifier):
+            return value.render()
+        return value
+
+    @classmethod
+    def convert_plan(cls, plan, goal):
+        plan = Plan(plan)
 
         return {
-            "name": action.name(),
-            "selected": action in agent.agenda().action() and goal.is_active()
+            "name": plan.name(),
+            "selected": plan in agent.agenda().plan() and goal.is_active(),
+            "steps": list(map(lambda step: IIDEAConverter.convert_step(step), plan.steps()))
+        }
+
+    @classmethod
+    def convert_step(cls, step):
+        return {
+            "name": "Step " + str(step.index()),
+            "finished": step.is_finished()
+        }
+
+    @classmethod
+    def decisions(cls):
+        return list(map(lambda d: IIDEAConverter.convert_decision(d), agent.decisions()))
+
+    @classmethod
+    def convert_decision(cls, decision: Decision):
+        return {
+            "goal": decision.goal().name(),
+            "plan": decision.plan().name(),
+            "step": "Step " + str(decision.step().index()),
+            "outputs": list(map(lambda output: output.frame.name(), decision.outputs())),
+            "priority": decision.priority(),
+            "cost": decision.cost(),
+            "requires": list(map(lambda required: required.frame.name(), decision.requires())),
+            "status": decision.status().name,
+            "effectors": list(map(lambda effector: effector.frame.name(), decision.effectors())),
+            "callbacks": list(map(lambda callback: callback.frame.name(), decision.callbacks()))
         }
 
     @classmethod
@@ -197,20 +217,53 @@ class IIDEAConverter(object):
 
     @classmethod
     def convert_effector(cls, effector):
+        effecting = None
+        if not effector.is_free():
+            effecting = effector.on_decision().goal().frame.name()
+
         return {
             "name": effector.frame.name(),
             "type": effector.type().name,
             "status": effector.is_free(),
-            "effecting": effector.effecting().frame.name() if effector.effecting() is not None else None,
+            "effecting": effecting,
             "capabilities": list(map(lambda c: IIDEAConverter.convert_capability(c, effector), effector.capabilities()))
         }
 
     @classmethod
     def convert_capability(cls, capability, wrt_effector):
+        selected = False
+        for d in agent.decisions():
+            if d.status() == Decision.Status.EXECUTING:
+                if capability in list(map(lambda output: output.capability(), d.outputs())):
+                    selected = True
+
+        callbacks = []
+        if wrt_effector.on_decision() is not None:
+            callbacks = list(map(lambda cb: {"name": cb.frame.name(), "waiting": cb.status() == Callback.Status.WAITING}, wrt_effector.on_decision().callbacks()))
+
         return {
             "name": capability.frame.name(),
-            "selected": capability.used_by() == wrt_effector
+            "selected": selected,
+            "callbacks": callbacks
         }
+
+    @classmethod
+    def triggers(cls):
+        return list(map(lambda t: IIDEAConverter.convert_trigger(t), agent.agenda().triggers()))
+
+    @classmethod
+    def convert_trigger(cls, trigger):
+        return {
+            "query": str(trigger.query()),
+            "goal": trigger.definition().name(),
+            "triggered-on": list(map(lambda to: str(to), trigger.triggered_on()))
+        }
+
+    @classmethod
+    def logs(cls):
+        if isinstance(agent.logger(), CachedAgentLogger):
+            return agent.logger()._cache
+        return []
 
 
 @app.route("/iidea", methods=["GET"])
@@ -220,8 +273,11 @@ def iidea():
     inputs = IIDEAConverter.inputs()
     agenda = IIDEAConverter.agenda()
     effectors = IIDEAConverter.effectors()
+    triggers = IIDEAConverter.triggers()
+    logs = IIDEAConverter.logs()
+    decisions = IIDEAConverter.decisions()
 
-    return render_template("iidea.html", time=time, stage=stage, inputs=inputs, agenda=agenda, aj=json.dumps(agenda), effectors=effectors, ae=json.dumps(effectors))
+    return render_template("iidea.html", time=time, stage=stage, inputs=inputs, agenda=agenda, aj=json.dumps(agenda), effectors=effectors, ej=json.dumps(effectors), tj=json.dumps(triggers), lj=json.dumps(logs), dj=json.dumps(decisions))
 
 
 @app.route("/iidea/advance", methods=["GET"])
@@ -232,25 +288,107 @@ def iidea_advance():
         "stage": agent.IDEA.stage(),
         "inputs": IIDEAConverter.inputs(),
         "agenda": IIDEAConverter.agenda(),
-        "effectors": IIDEAConverter.effectors()
+        "effectors": IIDEAConverter.effectors(),
+        "triggers": IIDEAConverter.triggers(),
+        "logs": IIDEAConverter.logs(),
+        "decisions": IIDEAConverter.decisions()
     })
 
 
 @app.route("/iidea/input", methods=["POST"])
 def iidea_input():
-    data = request.data.decode("utf-8")
+    if not request.get_json():
+        abort(400)
 
-    from backend.utils.YaleUtils import analyze
-    tmr = analyze(data)
+    data = request.get_json()
 
-    agent._input(input=tmr)
+    if data["input"] == "Let's build a chair.":
+        tmr = json.loads(get_data("tests.resources", "DemoJan2019_Analyses.json").decode('ascii'))[0]
+    else:
+        from backend.utils.YaleUtils import analyze
+        tmr = analyze(data["input"])
+
+    agent._input(input=tmr, source=data["source"], type=data["type"])
 
     return json.dumps({
         "time": agent.IDEA.time(),
         "stage": agent.IDEA.stage(),
         "inputs": IIDEAConverter.inputs(),
-        "agenda": IIDEAConverter.agenda()
+        "agenda": IIDEAConverter.agenda(),
+        "decisions": IIDEAConverter.decisions()
     })
+
+
+@app.route("/iidea/observe", methods=["POST"])
+def iidea_observe():
+    if not request.get_json():
+        abort(400)
+
+    data = request.get_json()
+
+    observations = json.loads(get_data("tests.resources", "DemoJan2019_Observations_VMR.json").decode('ascii'))
+    observation = observations[data["observation"]]
+    agent._input(observation, type=XMR.Type.VISUAL.name)
+
+    return json.dumps({
+        "time": agent.IDEA.time(),
+        "stage": agent.IDEA.stage(),
+        "inputs": IIDEAConverter.inputs(),
+        "agenda": IIDEAConverter.agenda(),
+        "decisions": IIDEAConverter.decisions()
+    })
+
+
+@app.route("/iidea/callback", methods=["POST"])
+def iidea_callback():
+    if not request.get_json():
+        abort(400)
+
+    data = request.get_json()
+
+    callback = data["callback-id"]
+    agent.callback(callback)
+
+    return json.dumps({
+        "time": agent.IDEA.time(),
+        "stage": agent.IDEA.stage(),
+        "inputs": IIDEAConverter.inputs(),
+        "agenda": IIDEAConverter.agenda(),
+        "effectors": IIDEAConverter.effectors(),
+        "triggers": IIDEAConverter.triggers(),
+        "logs": IIDEAConverter.logs(),
+        "decisions": IIDEAConverter.decisions()
+    })
+
+
+@app.route("/yale/bootstrap", methods=["POST"])
+def yale_bootstrap():
+    if not request.get_json():
+        abort(400)
+
+    data = request.get_json()
+
+    from backend.utils import YaleUtils
+
+    YaleUtils.bootstrap(data, agent.environment)
+
+    return "OK"
+
+
+@app.route("/yale/visual-input", methods=["POST"])
+def yale_visual_input():
+    if not request.get_json():
+        abort(400)
+
+    data = request.get_json()
+
+    from backend.utils import YaleUtils
+
+    data = YaleUtils.visual_input(data, agent.environment)
+
+    agent._input(data, type="VISUAL")
+
+    return "OK"
 
 
 @app.route("/input", methods=["POST"])
@@ -284,6 +422,26 @@ def htn():
     instance: FRInstance = agent.search(Frame.q(agent).id(instance))[0]
 
     return json.dumps(format_learned_event_yale(instance, agent.ontology), indent=4)
+
+
+@app.route("/bootstrap", methods=["GET", "POST"])
+def bootstrap():
+    if request.method == "POST":
+        script = request.form["custom-bootstrap"]
+        script = script.replace("\r\n", "\n")
+        Bootstrap.bootstrap_script(agent, script)
+        return redirect("/bootstrap", code=302)
+
+    if "package" in request.args and "resource" in request.args:
+        package = request.args["package"]
+        resource = request.args["resource"]
+        Bootstrap.bootstrap_resource(agent, package, resource)
+        return redirect("/bootstrap", code=302)
+
+    resources = Bootstrap.list_resources("backend.resources") + Bootstrap.list_resources("backend.resources.experiments") + Bootstrap.list_resources("backend.resources.example")
+    resources = map(lambda r: {"resource": r, "loaded": r[0] + "." + r[1] in Bootstrap.loaded}, resources)
+
+    return render_template("bootstrap.html", resources=resources)
 
 
 if __name__ == '__main__':

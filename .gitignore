@@ -3,10 +3,18 @@
 *.pyc
 .DS_Store
 
+venv/
+
+ApprenticeAgentsDocumentation/
+
 _*/
+
+*.uml
 
 OntoSem.postman_collection.json
 
-venv/
+#---Service Files---#
+ontosem-analyzer.yml
+static-knowledge.yml
 
-*.uml
+

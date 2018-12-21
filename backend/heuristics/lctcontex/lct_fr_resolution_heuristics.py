@@ -45,7 +45,7 @@ class FRResolveUndeterminedThemesOfLearning(ContextBasedFRResolutionHeuristic):
                 purpose_ofs = filter(lambda purpose_of: purpose_of ^ self.fr.ontology["EVENT"], purpose_ofs)
                 if len(list(purpose_ofs)) > 0:
                     results = self.fr.search(Frame.q(self.fr._network).isa(instance.concept()))
-                    resolves[instance._identifier.render(graph=False)] = set(map(lambda result: result.name(), results))
+                    resolves[instance._identifier.render()] = set(map(lambda result: result.name(), results))
                     return True
 
 
@@ -98,7 +98,7 @@ class FRResolveUndeterminedThemesOfLearningInPostfix(ContextBasedFRResolutionHeu
                         matches.add(theme._value.render())
 
         if len(matches) > 0:
-            resolves[instance._identifier.render(graph=False)] = matches
+            resolves[instance._identifier.render()] = matches
             return True
 
 
@@ -150,5 +150,5 @@ class FRResolveLearningEvents(ContextBasedFRResolutionHeuristic):
                 matches.add(candidate.name())
 
         if len(matches) > 0:
-            resolves[instance._identifier.render(graph=False)] = matches
+            resolves[instance._identifier.render()] = matches
             return True

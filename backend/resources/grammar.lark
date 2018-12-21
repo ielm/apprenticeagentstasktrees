@@ -2,74 +2,104 @@ start: (view)
 
 // Bootstrap
 
-bootstrap: ((declare_knowledge | append_knowledge | define) BOOTSTRAPDELIMITER)*
+bootstrap: ((declare_knowledge | append_knowledge | define | register_mp | add_trigger | output_xmr_template) BOOTSTRAPDELIMITER)*
 
 declare_knowledge: "@" graph "." name (declare_knowledge_instance)? "=" "{" (declare_knowledge_element (BOOTSTRAPDELIMITER declare_knowledge_element)*)? (BOOTSTRAPDELIMITER)? "}"
 declare_knowledge_instance: "." (instance | GENERATE_INSTANCE)
 declare_knowledge_element: (declare_isa_knowledge | declare_property_knowledge)
-declare_isa_knowledge: DISA "@" identifier
+declare_isa_knowledge: DISA identifier
 declare_property_knowledge: slot (facet)? filler
 
-append_knowledge: "@" identifier "+=" "{" (append_knowledge_element (BOOTSTRAPDELIMITER append_knowledge_element)*)? (BOOTSTRAPDELIMITER)? "}"
+append_knowledge: identifier "+=" "{" (append_knowledge_element (BOOTSTRAPDELIMITER append_knowledge_element)*)? (BOOTSTRAPDELIMITER)? "}"
 append_knowledge_element: (append_property_knowledge)
 append_property_knowledge: slot (facet)? filler
 
+register_mp: REGISTER MP agent_method (AS NAME)?
+agent_method: MODULE "." CLASS
+
+add_trigger: ADD TRIGGER TO identifier INSTANTIATE identifier WHEN logical_slot_query
+
+output_xmr_template: DEFINE NAME arguments AS TEMPLATE output_xmr_template_type output_xmr_template_requires (output_xmr_template_root)? output_xmr_template_include
+output_xmr_template_type: TYPE (VERBAL | PHYSICAL | MENTAL)
+output_xmr_template_requires: REQUIRES identifier
+output_xmr_template_root: ROOT identifier
+output_xmr_template_include: INCLUDE declare_knowledge*
+
 slot: NAME
 facet: (SEM | DEFAULT | VALUE | NOT)
-filler: ("@" identifier | literal)
+filler: (identifier | literal | filler_argument)
+filler_argument: argument
 
+ADD: "add"i
 BOOTSTRAPDELIMITER: ";"
 DISA: "isa"i
 GENERATE_INSTANCE: "?"
+INCLUDE: "include"i
+INSTANTIATE: "instantiate"i
+MENTAL: "mental"i
+PHYSICAL: "physical"i
+REGISTER: "register"i
+REQUIRES: "requires"i
+ROOT: "root"i
 SEM: "sem"i
+TEMPLATE: "template"i
+TRIGGER: "trigger"i
+TYPE: "type"i
 VALUE: "value"i
+VERBAL: "verbal"i
 
 // Statements and executables
 
 define: DEFINE goal
-goal: NAME arguments AS GOAL IN GRAPH priority resources (action)* (condition)*
+goal: NAME arguments AS GOAL IN GRAPH priority resources (plan)* (condition)*
 priority: (PRIORITY (double | mp_statement))?
 resources: (RESOURCES (double | mp_statement))?
 goal_status: (PENDING | ACTIVE | ABANDONED | SATISFIED)
 
-action: ACTION "(" ACTION_NAME ")" action_selection action_do+
-action_selection: SELECT (DEFAULT | IF boolean_statement)
-action_do: DO (statement | IDLE)
+plan: PLAN "(" PLAN_NAME ")" plan_selection plan_step+
+plan_selection: SELECT (DEFAULT | IF boolean_statement)
+plan_step: STEP plan_do+
+plan_do: DO (statement | IDLE)
 
-condition: WHEN (condition_and | condition_or | condition_nand | condition_nor | condition_not) THEN goal_status
+condition: WHEN (condition_and | condition_or | condition_nand | condition_nor | condition_not | condition_on) THEN goal_status
 condition_and: boolean_statement (AND boolean_statement)*
 condition_or: boolean_statement (OR boolean_statement)+
 condition_nand: boolean_statement (NAND boolean_statement)+
 condition_nor: boolean_statement (NOR boolean_statement)+
 condition_not: boolean_statement (NOT boolean_statement)+
+condition_on: (EXECUTED)
 
-statement: (add_filler_statement | assign_filler_statement | capability_statement | exists_statement | foreach_statement | is_statement | make_instance_statement | mp_statement)
+statement: (add_filler_statement | assign_filler_statement | assign_variable_statement | exists_statement | foreach_statement | is_statement | make_instance_statement | mp_statement | output_statement)
 boolean_statement: (exists_statement | is_statement)
 
 add_filler_statement: statement_instance "[" NAME "]" "+=" (statement_instance | literal)
 assign_filler_statement: statement_instance "[" NAME "]" "=" (statement_instance | literal)
-capability_statement: CAPABILITY statement_instance arguments ("|" THEN action_do)*
+assign_variable_statement: ARGUMENT "=" (literal | identifier | ARGUMENT | statement)
 exists_statement: EXISTS logical_slot_query
 foreach_statement: FOR EACH ARGUMENT IN logical_slot_query ("|" statement)*
 is_statement: statement_instance "[" NAME "]" EQUALS EQUALS literal
 make_instance_statement: "@" (graph | special_agent_graph) ":" identifier arguments
-mp_statement: SELF "." MP arguments
+mp_statement: SELF "." MP output_arguments
+output_statement: OUTPUT NAME output_arguments BY statement_instance
 
-statement_instance: (SELF | "#" identifier | make_instance_statement | argument)
+statement_instance: (SELF | identifier | make_instance_statement | argument)
 special_agent_graph: "AGENT." (INTERNAL | EXE | ONTOLOGY | WM | LT) "!"
 arguments: "(" (argument ("," argument)*)? ")"
 argument: ARGUMENT
+output_arguments: "(" (output_argument ("," output_argument)*)? ")"
+output_argument: (argument | literal | statement_instance)
 
 ABANDONED: "abandoned"i
-ACTION: "action"i
 ACTIVE: "active"i
 AS: "as"i
+BY: "by"i
 CAPABILITY: "capability"i
 DEFAULT: "default"i
 DEFINE: "define"i
 DO: "DO"i
 EACH: "each"i
 EXE: "exe"i
+EXECUTED: "executed"i
 EXISTS: "exists"i
 FOR: "for"i
 GOAL: "goal"i
@@ -81,18 +111,21 @@ LT: "lt"i
 NAND: "nand"i
 NOR: "nor"i
 ONTOLOGY: "ontology"i
+OUTPUT: "output"i
 PENDING: "pending"i
+PLAN: "plan"i
 PRIORITY: "priority"i
 RESOURCES: "resources"i
 SATISFIED: "satisfied"i
 SELECT: "select"i
 SELF: "self"i
+STEP: "step"i
 WHEN: "when"i
 WM: "wm"i
 
-ACTION_NAME: /(?!True|False)[a-zA-Z\.\*\_\- ]+/i
 ARGUMENT: /\$[a-zA-Z0-9]+/
 MP: /[a-zA-Z0-9\_]+/
+PLAN_NAME: /(?!True|False)[a-zA-Z\.\*\_\- ]+/i
 
 // Views and querying
 
@@ -132,9 +165,12 @@ integer: INTEGER
 double: INTEGER "." INTEGER
 string: ("\"") STRING ("\"")
 
-identifier: (graph ".")? name ("." instance)?
-graph: (GRAPH | tmr)
+identifier: "@" (graph ".")? name ("." instance)?
+graph: (GRAPH | tmr | vmr | xmr | xmr_template)
 tmr: "TMR" "#" INTEGER
+vmr: "VMR" "#" INTEGER
+xmr: "XMR" "#" INTEGER
+xmr_template: "XMR-TEMPLATE" "#" INTEGER
 name: NAME
 instance: INSTANCE
 
@@ -163,7 +199,9 @@ ISPARENT: "^."
 RECURSIVE: "*"
 SUBCLASSES: ">"
 
+CLASS: /[a-z0-9\_]+/i
 GRAPH: /[a-zA-Z]+/
+MODULE: /[a-z0-9\_]+[\.[a-z0-9\_]+]*/i
 NAME: /(?!True|False|isa)[a-zA-Z\.\*\_\-]+/i
 INSTANCE: /[0-9]+/
 RELATION: /[a-zA-Z0-9\-]+/
@@ -172,7 +210,9 @@ WILDCARD: "*"
 INTEGER: /[0-9]+/
 ALPHA: /[a-zA-Z]+/
 SYMBOL: /[\_]+/
-STRING: /[0-9a-zA-z\_]+/
+STRING: /[0-9a-zA-z\_\-\>\$\.]+/
 
+COMMENT: /\/\/.*\n/
 WHITESPACE: (" " | /\t/ | /\n/)+
+%ignore COMMENT
 %ignore WHITESPACE

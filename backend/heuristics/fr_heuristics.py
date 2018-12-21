@@ -27,7 +27,7 @@ class FRResolveHumanAndRobotAsSingletonsHeuristic(FRResolutionHeuristic):
         if instance[instance._ISA_type()] == self.fr.ontology["HUMAN"] or instance[instance._ISA_type()] == self.fr.ontology["ROBOT"]:
             fr_instances = self.fr.search(Frame.q(self.fr._network).isa(instance.concept()))
             if len(fr_instances) > 0:
-                resolves[instance._identifier.render(graph=False)] = {fr_instances[0].name()}
+                resolves[instance._identifier.render()] = {fr_instances[0].name()}
 
         if "HUMAN" in resolves:
             fr_instances = self.fr.search(Frame.q(self.fr._network).isa(self.fr.ontology["HUMAN"], set=False))
@@ -74,7 +74,7 @@ class FRResolveDeterminedObjectsHeuristic(FRResolutionHeuristic):
             return
 
         match = max(fr_instances, key=lambda instance: instance._identifier.instance)
-        resolves[instance._identifier.render(graph=False)] = {match.name()}
+        resolves[instance._identifier.render()] = {match.name()}
 
 
 # If the input instance is of type SET, and there is another set in the FR with the same (exact) members,
@@ -107,6 +107,6 @@ class FRResolveSetsWithIdenticalMembersHeuristic(FRResolutionHeuristic):
         for fr_instance in fr_instances:
             fr_instance_members = list(map(lambda filler: filler.resolve().name(), fr_instance["ELEMENTS"]))
             if set(fr_instance_members) == set(instance_members):
-                resolves[instance._identifier.render(graph=False)] = {fr_instance.name()}
+                resolves[instance._identifier.render()] = {fr_instance.name()}
             if set(fr_instance_members) == set(resolved_instance_members):
-                resolves[instance._identifier.render(graph=False)] = {fr_instance.name()}
+                resolves[instance._identifier.render()] = {fr_instance.name()}

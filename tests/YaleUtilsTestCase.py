@@ -2,15 +2,147 @@ import json
 import os
 
 from backend.agent import Agent
-from backend.models.graph import Network
+from backend.models.graph import Graph, Literal, Network
 from backend.models.ontology import Ontology
-from backend.utils.YaleUtils import format_learned_event_yale
+from backend.utils.YaleUtils import bootstrap, format_learned_event_yale, visual_input
 from tests.ApprenticeAgentsTestCase import ApprenticeAgentsTestCase
 
 from unittest import skip
 
 
 class YaleUtilsTestCase(ApprenticeAgentsTestCase):
+
+    def test_bootstrap(self):
+
+        input = {
+            "1": "dowel",               # DOWEL
+            "2": "front-bracket",       # BRACKET; SIDE-FB: FRONT
+            "3": "foot-bracket",        # BRACKET; SIDE-TB: BOTTOM
+            "4": "back-bracket",        # BRACKET; SIDE-FB: BACK
+            "5": "seat",                # SEAT
+            "6": "top-bracket",         # BRACKET; SIDE-TB: TOP
+            "7": "back",                # BACK-OF-OBJECT
+            "faces": ["jake", "bob"]
+        }
+
+        graph = Graph("TEST")
+
+        bootstrap(input, graph)
+
+        self.assertIn("TEST.DOWEL.1", graph)
+        self.assertIn("TEST.BRACKET.1", graph)
+        self.assertIn("TEST.BRACKET.2", graph)
+        self.assertIn("TEST.BRACKET.3", graph)
+        self.assertIn("TEST.BRACKET.4", graph)
+        self.assertIn("TEST.SEAT.1", graph)
+        self.assertIn("TEST.BACK-OF-OBJECT.1", graph)
+        self.assertIn("TEST.HUMAN.1", graph)
+        self.assertIn("TEST.HUMAN.2", graph)
+
+        self.assertTrue(graph["TEST.DOWEL.1"]["visual-object-id"] == 1)
+        self.assertTrue(graph["TEST.SEAT.1"]["visual-object-id"] == 5)
+        self.assertTrue(graph["TEST.BACK-OF-OBJECT.1"]["visual-object-id"] == 7)
+
+        for bracket in [graph["TEST.BRACKET.1"], graph["TEST.BRACKET.2"], graph["TEST.BRACKET.3"], graph["TEST.BRACKET.4"]]:
+            if bracket["SIDE-FB"] == "FRONT":
+                self.assertTrue(bracket["visual-object-id"] == 2)
+            if bracket["SIDE-TB"] == "BOTTOM":
+                self.assertTrue(bracket["visual-object-id"] == 3)
+            if bracket["SIDE-FB"] == "BACK":
+                self.assertTrue(bracket["visual-object-id"] == 4)
+            if bracket["SIDE-TB"] == "TOP":
+                self.assertTrue(bracket["visual-object-id"] == 6)
+
+        humans = list(map(lambda human: human["HAS-NAME"].singleton(), [graph["TEST.HUMAN.1"], graph["TEST.HUMAN.2"]]))
+        self.assertIn("jake", humans)
+        self.assertIn("bob", humans)
+        self.assertEqual(2, len(humans))
+
+    def test_visual_input(self):
+        network = Network()
+        ont = network.register(Graph("ONT"))
+        graph = network.register(Graph("TEST"))
+
+        ont.register("HUMAN", generate_index=False)
+
+        storage1 = graph.register("STORAGE", generate_index=True)
+        storage2 = graph.register("STORAGE", generate_index=True)
+        workspace = graph.register("WORKSPACE", generate_index=True)
+
+        object1 = graph.register("OBJECT", generate_index=True)
+        object2 = graph.register("OBJECT", generate_index=True)
+        object3 = graph.register("OBJECT", generate_index=True)
+        object4 = graph.register("OBJECT", generate_index=True)
+
+        human1 = graph.register("HUMAN", isa="ONT.HUMAN", generate_index=True)
+        human2 = graph.register("HUMAN", isa="ONT.HUMAN", generate_index=True)
+
+        object1["visual-object-id"] = 1
+        object2["visual-object-id"] = 2
+        object3["visual-object-id"] = 3
+        object4["visual-object-id"] = 4
+
+        human1["HAS-NAME"] = Literal("jake")
+        human2["HAS-NAME"] = Literal("bob")
+
+        input = {
+            "storage-1": [1, 2],
+            "storage-2": [3],
+            "faces": ["jake"]
+        }
+
+        expected = {
+            "slices": {
+                "SLICE.1": {
+                    "ENVIRONMENT.1": {
+                        "_refers_to": "@TEST",
+                        "contains": {
+                            "HUMAN.1": {
+                                "_refers_to": "",
+                                "_identifier": "jake",
+                                "_in": "ENVIRONMENT.1",
+                                "LOCATION": "HERE"
+                            },
+                            "HUMAN.2": {
+                                "_refers_to": "",
+                                "_identifier": "bob",
+                                "_in": "ENVIRONMENT.1",
+                                "LOCATION": "NOT-HERE"
+                            },
+                            "OBJECT.1": {
+                                "_refers_to": "",
+                                "_in": "ENVIRONMENT.1",
+                                "LOCATION": "STORAGE.1"
+                            },
+                            "OBJECT.2": {
+                                "_refers_to": "",
+                                "_in": "ENVIRONMENT.1",
+                                "LOCATION": "STORAGE.1"
+                            },
+                            "OBJECT.3": {
+                                "_refers_to": "",
+                                "_in": "ENVIRONMENT.1",
+                                "LOCATION": "STORAGE.2"
+                            },
+                            "OBJECT.4": {
+                                "_refers_to": "",
+                                "_in": "ENVIRONMENT.1",
+                                "LOCATION": "WORKSPACE.1"
+                            },
+                        }
+                    },
+                    "_timestamp": "...",
+                }
+            }
+        }
+
+        results = visual_input(input, graph)
+
+        self.assertEqual(expected["slices"]["SLICE.1"]["ENVIRONMENT.1"], results["slices"]["SLICE.1"]["ENVIRONMENT.1"])
+        self.assertIn("_timestamp", expected["slices"]["SLICE.1"])
+        self.assertEqual(1, len(expected["slices"]))
+        self.assertEqual(2, len(expected["slices"]["SLICE.1"]))
+
 
     def test_simple_format(self):
 
