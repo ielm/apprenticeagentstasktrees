@@ -114,12 +114,13 @@ class Effector(object):
 class Capability(object):
 
     @classmethod
-    def instance(cls, graph: Graph, name: str, mp: Union[str, Callable]):
+    def instance(cls, graph: Graph, name: str, mp: Union[str, Callable], covers: List[Union[str, Identifier, Frame]]):
         frame = graph.register(name, isa="EXE.CAPABILITY")
         if not isinstance(mp, str):
             mp = mp.__name__
 
         frame["MP"] = Literal(mp)
+        frame["COVERS-EVENT"] = covers
 
         return Capability(frame)
 
@@ -131,6 +132,9 @@ class Capability(object):
 
     def mp_name(self) -> str:
         return self.frame["MP"].singleton()
+
+    def events(self) -> List[Frame]:
+        return list(map(lambda e: e.resolve(), self.frame["COVERS-EVENT"]))
 
     def __eq__(self, other):
         if isinstance(other, Capability):
