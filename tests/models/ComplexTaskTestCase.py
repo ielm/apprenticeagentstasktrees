@@ -32,16 +32,11 @@ class ComplexTaskTestCase(unittest.TestCase):
         print(action, "\n")
 
         test_action = action["HAS-EVENT-AS-PART"][0].resolve()
-        print("Test")
         test_action = ActionableTask(test_action, test_action.name(), test_action["INSTANCE-OF"])
-        print("Test2")
 
         expected = "LT.TAKE.1 = {'IS-A': INSTANCE-OF=[ONT.TAKE], 'INSTANCE-OF': INSTANCE-OF=[ONT.TAKE], 'AGENT': AGENT=[SELF.ROBOT.1], 'THEME': THEME=[LT.SCREWDRIVER.1]}"
 
-        print("Test3")
-
         self.assertEqual(test_action.__str__(), expected)
-        print("Test4")
 
     def test_Complex_Task(self):
         print("\nComplexTask\n" + "=" * 50)
@@ -82,6 +77,8 @@ class ComplexTaskTestCase(unittest.TestCase):
         complex_task = ComplexTask(action, action.name())
 
         # print(complex_task.plan())
-        for step in complex_task.plan():
-            print(step.index())
+        # for step in complex_task.steps():
+        #     print(step.index())
 
+        for s in complex_task.steps():
+            print(s.status())

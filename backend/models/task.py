@@ -15,9 +15,19 @@ class ComplexTask(Graph):
             namespace = "COMPLEX-TASK" + str(ComplexTask.counter.increment())
 
         super().__init__(namespace)
+        self.name = namespace
 
         self.complex_tasks = []
 
+        for key in task:
+            # self[key] = task[key].singleton()
+            if key == "AGENT":
+                # self[key] = task[key]
+                self.agent = task[key].singleton()
+            if key == "INSTRUMENT":
+                self.instrument = task[key].singleton()
+            if key == "THEME":
+                self.theme = task[key].singleton()
         for subtask in task["HAS-EVENT-AS-PART"]:
             self.add_task(subtask.resolve())
 
@@ -44,10 +54,22 @@ class ComplexTask(Graph):
         return subtasks
 
     def step(self, step, index, statement=None):
-        # for subtask in self.subtasks():
-        #     Create Step from subtask
-        step = Step.build(self, index, step)
-        return step
+        # step = Step.build(self, index, step)
+        return
+
+    def steps(self):
+        index = 0
+
+        steps = []
+
+        for subtask in self.subtasks():
+            # s = self.step(subtask, index)
+            # TODO - should Step.build["PERFORM"] be the MP or target goal?
+            s = Step.build(self, index, subtask)
+            index += 1
+            steps.append(s)
+
+        return steps
 
     def plan(self):
         """
@@ -55,18 +77,11 @@ class ComplexTask(Graph):
 
         :return:
         """
-        index = 0
+        steps = self.steps()
 
-        steps = []
+        plan = Action.build(self, self.name, Action.DEFAULT, steps)
 
-        for subtask in self.subtasks():
-            s = self.step(subtask, index)
-            index += 1
-            steps.append(s)
-
-        # TODO - Create Plan (Action Object) from steps and return Plan
-
-        return steps
+        return plan
 
 
 class ActionableTask(Frame):
