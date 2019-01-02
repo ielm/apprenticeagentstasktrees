@@ -176,3 +176,13 @@ class OutputXMRTemplateTestCase(unittest.TestCase):
         self.assertEqual(template1, OutputXMRTemplate.lookup(self.n, "Test 1"))
         self.assertEqual(template2, OutputXMRTemplate.lookup(self.n, "Test 2"))
         self.assertIsNone(OutputXMRTemplate.lookup(self.n, "Test 3"))
+
+    def test_list(self):
+        template1 = OutputXMRTemplate.build(self.n, "Test 1", OutputXMRTemplate.Type.PHYSICAL, self.capability, [])
+        template2 = OutputXMRTemplate.build(self.n, "Test 2", OutputXMRTemplate.Type.PHYSICAL, self.capability, [])
+        other = self.n.register("OTHER")
+
+        self.assertEqual(2, len(OutputXMRTemplate.list(self.n)))
+        self.assertIn(template1, OutputXMRTemplate.list(self.n))
+        self.assertIn(template2, OutputXMRTemplate.list(self.n))
+        self.assertNotIn(other, OutputXMRTemplate.list(self.n))
