@@ -1,11 +1,13 @@
 @EXE.INIT-GOAL-CAPABILITY = {
     ISA @EXE.CAPABILITY;
     MP "init_goal_capability";
+    COVERS-EVENT @ONT.MENTAL-EVENT;
 };
 
 @EXE.FETCH-OBJECT-CAPABILITY = {
     ISA @EXE.CAPABILITY;
     MP "fetch_object_capability";
+    COVERS-EVENT @ONT.TAKE;
 };
 
 @SELF.MENTAL-EFFECTOR.1 = {

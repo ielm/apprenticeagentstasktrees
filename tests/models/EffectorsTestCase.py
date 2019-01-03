@@ -73,7 +73,7 @@ class EffectorTestCase(unittest.TestCase):
         self.assertEqual(output, Effector(f).on_output())
 
     def test_effector_on_capability(self):
-        capability = Capability.instance(self.g, "TEST-CAPABILITY", "TestMP")
+        capability = Capability.instance(self.g, "TEST-CAPABILITY", "TestMP", ["ONT.EVENT"])
 
         f = self.g.register("TEST-EFFECTOR", isa="EXE.EFFECTOR")
         f["ON-CAPABILITY"] = capability.frame
@@ -93,7 +93,7 @@ class EffectorTestCase(unittest.TestCase):
 
         decision = Decision.build(self.g, "GOAL", "PLAN", "STEP")
         output = OutputXMR.build(self.g, OutputXMRTemplate.Type.PHYSICAL, "CAPABILITY", "TEST")
-        capability = Capability.instance(self.g, "TEST-CAPABILITY", "TestMP")
+        capability = Capability.instance(self.g, "TEST-CAPABILITY", "TestMP", ["ONT.EVENT"])
 
         effector.reserve(decision, output, capability)
 
@@ -110,7 +110,7 @@ class EffectorTestCase(unittest.TestCase):
 
         decision = Decision.build(self.g, "GOAL", "PLAN", "STEP")
         output = OutputXMR.build(self.g, OutputXMRTemplate.Type.PHYSICAL, "CAPABILITY", "TEST")
-        capability = Capability.instance(self.g, "TEST-CAPABILITY", "TestMP")
+        capability = Capability.instance(self.g, "TEST-CAPABILITY", "TestMP", ["ONT.EVENT"])
 
         effector.reserve(decision, output, capability)
 
@@ -155,6 +155,24 @@ class CapabilityTestCase(unittest.TestCase):
         capability.run(None, None, None)
         self.assertTrue(out)
 
+    def test_capability_events(self):
+        f = self.g.register("CAPABILITY")
+        f["COVERS-EVENT"] += self.g.register("A-EVENT")
+        f["COVERS-EVENT"] += self.g.register("B-EVENT")
+
+        self.assertEqual(2, len(Capability(f).events()))
+        self.assertIn(self.g["A-EVENT"], Capability(f).events())
+        self.assertIn(self.g["B-EVENT"], Capability(f).events())
+
+    def test_instance(self):
+        e1 = self.g.register("PHYSICAL-EVENT")
+        e2 = self.g.register("MENTAL-EVENT")
+
+        c = Capability.instance(self.g, "TEST-CAPABILITY", "SomeMP", ["TEST.PHYSICAL-EVENT", "TEST.MENTAL-EVENT"])
+        self.assertEqual("TEST.TEST-CAPABILITY", c.frame.name())
+        self.assertEqual("SomeMP", c.mp_name())
+        self.assertEqual([e1, e2], c.events())
+
     def test_run(self):
         from backend.models.mps import OutputMethod
         from backend.models.output import OutputXMR, OutputXMRTemplate
@@ -169,7 +187,7 @@ class CapabilityTestCase(unittest.TestCase):
 
         MPRegistry.register(TestMP)
 
-        capability = Capability.instance(self.g, "TEST-CAPABILITY", TestMP.__name__)
+        capability = Capability.instance(self.g, "TEST-CAPABILITY", TestMP.__name__, ["ONT.EVENT"])
 
         output = OutputXMR.build(self.g, OutputXMRTemplate.Type.PHYSICAL, capability, "TEST")
         callback = Callback.build(self.g, "DECISION", "EFFECTOR")
