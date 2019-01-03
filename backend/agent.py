@@ -156,6 +156,7 @@ class Agent(Network):
         self.identity["HAS-INPUT"] += xmr.frame
 
         if type == "VISUAL":
+            input.update_environment(self.env())
             self._logger.log("Input: <<VMR INSTANCE HERE>>")
         else:
             self._logger.log("Input: " + registered_xMR.sentence)
