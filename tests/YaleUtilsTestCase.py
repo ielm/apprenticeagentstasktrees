@@ -92,57 +92,36 @@ class YaleUtilsTestCase(ApprenticeAgentsTestCase):
         }
 
         expected = {
-            "slices": {
-                "SLICE.1": {
-                    "ENVIRONMENT.1": {
-                        "_refers_to": "@TEST",
-                        "contains": {
-                            "HUMAN.1": {
-                                "_refers_to": "",
-                                "_identifier": "jake",
-                                "_in": "ENVIRONMENT.1",
-                                "LOCATION": "HERE"
-                            },
-                            "HUMAN.2": {
-                                "_refers_to": "",
-                                "_identifier": "bob",
-                                "_in": "ENVIRONMENT.1",
-                                "LOCATION": "NOT-HERE"
-                            },
-                            "OBJECT.1": {
-                                "_refers_to": "",
-                                "_in": "ENVIRONMENT.1",
-                                "LOCATION": "STORAGE.1"
-                            },
-                            "OBJECT.2": {
-                                "_refers_to": "",
-                                "_in": "ENVIRONMENT.1",
-                                "LOCATION": "STORAGE.1"
-                            },
-                            "OBJECT.3": {
-                                "_refers_to": "",
-                                "_in": "ENVIRONMENT.1",
-                                "LOCATION": "STORAGE.2"
-                            },
-                            "OBJECT.4": {
-                                "_refers_to": "",
-                                "_in": "ENVIRONMENT.1",
-                                "LOCATION": "WORKSPACE.1"
-                            },
-                        }
+            "ENVIRONMENT": {
+                "_refers_to": "TEST",
+                "timestamp": "...",
+                "contains": {
+                    "TEST.HUMAN.1": {
+                        "LOCATION": "HERE"
                     },
-                    "_timestamp": "...",
+                    "TEST.HUMAN.2": {
+                        "LOCATION": "NOT-HERE"
+                    },
+                    "TEST.OBJECT.1": {
+                        "LOCATION": "TEST.STORAGE.1"
+                    },
+                    "TEST.OBJECT.2": {
+                        "LOCATION": "TEST.STORAGE.1"
+                    },
+                    "TEST.OBJECT.3": {
+                        "LOCATION": "TEST.STORAGE.2"
+                    },
+                    "TEST.OBJECT.4": {
+                        "LOCATION": "TEST.WORKSPACE.1"
+                    }
                 }
             }
         }
 
         results = visual_input(input, graph)
 
-        self.assertEqual(expected["slices"]["SLICE.1"]["ENVIRONMENT.1"], results["slices"]["SLICE.1"]["ENVIRONMENT.1"])
-        self.assertIn("_timestamp", expected["slices"]["SLICE.1"])
-        self.assertEqual(1, len(expected["slices"]))
-        self.assertEqual(2, len(expected["slices"]["SLICE.1"]))
-
+        self.assertEqual(expected["ENVIRONMENT"]["_refers_to"], results["ENVIRONMENT"]["_refers_to"])
+        self.assertEqual(expected["ENVIRONMENT"]["contains"], results["ENVIRONMENT"]["contains"])
 
     def test_simple_format(self):
 
