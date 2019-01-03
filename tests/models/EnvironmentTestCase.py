@@ -12,7 +12,7 @@ class EnvironmentTestCase(unittest.TestCase):
         self.g.register("EPOCH")
 
         ont = self.n.register("ONT")
-        ont.register("SPATIAL-DISTANCE")
+        ont.register("LOCATION")
 
     def test_advance(self):
         self.assertEqual(1, len(self.g.search(Frame.q(self.n).isa("ENV.EPOCH"))))
@@ -94,27 +94,30 @@ class EnvironmentTestCase(unittest.TestCase):
         env = Environment(self.g)
         obj = self.g.register("TEST")
 
+        loc1 = self.g.register("LOCATION", generate_index=True)
+        loc2 = self.g.register("LOCATION", generate_index=True)
+
         env.advance()
         env.enter(obj)
 
-        # 1) Objects default to distance 1.0, but can be moved to arbitrary distances
-        self.assertEqual(1.0, env.distance(obj))
-        env.move(obj, 0.1)
-        self.assertEqual(0.1, env.distance(obj))
+        # 1) Objects default to distance 1.0, but can be moved to arbitrary locations
+        self.assertEqual(self.n["ONT"]["LOCATION"], env.location(obj))
+        env.move(obj, loc1)
+        self.assertEqual(loc1, env.location(obj))
 
-        # 2) Objects retain their distance over time
+        # 2) Objects retain their location over time
         env.advance()
-        self.assertEqual(0.1, env.distance(obj))
+        self.assertEqual(loc1, env.location(obj))
 
         # 3) Objects can be moved multiple times; this will not affect previous epochs
-        env.move(obj, 0.5)
-        self.assertEqual(0.5, env.distance(obj))
-        self.assertEqual(0.1, env.distance(obj, epoch=0))
+        env.move(obj, loc2)
+        self.assertEqual(loc2, env.location(obj))
+        self.assertEqual(loc1, env.location(obj, epoch=0))
 
-        # 4) Objects can enter at specific distances
+        # 4) Objects can enter at specific locations
         obj2 = self.g.register("TEST2")
-        env.enter(obj2, distance=0.75)
-        self.assertEqual(0.75, env.distance(obj2))
+        env.enter(obj2, location=loc1)
+        self.assertEqual(loc1, env.location(obj2))
 
     def test_view(self):
         env = Environment(self.g)

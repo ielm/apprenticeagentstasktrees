@@ -1,84 +1,36 @@
-from backend.models.graph import Frame, Graph, Identifier, Literal
+from backend.models.environment import Environment
+from backend.models.graph import Frame, Graph, Literal
 from backend.models.ontology import Ontology
 from backend.utils.AtomicCounter import AtomicCounter
-from backend.models.environment import Environment
 
-import re
-import datetime
-from uuid import uuid1, uuid4
+import time
+from typing import List, Union
 
 
 class VMR(Graph):
-    """
-    VMR is a relational DAG. Maybe we will want to use Spatio-Temporal DAGs for this?
-
-    Each temporal "slice" is a time-stamped DAG, which contains the main ENV node, all OBJECT or EVENT nodes that are "in" the environment, and all properties associated with OBJECT/EVENT nodes.
-    For now, each "slice" gets its own full ENV graph; for the future, maybe we can look at version control systems to update only what has changed in the ENV graph for each slice, but maintain temporality.
-    Slices don't have to be recorded with any specific frequency, so a VMR may have a range from a few milliseconds to multiple minutes in between slice timestamps.
-
-
-    All objects in the environment are OBJECT nodes, which have an [_IN] relational mapping to the environment, which is an ENV node.
-    All OBJECT nodes also have relative position relations with all other objects, kept at the coarsest possible granularity until more accurate positioning is needed.
-
-    OBJECT nodes can be EFFECTOR/s which are special objects that are a part of the agent itself and have functional capabilities defined in bootstrap.knowledge, as well as properties
-    The robot/agent is also a special object type, SELF, which refers to itself. EFFECTOR/s are connected to SELF by the _EFFECTOR_OF relation. Needless to say that SELF also has a set of properties.
-
-
-    Properties of OBJECT nodes include:
-        - general (approximate) location using current position as reference
-
-                     {<timestamp>}
-                     [Environment]
-                  __/      |     \__
-                 /    [__SELF__]    \
-           [Jake.#]                [Chair.#]
-        __/   |   \__             __/     \__
-       /      |      \           /           \
-     [_pos][_name][_interax]   [_status]     [_pos]
-
-The environment contains STORAGE.1, STORAGE.2, and WORKSPACE.1, which are each their own micro environments. They always come first in the ENVIRONMENT graph.
-    "slices": {
-        "SLICE.1": {
-            "ENVIRONMENT.1": {
-                "_refers_to": {},
-                "contains": {
-                    "STORAGE.1": {
-                        "contains": {}
-                    },
-                    "STORAGE.2": {
-                        "contains": {}
-                    },
-                    "WORKSPACE.1": {
-                        "contains": {}
-                    },
-                }
-            },
-            "_timestamp": datetime.datetime.now(),
-            "_id": uuid1(),  # use uuid1 for slice IDs
-        }
-    """
     # TODO - create environment modifier function that takes Environment as input and decides if it needs to change anything in Environment
     counter = AtomicCounter()
 
     @staticmethod
-    def new(ontology: Ontology, vmr=None, namespace=None, id=None):
-        if vmr is None:
-            vmr = [{
-                "_id": uuid4() if not id else id,  # use uuid4 for vmr IDs
-                "slices": [{
-                    "SLICE.1": [{
-                        "ENVIRONMENT.1": [{
-                            "_refers_to": {},
-                            "contains": {}
-                        }],
-                        "_timestamp": datetime.datetime.now(),
-                        "_id": uuid1(),  # use uuid1 for slice IDs
-                    }],
-                }],
-                "_label": None,
-                "_visual_frames": None,
-            }]
-            return VMR(vmr[0], ontology, namespace=namespace)
+    def new(ontology: Ontology, refers_to: str=None, timestamp: str=None, contains: dict=None, namespace: str=None):
+        if refers_to is None:
+            refers_to = "ENV"
+
+        if timestamp is None:
+            timestamp = time.time()
+
+        if contains is None:
+            contains = {}
+
+        vmr_dict = {
+            "ENVIRONMENT": {
+                "_refers_to": refers_to,
+                "timestamp": timestamp,
+                "contains": contains
+            }
+        }
+
+        return VMR(vmr_dict, ontology, namespace=namespace)
 
     def __init__(self, vmr_dict: dict, ontology: Ontology, namespace: str = None):
         if ontology is None:
@@ -89,92 +41,40 @@ The environment contains STORAGE.1, STORAGE.2, and WORKSPACE.1, which are each t
         super().__init__(namespace)
 
         self.ontology = ontology._namespace
-        self._id = None
 
-        # empty_env =
-        # self.environment = Environment()
+        reference = self.register("ENVIRONMENT", generate_index=False)
+        reference["REFERS-TO"] = Literal(vmr_dict["ENVIRONMENT"]["_refers_to"])
+        reference["TIMESTAMP"] = Literal(vmr_dict["ENVIRONMENT"]["timestamp"])
 
-        # COUNTER = 0
+        for frame in vmr_dict["ENVIRONMENT"]["contains"]:
+            location = vmr_dict["ENVIRONMENT"]["contains"][frame]["LOCATION"]
+            if location == "NOT-HERE":
+                continue
 
-        # TODO - create Slice instance for each slice in VMR
+            if location == "HERE":
+                location = reference
 
-        # for key in vmr_dict:
-        #     if key == "_id":
-        #         self._id = key
-        #     if key == "slices":
-        #         for s in vmr_dict[key]:
-        #             print()
-                    # print("COUNT#" + str(COUNTER) + ": ")
-                    # print(vmr_dict[key][s])
-                    # COUNTER += 1
-                    # print(vmr_dict[key][s])
+            location_frame = self.register("LOCATION", generate_index=True)
+            location_frame["DOMAIN"] = frame
+            location_frame["RANGE"] = location
 
-                    # slice = Slice(vmr_dict[key][s])
+    def locations(self) -> List[Frame]:
+        return list(map(lambda f: self[f], filter(lambda f: self[f]._identifier.name == "LOCATION", self)))
 
-                # slice = Slice(key)
-                # self[key] = slice
+    def update_environment(self, environment: Union[Graph, Environment]):
+        if isinstance(environment, Graph):
+            environment = Environment(environment)
 
+        environment.advance()
+        for object in environment.current():
+            environment.exit(object)
 
-        # for key in vmr_dict:
-        #     print("COUNT#" + str(COUNTER) + ": " + key)
-        #     COUNTER += 1
-            # if key == "_timestamp":
-            #     self._timestamp = vmr_dict[key]
-            # if key == "_label":
-            #     self._label = vmr_dict[key]
-            # if key == key.upper():
-            #     print("COUNT#"+str(COUNTER)+": "+key)
-            #
-            #     # TODO - If key is referring to element in @ENV, update environment
-            #
-            #     inst_dict = vmr_dict[key]
-            #
-            #     key = re.sub(r"-([0-9]+)$", ".\\1", key)
-            #
-            #     # TODO - self[key] = VMRInstance for all keys in vmr
-            #     self[key] = VMRInstance(key, properties=inst_dict, isa=None, ontology=ontology)
+        for location_marker in self.locations():
+            object = location_marker["DOMAIN"].singleton()
+            location = location_marker["RANGE"].singleton()
 
-        for instance in self._storage.values():
-            for slot in instance._storage.values():
-                for filler in slot:
-                    if isinstance(filler._value, Identifier) and filler._value.graph is None and not filler._value.render() in self:
-                        filler._value.graph = self.ontology
+            if location == self["ENVIRONMENT"]:
+                location = "ONT.LOCATION"
 
-    def update_environment(self, env: Environment, vmr=None):
-        env.advance()
-        # TODO -  Decide whether obj has entered or exited the environment
-        return
-
-
-class VMRInstance(Frame):
-    def __init__(self, name, properties=None, isa=None, ontology: Ontology = None):
-        super().__init__(name, isa=isa)
-
-        if properties is None:
-            properties = {}
-
-        _properties = {}
-        for key in properties:
-            if key == key.upper():
-                _properties[key] = properties[key]
-
-        for key in properties:
-            original_key = key
-            key = re.sub(r"-[0-9]+$", "", key)
-
-            # if key == "slices":
-            #     if ontology is not None \
-            #     and key in ontology \
-            #     and
-
-
-class Slice(Frame):
-    def __init__(self, name, slice=None, isa=None, ontology: Ontology = None):
-        super().__init__(name, isa=isa)
-
-        # g = agent.register("ENV")
-
-        # environment = Environment(g)
-
-
+            environment.enter(object, location=location)
 
