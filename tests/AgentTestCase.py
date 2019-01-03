@@ -148,7 +148,7 @@ class AgentTestCase(unittest.TestCase):
         goal = VariableMap.instance_of(self.agent.exe, definition, params)
 
         # Now define a capability statement with a callback
-        capability = Capability.instance(self.agent.exe, "CAPABILITY", "TestMP")
+        capability = Capability.instance(self.agent.exe, "CAPABILITY", "TestMP", ["ONT.EVENT"])
         effector = Effector.instance(self.agent.exe, Effector.Type.PHYSICAL, [capability])
 
         decision = Decision.build(self.agent.exe, goal.frame, "PLAN", "STEP")
@@ -315,7 +315,7 @@ class AgentDecideTestCase(unittest.TestCase):
         self.assertEqual(Decision.Status.DECLINED, decision.status())
 
     def test_decide_reserves_effectors(self):
-        capability = Capability.instance(self.g, "TEST-CAPABILITY", "")
+        capability = Capability.instance(self.g, "TEST-CAPABILITY", "", ["ONT.EVENT"])
         effector = Effector.instance(self.g, Effector.Type.PHYSICAL, [capability])
         self.agent.identity["HAS-EFFECTOR"] += effector.frame
 
@@ -337,7 +337,7 @@ class AgentDecideTestCase(unittest.TestCase):
         self.assertEqual(self.agent.decisions()[0].outputs()[0], effector.on_output())
 
     def test_decide_reserves_multiple_effectors_for_separate_decisions(self):
-        capability = Capability.instance(self.g, "TEST-CAPABILITY", "")
+        capability = Capability.instance(self.g, "TEST-CAPABILITY", "", ["ONT.EVENT"])
         effector1 = Effector.instance(self.g, Effector.Type.PHYSICAL, [capability])
         effector2 = Effector.instance(self.g, Effector.Type.PHYSICAL, [capability])
         self.agent.identity["HAS-EFFECTOR"] += effector1.frame
@@ -372,7 +372,7 @@ class AgentDecideTestCase(unittest.TestCase):
         self.assertNotEqual(effector1.on_output(), effector2.on_output())
 
     def test_decide_reserves_multiple_effectors_for_single_decision(self):
-        capability = Capability.instance(self.g, "TEST-CAPABILITY", "")
+        capability = Capability.instance(self.g, "TEST-CAPABILITY", "", ["ONT.EVENT"])
         effector1 = Effector.instance(self.g, Effector.Type.PHYSICAL, [capability])
         effector2 = Effector.instance(self.g, Effector.Type.PHYSICAL, [capability])
         self.agent.identity["HAS-EFFECTOR"] += effector1.frame
@@ -407,7 +407,7 @@ class AgentDecideTestCase(unittest.TestCase):
         self.assertNotEqual(effector1.on_output(), effector2.on_output())
 
     def test_decide_selects_multiple_decisions_if_possible(self):
-        capability = Capability.instance(self.g, "TEST-CAPABILITY", "")
+        capability = Capability.instance(self.g, "TEST-CAPABILITY", "", ["ONT.EVENT"])
         effector1 = Effector.instance(self.g, Effector.Type.PHYSICAL, [capability])
         effector2 = Effector.instance(self.g, Effector.Type.PHYSICAL, [capability])
         self.agent.identity["HAS-EFFECTOR"] += effector1.frame
@@ -432,7 +432,7 @@ class AgentDecideTestCase(unittest.TestCase):
         self.assertEqual(Decision.Status.SELECTED, self.agent.decisions()[1].status())
 
     def test_decide_selects_decisions_in_decision_order(self):
-        capability = Capability.instance(self.g, "TEST-CAPABILITY", "")
+        capability = Capability.instance(self.g, "TEST-CAPABILITY", "", ["ONT.EVENT"])
         effector = Effector.instance(self.g, Effector.Type.PHYSICAL, [capability])
         self.agent.identity["HAS-EFFECTOR"] += effector.frame
 
@@ -460,7 +460,7 @@ class AgentDecideTestCase(unittest.TestCase):
             self.assertEqual(Decision.Status.DECLINED, self.agent.decisions()[0].status())
 
     def test_decide_only_pursues_one_plan_per_goal(self):
-        capability = Capability.instance(self.g, "TEST-CAPABILITY", "")
+        capability = Capability.instance(self.g, "TEST-CAPABILITY", "", ["ONT.EVENT"])
         effector = Effector.instance(self.g, Effector.Type.PHYSICAL, [capability])
         self.agent.identity["HAS-EFFECTOR"] += effector.frame
 
@@ -524,7 +524,7 @@ class AgentExecuteTestCase(unittest.TestCase):
 
     @patch.object(Decision, 'execute')
     def test_execute_provides_correct_effectors(self, mocked):
-        capability = Capability.instance(self.g, "TEST-CAPABILITY", "")
+        capability = Capability.instance(self.g, "TEST-CAPABILITY", "", ["ONT.EVENT"])
         effector1 = Effector.instance(self.g, Effector.Type.PHYSICAL, [capability])
         effector2 = Effector.instance(self.g, Effector.Type.PHYSICAL, [capability])
         self.agent.identity["HAS-EFFECTOR"] += effector1.frame
@@ -553,7 +553,7 @@ class AgentExecuteTestCase(unittest.TestCase):
 
     @patch.object(Decision, 'execute')
     def test_execute_only_runs_selected_decisions(self, mocked):
-        capability = Capability.instance(self.g, "TEST-CAPABILITY", "")
+        capability = Capability.instance(self.g, "TEST-CAPABILITY", "", ["ONT.EVENT"])
         effector1 = Effector.instance(self.g, Effector.Type.PHYSICAL, [capability])
         effector2 = Effector.instance(self.g, Effector.Type.PHYSICAL, [capability])
         self.agent.identity["HAS-EFFECTOR"] += effector1.frame
@@ -594,7 +594,7 @@ class AgentExecuteTestCase(unittest.TestCase):
 
         MPRegistry.register(TestMP)
 
-        capability = Capability.instance(self.g, "TEST-CAPABILITY", TestMP)
+        capability = Capability.instance(self.g, "TEST-CAPABILITY", TestMP, ["ONT.EVENT"])
         effector1 = Effector.instance(self.g, Effector.Type.PHYSICAL, [capability])
         effector2 = Effector.instance(self.g, Effector.Type.PHYSICAL, [capability])
         self.agent.identity["HAS-EFFECTOR"] += effector1.frame
@@ -665,7 +665,7 @@ class AgentAssessTestCase(unittest.TestCase):
         goal = VariableMap.instance_of(self.agent.exe, definition, params)
 
         # Now define a capability statement with two callbacks
-        capability = Capability.instance(self.agent.exe, "CAPABILITY", "TestMP")
+        capability = Capability.instance(self.agent.exe, "CAPABILITY", "TestMP", ["ONT.EVENT"])
         effector1 = Effector.instance(self.agent.exe, Effector.Type.PHYSICAL, [capability])
         effector2 = Effector.instance(self.agent.exe, Effector.Type.PHYSICAL, [capability])
 

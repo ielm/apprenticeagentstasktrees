@@ -1174,7 +1174,7 @@ class DecisionTestCase(unittest.TestCase):
                 out = True
 
         MPRegistry.register(TestMP)
-        capability = Capability.instance(self.g, "CAPABILITY", "TestMP")
+        capability = Capability.instance(self.g, "CAPABILITY", "TestMP", ["ONT.EVENT"])
         output = OutputXMR.build(self.g, OutputXMRTemplate.Type.PHYSICAL, capability, "OUTPUT-XMR")
 
         decision = Decision.build(self.g, "GOAL", "PLAN", "STEP")
@@ -1198,7 +1198,7 @@ class DecisionTestCase(unittest.TestCase):
             def run(self): pass
 
         MPRegistry.register(TestMP)
-        capability = Capability.instance(self.g, "CAPABILITY", "TestMP")
+        capability = Capability.instance(self.g, "CAPABILITY", "TestMP", ["ONT.EVENT"])
         output = OutputXMR.build(self.g, OutputXMRTemplate.Type.PHYSICAL, capability, "OUTPUT-XMR")
 
         decision = Decision.build(self.g, "GOAL", "PLAN", "STEP")
@@ -1223,7 +1223,7 @@ class DecisionTestCase(unittest.TestCase):
             def run(self): pass
 
         MPRegistry.register(TestMP)
-        capability = Capability.instance(self.g, "CAPABILITY", "TestMP")
+        capability = Capability.instance(self.g, "CAPABILITY", "TestMP", ["ONT.EVENT"])
         output = OutputXMR.build(self.g, OutputXMRTemplate.Type.PHYSICAL, capability, "OUTPUT-XMR")
 
         decision = Decision.build(self.g, "GOAL", "PLAN", "STEP")
