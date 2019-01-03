@@ -190,48 +190,22 @@ class Jan2019Experiment(unittest.TestCase):
         # 4c) IIDEA loop
         self.iidea_loop(agent)
 
-        # 4d) TEST: An instance of ACKNOWLEDGE-VISUAL-INPUT with the correct VMR was triggered, and a speech output issued
-        self.assertGoalExists(agent, isa="EXE.ACKNOWLEDGE-VISUAL-INPUT", status=Goal.Status.ACTIVE, query=lambda goal: XMR(goal.resolve("$vmr")).graph(agent) == agent["VMR#3"])
+        # 4d) TEST: An instance of ACKNOWLEDGE-VISUAL-INPUT with the correct VMR was triggered, and executed
+        #     TEST: An instance of GREET-AGENT with the correct VMR was created
+        self.assertGoalExists(agent, isa="EXE.ACKNOWLEDGE-VISUAL-INPUT", status=Goal.Status.SATISFIED, query=lambda goal: XMR(goal.resolve("$vmr")).graph(agent) == agent["VMR#3"])
+        self.assertGoalExists(agent, isa="EXE.GREET-AGENT", status=Goal.Status.PENDING, query=lambda goal: XMR(goal.resolve("$vmr")).graph(agent) == agent["VMR#3"])
+
+        # 4e) IIDEA loop
+        self.iidea_loop(agent)
+
+        # 4f) An instance of GREET-AGENT is in progress, with the first step waiting on the verbal effector
+        self.assertGoalExists(agent, isa="EXE.GREET-AGENT", status=Goal.Status.ACTIVE, query=lambda goal: goal.plans()[0].steps()[0].status() == Step.Status.PENDING)
         self.assertFalse(Effector(agent.internal["VERBAL-EFFECTOR.1"]).is_free())
         self.assertEqual(agent.exe["SPEAK-CAPABILITY"], Effector(agent.internal["VERBAL-EFFECTOR.1"]).on_capability())
         self.assertEqual(agent.internal["XMR.8"], Effector(agent.internal["VERBAL-EFFECTOR.1"]).on_output())
         self.assertEqual(agent.environment["HUMAN.1"], OutputXMR(agent.internal["XMR.8"]).graph(agent)["GREET.1"]["THEME"].singleton())
 
         fail()
-
-        # 4d) TEST: PERFORM-COMPLEX-TASK is still "active"
-        self.assertTrue(Goal(agent.internal["PERFORM-COMPLEX-TASK.1"]).is_active())
-
-        # 4e) IIDEA loop
-        self.iidea_loop(agent)
-
-        # 4f) TEST: An instance of REACT-TO-VISUAL-INPUT with the correct VMR is on the agenda
-        self.assertGoalExists(agent, isa="EXE.REACT-TO-VISUAL-INPUT", status=Goal.Status.SATISFIED, query=lambda goal: XMR(goal.resolve("$vmr")).graph(agent) == agent["VMR#3"])
-
-        # 4g) TEST: PERFORM-COMPLEX-TASK is still "active"
-        self.assertTrue(Goal(agent.internal["PERFORM-COMPLEX-TASK.1"]).is_active())
-
-        # 4h) IIDEA loop
-        self.iidea_loop(agent)
-
-        # 4i) TEST: An instance of ACKNOWLEDGE-HUMAN with the correct @human instance is on the agenda
-        self.assertGoalExists(agent, isa="EXE.ACKNOWLEDGE-HUMAN", status=Goal.Status.PENDING, query=lambda goal: goal.resolve("$human")._identifier == "ENV.HUMAN.1")
-
-        # 4j) TEST: PERFORM-COMPLEX-TASK is still "active"
-        self.assertTrue(Goal(agent.internal["PERFORM-COMPLEX-TASK.1"]).is_active())
-
-        # 4k) IIDEA loop
-        mock = self.iidea_loop(agent, mock=SpeakCapabilityMP)
-
-        # 4l) TEST: The only VERBAL-EFFECTOR is reserved to ACKNOWLEDGE-HUMAN (using capability SPEAK("Hi Jake."))
-        self.assertEffectorReserved(agent, "SELF.VERBAL-EFFECTOR.1", "SELF.ACKNOWLEDGE-HUMAN.1", "EXE.SPEAK-CAPABILITY")
-        mock.assert_called_once_with("Hi Jake.")
-
-        # 4m) TEST: ACKNOWLEDGE-HUMAN is "active"
-        self.assertTrue(Goal(agent.internal["ACKNOWLEDGE-HUMAN.1"]).is_active())
-
-        # 4n) TEST: PERFORM-COMPLEX-TASK is still "active"
-        self.assertTrue(Goal(agent.internal["PERFORM-COMPLEX-TASK.1"]).is_active())
 
         # 5a) Callback input capability SPEAK("Hi Jake.") is complete
         agent.callback("SELF.CALLBACK.3")

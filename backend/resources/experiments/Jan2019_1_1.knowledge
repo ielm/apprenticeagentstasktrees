@@ -130,6 +130,7 @@ DEFINE init-goal($definition) AS TEMPLATE
     @OUT.INIT-GOAL.1 = {
         AGENT @SELF;
         THEME $definition;
+        PARAMS $$params;
     }
 ;
 
@@ -173,9 +174,15 @@ DEFINE ACKNOWLEDGE-VISUAL-INPUT($vmr)
     PRIORITY 0.5
     RESOURCES 0.5
     PLAN (passively register visual input)
-        SELECT DEFAULT
+        SELECT IF NOT SELF.should_acknowledge_visual_input($vmr)
         STEP
             DO IDLE
+    PLAN (acknowledge visual input)
+        SELECT IF SELF.should_acknowledge_visual_input($vmr)
+        STEP
+            DO $goal = SELF.select_goal_from_visual_input($vmr)
+            DO $vmr[STATUS] = "ACKNOWLEDGED"
+            DO OUTPUT init-goal($goal, $$vmr) BY SELF
     WHEN EXECUTED THEN satisfied
 ;
 
