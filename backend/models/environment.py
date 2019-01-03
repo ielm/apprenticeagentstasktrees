@@ -6,7 +6,6 @@ class Environment(object):
 
     def __init__(self, graph: Graph):
         self.graph = graph
-        # print(self.graph)
 
     def advance(self) -> Frame:
         # Create a new timestamp
@@ -26,28 +25,31 @@ class Environment(object):
                 location = location.resolve()
                 copy = self.graph.register("SPATIAL-LOCATION", isa="ONT.LOCATION", generate_index=True)
                 copy["DOMAIN"] = location["DOMAIN"].singleton()
-                copy["LOCATION"] = location["RANGE"].singleton()
+                copy["RANGE"] = location["RANGE"].singleton()
                 epoch["LOCATION"] += copy
         return epoch
 
     def history(self) -> List[Frame]:
-        epochs = list(filter(lambda f: f ^ "ENV.EPOCH.1" and f != self.graph["ENV.EPOCH"], self.graph.values()))
+        epochs = list(filter(lambda f: f ^ "ENV.EPOCH" and f != self.graph["ENV.EPOCH"], self.graph.values()))
         epochs = sorted(epochs, key=lambda e: e["TIME"].singleton())
 
         return epochs
 
-    def enter(self, obj: Union[str, Identifier, Frame], distance: float=1.0):
+    def enter(self, obj: Union[str, Identifier, Frame], location: Frame=None):
         # Something new is in the env
         if isinstance(obj, str):
             obj = Identifier.parse(obj)
         if isinstance(obj, Frame):
             obj = obj._identifier
 
+        if location is None:
+            location = "ONT.LOCATION"
+
         epoch = self.history()[-1]
 
         if obj not in epoch["CONTAINS"]:
             epoch["CONTAINS"] += obj
-            self.move(obj, distance)
+            self.move(obj, location=location)
 
     def exit(self, obj: Union[str, Identifier, Frame]):
         # Something has exited the environment
@@ -59,22 +61,26 @@ class Environment(object):
         epoch = self.history()[-1]
         epoch["CONTAINS"] -= obj
 
-    def move(self, obj: Union[str, Identifier, Frame], distance: float):
+        for d in epoch["LOCATION"]:
+            if d.resolve()["DOMAIN"] == obj:
+                d.resolve()["RANGE"] = None
+
+    def move(self, obj: Union[str, Identifier, Frame], location: Frame):
         if isinstance(obj, str):
             obj = Identifier.parse(obj)
         if isinstance(obj, Frame):
             obj = obj._identifier
 
         epoch = self.history()[-1]
-        for d in epoch["DISTANCE"]:
+        for d in epoch["LOCATION"]:
             if d.resolve()["DOMAIN"] == obj:
-                d.resolve()["RANGE"] = distance
+                d.resolve()["RANGE"] = location
                 return
 
-        d = self.graph.register("SPATIAL-DISTANCE", isa="ONT.SPATIAL-DISTANCE", generate_index=True)
+        d = self.graph.register("LOCATION", isa="ONT.LOCATION", generate_index=True)
         d["DOMAIN"] = obj
-        d["RANGE"] = distance
-        epoch["DISTANCE"] += d
+        d["RANGE"] = location
+        epoch["LOCATION"] += d
 
     def view(self, epoch: Union[int, str, Identifier, Frame]) -> List[Frame]:
         if isinstance(epoch, int):
@@ -89,26 +95,7 @@ class Environment(object):
     def current(self):
         return self.view(self.history()[-1])
 
-    def distance(self, obj: Union[str, Identifier, Frame], epoch: Union[int, str, Identifier, Frame]=-1) -> float:
-        if isinstance(epoch, int):
-            epoch = self.history()[epoch]
-        if isinstance(epoch, str):
-            epoch = Identifier.parse(epoch)
-        if isinstance(epoch, Frame):
-            epoch = epoch._identifier
-
-        if isinstance(obj, str):
-            obj = Identifier.parse(obj)
-        if isinstance(obj, Frame):
-            obj = obj._identifier
-
-        for d in self.graph[epoch]["DISTANCE"]:
-            if d.resolve()["DOMAIN"] == obj:
-                return d.resolve()["RANGE"].singleton()
-
-        raise Exception("Distance unknown.")
-
-    def location(self, obj: Union[str, Identifier, Frame], epoch: Union[int, str, Identifier, Frame]=-1) -> float:
+    def location(self, obj: Union[str, Identifier, Frame], epoch: Union[int, str, Identifier, Frame]=-1) -> Frame:
         if isinstance(epoch, int):
             epoch = self.history()[epoch]
         if isinstance(epoch, str):
@@ -123,5 +110,7 @@ class Environment(object):
 
         for d in self.graph[epoch]["LOCATION"]:
             if d.resolve()["DOMAIN"] == obj:
-                return d.resolve()["RANGE"].singleton()
+                location = d.resolve()["RANGE"].singleton()
+                if location is not None:
+                    return location
         raise Exception("Location unknown.")

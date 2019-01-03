@@ -38,9 +38,9 @@ def bootstrap(input: dict, graph: Graph):
 
 def visual_input(input: dict, graph: Graph) -> dict:
     locations = {
-        "storage-1": "STORAGE.1",
-        "storage-2": "STORAGE.2",
-        "workspace": "WORKSPACE.1"
+        "storage-1": graph._namespace + ".STORAGE.1",
+        "storage-2": graph._namespace + ".STORAGE.2",
+        "workspace": graph._namespace + ".WORKSPACE.1"
     }
 
     contains = {}
@@ -48,50 +48,34 @@ def visual_input(input: dict, graph: Graph) -> dict:
     for human in filter(lambda f: graph[f] ^ "ONT.HUMAN", graph):
         human = graph[human]
         if human["HAS-NAME"].singleton() in input["faces"]:
-            contains[human._identifier.render(graph=False)] = {
-                "_refers_to": "",
-                "_identifier": human["HAS-NAME"].singleton(),
-                "_in": "ENVIRONMENT.1",
+            contains[human._identifier.render()] = {
                 "LOCATION": "HERE"
             }
         else:
-            contains[human._identifier.render(graph=False)] = {
-                "_refers_to": "",
-                "_identifier": human["HAS-NAME"].singleton(),
-                "_in": "ENVIRONMENT.1",
+            contains[human._identifier.render()] = {
                 "LOCATION": "NOT-HERE"
             }
 
     for object in filter(lambda f: "visual-object-id" in graph[f], graph):
         object = graph[object]
         if object["visual-object-id"].singleton() in input["storage-1"]:
-            contains[object._identifier.render(graph=False)] = {
-                "_refers_to": "",
-                "_in": "ENVIRONMENT.1",
+            contains[object._identifier.render()] = {
                 "LOCATION": locations["storage-1"]
             }
         elif object["visual-object-id"].singleton() in input["storage-2"]:
-            contains[object._identifier.render(graph=False)] = {
-                "_refers_to": "",
-                "_in": "ENVIRONMENT.1",
+            contains[object._identifier.render()] = {
                 "LOCATION": locations["storage-2"]
             }
         else:
-            contains[object._identifier.render(graph=False)] = {
-                "_refers_to": "",
-                "_in": "ENVIRONMENT.1",
+            contains[object._identifier.render()] = {
                 "LOCATION": locations["workspace"]
             }
 
     results = {
-        "slices": {
-            "SLICE.1": {
-                "ENVIRONMENT.1": {
-                    "_refers_to": "@" + graph._namespace,
-                    "contains": contains
-                },
-                "_timestamp": datetime.datetime.now()
-            }
+        "ENVIRONMENT": {
+            "_refers_to": graph._namespace,
+            "timestamp": datetime.datetime.now(),
+            "contains": contains
         }
     }
 
