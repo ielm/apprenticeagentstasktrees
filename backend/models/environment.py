@@ -6,6 +6,7 @@ class Environment(object):
 
     def __init__(self, graph: Graph):
         self.graph = graph
+        # print(self.graph)
 
     def advance(self) -> Frame:
         # Create a new timestamp
@@ -20,17 +21,17 @@ class Environment(object):
 
             for obj in last["CONTAINS"]:
                 epoch["CONTAINS"] += obj
-            for distance in last["DISTANCE"]:
-                distance = distance.resolve()
-                copy = self.graph.register("SPATIAL-DISTANCE", isa="ONT.SPATIAL-DISTANCE", generate_index=True)
-                copy["DOMAIN"] = distance["DOMAIN"].singleton()
-                copy["RANGE"] = distance["RANGE"].singleton()
-                epoch["DISTANCE"] += copy
 
+            for location in last["LOCATION"]:
+                location = location.resolve()
+                copy = self.graph.register("SPATIAL-LOCATION", isa="ONT.LOCATION", generate_index=True)
+                copy["DOMAIN"] = location["DOMAIN"].singleton()
+                copy["LOCATION"] = location["RANGE"].singleton()
+                epoch["LOCATION"] += copy
         return epoch
 
     def history(self) -> List[Frame]:
-        epochs = list(filter(lambda f: f ^ "ENV.EPOCH" and f != self.graph["ENV.EPOCH"], self.graph.values()))
+        epochs = list(filter(lambda f: f ^ "ENV.EPOCH.1" and f != self.graph["ENV.EPOCH"], self.graph.values()))
         epochs = sorted(epochs, key=lambda e: e["TIME"].singleton())
 
         return epochs
@@ -106,3 +107,21 @@ class Environment(object):
                 return d.resolve()["RANGE"].singleton()
 
         raise Exception("Distance unknown.")
+
+    def location(self, obj: Union[str, Identifier, Frame], epoch: Union[int, str, Identifier, Frame]=-1) -> float:
+        if isinstance(epoch, int):
+            epoch = self.history()[epoch]
+        if isinstance(epoch, str):
+            epoch = Identifier.parse(epoch)
+        if isinstance(epoch, Frame):
+            epoch = epoch._identifier
+
+        if isinstance(obj, str):
+            obj = Identifier.parse(obj)
+        if isinstance(obj, Frame):
+            obj = obj._identifier
+
+        for d in self.graph[epoch]["LOCATION"]:
+            if d.resolve()["DOMAIN"] == obj:
+                return d.resolve()["RANGE"].singleton()
+        raise Exception("Location unknown.")
