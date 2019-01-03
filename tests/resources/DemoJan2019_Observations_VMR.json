@@ -1,93 +1,70 @@
 {
   "Jake leaves": {
-    "_id": "faf38347-4f81-403a-b8ae-d88e7daa2d52",
-    "slices": {
-      "SLICE.1": {
-        "ENVIRONMENT.1": {
-          "_refers_to": "@ENV",
-          "contains": {
-            "HUMAN.1": {
-              "_refers_to": "",
-              "_identifier": "Jake",
-              "_in": "ENVIRONMENT.1",
-              "LOCATION": "HERE"
-            },
-            "_SELF_": {
-              "_refers_to": "",
-              "_identifier": "self",
-              "_in": "ENVIRONMENT.1"
-            }
-          }
+    "ENVIRONMENT": {
+      "_refers_to": "ENV",
+      "timestamp": "...",
+      "contains": {
+        "ENV.HUMAN.1": {
+          "LOCATION": "NOT-HERE"
         },
-        "_timestamp": "2018-11-11 14:01:18.251602",
-        "_id": "433f1d58-e5e4-11e8-b8a0-7200c4f8d301",
-        "_label": ""
-      },
-      "SLICE.2": {
-        "ENVIRONMENT.1": {
-          "_refers_to": "@ENV",
-          "contains": {
-            "HUMAN.1": {
-              "_refers_to": "",
-              "_identifier": "Jake",
-              "_in": "ENVIRONMENT.1",
-              "LOCATION": "NOT HERE"
-            },
-            "_SELF_": {
-              "_refers_to": "",
-              "_identifier": "self",
-              "_in": "ENVIRONMENT.1"
-            }
-          }
+        "ENV.SCREWDRIVER.1": {
+          "LOCATION": "ENV.STORAGE.1"
         },
-        "_timestamp": "2018-11-11 14:02:04.126188",
-        "_id": "28c2346c-e5e5-11e8-8e76-7200c4f8d301",
-        "_label": ""
+        "ENV.BRACKET.1": {
+          "LOCATION": "ENV.STORAGE.1"
+        },
+        "ENV.BRACKET.2": {
+          "LOCATION": "ENV.STORAGE.2"
+        },
+        "ENV.DOWEL.1": {
+          "LOCATION": "ENV.STORAGE.2"
+        }
       }
     }
   },
-  "Screwdriver moves close": {
-    "_id": "faf38347-4f81-403a-b8ae-d88e7daa2d52",
-    "slices": {
-      "SLICE.1": {
-        "ENVIRONMENT.1": {
-          "_refers_to": "@ENV",
-          "contains": {
-            "SCREWDRIVER.1": {
-              "_refers_to": "",
-              "_in": "ENVIRONMENT.1",
-              "SPATIAL-DISTANCE": 0.8
-            },
-            "_SELF_": {
-              "_refers_to": "",
-              "_identifier": "self",
-              "_in": "ENVIRONMENT.1"
-            }
-          }
+  "screwdriver moved to workspace": {
+    "ENVIRONMENT": {
+      "_refers_to": "ENV",
+      "timestamp": "...",
+      "contains": {
+        "ENV.HUMAN.1": {
+          "LOCATION": "NOT-HERE"
         },
-        "_timestamp": "2018-11-11 14:07:18.251602",
-        "_id": "f7b6df70-e60d-11e8-b511-7200c4f8d301",
-        "_label": ""
-      },
-      "SLICE.2": {
-        "ENVIRONMENT.1": {
-          "_refers_to": "@ENV",
-          "contains": {
-            "SCREWDRIVER.1": {
-              "_refers_to": "",
-              "_in": "ENVIRONMENT.1",
-              "SPATIAL-DISTANCE": 0.1
-            },
-            "_SELF_": {
-              "_refers_to": "",
-              "_identifier": "self",
-              "_in": "ENVIRONMENT.1"
-            }
-          }
+        "ENV.SCREWDRIVER.1": {
+          "LOCATION": "ENV.WORKSPACE.1"
         },
-        "_timestamp": "2018-11-11 14:08:04.126188",
-        "_id": "05b92970-e60e-11e8-985f-7200c4f8d301",
-        "_label": ""
+        "ENV.BRACKET.1": {
+          "LOCATION": "ENV.STORAGE.1"
+        },
+        "ENV.BRACKET.2": {
+          "LOCATION": "ENV.STORAGE.2"
+        },
+        "ENV.DOWEL.1": {
+          "LOCATION": "ENV.STORAGE.2"
+        }
+      }
+    }
+  },
+  "jake enters": {
+    "ENVIRONMENT": {
+      "_refers_to": "ENV",
+      "timestamp": "...",
+      "contains": {
+        "ENV.HUMAN.1": {
+          "LOCATION": "HERE"
+        },
+        "ENV.SCREWDRIVER.1": {
+          "LOCATION": "ENV.WORKSPACE.1"
+        },
+        "ENV.BRACKET.1": {
+          "LOCATION": "ENV.STORAGE.1"
+        },
+        "ENV.BRACKET.2": {
+          "LOCATION": "ENV.STORAGE.2"
+        },
+        "ENV.DOWEL.1": {
+          "LOCATION": "ENV.STORAGE.2"
+        }
       }
     }
   }

@@ -1,10 +1,38 @@
-from backend.models.mps import AgentMethod
+from backend.models.mps import AgentMethod, OutputMethod
 from backend.models.agenda import Goal
 from backend.models.graph import Frame
 from backend.models.xmr import XMR
-from backend.agent import Agent
 from backend.models.effectors import Capability
 
+
+class SelectGoalFromLanguageInput(AgentMethod):
+    def run(self, input_tmr):
+        print("TODO: choose a goal intelligently")
+        return self.agent.lookup("EXE.BUILD-A-CHAIR")
+
+
+class InitGoalCapability(OutputMethod):
+    def run(self):
+        from backend.models.agenda import Goal
+
+        print("TODO: handle possible parameters")
+
+        definition = self.output.root()["THEME"].singleton()
+        goal = Goal.instance_of(self.agent.internal, definition, [])
+        self.agent.agenda().add_goal(goal)
+
+        self.agent.callback(self.callback)
+
+class FetchObjectCapability(OutputMethod):
+    def run(self):
+        target = self.output.root()["THEME"].singleton()
+
+        print("TODO: issue command to robot to fetch " + str(target))
+
+
+
+
+######################
 
 class FindSomethingToDoMP(AgentMethod):
     def run(self):

@@ -1,10 +1,11 @@
 from backend.agent import Agent
-from backend.models.agenda import Goal
+from backend.models.agenda import Goal, Step
 from backend.models.bootstrap import Bootstrap
 from backend.models.effectors import Capability, Effector
 from backend.models.graph import Frame, Identifier
 from backend.models.mps import AgentMethod
 from backend.models.ontology import Ontology
+from backend.models.output import OutputXMR
 from backend.models.xmr import XMR
 
 from pkgutil import get_data
@@ -113,106 +114,90 @@ class Jan2019Experiment(unittest.TestCase):
         # 1b) IIDEA loop
         self.iidea_loop(agent)
 
-        # 1c) TEST: An instance of ACKNOWLEDGE-INPUT with the correct TMR is on the agenda
-        self.assertGoalExists(agent, isa="EXE.ACKNOWLEDGE-INPUT", status=Goal.Status.PENDING, query=lambda goal: goal.resolve("$xmr")["REFERS-TO-GRAPH"].singleton() == "TMR#1")
+        # 1c) TEST: An instance of ACKNOWLEDGE-LANGUAGE-INPUT with the correct TMR was triggered, and executed
+        #     TEST: An instance of BUILD-A-CHAIR is pending
+        self.assertGoalExists(agent, isa="EXE.ACKNOWLEDGE-LANGUAGE-INPUT", status=Goal.Status.SATISFIED, query=lambda goal: goal.resolve("$tmr")["REFERS-TO-GRAPH"].singleton() == "TMR#1")
+        self.assertGoalExists(agent, isa="EXE.BUILD-A-CHAIR", status=Goal.Status.PENDING)
 
         # 1d) IIDEA loop
         self.iidea_loop(agent)
 
-        # 1e) TEST: An instance of DECIDE-ON-LANGUAGE-INPUT with the correct TMR is on the agenda
-        self.assertGoalExists(agent, isa="EXE.DECIDE-ON-LANGUAGE-INPUT", status=Goal.Status.PENDING, query=lambda goal: goal.resolve("$tmr")["REFERS-TO-GRAPH"].singleton() == "TMR#1")
+        # 1e) TEST: An instance of BUILD-A-CHAIR is in progress, with the first step waiting on the physical effector
+        self.assertGoalExists(agent, isa="EXE.BUILD-A-CHAIR", status=Goal.Status.ACTIVE, query=lambda goal: goal.plans()[0].steps()[0].status() == Step.Status.PENDING)
+        self.assertFalse(Effector(agent.internal["PHYSICAL-EFFECTOR.1"]).is_free())
+        self.assertEqual(agent.exe["FETCH-OBJECT-CAPABILITY"], Effector(agent.internal["PHYSICAL-EFFECTOR.1"]).on_capability())
+        self.assertEqual(agent.internal["XMR.3"], Effector(agent.internal["PHYSICAL-EFFECTOR.1"]).on_output())
+        self.assertEqual(agent.environment["SCREWDRIVER.1"], OutputXMR(agent.internal["XMR.3"]).graph(agent)["FETCH.1"]["THEME"].singleton())
 
-        # 1f) IIDEA loop
-        self.iidea_loop(agent)
-
-        # 1g) TEST: An instance of PERFORM-COMPLEX-TASK with the LTM instructions root is on the agenda
-        self.assertGoalExists(agent, isa="EXE.PERFORM-COMPLEX-TASK", status=Goal.Status.PENDING, query=lambda goal: goal.resolve("$task")._identifier == "LT.BUILD.1")
-
-# ====================================================================================== #
+        #######
 
         # 2a) Visual input "Jake leaves"
         agent._input(self.observations()["Jake leaves"], type=XMR.Type.VISUAL.name)
 
-        # 2b) IIDEA loop
-        mock = self.iidea_loop(agent, mock=GetPhysicalObjectCapabilityMP)
+        # 2b) TEST: Jake is no longer in the environment
+        with self.assertRaises(Exception):
+            agent.env().location("ENV.HUMAN.1")
 
-        # 2c) TEST: An instance of ACKNOWLEDGE-INPUT with the correct TMR is on the agenda
-        self.assertGoalExists(agent, isa="EXE.ACKNOWLEDGE-INPUT", status=Goal.Status.PENDING, query=lambda goal: XMR(goal.resolve("$xmr")).graph(agent) == agent["VMR#1"])
+        # 2c) IIDEA loop
+        mock = self.iidea_loop(agent)
 
-        # 2d) TEST: The only PHYSICAL-EFFECTOR is reserved to PERFORM-COMPLEX-TASK (using capability GET(screwdriver))
-        self.assertEffectorReserved(agent, "SELF.PHYSICAL-EFFECTOR.1", "SELF.GOAL.2", "EXE.GET-CAPABILITY")
-        mock.assert_called_once_with(agent.lookup("ENV.SCREWDRIVER.1"))
+        # 2d) TEST: An instance of BUILD-A-CHAIR is in progress, with the first step waiting on the physical effector
+        #     TEST: An instance of ACKNOWLEDGE-VISUAL-INPUT with the correct VMR was triggered, and executed (no effect)
+        self.assertGoalExists(agent, isa="EXE.BUILD-A-CHAIR", status=Goal.Status.ACTIVE, query=lambda goal: goal.plans()[0].steps()[0].status() == Step.Status.PENDING)
+        self.assertGoalExists(agent, isa="EXE.ACKNOWLEDGE-VISUAL-INPUT", status=Goal.Status.SATISFIED, query=lambda goal: XMR(goal.resolve("$vmr")).graph(agent) == agent["VMR#1"])
+        self.assertFalse(Effector(agent.internal["PHYSICAL-EFFECTOR.1"]).is_free())
+        self.assertTrue(Effector(agent.internal["MENTAL-EFFECTOR.1"]).is_free())
+        self.assertTrue(Effector(agent.internal["VERBAL-EFFECTOR.1"]).is_free())
 
-        # 2e) IIDEA loop
-        self.iidea_loop(agent)
-
-        # 2f) TEST: An instance of REACT-TO-VISUAL-INPUT with the correct VMR is on the agenda
-        self.assertGoalExists(agent, isa="EXE.REACT-TO-VISUAL-INPUT", status=Goal.Status.PENDING, query=lambda goal: XMR(goal.resolve("$vmr")).graph(agent) == agent["VMR#1"])
-
-        # 2g) TEST: The PHYSICAL-EFFECTOR is still reserved; PERFORM-COMPLEX-TASK is still "active"
-        self.assertEffectorReserved(agent, "SELF.PHYSICAL-EFFECTOR.1", "SELF.GOAL.2", "EXE.GET-CAPABILITY")
-
-        # 2h) IIDEA loop
-        self.iidea_loop(agent)
-
-        # 2i) TEST: REACT-TO-VISUAL-INPUT is satisfied (only 2 goals: FSTD and PERFORM-COMPLEX-TASK)
-        self.assertGoalExists(agent, isa="EXE.REACT-TO-VISUAL-INPUT", status=Goal.Status.SATISFIED, query=lambda goal: XMR(goal.resolve("$vmr")).graph(agent) == agent["VMR#1"])
-
-        # 2j) TEST: The environment no longer registers "Jake" as being present
-        # Might need to be frame rather than name
-        self.assertNotIn("ENV.HUMAN.1", agent.env().current())
-
-        # 2k) TEST: The PHYSICAL-EFFECTOR is still reserved; PERFORM-COMPLEX-TASK is still "active"
-        self.assertEffectorReserved(agent, "SELF.PHYSICAL-EFFECTOR.1", "SELF.PERFORM-COMPLEX-TASK.1", "EXE.GET-CAPABILITY")
+        #######
 
         # 3a) Callback input capability GET(screwdriver) is complete
-        agent.callback("SELF.CALLBACK.1")
+        agent.callback("SELF.CALLBACK.2")
 
         # 3b) Visual input "the screwdriver has been moved"
-        agent._input(self.observations()["screwdriver moved close"], type=XMR.Type.VISUAL.name)
+        agent._input(self.observations()["screwdriver moved to workspace"], type=XMR.Type.VISUAL.name)
 
         # 3c) TEST: The screwdriver is "close" to the agent
-        self.assertEqual(0.1, agent.environment().distance("ENV.SCREWDRIVER.1"))
+        self.assertEqual(agent.environment["WORKSPACE.1"], agent.env().location("ENV.SCREWDRIVER.1"))
 
         # 3d) IIDEA loop
-        mock = self.iidea_loop(agent, mock=GetPhysicalObjectCapabilityMP)
-
-        # 3e) TEST: An instance of ACKNOWLEDGE-INPUT with the correct VMR is on the agenda
-        self.assertGoalExists(agent, isa="EXE.ACKNOWLEDGE-INPUT", status=Goal.Status.PENDING, query=lambda goal: XMR(goal.resolve("$tmr")).graph(agent) == agent["VMR#2"])
-
-        # 3f) TEST: The only PHYSICAL-EFFECTOR is reserved to PERFORM-COMPLEX-TASK (using capability GET(foot_bracket))
-        self.assertEffectorReserved(agent, "SELF.PHYSICAL-EFFECTOR.1", "SELF.PERFORM-COMPLEX-TASK.1",  "EXE.GET-CAPABILITY")
-        mock.assert_called_once_with("ENV.BRACKET.1")
-
-        # 3g) TEST: PERFORM-COMPLEX-TASK is still "active"
-        self.assertTrue(Goal(agent.internal["PERFORM-COMPLEX-TASK.1"]).is_active())
-
-        # 3h) IIDEA loop
         self.iidea_loop(agent)
 
-        # 3i) TEST: An instance of REACT-TO-VISUAL-INPUT with the correct VMR is on the agenda
-        self.assertGoalExists(agent, isa="EXE.REACT-TO-VISUAL-INPUT", status=Goal.Status.SATISFIED, query=lambda goal: XMR(goal.resolve("$vmr")).graph(agent) == agent["VMR#2"])
+        # 3e) TEST: An instance of BUILD-A-CHAIR is in progress, with the first step finished
+        #     TEST: An instance of ACKNOWLEDGE-VISUAL-INPUT with the correct VMR was triggered, and executed (no effect)
+        self.assertGoalExists(agent, isa="EXE.BUILD-A-CHAIR", status=Goal.Status.ACTIVE, query=lambda goal: goal.plans()[0].steps()[0].status() == Step.Status.FINISHED)
+        self.assertGoalExists(agent, isa="EXE.BUILD-A-CHAIR", status=Goal.Status.ACTIVE, query=lambda goal: goal.plans()[0].steps()[1].status() == Step.Status.PENDING)
+        self.assertGoalExists(agent, isa="EXE.ACKNOWLEDGE-VISUAL-INPUT", status=Goal.Status.SATISFIED, query=lambda goal: XMR(goal.resolve("$vmr")).graph(agent) == agent["VMR#2"])
 
-        # 3j) TEST: PERFORM-COMPLEX-TASK is still "active"
-        self.assertTrue(Goal(agent.internal["PERFORM-COMPLEX-TASK.1"]).is_active())
-
-        # 3k) IIDEA loop
+        # 3f) IIDEA loop
         self.iidea_loop(agent)
 
-        # 3l) TEST: All instances of REACT-TO-VISUAL-INPUT are satisified
-        self.assertEqual(0, len(list(filter(lambda g: not g.is_satisfied(), map(lambda g: Goal(g), agent.internal.search(Frame.q(agent).isa("EXE.REACT-TO-VISUAL-INPUT")))))))
+        # 3g) TEST: An instance of BUILD-A-CHAIR is in progress, with the first second waiting on the physical effector
+        self.assertGoalExists(agent, isa="EXE.BUILD-A-CHAIR", status=Goal.Status.ACTIVE, query=lambda goal: goal.plans()[0].steps()[1].status() == Step.Status.PENDING)
+        self.assertFalse(Effector(agent.internal["PHYSICAL-EFFECTOR.1"]).is_free())
+        self.assertEqual(agent.exe["FETCH-OBJECT-CAPABILITY"], Effector(agent.internal["PHYSICAL-EFFECTOR.1"]).on_capability())
+        self.assertEqual(agent.internal["XMR.6"], Effector(agent.internal["PHYSICAL-EFFECTOR.1"]).on_output())
+        self.assertEqual(agent.environment["BRACKET.1"], OutputXMR(agent.internal["XMR.6"]).graph(agent)["FETCH.1"]["THEME"].singleton())
 
-        # 3j) TEST: PERFORM-COMPLEX-TASK is still "active"
-        self.assertTrue(Goal(agent.internal["PERFORM-COMPLEX-TASK.1"]).is_active())
+        #######
 
         # 4a) Visual input "Jake returns"
         agent._input(self.observations()["jake enters"], type=XMR.Type.VISUAL.name)
 
-        # 4b) IIDEA loop
+        # 4b) TEST: Jake is in the environment
+        self.assertEqual(agent.ontology["LOCATION"], agent.env().location("ENV.HUMAN.1"))
+
+        # 4c) IIDEA loop
         self.iidea_loop(agent)
 
-        # 4c) TEST: An instance of ACKNOWLEDGE-INPUT with the correct TMR is on the agenda
-        self.assertGoalExists(agent, isa="EXE.ACKNOWLEDGE-INPUT", status=Goal.Status.PENDING, query=lambda goal: XMR(goal.resolve("$tmr")).graph(agent) == agent["VMR#3"])
+        # 4d) TEST: An instance of ACKNOWLEDGE-VISUAL-INPUT with the correct VMR was triggered, and a speech output issued
+        self.assertGoalExists(agent, isa="EXE.ACKNOWLEDGE-VISUAL-INPUT", status=Goal.Status.ACTIVE, query=lambda goal: XMR(goal.resolve("$vmr")).graph(agent) == agent["VMR#3"])
+        self.assertFalse(Effector(agent.internal["VERBAL-EFFECTOR.1"]).is_free())
+        self.assertEqual(agent.exe["SPEAK-CAPABILITY"], Effector(agent.internal["VERBAL-EFFECTOR.1"]).on_capability())
+        self.assertEqual(agent.internal["XMR.8"], Effector(agent.internal["VERBAL-EFFECTOR.1"]).on_output())
+        self.assertEqual(agent.environment["HUMAN.1"], OutputXMR(agent.internal["XMR.8"]).graph(agent)["GREET.1"]["THEME"].singleton())
+
+        fail()
 
         # 4d) TEST: PERFORM-COMPLEX-TASK is still "active"
         self.assertTrue(Goal(agent.internal["PERFORM-COMPLEX-TASK.1"]).is_active())
