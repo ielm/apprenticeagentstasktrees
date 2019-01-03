@@ -114,11 +114,6 @@ class PerformComplexTaskMP(AgentMethod):
         return capabilities
 
 
-class ReactToVisualInputMP(AgentMethod):
-    def run(self, input_tmr):
-        return
-
-
 class GetPhysicalObjectCapabilityMP(AgentMethod):
     def run(self, target: Frame):
         self.agent.logger().log("Executed GET(" + target._identifier.render() + ")")
@@ -132,4 +127,22 @@ class SpeakCapabilityMP(AgentMethod):
 
 class ReactToVisualInputMP(AgentMethod):
     def run(self, vmr):
+        return
+
+
+class HoldPhysicalObjectMP(AgentMethod):
+    def run(self, target: Frame):
+        self.agent.logger().log("Executed HOLD(" + target._identifier.render() + ")")
+        return
+
+
+class FastenPhysicalObjectMP(AgentMethod):
+    def run(self, target: Frame):
+        self.agent.logger().log("Executed FASTEN(" + target._identifier.render() + ")")
+        return
+
+
+class RestrainPhysicalObjectMP(AgentMethod):
+    def run(self, target: Frame):
+        self.agent.logger().log("Executed RESTRAIN(" + target._identifier.render() + ")")
         return

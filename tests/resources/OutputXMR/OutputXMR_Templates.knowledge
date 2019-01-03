@@ -1,0 +1,40 @@
+DEFINE take($agent, $theme) AS TEMPLATE
+    TYPE PHYSICAL
+    REQUIRES @EXE.GET-CAPABILITY
+    INCLUDE
+
+    @OUT.TAKE.1 = {
+        AGENT $agent;
+        THEME $theme;
+    }
+;
+DEFINE hold($agent, $theme) AS TEMPLATE
+    TYPE PHYSICAL
+    REQUIRES @EXE.HOLD-CAPABILITY
+    INCLUDE
+
+    @OUT.HOLD.1 = {
+        AGENT $agent;
+        THEME $theme;
+    }
+;
+DEFINE fasten($agent, $theme) AS TEMPLATE
+    TYPE PHYSICAL
+    REQUIRES @EXE.FASTEN-CAPABILITY
+    INCLUDE
+
+    @OUT.FASTEN.1 = {
+        AGENT $agent;
+        THEME $theme;
+    }
+;
+DEFINE RESTRAIN($agent, $theme) AS TEMPLATE
+    TYPE PHYSICAL
+    REQUIRES @EXE.RESTRAIN-CAPABILITY
+    INCLUDE
+
+    @OUT.RESTRAIN.1 = {
+    AGENT $agent;
+    THEME $theme;
+    }
+;
