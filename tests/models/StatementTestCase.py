@@ -1,4 +1,4 @@
-from backend.models.effectors import Capability
+from backend.models.bootstrap import Bootstrap
 from backend.models.graph import Frame, Graph, Identifier, Literal, Network
 from backend.models.mps import AgentMethod, MPRegistry
 from backend.models.query import Query
@@ -170,19 +170,22 @@ class VariableMapTestCase(unittest.TestCase):
 
 class StatementTestCase(unittest.TestCase):
 
+    def setUp(self):
+        self.n = Network()
+        self.g = self.n.register("EXE")
+        Bootstrap.bootstrap_resource(self.n, "backend.resources", "exe.knowledge")
+
     def test_run(self):
 
         class TestStatement(Statement):
             def run(self, scope: StatementScope, varmap: VariableMap):
                 return varmap.resolve("X")
 
-        graph = Graph("TEST")
-
-        stmt = graph.register("STATEMENT")
-        varmap = graph.register("VARMAP")
+        stmt = self.g.register("STATEMENT")
+        varmap = self.g.register("VARMAP")
         varmap["WITH"] = Literal("X")
 
-        vm = VariableMap.instance_of(graph, varmap, [123])
+        vm = VariableMap.instance_of(self.g, varmap, [123])
         statement = TestStatement(stmt)
 
         self.assertEqual(123, statement.run(StatementScope(), vm))
@@ -193,11 +196,10 @@ class StatementTestCase(unittest.TestCase):
             def run(self, scope: StatementScope, varmap: VariableMap):
                 return 1
 
-        graph = Statement.hierarchy()
-        graph.register("TEST-STATEMENT", isa="EXE.STATEMENT")
-        graph["TEST-STATEMENT"]["CLASSMAP"] = Literal(TestStatement)
+        self.g.register("TEST-STATEMENT", isa="EXE.STATEMENT")
+        self.g["TEST-STATEMENT"]["CLASSMAP"] = Literal(TestStatement)
 
-        frame = graph.register("TEST.1", isa="TEST-STATEMENT")
+        frame = self.g.register("TEST.1", isa="TEST-STATEMENT")
         stmt = Statement.from_instance(frame)
 
         self.assertIsInstance(stmt, TestStatement)
@@ -205,11 +207,14 @@ class StatementTestCase(unittest.TestCase):
 
 class AddFillerStatementTestCase(unittest.TestCase):
 
+    def setUp(self):
+        self.n = Network()
+        self.g = self.n.register("EXE")
+        Bootstrap.bootstrap_resource(self.n, "backend.resources", "exe.knowledge")
+
     def test_run(self):
-        network = Network()
-        graph = network.register(Statement.hierarchy())
-        addfiller = graph.register("TEST", isa="EXE.ADDFILLER-STATEMENT")
-        target = graph.register("TARGET")
+        addfiller = self.g.register("TEST", isa="EXE.ADDFILLER-STATEMENT")
+        target = self.g.register("TARGET")
 
         addfiller["TO"] = target
         addfiller["SLOT"] = Literal("X")
@@ -222,29 +227,25 @@ class AddFillerStatementTestCase(unittest.TestCase):
         self.assertTrue(target["X"] == [123, 123])
 
     def test_run_variable_to(self):
-        network = Network()
-        graph = network.register(Statement.hierarchy())
-        addfiller = graph.register("TEST", isa="EXE.ADDFILLER-STATEMENT")
-        target = graph.register("TARGET")
-        varmap = graph.register("VARMAP")
+        addfiller = self.g.register("TEST", isa="EXE.ADDFILLER-STATEMENT")
+        target = self.g.register("TARGET")
+        varmap = self.g.register("VARMAP")
 
         addfiller["TO"] = Literal("$VAR")
         addfiller["SLOT"] = Literal("X")
         addfiller["ADD"] = 123
 
         varmap = VariableMap(varmap)
-        Variable.instance(graph, "$VAR", target, varmap)
+        Variable.instance(self.g, "$VAR", target, varmap)
 
         Statement.from_instance(addfiller).run(StatementScope(), varmap)
         self.assertTrue(target["X"] == 123)
 
     def test_run_variable_value(self):
-        network = Network()
-        graph = network.register(Statement.hierarchy())
-        addfiller = graph.register("TEST", isa="EXE.ADDFILLER-STATEMENT")
-        target = graph.register("TARGET")
-        varmap = graph.register("VARMAP")
-        Variable.instance(graph, "MYVAR", 123, VariableMap(varmap))
+        addfiller = self.g.register("TEST", isa="EXE.ADDFILLER-STATEMENT")
+        target = self.g.register("TARGET")
+        varmap = self.g.register("VARMAP")
+        Variable.instance(self.g, "MYVAR", 123, VariableMap(varmap))
 
         addfiller["TO"] = target
         addfiller["SLOT"] = Literal("X")
@@ -259,13 +260,11 @@ class AddFillerStatementTestCase(unittest.TestCase):
             def run(self, scope: StatementScope(), varmap: VariableMap):
                 return 123
 
-        network = Network()
-        graph = network.register(Statement.hierarchy())
-        addfiller = graph.register("TEST", isa="EXE.ADDFILLER-STATEMENT")
-        target = graph.register("TARGET")
-        stmt = graph.register("TEST-STMT", isa="EXE.RETURNING-STATEMENT")
+        addfiller = self.g.register("TEST", isa="EXE.ADDFILLER-STATEMENT")
+        target = self.g.register("TARGET")
+        stmt = self.g.register("TEST-STMT", isa="EXE.RETURNING-STATEMENT")
 
-        graph["RETURNING-STATEMENT"]["CLASSMAP"] = Literal(TestStatement)
+        self.g["RETURNING-STATEMENT"]["CLASSMAP"] = Literal(TestStatement)
 
         addfiller["TO"] = target
         addfiller["SLOT"] = Literal("X")
@@ -277,11 +276,14 @@ class AddFillerStatementTestCase(unittest.TestCase):
 
 class AssignFillerStatementTestCase(unittest.TestCase):
 
+    def setUp(self):
+        self.n = Network()
+        self.g = self.n.register("EXE")
+        Bootstrap.bootstrap_resource(self.n, "backend.resources", "exe.knowledge")
+
     def test_run(self):
-        network = Network()
-        graph = network.register(Statement.hierarchy())
-        assignfiller = graph.register("TEST", isa="EXE.ASSIGNFILLER-STATEMENT")
-        target = graph.register("TARGET")
+        assignfiller = self.g.register("TEST", isa="EXE.ASSIGNFILLER-STATEMENT")
+        target = self.g.register("TARGET")
 
         assignfiller["TO"] = target
         assignfiller["SLOT"] = Literal("X")
@@ -296,29 +298,25 @@ class AssignFillerStatementTestCase(unittest.TestCase):
         self.assertTrue(target["X"] != 123)
 
     def test_run_variable_to(self):
-        network = Network()
-        graph = network.register(Statement.hierarchy())
-        assignfiller = graph.register("TEST", isa="EXE.ASSIGNFILLER-STATEMENT")
-        target = graph.register("TARGET")
-        varmap = graph.register("VARMAP")
+        assignfiller = self.g.register("TEST", isa="EXE.ASSIGNFILLER-STATEMENT")
+        target = self.g.register("TARGET")
+        varmap = self.g.register("VARMAP")
 
         assignfiller["TO"] = Literal("$VAR")
         assignfiller["SLOT"] = Literal("X")
         assignfiller["ASSIGN"] = 123
 
         varmap = VariableMap(varmap)
-        Variable.instance(graph, "$VAR", target, varmap)
+        Variable.instance(self.g, "$VAR", target, varmap)
 
         Statement.from_instance(assignfiller).run(StatementScope(), varmap)
         self.assertTrue(target["X"] == 123)
 
     def test_run_variable_value(self):
-        network = Network()
-        graph = network.register(Statement.hierarchy())
-        assignfiller = graph.register("TEST", isa="EXE.ASSIGNFILLER-STATEMENT")
-        target = graph.register("TARGET")
-        varmap = graph.register("VARMAP")
-        Variable.instance(graph, "MYVAR", 123, VariableMap(varmap))
+        assignfiller = self.g.register("TEST", isa="EXE.ASSIGNFILLER-STATEMENT")
+        target = self.g.register("TARGET")
+        varmap = self.g.register("VARMAP")
+        Variable.instance(self.g, "MYVAR", 123, VariableMap(varmap))
 
         assignfiller["TO"] = target
         assignfiller["SLOT"] = Literal("X")
@@ -333,13 +331,11 @@ class AssignFillerStatementTestCase(unittest.TestCase):
             def run(self, scope: StatementScope(), varmap: VariableMap):
                 return 123
 
-        network = Network()
-        graph = network.register(Statement.hierarchy())
-        assignfiller = graph.register("TEST", isa="EXE.ASSIGNFILLER-STATEMENT")
-        target = graph.register("TARGET")
-        stmt = graph.register("TEST-STMT", isa="EXE.RETURNING-STATEMENT")
+        assignfiller = self.g.register("TEST", isa="EXE.ASSIGNFILLER-STATEMENT")
+        target = self.g.register("TARGET")
+        stmt = self.g.register("TEST-STMT", isa="EXE.RETURNING-STATEMENT")
 
-        graph["RETURNING-STATEMENT"]["CLASSMAP"] = Literal(TestStatement)
+        self.g["RETURNING-STATEMENT"]["CLASSMAP"] = Literal(TestStatement)
 
         assignfiller["TO"] = target
         assignfiller["SLOT"] = Literal("X")
@@ -351,41 +347,38 @@ class AssignFillerStatementTestCase(unittest.TestCase):
 
 class AssignVariableStatementTestCase(unittest.TestCase):
 
-    def test_run_assign_literal(self):
-        network = Network()
-        graph = network.register(Statement.hierarchy())
+    def setUp(self):
+        self.n = Network()
+        self.g = self.n.register("EXE")
+        Bootstrap.bootstrap_resource(self.n, "backend.resources", "exe.knowledge")
 
-        assignvariable = graph.register("TEST", isa="EXE.ASSIGNVARIABLE-STATEMENT")
+    def test_run_assign_literal(self):
+        assignvariable = self.g.register("TEST", isa="EXE.ASSIGNVARIABLE-STATEMENT")
         assignvariable["TO"] = Literal("$var1")
         assignvariable["ASSIGN"] = 123
 
-        varmap = VariableMap(graph.register("VARMAP"))
+        varmap = VariableMap(self.g.register("VARMAP"))
         Statement.from_instance(assignvariable).run(StatementScope(), varmap)
         self.assertEqual(123, varmap.resolve("$var1"))
 
     def test_run_assign_frame(self):
-        network = Network()
-        graph = network.register(Statement.hierarchy())
-        target = graph.register("TARGET")
+        target = self.g.register("TARGET")
 
-        assignvariable = graph.register("TEST", isa="EXE.ASSIGNVARIABLE-STATEMENT")
+        assignvariable = self.g.register("TEST", isa="EXE.ASSIGNVARIABLE-STATEMENT")
         assignvariable["TO"] = Literal("$var1")
         assignvariable["ASSIGN"] = target
 
-        varmap = VariableMap(graph.register("VARMAP"))
+        varmap = VariableMap(self.g.register("VARMAP"))
         Statement.from_instance(assignvariable).run(StatementScope(), varmap)
         self.assertEqual(target, varmap.resolve("$var1"))
 
     def test_run_assign_variable(self):
-        network = Network()
-        graph = network.register(Statement.hierarchy())
-
-        assignvariable = graph.register("TEST", isa="EXE.ASSIGNVARIABLE-STATEMENT")
+        assignvariable = self.g.register("TEST", isa="EXE.ASSIGNVARIABLE-STATEMENT")
         assignvariable["TO"] = Literal("$var1")
         assignvariable["ASSIGN"] = Literal("$existing")
 
-        varmap = VariableMap(graph.register("VARMAP"))
-        Variable.instance(graph, "$existing", 123, varmap)
+        varmap = VariableMap(self.g.register("VARMAP"))
+        Variable.instance(self.g, "$existing", 123, varmap)
 
         Statement.from_instance(assignvariable).run(StatementScope(), varmap)
         self.assertEqual(123, varmap.resolve("$var1"))
@@ -398,43 +391,48 @@ class AssignVariableStatementTestCase(unittest.TestCase):
                 return 123
         MPRegistry.register(TestMP)
 
-        network = Network()
-        graph = network.register(Statement.hierarchy())
-
-        assignvariable = graph.register("TEST", isa="EXE.ASSIGNVARIABLE-STATEMENT")
-        varmap = VariableMap(graph.register("VARMAP"))
+        assignvariable = self.g.register("TEST", isa="EXE.ASSIGNVARIABLE-STATEMENT")
+        varmap = VariableMap(self.g.register("VARMAP"))
 
         assignvariable["TO"] = Literal("$var1")
-        assignvariable["ASSIGN"] = MeaningProcedureStatement.instance(graph, "TestMP", [])
+        assignvariable["ASSIGN"] = MeaningProcedureStatement.instance(self.g, "TestMP", [])
         Statement.from_instance(assignvariable).run(StatementScope(), varmap)
         self.assertEqual(123, varmap.resolve("$var1"))
 
         assignvariable["TO"] = Literal("$var2")
-        assignvariable["ASSIGN"] = ExistsStatement.instance(graph, Frame.q(network).id("EXE.TEST"))
+        assignvariable["ASSIGN"] = ExistsStatement.instance(self.g, Frame.q(self.n).id("EXE.TEST"))
         Statement.from_instance(assignvariable).run(StatementScope(), varmap)
         self.assertEqual(True, varmap.resolve("$var2"))
 
         assignvariable["TO"] = Literal("$var3")
-        assignvariable["ASSIGN"] = MakeInstanceStatement.instance(graph, graph._namespace, "EXE.TEST", [])
+        assignvariable["ASSIGN"] = MakeInstanceStatement.instance(self.g, self.g._namespace, "EXE.TEST", [])
         Statement.from_instance(assignvariable).run(StatementScope(), varmap)
-        self.assertEqual(graph["TEST.1"], varmap.resolve("$var3"))
+        self.assertEqual(self.g["TEST.1"], varmap.resolve("$var3"))
 
 
 class ExistsStatementTestCase(unittest.TestCase):
 
-    def test_run(self):
-        network = Network()
-        graph = network.register(Statement.hierarchy())
-        stmt = graph.register("TEST", isa="EXE.EXISTS-STATEMENT")
+    def setUp(self):
+        self.n = Network()
+        self.g = self.n.register("EXE")
+        Bootstrap.bootstrap_resource(self.n, "backend.resources", "exe.knowledge")
 
-        stmt["FIND"] = Query.parse(graph._network, "WHERE @ ^ EXE.EXISTS-STATEMENT")
+    def test_run(self):
+        stmt = self.g.register("TEST", isa="EXE.EXISTS-STATEMENT")
+
+        stmt["FIND"] = Query.parse(self.g._network, "WHERE @ ^ @EXE.EXISTS-STATEMENT")
         self.assertTrue(Statement.from_instance(stmt).run(StatementScope(), None))
 
-        stmt["FIND"] = Query.parse(graph._network, "WHERE abc=123")
+        stmt["FIND"] = Query.parse(self.g._network, "WHERE abc=123")
         self.assertFalse(Statement.from_instance(stmt).run(StatementScope(), None))
 
 
 class ForEachStatementTestCase(unittest.TestCase):
+
+    def setUp(self):
+        self.n = Network()
+        self.g = self.n.register("EXE")
+        Bootstrap.bootstrap_resource(self.n, "backend.resources", "exe.knowledge")
 
     def test_run(self):
 
@@ -443,23 +441,21 @@ class ForEachStatementTestCase(unittest.TestCase):
                 frame = varmap.resolve("$FOR")
                 frame["c"] = frame["a"][0].resolve().value + frame["b"][0].resolve().value
 
-        network = Network()
-        graph = network.register(Statement.hierarchy())
-        foreach = graph.register("TEST", isa="EXE.FOREACH-STATEMENT")
-        stmt = graph.register("TEST", isa="EXE.STATEMENT")
-        varmap = graph.register("VARMAP")
+        foreach = self.g.register("TEST", isa="EXE.FOREACH-STATEMENT")
+        stmt = self.g.register("TEST", isa="EXE.STATEMENT")
+        varmap = self.g.register("VARMAP")
 
-        target1 = graph.register("TARGET", generate_index=True)
-        target2 = graph.register("TARGET", generate_index=True)
+        target1 = self.g.register("TARGET", generate_index=True)
+        target2 = self.g.register("TARGET", generate_index=True)
 
         target1["a"] = 1
         target2["a"] = 1
         target1["b"] = 2
         target2["b"] = 3
 
-        graph["STATEMENT"]["CLASSMAP"] = Literal(TestStatement)
+        self.g["STATEMENT"]["CLASSMAP"] = Literal(TestStatement)
 
-        foreach["FROM"] = Query.parse(graph._network, "WHERE a = 1")
+        foreach["FROM"] = Query.parse(self.g._network, "WHERE a = 1")
         foreach["ASSIGN"] = Literal("$FOR")
         foreach["DO"] = stmt
 
@@ -471,11 +467,14 @@ class ForEachStatementTestCase(unittest.TestCase):
 
 class IsStatementTestCase(unittest.TestCase):
 
+    def setUp(self):
+        self.n = Network()
+        self.g = self.n.register("EXE")
+        Bootstrap.bootstrap_resource(self.n, "backend.resources", "exe.knowledge")
+
     def test_run(self):
-        network = Network()
-        graph = network.register(Statement.hierarchy())
-        stmt = graph.register("TEST", isa="EXE.IS-STATEMENT")
-        target = graph.register("TARGET")
+        stmt = self.g.register("TEST", isa="EXE.IS-STATEMENT")
+        target = self.g.register("TARGET")
 
         stmt["DOMAIN"] = target
         stmt["SLOT"] = Literal("X")
@@ -489,18 +488,16 @@ class IsStatementTestCase(unittest.TestCase):
         self.assertTrue(stmt.run(StatementScope(), None))
 
     def test_variable_domain(self):
-        network = Network()
-        graph = network.register(Statement.hierarchy())
-        stmt = graph.register("TEST", isa="EXE.IS-STATEMENT")
-        target = graph.register("TARGET")
-        varmap = graph.register("VARMAP")
+        stmt = self.g.register("TEST", isa="EXE.IS-STATEMENT")
+        target = self.g.register("TARGET")
+        varmap = self.g.register("VARMAP")
 
         stmt["DOMAIN"] = Literal("$VAR")
         stmt["SLOT"] = Literal("X")
         stmt["FILLER"] = 123
 
         varmap = VariableMap(varmap)
-        Variable.instance(graph, "$VAR", target, varmap)
+        Variable.instance(self.g, "$VAR", target, varmap)
 
         stmt = Statement.from_instance(stmt)
 
@@ -510,18 +507,16 @@ class IsStatementTestCase(unittest.TestCase):
         self.assertTrue(stmt.run(StatementScope(), varmap))
 
     def test_variable_filler(self):
-        network = Network()
-        graph = network.register(Statement.hierarchy())
-        stmt = graph.register("TEST", isa="EXE.IS-STATEMENT")
-        target = graph.register("TARGET")
-        varmap = graph.register("VARMAP")
+        stmt = self.g.register("TEST", isa="EXE.IS-STATEMENT")
+        target = self.g.register("TARGET")
+        varmap = self.g.register("VARMAP")
 
         stmt["DOMAIN"] = target
         stmt["SLOT"] = Literal("X")
         stmt["FILLER"] = Literal("$VAR")
 
         varmap = VariableMap(varmap)
-        Variable.instance(graph, "$VAR", 123, varmap)
+        Variable.instance(self.g, "$VAR", 123, varmap)
 
         stmt = Statement.from_instance(stmt)
 
@@ -533,11 +528,14 @@ class IsStatementTestCase(unittest.TestCase):
 
 class MakeInstanceStatementTestCase(unittest.TestCase):
 
+    def setUp(self):
+        self.n = Network()
+        self.g = self.n.register("EXE")
+        Bootstrap.bootstrap_resource(self.n, "backend.resources", "exe.knowledge")
+
     def test_run(self):
-        network = Network()
-        graph = network.register(Statement.hierarchy())
-        makeinstance = graph.register("TEST", isa="EXE.MAKEINSTANCE-STATEMENT")
-        target = graph.register("TARGET")
+        makeinstance = self.g.register("TEST", isa="EXE.MAKEINSTANCE-STATEMENT")
+        target = self.g.register("TARGET")
 
         makeinstance["IN"] = Literal("EXE")
         makeinstance["OF"] = target
@@ -546,21 +544,19 @@ class MakeInstanceStatementTestCase(unittest.TestCase):
         target["WITH"] = [Literal("$A"), Literal("$B"), Literal("$C")]
 
         instance = Statement.from_instance(makeinstance).run(StatementScope(), None)
-        self.assertTrue(instance.name() in graph)
+        self.assertTrue(instance.name() in self.g)
         self.assertEqual(VariableMap(instance).resolve("$A"), 1)
         self.assertEqual(VariableMap(instance).resolve("$B"), 2)
         self.assertEqual(VariableMap(instance).resolve("$C"), 3)
 
-        other = network.register("OTHER")
+        other = self.n.register("OTHER")
         makeinstance["IN"] = Literal("OTHER")
         instance = Statement.from_instance(makeinstance).run(StatementScope(), None)
         self.assertTrue(instance.name() in other)
 
     def test_raises_exception_on_mismatched_params(self):
-        network = Network()
-        graph = network.register(Statement.hierarchy())
-        makeinstance = graph.register("TEST", isa="EXE.MAKEINSTANCE-STATEMENT")
-        target = graph.register("TARGET")
+        makeinstance = self.g.register("TEST", isa="EXE.MAKEINSTANCE-STATEMENT")
+        target = self.g.register("TARGET")
 
         makeinstance["OF"] = target
         makeinstance["PARAMS"] = [1, 2, 3]
@@ -570,6 +566,11 @@ class MakeInstanceStatementTestCase(unittest.TestCase):
 
 
 class MeaningProcedureStatementTestCase(unittest.TestCase):
+
+    def setUp(self):
+        self.n = Network()
+        self.g = self.n.register("EXE")
+        Bootstrap.bootstrap_resource(self.n, "backend.resources", "exe.knowledge")
 
     def test_run(self):
         result = 0
@@ -585,9 +586,7 @@ class MeaningProcedureStatementTestCase(unittest.TestCase):
         from backend.models.mps import MPRegistry
         MPRegistry.register(TestMP)
 
-        network = Network()
-        graph = network.register(Statement.hierarchy())
-        mp = graph.register("TEST", isa="EXE.MP-STATEMENT")
+        mp = self.g.register("TEST", isa="EXE.MP-STATEMENT")
 
         mp["CALLS"] = Literal(TestMP.__name__)
         mp["PARAMS"] = [1, 2, 3]
@@ -611,17 +610,15 @@ class MeaningProcedureStatementTestCase(unittest.TestCase):
         from backend.models.mps import MPRegistry
         MPRegistry.register(TestMP)
 
-        network = Network()
-        graph = network.register(Statement.hierarchy())
-        mp = graph.register("TEST", isa="EXE.MP-STATEMENT")
-        varmap = graph.register("VARMAP")
+        mp = self.g.register("TEST", isa="EXE.MP-STATEMENT")
+        varmap = self.g.register("VARMAP")
 
         mp["CALLS"] = Literal(TestMP.__name__)
         mp["PARAMS"] = [1, 2, Literal("$var")]
         mp["X"] = 4
 
         varmap = VariableMap(varmap)
-        Variable.instance(graph, "$var", 3, varmap)
+        Variable.instance(self.g, "$var", 3, varmap)
 
         Statement.from_instance(mp).run(StatementScope(), varmap)
 
@@ -632,7 +629,8 @@ class OutputXMRStatementTestCase(unittest.TestCase):
 
     def setUp(self):
         self.n = Network()
-        self.g = self.n.register(Statement.hierarchy())
+        self.g = self.n.register("EXE")
+        Bootstrap.bootstrap_resource(self.n, "backend.resources", "exe.knowledge")
 
     def test_template(self):
         from backend.models.output import OutputXMRTemplate

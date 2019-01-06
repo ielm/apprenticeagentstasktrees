@@ -1,6 +1,6 @@
 from backend.models.graph import Graph, Frame
 from backend.utils.AtomicCounter import AtomicCounter
-from backend.models.agenda import Step, Action
+from backend.models.agenda import Step, Plan
 
 
 class ComplexTask(Graph):
@@ -81,7 +81,7 @@ class ComplexTask(Graph):
         """
         steps = self.steps()
 
-        plan = Action.build(self, self.name, Action.DEFAULT, steps)
+        plan = Plan.build(self, self.name, Plan.DEFAULT, steps)
 
         return plan
 

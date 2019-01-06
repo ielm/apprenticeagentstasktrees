@@ -94,6 +94,17 @@ class OutputXMRTemplate(object):
             except: pass
         return None
 
+    @classmethod
+    def list(cls, network: Network) -> List['OutputXMRTemplate']:
+        templates = []
+        for graph in network._storage.values():
+            try:
+                template = OutputXMRTemplate(graph)
+                if template.graph._namespace.startswith("XMR-TEMPLATE#") and template.anchor() is not None:
+                    templates.append(template)
+            except: pass
+        return templates
+
     def __init__(self, graph: Graph):
         self.graph = graph
 

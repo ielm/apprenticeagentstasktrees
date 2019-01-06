@@ -1,0 +1,329 @@
+[
+  {
+    "sentence": "Let's build a chair.",
+    "tmr": [
+      {
+        "sentence": "LET_US build a chair.",
+        "sent-num": 1,
+        "results": [
+          {
+            "words": {
+              "0": [
+                "LET_US",
+                "LET_US-V1"
+              ],
+              "1": [
+                "BUILD",
+                "BUILD-V1"
+              ],
+              "3": [
+                "CHAIR",
+                "CHAIR-N1"
+              ],
+              "4": [
+                ".",
+                ".-PUNCT1"
+              ]
+            },
+            "concept_counts": {
+              "REQUEST-ACTION": {
+                "count": 1,
+                "word-info": [
+                  [
+                    0,
+                    "top"
+                  ]
+                ]
+              },
+              "BUILD": {
+                "count": 1,
+                "word-info": [
+                  [
+                    1,
+                    "top"
+                  ]
+                ]
+              },
+              "CHAIR": {
+                "count": 1,
+                "word-info": [
+                  [
+                    3,
+                    "top"
+                  ]
+                ]
+              }
+            },
+            "TMR": {
+              "REQUEST-ACTION-1": {
+                "from-sense": "LET_US-V1",
+                "concept": "REQUEST-ACTION",
+                "sent-word-ind": [
+                  1,
+                  [
+                    0
+                  ]
+                ],
+                "token": "LET_US",
+                "AGENT": "HUMAN",
+                "BENEFICIARY": "ROBOT",
+                "THEME": "BUILD-1",
+                "TIME": [
+                  "FIND-ANCHOR-TIME"
+                ],
+                "is-in-subtree": "EVENT",
+                "preference": 4,
+                "THEME_constraint_info": {
+                  "match": "SEM",
+                  "matched_constraint": "ALL",
+                  "type": "onto",
+                  "orig_constr": {},
+                  "from_sense": "LET_US-V1",
+                  "variable": "^$VAR1",
+                  "from_word_num": 0
+                },
+                "sem-preference": 2
+              },
+              "BUILD-1": {
+                "from-sense": "BUILD-V1",
+                "concept": "BUILD",
+                "sent-word-ind": [
+                  1,
+                  [
+                    1
+                  ]
+                ],
+                "token": "build",
+                "AGENT": [
+                  "ROBOT",
+                  "HUMAN"
+                ],
+                "THEME": "CHAIR-1",
+                "TIME": [
+                  "FIND-ANCHOR-TIME"
+                ],
+                "is-in-subtree": "EVENT",
+                "preference": 3,
+                "THEME-OF": "REQUEST-ACTION-1",
+                "THEME_constraint_info": {
+                  "match": "SEM",
+                  "matched_constraint": "ARTIFACT",
+                  "type": "onto",
+                  "orig_constr": {},
+                  "from_sense": "BUILD-V1",
+                  "variable": "^$VAR2",
+                  "from_word_num": 1
+                },
+                "sem-preference": 2
+              },
+              "CHAIR-1": {
+                "from-sense": "CHAIR-N1",
+                "concept": "CHAIR",
+                "sent-word-ind": [
+                  1,
+                  [
+                    3
+                  ]
+                ],
+                "token": "chair",
+                "is-in-subtree": "OBJECT",
+                "preference": 2,
+                "THEME-OF": "BUILD-1",
+                "sem-preference": 0
+              },
+              "syntactic-score": 9,
+              "semantic-score": 4,
+              "baseline-semantic-score": 2,
+              "combined-score": 13
+            }
+          }
+        ],
+        "timestamp": "2018-Oct-15 15:29:00",
+        "candidatesBeforePrunning": 1,
+        "OriginalSentence": "Let us build a chair."
+      }
+    ],
+    "syntax": [
+      {
+        "basicDeps": [
+          [
+            "ROOT",
+            -1,
+            0
+          ],
+          [
+            "COMP",
+            0,
+            1
+          ],
+          [
+            "SUBJECT",
+            1,
+            0
+          ],
+          [
+            "DIRECTOBJECT",
+            1,
+            3
+          ],
+          [
+            "ART",
+            3,
+            2
+          ]
+        ],
+        "originalSentence": "Let us build a chair.",
+        "parse": "(ROOT (S (VP (V LET_US-0)) (VP (V BUILD-1) (NP (ART A-2) (N CHAIR-3))))) (. .-4)))",
+        "sentence": "LET_US build a chair.",
+        "0": {
+          "coref": [],
+          "lemma": "LET_US",
+          "ner": "O",
+          "offset": [
+            0,
+            6
+          ],
+          "pos": [
+            "V"
+          ],
+          "token": "LET_US",
+          "treatment-algorithm": "VERB-underscore-entry",
+          "use-entry": "LET_US"
+        },
+        "1": {
+          "coref": [],
+          "lemma": "BUILD",
+          "ner": "O",
+          "offset": [
+            7,
+            12
+          ],
+          "pos": [
+            "V",
+            "INFINITIVE"
+          ],
+          "token": "build"
+        },
+        "2": {
+          "coref": [],
+          "lemma": "A",
+          "ner": "O",
+          "offset": [
+            13,
+            14
+          ],
+          "pos": [
+            "ART"
+          ],
+          "token": "a"
+        },
+        "3": {
+          "coref": [],
+          "lemma": "CHAIR",
+          "ner": "O",
+          "offset": [
+            15,
+            20
+          ],
+          "pos": [
+            "N",
+            "SINGULAR"
+          ],
+          "token": "chair"
+        },
+        "4": {
+          "coref": [],
+          "lemma": ".",
+          "ner": "O",
+          "offset": [
+            20,
+            21
+          ],
+          "pos": [
+            "."
+          ],
+          "token": "."
+        },
+        "syn-map": [
+          [
+            [
+              "LET_US-V1",
+              {
+                "$VAR1": [
+                  1
+                ],
+                "$VAR2": [
+                  3,
+                  2,
+                  3
+                ],
+                "$VAR0": [
+                  0
+                ],
+                "preference": 4
+              }
+            ]
+          ],
+          [
+            [
+              "BUILD-V1",
+              {
+                "$VAR2": [
+                  3,
+                  2,
+                  3
+                ],
+                "$VAR1": null,
+                "$VAR3": null,
+                "$VAR4": null,
+                "$VAR0": [
+                  1
+                ],
+                "preference": 3
+              }
+            ]
+          ],
+          [
+            [
+              "A-ART800",
+              {
+                "$VAR1": [
+                  3,
+                  3,
+                  3
+                ],
+                "$VAR0": [
+                  2
+                ],
+                "preference": 4
+              }
+            ]
+          ],
+          [
+            [
+              "CHAIR-N1",
+              {
+                "$VAR0": [
+                  3
+                ],
+                "preference": 2
+              }
+            ]
+          ],
+          [
+            [
+              ".-PUNCT1",
+              {
+                "$VAR0": [
+                  4
+                ],
+                "preference": 2
+              }
+            ]
+          ]
+        ],
+        "syn-map_generator": "CSynmap"
+      }
+    ]
+  }
+]

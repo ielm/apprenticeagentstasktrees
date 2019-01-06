@@ -1,4 +1,5 @@
-from backend.models.agenda import Action, Agenda, Condition, Decision, Goal, Step, Trigger
+from backend.models.agenda import Agenda, Condition, Decision, Goal, Plan, Step, Trigger
+from backend.models.bootstrap import Bootstrap
 from backend.models.graph import Frame, Graph, Literal, Network
 from backend.models.statement import Statement, StatementScope, VariableMap
 
@@ -41,32 +42,32 @@ class AgendaTestCase(unittest.TestCase):
 
         self.assertEqual(agenda.goals(pending=True), [Goal(g1), Goal(g2)])
 
-    def test_prepare_action(self):
+    def test_prepare_plan(self):
         graph = Graph("TEST")
         f1 = graph.register("AGENDA.1")
-        a1 = graph.register("ACTION.1")
-        a2 = graph.register("ACTION.2")
+        a1 = graph.register("PLAN.1")
+        a2 = graph.register("PLAN.2")
 
         agenda = Agenda(f1)
 
-        agenda.prepare_action(a1)
-        self.assertEqual(len(f1["ACTION-TO-TAKE"]), 1)
-        self.assertEqual(f1["ACTION-TO-TAKE"][0].resolve(), a1)
+        agenda.prepare_plan(a1)
+        self.assertEqual(len(f1["PLAN-TO-TAKE"]), 1)
+        self.assertEqual(f1["PLAN-TO-TAKE"][0].resolve(), a1)
 
-        agenda.prepare_action(Action(a2))
-        self.assertEqual(len(f1["ACTION-TO-TAKE"]), 2)
-        self.assertEqual(f1["ACTION-TO-TAKE"][0].resolve(), a1)
-        self.assertEqual(f1["ACTION-TO-TAKE"][1].resolve(), a2)
+        agenda.prepare_plan(Plan(a2))
+        self.assertEqual(len(f1["PLAN-TO-TAKE"]), 2)
+        self.assertEqual(f1["PLAN-TO-TAKE"][0].resolve(), a1)
+        self.assertEqual(f1["PLAN-TO-TAKE"][1].resolve(), a2)
 
-    def test_action(self):
+    def test_plan(self):
         graph = Graph("TEST")
         f1 = graph.register("AGENDA.1")
-        a1 = graph.register("ACTION.1")
+        a1 = graph.register("PLAN.1")
 
-        f1["ACTION-TO-TAKE"] = a1
+        f1["PLAN-TO-TAKE"] = a1
 
         agenda = Agenda(f1)
-        self.assertEqual([a1], agenda.action())
+        self.assertEqual([a1], agenda.plan())
 
     def test_triggers(self):
         n = Network()
@@ -197,11 +198,11 @@ class GoalTestCase(unittest.TestCase):
         step1 = Step.build(g, 1, [])
         step2 = Step.build(g, 1, [])
 
-        action1 = Action.build(g, "test-action-1", Action.DEFAULT, [step1])
-        action2 = Action.build(g, "test-action-2", Action.DEFAULT, [step2])
+        plan1 = Plan.build(g, "test-plan-1", Plan.DEFAULT, [step1])
+        plan2 = Plan.build(g, "test-plan-2", Plan.DEFAULT, [step2])
 
         goal = g.register("GOAL.1")
-        goal["PLAN"] = [action1.frame, action2.frame]
+        goal["PLAN"] = [plan1.frame, plan2.frame]
 
         self.assertFalse(Goal(goal).executed())
 
@@ -224,7 +225,10 @@ class GoalTestCase(unittest.TestCase):
             def run(self, varmap: VariableMap, *args, **kwargs):
                 return 0.5
 
-        graph = Statement.hierarchy()
+        network = Network()
+        graph = network.register("EXE")
+        Bootstrap.bootstrap_resource(network, "backend.resources", "exe.knowledge")
+
         graph["RETURNING-STATEMENT"]["CLASSMAP"] = Literal(TestStatement)
         statement = graph.register("STATEMENT.1", isa="EXE.RETURNING-STATEMENT")
 
@@ -267,7 +271,10 @@ class GoalTestCase(unittest.TestCase):
             def run(self, varmap: VariableMap, *args, **kwargs):
                 return 0.5
 
-        graph = Statement.hierarchy()
+        network = Network()
+        graph = network.register("EXE")
+        Bootstrap.bootstrap_resource(network, "backend.resources", "exe.knowledge")
+
         graph["RETURNING-STATEMENT"]["CLASSMAP"] = Literal(TestStatement)
         statement = graph.register("STATEMENT.1", isa="EXE.RETURNING-STATEMENT")
 
@@ -315,14 +322,14 @@ class GoalTestCase(unittest.TestCase):
     def test_plan(self):
         graph = Graph("TEST")
         goal = graph.register("GOAL.1")
-        action1 = graph.register("ACTION.1")
-        action2 = graph.register("ACTION.2")
+        plan1 = graph.register("PLAN.1")
+        plan2 = graph.register("PLAN.2")
 
-        goal["PLAN"] = [action1, action2]
-        action2["SELECT"] = Literal(Action.DEFAULT)
+        goal["PLAN"] = [plan1, plan2]
+        plan2["SELECT"] = Literal(Plan.DEFAULT)
 
-        self.assertEqual(Goal(goal).plan(), action2)
-        self.assertIsInstance(Goal(goal).plan(), Action)
+        self.assertEqual(Goal(goal).plan(), plan2)
+        self.assertIsInstance(Goal(goal).plan(), Plan)
 
     def test_assess(self):
 
@@ -330,7 +337,10 @@ class GoalTestCase(unittest.TestCase):
             def run(self, varmap: VariableMap, *args, **kwargs):
                 return True
 
-        graph = Statement.hierarchy()
+        network = Network()
+        graph = network.register("EXE")
+        Bootstrap.bootstrap_resource(network, "backend.resources", "exe.knowledge")
+
         goal = graph.register("GOAL.1")
         condition1 = graph.register("CONDITION.1")
         condition2 = graph.register("CONDITION.2")
@@ -351,14 +361,14 @@ class GoalTestCase(unittest.TestCase):
     def test_instance_of(self):
         graph = Graph("TEST")
         definition = graph.register("GOAL-DEF")
-        action = graph.register("ACTION.1")
+        plan = graph.register("PLAN.1")
         condition = graph.register("CONDITION.1")
 
-        action["SELECT"] = Literal(Action.DEFAULT)
+        plan["SELECT"] = Literal(Plan.DEFAULT)
 
         definition["NAME"] = Literal("Test Goal")
         definition["PRIORITY"] = 0.5
-        definition["PLAN"] = action
+        definition["PLAN"] = plan
         definition["WHEN"] = condition
         definition["WITH"] = Literal("VAR_X")
 
@@ -367,7 +377,7 @@ class GoalTestCase(unittest.TestCase):
 
         self.assertEqual(goal.name(), "Test Goal")
         self.assertTrue(goal.frame["PRIORITY"] == 0.5)
-        self.assertTrue(goal.frame["PLAN"] == action)
+        self.assertTrue(goal.frame["PLAN"] == plan)
         self.assertTrue(goal.frame["WHEN"] == condition)
         self.assertTrue(goal.frame["WITH"] == "VAR_X")
         self.assertEqual(1, len(goal.frame["_WITH"]))
@@ -491,31 +501,32 @@ class TriggerTestCase(unittest.TestCase):
 
 class ConditionTestCase(unittest.TestCase):
 
+    def setUp(self):
+        self.n = Network()
+        self.g = self.n.register("EXE")
+        Bootstrap.bootstrap_resource(self.n, "backend.resources", "exe.knowledge")
+
     def test_order(self):
-        graph = Graph("TEST")
-        gc = graph.register("CONDITION.1")
+        gc = self.g.register("CONDITION.1")
         gc["ORDER"] = 1
 
         self.assertEqual(Condition(gc).order(), 1)
 
     def test_status(self):
-        graph = Graph("TEST")
-        gc = graph.register("GOAL-CONDITION.1")
+        gc = self.g.register("GOAL-CONDITION.1")
         gc["STATUS"] = Literal(Goal.Status.SATISFIED.name)
 
         self.assertEqual(Condition(gc).status(), Goal.Status.SATISFIED)
 
     def test_on(self):
-        graph = Graph("TEST")
-        gc = graph.register("GOAL-CONDITION.1")
+        gc = self.g.register("GOAL-CONDITION.1")
         gc["ON"] = Literal(Condition.On.EXECUTED)
 
         self.assertEqual(Condition(gc).on(), Condition.On.EXECUTED)
 
     def test_requires_boolean_statement(self):
-        graph = Statement.hierarchy()
-        c = graph.register("CONDITION.1")
-        b = graph.register("STATEMENT.1", isa="EXE.STATEMENT")
+        c = self.g.register("CONDITION.1")
+        b = self.g.register("STATEMENT.1", isa="EXE.STATEMENT")
 
         c["IF"] = b
 
@@ -523,15 +534,14 @@ class ConditionTestCase(unittest.TestCase):
             Condition(c)
 
     def test_assess_executed(self):
-        graph = Graph("TEST")
-        goal = graph.register("GOAL")
+        goal = self.g.register("GOAL")
 
-        condition = graph.register("CONDITION")
+        condition = self.g.register("CONDITION")
         condition["ON"] = Condition.On.EXECUTED
 
         self.assertFalse(Condition(condition).assess(VariableMap(goal)))
 
-        goal["PLAN"] = graph.register("PLAN")
+        goal["PLAN"] = self.g.register("PLAN")
 
         self.assertTrue(Condition(condition).assess(VariableMap(goal)))
 
@@ -541,10 +551,9 @@ class ConditionTestCase(unittest.TestCase):
             def run(self, scope: StatementScope,  varmap: VariableMap):
                 return True
 
-        graph = Statement.hierarchy()
-        c = graph.register("CONDITION.1")
-        b = graph.register("BOOLEAN-STATEMENT.1", isa="EXE.BOOLEAN-STATEMENT")
-        graph["BOOLEAN-STATEMENT"]["CLASSMAP"] = Literal(TestStatement)
+        c = self.g.register("CONDITION.1")
+        b = self.g.register("BOOLEAN-STATEMENT.1", isa="EXE.BOOLEAN-STATEMENT")
+        self.g["BOOLEAN-STATEMENT"]["CLASSMAP"] = Literal(TestStatement)
 
         c["IF"] = b
 
@@ -563,14 +572,13 @@ class ConditionTestCase(unittest.TestCase):
             def run(self, scope: StatementScope,  varmap: VariableMap):
                 return result2
 
-        graph = Statement.hierarchy()
-        c = graph.register("CONDITION.1")
-        graph.register("TEST-STATEMENT-A", isa="EXE.BOOLEAN-STATEMENT")
-        graph.register("TEST-STATEMENT-B", isa="EXE.BOOLEAN-STATEMENT")
-        b1 = graph.register("TEST-STATEMENT-A.1", isa="TEST-STATEMENT-A")
-        b2 = graph.register("TEST-STATEMENT-B.1", isa="TEST-STATEMENT-B")
-        graph["TEST-STATEMENT-A"]["CLASSMAP"] = Literal(TestStatement1)
-        graph["TEST-STATEMENT-B"]["CLASSMAP"] = Literal(TestStatement2)
+        c = self.g.register("CONDITION.1")
+        self.g.register("TEST-STATEMENT-A", isa="EXE.BOOLEAN-STATEMENT")
+        self.g.register("TEST-STATEMENT-B", isa="EXE.BOOLEAN-STATEMENT")
+        b1 = self.g.register("TEST-STATEMENT-A.1", isa="TEST-STATEMENT-A")
+        b2 = self.g.register("TEST-STATEMENT-B.1", isa="TEST-STATEMENT-B")
+        self.g["TEST-STATEMENT-A"]["CLASSMAP"] = Literal(TestStatement1)
+        self.g["TEST-STATEMENT-B"]["CLASSMAP"] = Literal(TestStatement2)
 
         c["IF"] = [b1, b2]
         c["LOGIC"] = Condition.Logic.AND
@@ -594,14 +602,13 @@ class ConditionTestCase(unittest.TestCase):
             def run(self, scope: StatementScope,  varmap: VariableMap):
                 return result2
 
-        graph = Statement.hierarchy()
-        c = graph.register("CONDITION.1")
-        graph.register("TEST-STATEMENT-A", isa="EXE.BOOLEAN-STATEMENT")
-        graph.register("TEST-STATEMENT-B", isa="EXE.BOOLEAN-STATEMENT")
-        b1 = graph.register("TEST-STATEMENT-A.1", isa="TEST-STATEMENT-A")
-        b2 = graph.register("TEST-STATEMENT-B.1", isa="TEST-STATEMENT-B")
-        graph["TEST-STATEMENT-A"]["CLASSMAP"] = Literal(TestStatement1)
-        graph["TEST-STATEMENT-B"]["CLASSMAP"] = Literal(TestStatement2)
+        c = self.g.register("CONDITION.1")
+        self.g.register("TEST-STATEMENT-A", isa="EXE.BOOLEAN-STATEMENT")
+        self.g.register("TEST-STATEMENT-B", isa="EXE.BOOLEAN-STATEMENT")
+        b1 = self.g.register("TEST-STATEMENT-A.1", isa="TEST-STATEMENT-A")
+        b2 = self.g.register("TEST-STATEMENT-B.1", isa="TEST-STATEMENT-B")
+        self.g["TEST-STATEMENT-A"]["CLASSMAP"] = Literal(TestStatement1)
+        self.g["TEST-STATEMENT-B"]["CLASSMAP"] = Literal(TestStatement2)
 
         c["IF"] = [b1, b2]
         c["LOGIC"] = Condition.Logic.OR
@@ -625,14 +632,13 @@ class ConditionTestCase(unittest.TestCase):
             def run(self, scope: StatementScope,  varmap: VariableMap):
                 return result2
 
-        graph = Statement.hierarchy()
-        c = graph.register("CONDITION.1")
-        graph.register("TEST-STATEMENT-A", isa="EXE.BOOLEAN-STATEMENT")
-        graph.register("TEST-STATEMENT-B", isa="EXE.BOOLEAN-STATEMENT")
-        b1 = graph.register("TEST-STATEMENT-A.1", isa="TEST-STATEMENT-A")
-        b2 = graph.register("TEST-STATEMENT-B.1", isa="TEST-STATEMENT-B")
-        graph["TEST-STATEMENT-A"]["CLASSMAP"] = Literal(TestStatement1)
-        graph["TEST-STATEMENT-B"]["CLASSMAP"] = Literal(TestStatement2)
+        c = self.g.register("CONDITION.1")
+        self.g.register("TEST-STATEMENT-A", isa="EXE.BOOLEAN-STATEMENT")
+        self.g.register("TEST-STATEMENT-B", isa="EXE.BOOLEAN-STATEMENT")
+        b1 = self.g.register("TEST-STATEMENT-A.1", isa="TEST-STATEMENT-A")
+        b2 = self.g.register("TEST-STATEMENT-B.1", isa="TEST-STATEMENT-B")
+        self.g["TEST-STATEMENT-A"]["CLASSMAP"] = Literal(TestStatement1)
+        self.g["TEST-STATEMENT-B"]["CLASSMAP"] = Literal(TestStatement2)
 
         c["IF"] = [b1, b2]
         c["LOGIC"] = Condition.Logic.NOR
@@ -661,14 +667,13 @@ class ConditionTestCase(unittest.TestCase):
             def run(self, scope: StatementScope,  varmap: VariableMap):
                 return result2
 
-        graph = Statement.hierarchy()
-        c = graph.register("CONDITION.1")
-        graph.register("TEST-STATEMENT-A", isa="EXE.BOOLEAN-STATEMENT")
-        graph.register("TEST-STATEMENT-B", isa="EXE.BOOLEAN-STATEMENT")
-        b1 = graph.register("TEST-STATEMENT-A.1", isa="TEST-STATEMENT-A")
-        b2 = graph.register("TEST-STATEMENT-B.1", isa="TEST-STATEMENT-B")
-        graph["TEST-STATEMENT-A"]["CLASSMAP"] = Literal(TestStatement1)
-        graph["TEST-STATEMENT-B"]["CLASSMAP"] = Literal(TestStatement2)
+        c = self.g.register("CONDITION.1")
+        self.g.register("TEST-STATEMENT-A", isa="EXE.BOOLEAN-STATEMENT")
+        self.g.register("TEST-STATEMENT-B", isa="EXE.BOOLEAN-STATEMENT")
+        b1 = self.g.register("TEST-STATEMENT-A.1", isa="TEST-STATEMENT-A")
+        b2 = self.g.register("TEST-STATEMENT-B.1", isa="TEST-STATEMENT-B")
+        self.g["TEST-STATEMENT-A"]["CLASSMAP"] = Literal(TestStatement1)
+        self.g["TEST-STATEMENT-B"]["CLASSMAP"] = Literal(TestStatement2)
 
         c["IF"] = [b1, b2]
         c["LOGIC"] = Condition.Logic.NAND
@@ -697,14 +702,13 @@ class ConditionTestCase(unittest.TestCase):
             def run(self, scope: StatementScope,  varmap: VariableMap):
                 return result2
 
-        graph = Statement.hierarchy()
-        c = graph.register("CONDITION.1")
-        graph.register("TEST-STATEMENT-A", isa="EXE.BOOLEAN-STATEMENT")
-        graph.register("TEST-STATEMENT-B", isa="EXE.BOOLEAN-STATEMENT")
-        b1 = graph.register("TEST-STATEMENT-A.1", isa="TEST-STATEMENT-A")
-        b2 = graph.register("TEST-STATEMENT-B.1", isa="TEST-STATEMENT-B")
-        graph["TEST-STATEMENT-A"]["CLASSMAP"] = Literal(TestStatement1)
-        graph["TEST-STATEMENT-B"]["CLASSMAP"] = Literal(TestStatement2)
+        c = self.g.register("CONDITION.1")
+        self.g.register("TEST-STATEMENT-A", isa="EXE.BOOLEAN-STATEMENT")
+        self.g.register("TEST-STATEMENT-B", isa="EXE.BOOLEAN-STATEMENT")
+        b1 = self.g.register("TEST-STATEMENT-A.1", isa="TEST-STATEMENT-A")
+        b2 = self.g.register("TEST-STATEMENT-B.1", isa="TEST-STATEMENT-B")
+        self.g["TEST-STATEMENT-A"]["CLASSMAP"] = Literal(TestStatement1)
+        self.g["TEST-STATEMENT-B"]["CLASSMAP"] = Literal(TestStatement2)
 
         c["IF"] = [b1, b2]
         c["LOGIC"] = Condition.Logic.NOT
@@ -722,8 +726,7 @@ class ConditionTestCase(unittest.TestCase):
         self.assertTrue(Condition(c).assess(None))
 
     def test_assess_no_conditions(self):
-        graph = Graph("TEST")
-        gc = graph.register("GOAL-CONDITION.1")
+        gc = self.g.register("GOAL-CONDITION.1")
         self.assertTrue(Condition(gc).assess(None))
 
     def test_assess_with_varmap(self):
@@ -732,12 +735,11 @@ class ConditionTestCase(unittest.TestCase):
             def run(self, scope: StatementScope,  varmap: VariableMap):
                 return varmap.resolve("X")
 
-        graph = Statement.hierarchy()
-        c = graph.register("CONDITION.1")
-        b = graph.register("BOOLEAN-STATEMENT.1", isa="EXE.BOOLEAN-STATEMENT")
-        graph["BOOLEAN-STATEMENT"]["CLASSMAP"] = Literal(TestStatement)
-        vm = graph.register("VARMAP.1")
-        v = graph.register("VARIABLE.1")
+        c = self.g.register("CONDITION.1")
+        b = self.g.register("BOOLEAN-STATEMENT.1", isa="EXE.BOOLEAN-STATEMENT")
+        self.g["BOOLEAN-STATEMENT"]["CLASSMAP"] = Literal(TestStatement)
+        vm = self.g.register("VARMAP.1")
+        v = self.g.register("VARIABLE.1")
 
         vm["WITH"] = Literal("X")
         vm["_WITH"] = v
@@ -749,16 +751,20 @@ class ConditionTestCase(unittest.TestCase):
         self.assertTrue(Condition(c).assess(VariableMap(vm)))
 
 
-class ActionTestCase(unittest.TestCase):
+class PlanTestCase(unittest.TestCase):
+
+    def setUp(self):
+        self.n = Network()
+        self.g = self.n.register("EXE")
 
     def test_name(self):
-        graph = Graph("TEST")
-        action = graph.register("ACTION.1")
-        action["NAME"] = Literal("Test Action")
+        plan = self.g.register("PLAN.1")
+        plan["NAME"] = Literal("Test Plan")
 
-        self.assertEqual(Action(action).name(), "Test Action")
+        self.assertEqual(Plan(plan).name(), "Test Plan")
 
     def test_select(self):
+        Bootstrap.bootstrap_resource(self.n, "backend.resources", "exe.knowledge")
 
         result = True
 
@@ -766,72 +772,68 @@ class ActionTestCase(unittest.TestCase):
             def run(self, varmap: VariableMap, *args, **kwargs):
                 return result
 
-        graph = Statement.hierarchy()
-        action = graph.register("ACTION.1")
-        statement = graph.register("BOOLEAN-STATEMENT.1", isa="EXE.BOOLEAN-STATEMENT")
+        plan = self.g.register("PLAN.1")
+        statement = self.g.register("BOOLEAN-STATEMENT.1", isa="EXE.BOOLEAN-STATEMENT")
 
-        action["SELECT"] = statement
-        graph["BOOLEAN-STATEMENT"]["CLASSMAP"] = Literal(TestStatement)
+        plan["SELECT"] = statement
+        self.g["BOOLEAN-STATEMENT"]["CLASSMAP"] = Literal(TestStatement)
 
-        self.assertTrue(Action(action).select(None))
+        self.assertTrue(Plan(plan).select(None))
 
         result = False
 
-        self.assertFalse(Action(action).select(None))
+        self.assertFalse(Plan(plan).select(None))
 
     def test_select_with_variable(self):
+        Bootstrap.bootstrap_resource(self.n, "backend.resources", "exe.knowledge")
 
         class TestStatement(Statement):
             def run(self, scope: StatementScope, varmap: VariableMap):
                 return varmap.resolve("X")
 
-        graph = Statement.hierarchy()
-        varmap = graph.register("VARMAP.1")
-        variable = graph.register("VARIABLE.1")
-        action = graph.register("ACTION.1")
-        statement = graph.register("BOOLEAN-STATEMENT.1", isa="EXE.BOOLEAN-STATEMENT")
+        varmap = self.g.register("VARMAP.1")
+        variable = self.g.register("VARIABLE.1")
+        plan = self.g.register("PLAN.1")
+        statement = self.g.register("BOOLEAN-STATEMENT.1", isa="EXE.BOOLEAN-STATEMENT")
 
         varmap["_WITH"] = variable
         variable["NAME"] = Literal("X")
         variable["VALUE"] = True
-        action["SELECT"] = statement
-        graph["BOOLEAN-STATEMENT"]["CLASSMAP"] = Literal(TestStatement)
+        plan["SELECT"] = statement
+        self.g["BOOLEAN-STATEMENT"]["CLASSMAP"] = Literal(TestStatement)
 
-        self.assertTrue(Action(action).select(VariableMap(varmap)))
+        self.assertTrue(Plan(plan).select(VariableMap(varmap)))
 
     def test_select_when_default(self):
-        graph = Statement.hierarchy()
-        action = graph.register("ACTION.1")
-        action["SELECT"] = Literal(Action.DEFAULT)
+        plan = self.g.register("PLAN.1")
+        plan["SELECT"] = Literal(Plan.DEFAULT)
 
-        self.assertTrue(Action(action).select(None))
+        self.assertTrue(Plan(plan).select(None))
 
     def test_is_default(self):
-        graph = Statement.hierarchy()
-        action = graph.register("ACTION.1")
+        plan = self.g.register("PLAN.1")
 
-        self.assertFalse(Action(action).is_default())
+        self.assertFalse(Plan(plan).is_default())
 
-        action["SELECT"] = Literal(Action.DEFAULT)
+        plan["SELECT"] = Literal(Plan.DEFAULT)
 
-        self.assertTrue(Action(action).is_default())
+        self.assertTrue(Plan(plan).is_default())
 
     def test_steps(self):
-        graph = Statement.hierarchy()
-        action = graph.register("ACTION.1")
+        plan = self.g.register("PLAN.1")
 
-        step1 = graph.register("STEP", generate_index=True)
-        step2 = graph.register("STEP", generate_index=True)
+        step1 = self.g.register("STEP", generate_index=True)
+        step2 = self.g.register("STEP", generate_index=True)
 
         step1["INDEX"] = 1
         step2["INDEX"] = 2
 
-        self.assertEqual([], Action(action).steps())
+        self.assertEqual([], Plan(plan).steps())
 
-        action["HAS-STEP"] += step2
-        action["HAS-STEP"] += step1
+        plan["HAS-STEP"] += step2
+        plan["HAS-STEP"] += step1
 
-        self.assertEqual([Step(step1), Step(step2)], Action(action).steps())
+        self.assertEqual([Step(step1), Step(step2)], Plan(plan).steps())
 
     def test_executed(self):
         g = Graph("TEST")
@@ -839,31 +841,33 @@ class ActionTestCase(unittest.TestCase):
         step1 = Step.build(g, 1, [])
         step2 = Step.build(g, 2, [])
 
-        action = Action.build(g, "test-action", Action.DEFAULT, [step1, step2])
+        plan = Plan.build(g, "test-plan", Plan.DEFAULT, [step1, step2])
 
-        self.assertFalse(action.executed())
+        self.assertFalse(plan.executed())
 
         step1.frame["STATUS"] = Step.Status.FINISHED
 
-        self.assertFalse(action.executed())
+        self.assertFalse(plan.executed())
 
         step2.frame["STATUS"] = Step.Status.FINISHED
 
-        self.assertTrue(action.executed())
+        self.assertTrue(plan.executed())
 
 
 class StepTestCase(unittest.TestCase):
 
+    def setUp(self):
+        self.n = Network()
+        self.g = self.n.register("EXE")
+
     def test_index(self):
-        graph = Graph("TEST")
-        step = graph.register("STEP")
+        step = self.g.register("STEP")
         step["INDEX"] = 1
 
         self.assertEqual(1, Step(step).index())
 
     def test_status(self):
-        graph = Graph("TEST")
-        step = graph.register("STEP")
+        step = self.g.register("STEP")
 
         step["STATUS"] = Step.Status.PENDING
         self.assertEqual(Step.Status.PENDING, Step(step).status())
@@ -876,6 +880,7 @@ class StepTestCase(unittest.TestCase):
         self.assertTrue(Step(step).is_finished())
 
     def test_perform(self):
+        Bootstrap.bootstrap_resource(self.n, "backend.resources", "exe.knowledge")
 
         out = []
 
@@ -884,41 +889,41 @@ class StepTestCase(unittest.TestCase):
                 nonlocal out
                 out.append(self.frame["LOCAL"][0].resolve().value)
 
-        graph = Statement.hierarchy()
-        step = graph.register("STEP")
-        statement1 = graph.register("STATEMENT", generate_index=True, isa="EXE.STATEMENT")
-        statement2 = graph.register("STATEMENT", generate_index=True, isa="EXE.STATEMENT")
+        step = self.g.register("STEP")
+        statement1 = self.g.register("STATEMENT", generate_index=True, isa="EXE.STATEMENT")
+        statement2 = self.g.register("STATEMENT", generate_index=True, isa="EXE.STATEMENT")
 
-        graph["STATEMENT"]["CLASSMAP"] = Literal(TestStatement)
+        self.g["STATEMENT"]["CLASSMAP"] = Literal(TestStatement)
         step["PERFORM"] = [statement1, statement2]
         statement1["LOCAL"] = Literal("X")
         statement2["LOCAL"] = Literal("Y")
 
-        Step(step).perform(VariableMap(graph.register("VARMAP")))
+        Step(step).perform(VariableMap(self.g.register("VARMAP")))
 
         self.assertEqual(out, ["X", "Y"])
 
     def test_perform_returns_outputs(self):
+        Bootstrap.bootstrap_resource(self.n, "backend.resources", "exe.knowledge")
 
         class TestStatement(Statement):
             def run(self, scope: StatementScope(), varmap: VariableMap):
                 scope.outputs.append(123)
 
-        graph = Statement.hierarchy()
+        agent = self.g.register("AGENT")
+        goal = self.g.register("GOAL")
+        plan = self.g.register("PLAN")
+        step = self.g.register("STEP")
 
-        agent = graph.register("AGENT")
-        goal = graph.register("GOAL")
-        action = graph.register("ACTION")
-        step = graph.register("STEP")
-
-        statement = graph.register("STATEMENT", generate_index=True, isa="EXE.STATEMENT")
-        graph["STATEMENT"]["CLASSMAP"] = Literal(TestStatement)
+        statement = self.g.register("STATEMENT", generate_index=True, isa="EXE.STATEMENT")
+        self.g["STATEMENT"]["CLASSMAP"] = Literal(TestStatement)
         step["PERFORM"] = [statement]
 
-        outputs = Step(step).perform(VariableMap(graph.register("VARMAP")))
+        outputs = Step(step).perform(VariableMap(self.g.register("VARMAP")))
         self.assertEqual([123], outputs)
 
     def test_perform_with_variables(self):
+        Bootstrap.bootstrap_resource(self.n, "backend.resources", "exe.knowledge")
+
         out = []
 
         class TestStatement(Statement):
@@ -926,13 +931,12 @@ class StepTestCase(unittest.TestCase):
                 nonlocal out
                 out.append(varmap.resolve("X"))
 
-        graph = Statement.hierarchy()
-        step = graph.register("STEP")
-        statement = graph.register("STATEMENT", generate_index=True, isa="EXE.STATEMENT")
-        varmap = graph.register("VARMAP")
-        variable = graph.register("VARIABLE")
+        step = self.g.register("STEP")
+        statement = self.g.register("STATEMENT", generate_index=True, isa="EXE.STATEMENT")
+        varmap = self.g.register("VARMAP")
+        variable = self.g.register("VARIABLE")
 
-        graph["STATEMENT"]["CLASSMAP"] = Literal(TestStatement)
+        self.g["STATEMENT"]["CLASSMAP"] = Literal(TestStatement)
         step["PERFORM"] = statement
         varmap["_WITH"] = variable
         variable["NAME"] = Literal("X")
@@ -943,11 +947,12 @@ class StepTestCase(unittest.TestCase):
         self.assertEqual(out, [123])
 
     def test_perform_idle(self):
-        graph = Statement.hierarchy()
-        step = graph.register("STEP")
+        Bootstrap.bootstrap_resource(self.n, "backend.resources", "exe.knowledge")
+
+        step = self.g.register("STEP")
         step["PERFORM"] = Literal(Step.IDLE)
 
-        Step(step).perform(VariableMap(graph.register("VARMAP")))
+        Step(step).perform(VariableMap(self.g.register("VARMAP")))
 
 
 class DecisionTestCase(unittest.TestCase):
@@ -1086,7 +1091,8 @@ class DecisionTestCase(unittest.TestCase):
         from backend.models.output import OutputXMRTemplate
         from backend.models.statement import OutputXMRStatement
 
-        self.n.register(Statement.hierarchy())
+        self.n.register("EXE")
+        Bootstrap.bootstrap_resource(self.n, "backend.resources", "exe.knowledge")
 
         agent = self.g.register("AGENT")
         capability = self.g.register("CAPABILITY")
@@ -1168,7 +1174,7 @@ class DecisionTestCase(unittest.TestCase):
                 out = True
 
         MPRegistry.register(TestMP)
-        capability = Capability.instance(self.g, "CAPABILITY", "TestMP")
+        capability = Capability.instance(self.g, "CAPABILITY", "TestMP", ["ONT.EVENT"])
         output = OutputXMR.build(self.g, OutputXMRTemplate.Type.PHYSICAL, capability, "OUTPUT-XMR")
 
         decision = Decision.build(self.g, "GOAL", "PLAN", "STEP")
@@ -1192,7 +1198,7 @@ class DecisionTestCase(unittest.TestCase):
             def run(self): pass
 
         MPRegistry.register(TestMP)
-        capability = Capability.instance(self.g, "CAPABILITY", "TestMP")
+        capability = Capability.instance(self.g, "CAPABILITY", "TestMP", ["ONT.EVENT"])
         output = OutputXMR.build(self.g, OutputXMRTemplate.Type.PHYSICAL, capability, "OUTPUT-XMR")
 
         decision = Decision.build(self.g, "GOAL", "PLAN", "STEP")
@@ -1217,7 +1223,7 @@ class DecisionTestCase(unittest.TestCase):
             def run(self): pass
 
         MPRegistry.register(TestMP)
-        capability = Capability.instance(self.g, "CAPABILITY", "TestMP")
+        capability = Capability.instance(self.g, "CAPABILITY", "TestMP", ["ONT.EVENT"])
         output = OutputXMR.build(self.g, OutputXMRTemplate.Type.PHYSICAL, capability, "OUTPUT-XMR")
 
         decision = Decision.build(self.g, "GOAL", "PLAN", "STEP")

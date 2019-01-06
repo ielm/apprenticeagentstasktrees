@@ -1,6 +1,7 @@
 from backend.models.graph import Filler, Frame, Graph, Identifier, Literal
 from backend.models.mps import MPRegistry
 from backend.models.query import Query
+from pydoc import locate
 from typing import Any, List, Union
 
 from typing import TYPE_CHECKING
@@ -123,82 +124,15 @@ class StatementScope(object):
         self.outputs: List[OutputXMR] = []
 
 
-class StatementHierarchy(object):
-
-    def __init__(self):
-        self._cache = None
-
-    def __call__(self, *args, **kwargs) -> Graph:
-        if self._cache is None:
-            self._cache = self.build()
-        return self._cache
-
-    def build(self) -> Graph:
-        '''
-        STATEMENT (hierarchy)
-            RETURNING-STATEMENT
-                BOOLEAN-STATEMENT
-                    EXISTS-STATEMENT
-                    IS-STATEMENT
-                MAKEINSTANCE-STATEMENT
-                QUERY-STATEMENT
-                SLOT-STATEMENT
-                MP-STATEMENT
-                OUTPUTXMR-STATEMENT
-            NONRETURNING-STATEMENT
-                FOREACH-STATEMENT
-                ADDFILLER-STATEMENT
-                ASSIGNFILLER-STATEMENT
-        '''
-
-        hierarchy = Graph("EXE")
-        hierarchy.register("STATEMENT")
-        hierarchy.register("RETURNING-STATEMENT", isa="EXE.STATEMENT")
-        hierarchy.register("BOOLEAN-STATEMENT", isa="EXE.RETURNING-STATEMENT")
-        hierarchy.register("EXISTS-STATEMENT", isa="EXE.BOOLEAN-STATEMENT")
-        hierarchy.register("IS-STATEMENT", isa="EXE.BOOLEAN-STATEMENT")
-        hierarchy.register("MAKEINSTANCE-STATEMENT", isa="EXE.RETURNING-STATEMENT")
-        hierarchy.register("QUERY-STATEMENT", isa="EXE.RETURNING-STATEMENT")
-        hierarchy.register("SLOT-STATEMENT", isa="EXE.RETURNING-STATEMENT")
-        hierarchy.register("MP-STATEMENT", isa="EXE.RETURNING-STATEMENT")
-        hierarchy.register("OUTPUTXMR-STATEMENT", isa="EXE.RETURNING-STATEMENT")
-        hierarchy.register("NONRETURNING-STATEMENT", isa="EXE.STATEMENT")
-        hierarchy.register("FOREACH-STATEMENT", isa="EXE.NONRETURNING-STATEMENT")
-        hierarchy.register("ADDFILLER-STATEMENT", isa="EXE.NONRETURNING-STATEMENT")
-        hierarchy.register("ASSIGNFILLER-STATEMENT", isa="EXE.NONRETURNING-STATEMENT")
-        hierarchy.register("ASSIGNVARIABLE-STATEMENT", isa="EXE.NONRETURNING-STATEMENT")
-
-        hierarchy["STATEMENT"]["CLASSMAP"] = Literal(Statement)
-        hierarchy["ADDFILLER-STATEMENT"]["CLASSMAP"] = Literal(AddFillerStatement)
-        hierarchy["ASSIGNFILLER-STATEMENT"]["CLASSMAP"] = Literal(AssignFillerStatement)
-        hierarchy["ASSIGNVARIABLE-STATEMENT"]["CLASSMAP"] = Literal(AssignVariableStatement)
-        hierarchy["EXISTS-STATEMENT"]["CLASSMAP"] = Literal(ExistsStatement)
-        hierarchy["FOREACH-STATEMENT"]["CLASSMAP"] = Literal(ForEachStatement)
-        hierarchy["IS-STATEMENT"]["CLASSMAP"] = Literal(IsStatement)
-        hierarchy["MAKEINSTANCE-STATEMENT"]["CLASSMAP"] = Literal(MakeInstanceStatement)
-        hierarchy["MP-STATEMENT"]["CLASSMAP"] = Literal(MeaningProcedureStatement)
-        hierarchy["OUTPUTXMR-STATEMENT"]["CLASSMAP"] = Literal(OutputXMRStatement)
-
-        return hierarchy
-
-    def concept_for_statement(self, statement: 'Statement'):
-        root: Frame = self()["STATEMENT"]
-        for frame in self():
-            if frame ^ root and frame["CLASSMAP"] == statement.__class__:
-                return frame
-        raise Exception("Unknown statement type: '" + str(statement.__class__) + "'.")
-
-
 class Statement(object):
-
-    @classmethod
-    def hierarchy(cls):
-        return StatementHierarchy().build()
 
     @classmethod
     def from_instance(cls, frame: Frame) -> 'Statement':
         definition = frame.parents()[0].resolve(frame._graph, network=frame._network)
-        return definition["CLASSMAP"][0].resolve().value(frame)
+        clazz = definition["CLASSMAP"][0].resolve().value
+        if isinstance(clazz, str):
+            clazz = locate(definition["CLASSMAP"][0].resolve().value)
+        return clazz(frame)
 
     def __init__(self, frame: Frame):
         self.frame = frame

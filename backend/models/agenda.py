@@ -44,17 +44,17 @@ class Agenda(object):
 
         self.frame["HAS-GOAL"] += goal
 
-    def prepare_action(self, action: Union['Action', Frame]):
-        if isinstance(action, Action):
-            action = action.frame
+    def prepare_plan(self, plan: Union['Plan', Frame]):
+        if isinstance(plan, Plan):
+            plan = plan.frame
 
-        self.frame["ACTION-TO-TAKE"] += action
+        self.frame["PLAN-TO-TAKE"] += plan
 
-    def action(self):
-        if "ACTION-TO-TAKE" not in self.frame:
+    def plan(self):
+        if "PLAN-TO-TAKE" not in self.frame:
             return []
 
-        return list(map(lambda a: Action(a.resolve()), self.frame["ACTION-TO-TAKE"]))
+        return list(map(lambda a: Plan(a.resolve()), self.frame["PLAN-TO-TAKE"]))
 
     def add_trigger(self, trigger: [str, Identifier, Frame, 'Trigger']):
         if isinstance(trigger, str):
@@ -83,7 +83,7 @@ class Goal(VariableMap):
         SATISFIED = 4
 
     @classmethod
-    def define(cls, graph: Graph, name: str, priority: Union[Statement, float], resources: Union[Statement, float], plan: List['Action'], conditions: List['Condition'], variables: List[str]):
+    def define(cls, graph: Graph, name: str, priority: Union[Statement, float], resources: Union[Statement, float], plan: List['Plan'], conditions: List['Condition'], variables: List[str]):
         frame = graph.register(name, generate_index=False)
         frame["NAME"] = Literal(name)
         frame["PRIORITY"] = priority
@@ -110,7 +110,7 @@ class Goal(VariableMap):
         frame["PRIORITY"] = definition["PRIORITY"]
         frame["RESOURCES"] = definition["RESOURCES"]
         frame["STATUS"] = Goal.Status.PENDING
-        frame["PLAN"] = list(map(lambda plan: Action.instance_of(graph, plan.resolve()).frame, definition["PLAN"]))  # definition["PLAN"]
+        frame["PLAN"] = list(map(lambda plan: Plan.instance_of(graph, plan.resolve()).frame, definition["PLAN"]))
         frame["WHEN"] = definition["WHEN"]
 
         super().instance_of(graph, definition, params, existing=frame)
@@ -226,15 +226,15 @@ class Goal(VariableMap):
             return self.frame["_DECISION"].singleton()
         return 0.0
 
-    def plan(self) -> 'Action':
+    def plan(self) -> 'Plan':
         for plan in self.frame["PLAN"]:
-            action = Action(plan.resolve())
-            if action.select(self):
-                return action
-        raise Exception("No action was selected in the plan.")
+            plan = Plan(plan.resolve())
+            if plan.select(self):
+                return plan
+        raise Exception("No plan was selected.")
 
-    def plans(self) -> List['Action']:
-        return list(map(lambda plan: Action(plan.resolve()), self.frame["PLAN"]))
+    def plans(self) -> List['Plan']:
+        return list(map(lambda plan: Plan(plan.resolve()), self.frame["PLAN"]))
 
     def __eq__(self, other):
         if isinstance(other, Goal):
@@ -253,8 +253,8 @@ class Goal(VariableMap):
         if self.frame["PLAN"] == other.frame["PLAN"]:
             return True
 
-        s1 = list(map(lambda frame: Action(frame.resolve()), self.frame["PLAN"]))
-        s2 = list(map(lambda frame: Action(frame.resolve()), other.frame["PLAN"]))
+        s1 = list(map(lambda frame: Plan(frame.resolve()), self.frame["PLAN"]))
+        s2 = list(map(lambda frame: Plan(frame.resolve()), other.frame["PLAN"]))
 
         return s1 == s2
 
@@ -268,7 +268,7 @@ class Goal(VariableMap):
         return s1 == s2
 
 
-class Action(object):
+class Plan(object):
 
     DEFAULT = "DEFAULT"
 
@@ -282,20 +282,20 @@ class Action(object):
             steps = [steps]
         steps = list(map(lambda s: s.frame if isinstance(s, Step) else s, steps))
 
-        frame = graph.register("ACTION", generate_index=True)
+        frame = graph.register("PLAN", generate_index=True)
         frame["NAME"] = Literal(name)
-        frame["SELECT"] = Literal(Action.DEFAULT) if select == Action.DEFAULT else select
+        frame["SELECT"] = Literal(Plan.DEFAULT) if select == Plan.DEFAULT else select
         frame["HAS-STEP"] = steps
 
-        return Action(frame)
+        return Plan(frame)
 
     @classmethod
-    def instance_of(cls, graph: Graph, plan: Union[Frame, 'Action']) -> 'Action':
+    def instance_of(cls, graph: Graph, plan: Union[Frame, 'Plan']) -> 'Plan':
 
         if isinstance(plan, Frame):
-            plan = Action(plan)
+            plan = Plan(plan)
 
-        return Action.build(graph, plan.name(), plan.frame["SELECT"].singleton(), list(map(lambda step: Step.instance_of(graph, step).frame, plan.steps())))
+        return Plan.build(graph, plan.name(), plan.frame["SELECT"].singleton(), list(map(lambda step: Step.instance_of(graph, step).frame, plan.steps())))
 
     def __init__(self, frame: Frame):
         self.frame = frame
@@ -317,7 +317,7 @@ class Action(object):
     def is_default(self):
         if "SELECT" in self.frame:
             select = self.frame["SELECT"].singleton()
-            if select == Action.DEFAULT:
+            if select == Plan.DEFAULT:
                 return True
         return False
 
@@ -333,7 +333,7 @@ class Action(object):
         return True
 
     def __eq__(self, other):
-        if isinstance(other, Action):
+        if isinstance(other, Plan):
             return (self.frame == other.frame) or (
                 self.frame["NAME"] == other.frame["NAME"] and
                 self.__eqSELECT(other) and
@@ -343,10 +343,10 @@ class Action(object):
             return self.frame == other
         return super().__eq__(other)
 
-    def __eqSELECT(self, other: 'Action'):
+    def __eqSELECT(self, other: 'Plan'):
         if self.frame["SELECT"] == other.frame["SELECT"]:
             return True
-        if self.frame["SELECT"] == Action.DEFAULT or other.frame["SELECT"] == Action.DEFAULT:
+        if self.frame["SELECT"] == Plan.DEFAULT or other.frame["SELECT"] == Plan.DEFAULT:
             return False
 
         s1 = list(map(lambda frame: Statement.from_instance(frame.resolve()), self.frame["SELECT"]))
@@ -354,7 +354,7 @@ class Action(object):
 
         return s1 == s2
 
-    def __eqSTEPS(self, other: 'Action'):
+    def __eqSTEPS(self, other: 'Plan'):
         if self.frame["HAS-STEP"] == other.frame["HAS-STEP"]:
             return True
         if len(self.frame["HAS-STEP"]) != len(other.frame["HAS-STEP"]):
@@ -428,7 +428,6 @@ class Step(object):
                 scope = StatementScope()
                 Statement.from_instance(statement).run(scope, varmap)
                 outputs.extend(scope.outputs)
-        # self.frame["STATUS"] = Step.Status.FINISHED
 
         return outputs
 
@@ -621,24 +620,25 @@ class Decision(object):
 
     '''
     EXE.DECISION = {
-      ISA           ^ONT.MENTAL-OBJECT
+      ISA           ^ONT.MENTAL-OBJECT;
       ON-GOAL       ^EXE.GOAL;
-      ON-PLAN       ^EXE.ACTION;
+      ON-PLAN       ^EXE.PLAN;
       ON-STEP       ^EXE.STEP;
       HAS-OUTPUT*   ^EXE.XMR;
       HAS-PRIORITY? Literal(dbl);
       HAS-COST?     Literal(dbl);
       REQUIRES*     ^EXE.CAPABILITY;
-      STATUS        Literal(str[PENDING | SELECTED | DECLINED | EXECUTING | FINISHED])
+      STATUS        Literal(str[PENDING | SELECTED | DECLINED | EXECUTING | FINISHED]);
+      HAS-EFFECTOR* ^EXE.EFFECTOR;
       HAS-CALLBACK* ^EXE.CALLBACK;
     }
     '''
 
     @classmethod
-    def build(cls, graph: Graph, goal: Union[str, Identifier, Frame, Goal], plan: Union[str, Identifier, Frame, Action], step: Union[str, Identifier, Frame, Step]) -> 'Decision':
+    def build(cls, graph: Graph, goal: Union[str, Identifier, Frame, Goal], plan: Union[str, Identifier, Frame, Plan], step: Union[str, Identifier, Frame, Step]) -> 'Decision':
         if isinstance(goal, Goal):
             goal = goal.frame
-        if isinstance(plan, Action):
+        if isinstance(plan, Plan):
             plan = plan.frame
         if isinstance(step, Step):
             step = step.frame
@@ -657,8 +657,8 @@ class Decision(object):
     def goal(self) -> Goal:
         return Goal(self.frame["ON-GOAL"].singleton())
 
-    def plan(self) -> Action:
-        return Action(self.frame["ON-PLAN"].singleton())
+    def plan(self) -> Plan:
+        return Plan(self.frame["ON-PLAN"].singleton())
 
     def step(self) -> Step:
         return Step(self.frame["ON-STEP"].singleton())

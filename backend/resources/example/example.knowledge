@@ -1,0 +1,92 @@
+@EXE.INIT-GOAL-CAPABILITY = {
+    ISA @EXE.CAPABILITY;
+    MP "init_goal_capability";
+    COVERS-EVENT @ONT.MENTAL-EVENT;
+};
+
+@EXE.FETCH-OBJECT-CAPABILITY = {
+    ISA @EXE.CAPABILITY;
+    MP "fetch_object_capability";
+    COVERS-EVENT @ONT.TAKE;
+};
+
+@SELF.MENTAL-EFFECTOR.1 = {
+    ISA @EXE.MENTAL-EFFECTOR;
+    HAS-CAPABILITY @EXE.INIT-GOAL-CAPABILITY;
+    STATUS "FREE";
+};
+
+@SELF.PHYSICAL-EFFECTOR.1 = {
+    ISA @EXE.PHYSICAL-EFFECTOR;
+    HAS-CAPABILITY @EXE.FETCH-OBJECT-CAPABILITY;
+    STATUS "FREE";
+};
+
+@SELF.ROBOT.1 += {
+    PRIORITY_WEIGHT 1.5;
+    RESOURCES_WEIGHT 0.25;
+    HAS-EFFECTOR @SELF.MENTAL-EFFECTOR.1;
+    HAS-EFFECTOR @SELF.PHYSICAL-EFFECTOR.1;
+};
+
+@ENV.SCREWDRIVER.1 = {
+    ISA @ONT.SCREWDRIVER;
+};
+
+DEFINE init-goal($definition) AS TEMPLATE
+    TYPE MENTAL
+    REQUIRES @EXE.INIT-GOAL-CAPABILITY
+    ROOT @OUT.INIT-GOAL.1
+    INCLUDE
+
+    @OUT.INIT-GOAL.1 = {
+        AGENT @SELF;
+        THEME $definition;
+    }
+;
+
+DEFINE fetch-object($object) AS TEMPLATE
+    TYPE PHYSICAL
+    REQUIRES @EXE.FETCH-OBJECT-CAPABILITY
+    ROOT @OUT.FETCH.1
+    INCLUDE
+
+    @OUT.FETCH.1 = {
+        AGENT @SELF;
+        THEME $object;
+    }
+;
+
+REGISTER MP backend.resources.example.ExampleMP.SelectGoalFromLanguageInput AS select_goal_from_language_input;
+REGISTER MP backend.resources.example.ExampleMP.InitGoalCapability AS init_goal_capability;
+REGISTER MP backend.resources.example.ExampleMP.SelectObjectOfType AS select_object_of_type;
+REGISTER MP backend.resources.example.ExampleMP.FetchObjectCapability AS fetch_object_capability;
+
+DEFINE ACKNOWLEDGE-LANGUAGE-INPUT($tmr)
+    AS GOAL
+    IN EXE
+    PRIORITY 0.5
+    RESOURCES 0.5
+    PLAN (acknowledge language input)
+        SELECT DEFAULT
+        STEP
+            DO $goal = SELF.select_goal_from_language_input($tmr)
+            DO $tmr[STATUS] = "ACKNOWLEDGED"
+            DO OUTPUT init-goal($goal) BY SELF
+    WHEN EXECUTED THEN satisfied
+;
+
+ADD TRIGGER TO @SELF.ROBOT.1 INSTANTIATE @EXE.ACKNOWLEDGE-LANGUAGE-INPUT WHEN (@ ^ @EXE.INPUT-TMR AND STATUS = "RECEIVED" and TYPE = "LANGUAGE");
+
+DEFINE BUILD-A-CHAIR()
+    AS GOAL
+    IN EXE
+    PRIORITY 0.5
+    RESOURCES 0.5
+    PLAN (as-taught-by-jake)
+        SELECT DEFAULT
+        STEP
+            DO $screwdriver = SELF.select_object_of_type(@ONT.SCREWDRIVER)
+            DO OUTPUT fetch-object($screwdriver) BY SELF
+    WHEN EXECUTED THEN satisfied
+;

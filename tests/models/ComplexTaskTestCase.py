@@ -1,7 +1,7 @@
 from backend.models.graph import Frame, Graph, Literal, Network
 from backend.agent import Agent
 from backend.models.ontology import Ontology
-from backend.models.agenda import Agenda, Goal, Action
+from backend.models.agenda import Agenda, Goal, Plan
 from backend.models.output import OutputXMR, OutputXMRTemplate
 from backend.models.bootstrap import Bootstrap
 from backend.models.task import ComplexTask, ActionableTask
