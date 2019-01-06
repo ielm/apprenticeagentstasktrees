@@ -28,12 +28,12 @@
 @EXE.FASTEN-CAPABILITY = {
     ISA @EXE.CAPABILITY;
     MP "fasten_physical_object";
-}
+};
 
 @EXE.RESTRAIN-CAPABILITY = {
     ISA @EXE.CAPABILITY;
     MP "restrain_physical_object"
-}
+};
 
 @EXE.LEARN-CAPABILITY = {
     ISA @EXE.CAPABILITY;

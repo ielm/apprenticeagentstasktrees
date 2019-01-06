@@ -54,8 +54,10 @@ class ComplexTask(Graph):
         return subtasks
 
     def step(self, step, index, statement=None):
-        # step = Step.build(self, index, step)
-        return
+        print("Step: ", step)
+        print("Type: ", type(step))
+        step = Step.build(self, index, step)
+        return step
 
     def steps(self):
         index = 0
@@ -63,9 +65,9 @@ class ComplexTask(Graph):
         steps = []
 
         for subtask in self.subtasks():
-            # s = self.step(subtask, index)
             # TODO - should Step.build["PERFORM"] be the MP or target goal?
-            s = Step.build(self, index, subtask)
+            s = self.step(subtask, index)
+            # s = Step.build(self, index, subtask)
             index += 1
             steps.append(s)
 

@@ -20,6 +20,8 @@ class ComplexTaskTestCase(unittest.TestCase):
         self.agent = Agent(ontology=Ontology.init_default())
 
         Bootstrap.bootstrap_resource(self.agent, "backend.resources", "chair.knowledge")
+        # Bootstrap.bootstrap_resource(self.agent, "backend.resources", "goals.aa")
+        Bootstrap.bootstrap_resource(self.agent, "backend.resources", "Templates.knowledge")
 
     def action(self):
         return self.agent.lt_memory["LT.BUILD.1"]
