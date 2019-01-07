@@ -290,6 +290,11 @@ class AgendaGrammarTestCase(unittest.TestCase):
         parsed = Grammar.parse(self.agent, "$var1 = EXISTS @ = @EXE.TEST.1", start="assign_variable_statement", agent=self.agent)
         self.assertEqual(statement, parsed)
 
+        statement = AssignVariableStatement.instance(self.g, "$var1", Literal([123, Literal("test"), Literal("$var2"), MeaningProcedureStatement.instance(self.g, "TestMP", [])]))
+        parsed = Grammar.parse(self.agent, "$var1 = [123, \"test\", $var2, SELF.TestMP()]", start="assign_variable_statement", agent=self.agent)
+        self.assertIsInstance(parsed.frame._storage["ASSIGN"]._storage[0]._value.value, list)
+        self.assertEqual(statement, parsed)
+
     def test_exists_statement(self):
         statement = ExistsStatement.instance(self.g, SlotQuery(self.agent, AndQuery(self.agent, [NameQuery(self.agent, "THEME"), FillerQuery(self.agent, LiteralQuery(self.agent, 123))])))
         parsed = Grammar.parse(self.agent, "EXISTS THEME = 123", start="exists_statement", agent=self.agent)
@@ -343,6 +348,16 @@ class AgendaGrammarTestCase(unittest.TestCase):
         query = SlotQuery(self.agent, AndQuery(self.agent, [NameQuery(self.agent, "THEME"), FillerQuery(self.agent, LiteralQuery(self.agent, 123))]))
         plan = Plan.build(self.g, "testplan", ExistsStatement.instance(self.g, query), Step.build(self.g, 1, Step.IDLE))
         parsed = Grammar.parse(self.agent, "PLAN (testplan) SELECT IF EXISTS THEME = 123 STEP DO IDLE", start="plan", agent=self.agent)
+        self.assertEqual(plan, parsed)
+
+        statement = MeaningProcedureStatement.instance(self.g, "mp1", ["$var1"])
+        plan = Plan.build(self.g, "testplan", statement, Step.build(self.g, 1, Step.IDLE))
+        parsed = Grammar.parse(self.agent, "PLAN (testplan) SELECT IF SELF.mp1($var1) STEP DO IDLE", start="plan", agent=self.agent)
+        self.assertEqual(plan, parsed)
+
+        statement = MeaningProcedureStatement.instance(self.g, "mp1", ["$var1"])
+        plan = Plan.build(self.g, "testplan", statement, Step.build(self.g, 1, Step.IDLE), negate=True)
+        parsed = Grammar.parse(self.agent, "PLAN (testplan) SELECT IF NOT SELF.mp1($var1) STEP DO IDLE", start="plan", agent=self.agent)
         self.assertEqual(plan, parsed)
 
         statement = MeaningProcedureStatement.instance(self.g, "mp1", [])

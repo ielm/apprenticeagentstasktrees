@@ -763,6 +763,15 @@ class PlanTestCase(unittest.TestCase):
 
         self.assertEqual(Plan(plan).name(), "Test Plan")
 
+    def test_is_negated(self):
+        plan = self.g.register("PLAN.1")
+
+        plan["NEGATE"] = False
+        self.assertFalse(Plan(plan).is_negated())
+
+        plan["NEGATE"] = True
+        self.assertTrue(Plan(plan).is_negated())
+
     def test_select(self):
         Bootstrap.bootstrap_resource(self.n, "backend.resources", "exe.knowledge")
 
@@ -784,6 +793,22 @@ class PlanTestCase(unittest.TestCase):
 
         self.assertFalse(Plan(plan).select(None))
 
+    def test_select_negated(self):
+        Bootstrap.bootstrap_resource(self.n, "backend.resources", "exe.knowledge")
+
+        class TestStatement(Statement):
+            def run(self, varmap: VariableMap, *args, **kwargs):
+                return True
+
+        self.g["BOOLEAN-STATEMENT"]["CLASSMAP"] = Literal(TestStatement)
+        statement = self.g.register("BOOLEAN-STATEMENT.1", isa="EXE.BOOLEAN-STATEMENT")
+
+        plan = Plan.build(self.g, "test", statement, [])
+        self.assertTrue(plan.select(None))
+
+        plan = Plan.build(self.g, "test", statement, [], negate=True)
+        self.assertFalse(plan.select(None))
+
     def test_select_with_variable(self):
         Bootstrap.bootstrap_resource(self.n, "backend.resources", "exe.knowledge")
 
@@ -803,6 +828,32 @@ class PlanTestCase(unittest.TestCase):
         self.g["BOOLEAN-STATEMENT"]["CLASSMAP"] = Literal(TestStatement)
 
         self.assertTrue(Plan(plan).select(VariableMap(varmap)))
+
+    def test_select_with_mp(self):
+        from backend.models.mps import AgentMethod
+        from backend.models.statement import MeaningProcedureStatement, MPRegistry
+
+        Bootstrap.bootstrap_resource(self.n, "backend.resources", "exe.knowledge")
+
+        class TestMP(AgentMethod):
+            def run(self, var1):
+                return var1
+
+        MPRegistry.register(TestMP)
+
+        mp_statement = MeaningProcedureStatement.instance(self.g, TestMP.__name__, ["$var1"])
+        plan = Plan.build(self.g, "X", mp_statement, [])
+
+        varmap = self.g.register("VARMAP.1")
+        variable = self.g.register("VARIABLE.1")
+        varmap["_WITH"] = variable
+        variable["NAME"] = Literal("$var1")
+
+        variable["VALUE"] = True
+        self.assertTrue(plan.select(VariableMap(varmap)))
+
+        variable["VALUE"] = False
+        self.assertFalse(plan.select(VariableMap(varmap)))
 
     def test_select_when_default(self):
         plan = self.g.register("PLAN.1")
