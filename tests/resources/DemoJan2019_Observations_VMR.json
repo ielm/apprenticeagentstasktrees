@@ -22,7 +22,7 @@
       }
     }
   },
-  "screwdriver moved to workspace": {
+  "Screwdriver location changes to workspace": {
     "ENVIRONMENT": {
       "_refers_to": "ENV",
       "timestamp": "...",
@@ -45,7 +45,7 @@
       }
     }
   },
-  "jake enters": {
+  "Jake enters": {
     "ENVIRONMENT": {
       "_refers_to": "ENV",
       "timestamp": "...",

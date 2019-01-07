@@ -153,7 +153,7 @@ class Jan2019Experiment(unittest.TestCase):
         agent.callback("SELF.CALLBACK.2")
 
         # 3b) Visual input "the screwdriver has been moved"
-        agent._input(self.observations()["screwdriver moved to workspace"], type=XMR.Type.VISUAL.name)
+        agent._input(self.observations()["Screwdriver location changes to workspace"], type=XMR.Type.VISUAL.name)
 
         # 3c) TEST: The screwdriver is "close" to the agent
         self.assertEqual(agent.environment["WORKSPACE.1"], agent.env().location("ENV.SCREWDRIVER.1"))
@@ -180,7 +180,7 @@ class Jan2019Experiment(unittest.TestCase):
         #######
 
         # 4a) Visual input "Jake returns"
-        agent._input(self.observations()["jake enters"], type=XMR.Type.VISUAL.name)
+        agent._input(self.observations()["Jake enters"], type=XMR.Type.VISUAL.name)
 
         # 4b) TEST: Jake is in the environment
         self.assertEqual(agent.ontology["LOCATION"], agent.env().location("ENV.HUMAN.1"))
@@ -242,7 +242,7 @@ class Jan2019Experiment(unittest.TestCase):
         self.assertFalse(Effector(agent.internal["VERBAL-EFFECTOR.1"]).is_free())
         self.assertEqual(agent.exe["SPEAK-CAPABILITY"], Effector(agent.internal["VERBAL-EFFECTOR.1"]).on_capability())
         self.assertEqual(agent.internal["XMR.12"], Effector(agent.internal["VERBAL-EFFECTOR.1"]).on_output())
-        self.assertEqual(agent.internal["XMR.6"], OutputXMR(agent.internal["XMR.12"]).graph(agent)["DESCRIBE.1"]["THEME"].singleton())
+        self.assertEqual(agent["XMR#3"]["FETCH.1"], OutputXMR(agent.internal["XMR.12"]).graph(agent)["DESCRIBE.1"]["THEME"].singleton())
 
         # 6g) TEST: BUILD-A-CHAIR is still "active"
         self.assertGoalExists(agent, isa="EXE.BUILD-A-CHAIR", status=Goal.Status.ACTIVE, query=lambda goal: goal.plans()[0].steps()[1].status() == Step.Status.PENDING)

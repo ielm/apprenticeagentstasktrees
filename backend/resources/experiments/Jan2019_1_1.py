@@ -146,6 +146,6 @@ class DetermineCurrentAction(AgentMethod):
 
         # TODO
         if len(decisions) > 0:
-            return decisions[0].outputs()[0]
+            return decisions[0].outputs()[0].root()
 
         return None

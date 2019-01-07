@@ -304,6 +304,8 @@ def iidea_input():
 
     if data["input"] == "Let's build a chair.":
         tmr = json.loads(get_data("tests.resources", "DemoJan2019_Analyses.json").decode('ascii'))[0]
+    elif data["input"] == "What are you doing?":
+        tmr = json.loads(get_data("tests.resources", "DemoJan2019_Analyses.json").decode('ascii'))[1]
     else:
         from backend.utils.YaleUtils import analyze
         tmr = analyze(data["input"])
