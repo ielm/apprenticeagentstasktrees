@@ -15,8 +15,6 @@ from unittest.mock import patch
 import json
 import unittest
 
-from backend.resources.experiments.Jan2019_1_1 import GetPhysicalObjectCapabilityMP, SpeakCapabilityMP
-
 
 class Jan2019Experiment(unittest.TestCase):
 
