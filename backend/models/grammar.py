@@ -407,6 +407,12 @@ class GrammarTransformer(Transformer):
             "LT": self.agent.lt_memory._namespace
         }[name]
 
+    def list(self, matches):
+        return [matches]
+
+    def list_element(self, matches):
+        return matches[0]
+
     # Views and querying
 
     def view(self, matches):
