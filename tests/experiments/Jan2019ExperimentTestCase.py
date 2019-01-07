@@ -139,7 +139,7 @@ class Jan2019Experiment(unittest.TestCase):
             agent.env().location("ENV.HUMAN.1")
 
         # 2c) IIDEA loop
-        mock = self.iidea_loop(agent)
+        self.iidea_loop(agent)
 
         # 2d) TEST: An instance of BUILD-A-CHAIR is in progress, with the first step waiting on the physical effector
         #     TEST: An instance of ACKNOWLEDGE-VISUAL-INPUT with the correct VMR was triggered, and executed (no effect)

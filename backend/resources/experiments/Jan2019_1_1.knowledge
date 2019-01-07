@@ -121,7 +121,7 @@
 
 // Define TEMPLATES ----------------
 
-DEFINE init-goal($definition) AS TEMPLATE
+DEFINE init-goal($definition, $params) AS TEMPLATE
     TYPE MENTAL
     REQUIRES @EXE.INIT-GOAL-CAPABILITY
     ROOT @OUT.INIT-GOAL.1
@@ -130,7 +130,7 @@ DEFINE init-goal($definition) AS TEMPLATE
     @OUT.INIT-GOAL.1 = {
         AGENT @SELF;
         THEME $definition;
-        PARAMS $$params;
+        PARAMS $params;
     }
 ;
 
@@ -151,6 +151,8 @@ DEFINE fetch-object($object) AS TEMPLATE
 REGISTER MP backend.resources.experiments.Jan2019_1_1.SelectGoalFromLanguageInput AS select_goal_from_language_input;
 REGISTER MP backend.resources.experiments.Jan2019_1_1.InitGoalCapability AS init_goal_capability;
 REGISTER MP backend.resources.experiments.Jan2019_1_1.FetchObjectCapability AS fetch_object_capability;
+REGISTER MP backend.resources.experiments.Jan2019_1_1.ShouldAcknowledgeVisualInput AS should_acknowledge_visual_input;
+REGISTER MP backend.resources.experiments.Jan2019_1_1.SelectGoalFromVisualInput AS select_goal_from_visual_input;
 
 DEFINE ACKNOWLEDGE-LANGUAGE-INPUT($tmr)
     AS GOAL
@@ -162,7 +164,8 @@ DEFINE ACKNOWLEDGE-LANGUAGE-INPUT($tmr)
         STEP
             DO $goal = SELF.select_goal_from_language_input($tmr)
             DO $tmr[STATUS] = "ACKNOWLEDGED"
-            DO OUTPUT init-goal($goal) BY SELF
+            DO $params = []
+            DO OUTPUT init-goal($goal, $params) BY SELF
     WHEN EXECUTED THEN satisfied
 ;
 
@@ -182,7 +185,8 @@ DEFINE ACKNOWLEDGE-VISUAL-INPUT($vmr)
         STEP
             DO $goal = SELF.select_goal_from_visual_input($vmr)
             DO $vmr[STATUS] = "ACKNOWLEDGED"
-            DO OUTPUT init-goal($goal, $$vmr) BY SELF
+            DO $params = [$vmr]
+            DO OUTPUT init-goal($goal, $params) BY SELF
     WHEN EXECUTED THEN satisfied
 ;
 
@@ -208,6 +212,18 @@ DEFINE BUILD-A-CHAIR()
             DO $dowel = @ENV.DOWEL.1
             DO OUTPUT fetch-object($dowel) BY SELF
     WHEN EXECUTED THEN satisfied
+;
+
+DEFINE GREET-HUMAN($vmr)
+    AS GOAL
+    IN EXE
+    PRIORITY 0.5
+    RESOURCES 0.5
+    PLAN (greet-normal)
+        SELECT DEFAULT
+        STEP
+            DO IDLE
+    WHEN EXECUTED THEN SATISFIED
 ;
 
 

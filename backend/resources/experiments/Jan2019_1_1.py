@@ -15,13 +15,17 @@ class InitGoalCapability(OutputMethod):
     def run(self):
         from backend.models.agenda import Goal
 
-        print("TODO: handle possible parameters")
+        params = []
+        try:
+            params = list(self.output.root()["PARAMS"])
+        except: pass
 
         definition = self.output.root()["THEME"].singleton()
-        goal = Goal.instance_of(self.agent.internal, definition, [])
+        goal = Goal.instance_of(self.agent.internal, definition, params)
         self.agent.agenda().add_goal(goal)
 
         self.agent.callback(self.callback)
+
 
 class FetchObjectCapability(OutputMethod):
     def run(self):
@@ -30,6 +34,74 @@ class FetchObjectCapability(OutputMethod):
         print("TODO: issue command to robot to fetch " + str(target))
 
 
+class ShouldAcknowledgeVisualInput(AgentMethod):
+    def run(self, input_vmr):
+        vmr = XMR(input_vmr).graph(self.agent)
+
+        if self._acknowledge_due_to_human_entering(vmr):
+            return True
+
+        return False
+
+    def _acknowledge_due_to_human_entering(self, vmr):
+        # 1) Check to see that there is at least a previous history
+        history = self.agent.env().history()
+        if len(history) < 2:
+            return False
+
+        # 2) Find all LOCATIONs with a DOMAIN of ONT.HUMAN
+        #    If that human is currently in the environment, AND was not previously in the environment, return True
+        for frame in vmr:
+            frame = vmr[frame]
+            if frame._identifier.name == "LOCATION":
+                domain = frame["DOMAIN"].singleton()
+                if domain ^ "ONT.HUMAN":
+                    try:
+                        # The agent is currently in the environment
+                        self.agent.env().location(domain)
+                    except:
+                        continue
+                    try:
+                        # The agent was not previously in the environment
+                        self.agent.env().location(domain, epoch=len(history) - 2)
+                    except:
+                        return True
+        return False
+
+
+class SelectGoalFromVisualInput(AgentMethod):
+    def run(self, input_vmr):
+        vmr = XMR(input_vmr).graph(self.agent)
+
+        if self._acknowledge_due_to_human_entering(vmr):
+            return self.agent.lookup("EXE.GREET-HUMAN")
+
+        return None
+
+    def _acknowledge_due_to_human_entering(self, vmr):
+        # 1) Check to see that there is at least a previous history
+        history = self.agent.env().history()
+        if len(history) < 2:
+            return False
+
+        # 2) Find all LOCATIONs with a DOMAIN of ONT.HUMAN
+        #    If that human is currently in the environment, AND was not previously in the environment, return True
+        for frame in vmr:
+            frame = vmr[frame]
+            if frame._identifier.name == "LOCATION":
+                domain = frame["DOMAIN"].singleton()
+                if domain ^ "ONT.HUMAN":
+                    try:
+                        # The agent is currently in the environment
+                        self.agent.env().location(domain)
+                    except:
+                        continue
+                    try:
+                        # The agent was not previously in the environment
+                        self.agent.env().location(domain, epoch=len(history) - 2)
+                    except:
+                        return True
+        return False
 
 
 ######################
