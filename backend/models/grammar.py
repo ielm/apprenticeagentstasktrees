@@ -213,23 +213,29 @@ class GrammarTransformer(Transformer):
     def plan(self, matches):
         from backend.models.agenda import Plan
         name = matches[1]
-        select = matches[2]
+        select, negate = matches[2]
         steps = matches[3:]
 
         for i, v in enumerate(steps):
             v.frame["INDEX"] = i + 1
 
-        return Plan.build(self.agent.exe, name, select, steps)
+        return Plan.build(self.agent.exe, name, select, steps, negate=negate)
 
     def plan_selection(self, matches):
         from backend.models.agenda import Plan
         select = matches[1]
+        negate = False
+
         if str(select) == "DEFAULT":
             select = Plan.DEFAULT
         elif str(select) == "IF":
-            select = matches[2]
+            if matches[2] == "NOT":
+                select = matches[3]
+                negate = True
+            else:
+                select = matches[2]
 
-        return select
+        return select, negate
 
     def plan_step(self, matches):
         from backend.models.agenda import Step

@@ -763,6 +763,15 @@ class PlanTestCase(unittest.TestCase):
 
         self.assertEqual(Plan(plan).name(), "Test Plan")
 
+    def test_is_negated(self):
+        plan = self.g.register("PLAN.1")
+
+        plan["NEGATE"] = False
+        self.assertFalse(Plan(plan).is_negated())
+
+        plan["NEGATE"] = True
+        self.assertTrue(Plan(plan).is_negated())
+
     def test_select(self):
         Bootstrap.bootstrap_resource(self.n, "backend.resources", "exe.knowledge")
 
@@ -783,6 +792,22 @@ class PlanTestCase(unittest.TestCase):
         result = False
 
         self.assertFalse(Plan(plan).select(None))
+
+    def test_select_negated(self):
+        Bootstrap.bootstrap_resource(self.n, "backend.resources", "exe.knowledge")
+
+        class TestStatement(Statement):
+            def run(self, varmap: VariableMap, *args, **kwargs):
+                return True
+
+        self.g["BOOLEAN-STATEMENT"]["CLASSMAP"] = Literal(TestStatement)
+        statement = self.g.register("BOOLEAN-STATEMENT.1", isa="EXE.BOOLEAN-STATEMENT")
+
+        plan = Plan.build(self.g, "test", statement, [])
+        self.assertTrue(plan.select(None))
+
+        plan = Plan.build(self.g, "test", statement, [], negate=True)
+        self.assertFalse(plan.select(None))
 
     def test_select_with_variable(self):
         Bootstrap.bootstrap_resource(self.n, "backend.resources", "exe.knowledge")

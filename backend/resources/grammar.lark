@@ -57,7 +57,7 @@ resources: (RESOURCES (double | mp_statement))?
 goal_status: (PENDING | ACTIVE | ABANDONED | SATISFIED)
 
 plan: PLAN "(" PLAN_NAME ")" plan_selection plan_step+
-plan_selection: SELECT (DEFAULT | IF (boolean_statement | mp_statement))
+plan_selection: SELECT (DEFAULT | IF NOT? (boolean_statement | mp_statement))
 plan_step: STEP plan_do+
 plan_do: DO (statement | IDLE)
 
