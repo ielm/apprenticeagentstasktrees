@@ -163,6 +163,23 @@ DEFINE greet-human($human) AS TEMPLATE
     }
 ;
 
+DEFINE describe-action($action) AS TEMPLATE
+    TYPE VERBAL
+    REQUIRES @EXE.SPEAK-CAPABILITY
+    ROOT @OUT.SPEECH-ACT.1
+    INCLUDE
+
+    @OUT.SPEECH-ACT.1 = {
+        AGENT @SELF;
+        THEME @OUT.DESCRIBE.1;
+    }
+
+    @OUT.DESCRIBE.1 = {
+        AGENT @SELF;
+        THEME $action;
+    }
+;
+
 // Define GOALS --------------------
 
 REGISTER MP backend.resources.experiments.Jan2019_1_1.SelectGoalFromLanguageInput AS select_goal_from_language_input;
@@ -172,6 +189,7 @@ REGISTER MP backend.resources.experiments.Jan2019_1_1.SpeakCapability AS speak_c
 REGISTER MP backend.resources.experiments.Jan2019_1_1.ShouldAcknowledgeVisualInput AS should_acknowledge_visual_input;
 REGISTER MP backend.resources.experiments.Jan2019_1_1.ShouldGreetHuman AS should_greet_human;
 REGISTER MP backend.resources.experiments.Jan2019_1_1.SelectHumanToGreet AS select_human_to_greet;
+REGISTER MP backend.resources.experiments.Jan2019_1_1.DetermineCurrentAction AS determine_current_action;
 
 DEFINE ACKNOWLEDGE-LANGUAGE-INPUT($tmr)
     AS GOAL
@@ -183,7 +201,7 @@ DEFINE ACKNOWLEDGE-LANGUAGE-INPUT($tmr)
         STEP
             DO $goal = SELF.select_goal_from_language_input($tmr)
             DO $tmr[STATUS] = "ACKNOWLEDGED"
-            DO $params = []
+            DO $params = [$tmr]
             DO OUTPUT init-goal($goal, $params) BY SELF
     WHEN EXECUTED THEN satisfied
 ;
@@ -222,11 +240,11 @@ DEFINE BUILD-A-CHAIR()
             DO $screwdriver = @ENV.SCREWDRIVER.1
             DO OUTPUT fetch-object($screwdriver) BY SELF
         STEP
-            DO $bracket = @ENV.BRACKET.1
-            DO OUTPUT fetch-object($bracket) BY SELF
+            DO $bracket1 = @ENV.BRACKET.1
+            DO OUTPUT fetch-object($bracket1) BY SELF
         STEP
-            DO $bracket = @ENV.BRACKET.2
-            DO OUTPUT fetch-object($bracket) BY SELF
+            DO $bracket2 = @ENV.BRACKET.2
+            DO OUTPUT fetch-object($bracket2) BY SELF
         STEP
             DO $dowel = @ENV.DOWEL.1
             DO OUTPUT fetch-object($dowel) BY SELF
@@ -242,6 +260,19 @@ DEFINE GREET-HUMAN($human)
         SELECT DEFAULT
         STEP
             DO OUTPUT greet-human($human) BY SELF
+    WHEN EXECUTED THEN SATISFIED
+;
+
+DEFINE RESPOND-TO-QUERY($tmr)
+    AS GOAL
+    IN EXE
+    PRIORITY 0.5
+    RESOURCES 0.5
+    PLAN (respond)
+        SELECT DEFAULT
+        STEP
+            DO $action = SELF.determine_current_action()
+            DO OUTPUT describe-action($action) BY SELF
     WHEN EXECUTED THEN SATISFIED
 ;
 
@@ -295,12 +326,7 @@ DEFINE DECIDE-ON-LANGUAGE-INPUT($tmr)
     // TODO - insert WHEN condition for goal satisfaction
     WHEN EXECUTED THEN satisfied
 ;
-DEFINE RESPOND-TO-QUERY($tmr)
-    AS GOAL
-    IN EXE
-    PRIORITY SELF.prioritize_learning($tmr)
-    RESOURCES SELF.evaluate_resources($tmr)
-;
+
 DEFINE PERFORM-COMPLEX-TASK($task)
     AS GOAL
     IN EXE

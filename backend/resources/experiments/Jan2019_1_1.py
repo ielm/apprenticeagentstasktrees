@@ -7,6 +7,10 @@ from backend.models.effectors import Capability
 
 class SelectGoalFromLanguageInput(AgentMethod):
     def run(self, input_tmr):
+        tmr = XMR(input_tmr).graph(self.agent)
+        if len(tmr.search(Frame.q(self.agent).isa("ONT.REQUEST-INFO"))) > 0:
+            return self.agent.lookup("EXE.RESPOND-TO-QUERY")
+
         print("TODO: choose a goal intelligently")
         return self.agent.lookup("EXE.BUILD-A-CHAIR")
 
@@ -129,6 +133,20 @@ class SelectHumanToGreet(AgentMethod):
                         self.agent.env().location(domain, epoch=len(history) - 2)
                     except:
                         return domain
+
+        return None
+
+
+class DetermineCurrentAction(AgentMethod):
+    def run(self):
+        from backend.models.agenda import Decision
+
+        decisions = self.agent.decisions()
+        decisions = list(filter(lambda d: d.status() == Decision.Status.EXECUTING, decisions))
+
+        # TODO
+        if len(decisions) > 0:
+            return decisions[0].outputs()[0]
 
         return None
 

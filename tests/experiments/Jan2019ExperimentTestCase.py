@@ -172,7 +172,7 @@ class Jan2019Experiment(unittest.TestCase):
         # 3f) IIDEA loop
         self.iidea_loop(agent)
 
-        # 3g) TEST: An instance of BUILD-A-CHAIR is in progress, with the first second waiting on the physical effector
+        # 3g) TEST: An instance of BUILD-A-CHAIR is in progress, with the second step waiting on the physical effector
         self.assertGoalExists(agent, isa="EXE.BUILD-A-CHAIR", status=Goal.Status.ACTIVE, query=lambda goal: goal.plans()[0].steps()[1].status() == Step.Status.PENDING)
         self.assertFalse(Effector(agent.internal["PHYSICAL-EFFECTOR.1"]).is_free())
         self.assertEqual(agent.exe["FETCH-OBJECT-CAPABILITY"], Effector(agent.internal["PHYSICAL-EFFECTOR.1"]).on_capability())
@@ -205,19 +205,22 @@ class Jan2019Experiment(unittest.TestCase):
         self.assertEqual(agent.internal["XMR.9"], Effector(agent.internal["VERBAL-EFFECTOR.1"]).on_output())
         self.assertEqual(agent.environment["HUMAN.1"], OutputXMR(agent.internal["XMR.9"]).graph(agent)["GREET.1"]["THEME"].singleton())
 
-        fail()
+        #######
 
         # 5a) Callback input capability SPEAK("Hi Jake.") is complete
-        agent.callback("SELF.CALLBACK.3")
+        agent.callback("SELF.CALLBACK.5")
 
         # 5b) IIDEA loop
         self.iidea_loop(agent)
 
-        # 5c) TEST: ACKNOWLEDGE-HUMAN is "satisfied"
-        self.assertTrue(Goal(agent.internal["ACKNOWLEDGE-HUMAN.1"]).is_satisfied())
+        # 5c) TEST: GREET-HUMAN is "satisfied"
+        self.assertGoalExists(agent, isa="EXE.GREET-HUMAN", status=Goal.Status.SATISFIED, query=lambda goal: goal.resolve("$human") == agent.environment["HUMAN.1"])
+        self.assertTrue(Effector(agent.internal["VERBAL-EFFECTOR.1"]).is_free())
 
-        # 5d) TEST: PERFORM-COMPLEX-TASK is still "active"
-        self.assertTrue(Goal(agent.internal["PERFORM-COMPLEX-TASK.1"]).is_active())
+        # 5d) TEST: BUILD-A-CHAIR is still "active"
+        self.assertGoalExists(agent, isa="EXE.BUILD-A-CHAIR", status=Goal.Status.ACTIVE, query=lambda goal: goal.plans()[0].steps()[1].status() == Step.Status.PENDING)
+
+        #######
 
         # 6a) Input from "Jake", "What are you doing?"
         agent._input(self.analyses()[1], source="LT.HUMAN.1")
@@ -225,61 +228,61 @@ class Jan2019Experiment(unittest.TestCase):
         # 6b) IIDEA loop
         self.iidea_loop(agent)
 
-        # 6c) TEST: An instance of ACKNOWLEDGE-INPUT with the correct TMR is on the agenda
-        self.assertGoalExists(agent, isa="EXE.ACKNOWLEDGE-INPUT", status=Goal.Status.PENDING, query=lambda goal: XMR(goal.resolve("$tmr")).graph(agent) == agent["TMR#2"])
+        # 6c) TEST: An instance of ACKNOWLEDGE-LANGUAGE-INPUT with the correct TMR was triggered and executed
+        #     TEST: An instance of RESPOND-TO-QUERY with the correct TMR is pending on the agenda
+        self.assertGoalExists(agent, isa="EXE.ACKNOWLEDGE-LANGUAGE-INPUT", status=Goal.Status.SATISFIED, query=lambda goal: goal.resolve("$tmr")["REFERS-TO-GRAPH"].singleton() == "TMR#2")
+        self.assertGoalExists(agent, isa="EXE.RESPOND-TO-QUERY", status=Goal.Status.PENDING, query=lambda goal: goal.resolve("$tmr")["REFERS-TO-GRAPH"].singleton() == "TMR#2")
 
-        # 6d) TEST: PERFORM-COMPLEX-TASK is still "active"
-        self.assertTrue(Goal(agent.internal["PERFORM-COMPLEX-TASK.1"]).is_active())
+        # 6d) TEST: BUILD-A-CHAIR is still "active"
+        self.assertGoalExists(agent, isa="EXE.BUILD-A-CHAIR", status=Goal.Status.ACTIVE, query=lambda goal: goal.plans()[0].steps()[1].status() == Step.Status.PENDING)
 
         # 6e) IIDEA loop
         self.iidea_loop(agent)
 
-        # 6f) TEST: An instance of DECIDE-ON-LANGUAGE-INPUT with the correct TMR is on the agenda
-        self.assertGoalExists(agent, isa="EXE.DECIDE-ON-LANGUAGE-INPUT", status=Goal.Status.PENDING, query=lambda goal: XMR(goal.resolve("$tmr")).graph(agent) == "TMR#2")
+        # 6f) TEST: An instance of RESPOND-TO-QUERY is running, with an output XMR with the correct verbal response
+        self.assertGoalExists(agent, isa="EXE.RESPOND-TO-QUERY", status=Goal.Status.ACTIVE, query=lambda goal: goal.resolve("$tmr")["REFERS-TO-GRAPH"].singleton() == "TMR#2")
+        self.assertFalse(Effector(agent.internal["VERBAL-EFFECTOR.1"]).is_free())
+        self.assertEqual(agent.exe["SPEAK-CAPABILITY"], Effector(agent.internal["VERBAL-EFFECTOR.1"]).on_capability())
+        self.assertEqual(agent.internal["XMR.12"], Effector(agent.internal["VERBAL-EFFECTOR.1"]).on_output())
+        self.assertEqual(agent.internal["XMR.6"], OutputXMR(agent.internal["XMR.12"]).graph(agent)["DESCRIBE.1"]["THEME"].singleton())
 
-        # 6g) TEST: PERFORM-COMPLEX-TASK is still "active"
-        self.assertTrue(Goal(agent.internal["PERFORM-COMPLEX-TASK.1"]).is_active())
+        # 6g) TEST: BUILD-A-CHAIR is still "active"
+        self.assertGoalExists(agent, isa="EXE.BUILD-A-CHAIR", status=Goal.Status.ACTIVE, query=lambda goal: goal.plans()[0].steps()[1].status() == Step.Status.PENDING)
 
-        # 6h) IIDEA loop
-        self.iidea_loop(agent)
-
-        # 6i) TEST: An instance of RESPOND-TO-QUERY with the correct TMR is on the agenda
-        self.assertGoalExists(agent, isa="EXE.RESPOND-TO-QUERY", status=Goal.Status.PENDING, query=lambda goal: XMR(goal.resolve("$tmr")).graph(agent) == "TMR#2")
-
-        # 6j) TEST: PERFORM-COMPLEX-TASK is still "active"
-        self.assertTrue(Goal(agent.internal["PERFORM-COMPLEX-TASK.1"]).is_active())
-
-        # 6k) IIDEA loop
-        mock = self.iidea_loop(agent, mock=SpeakCapabilityMP)
-
-        # 6l) TEST: The only VERBAL-EFFECTOR is reserved to RESPOND-TO-QUERY (using capability SPEAK("I am fetching a foot bracket."))
-        self.assertEffectorReserved(agent, "SELF.VERBAL-EFFECTOR.1", "SELF.RESPOND-TO-QUERY.1", "EXE.SPEAK-CAPABILITY")
-        mock.assert_called_once_with("I am fetching a foot bracket.")
-
-        # 6m) TEST: PERFORM-COMPLEX-TASK is still "active"
-        self.assertTrue(Goal(agent.internal["PERFORM-COMPLEX-TASK.1"]).is_active())
+        #######
 
         # 7a) Callback input capability SPEAK("I am fetching a foot bracket.") is complete
-        agent.callback("SELF.CALLBACK.4")
+        agent.callback("SELF.CALLBACK.7")
 
         # 7b) IIDEA loop
         self.iidea_loop(agent)
 
         # 7c) TEST: RESPOND-TO-QUERY is "satisfied"
-        self.assertTrue(Goal(agent.internal["RESPOND-TO-QUERY.1"]).is_satisfied())
+        self.assertGoalExists(agent, isa="EXE.RESPOND-TO-QUERY", status=Goal.Status.SATISFIED, query=lambda goal: goal.resolve("$tmr")["REFERS-TO-GRAPH"].singleton() == "TMR#2")
+        self.assertTrue(Effector(agent.internal["VERBAL-EFFECTOR.1"]).is_free())
 
-        # 7d) TEST: PERFORM-COMPLEX-TASK is still "active"
-        self.assertTrue(Goal(agent.internal["PERFORM-COMPLEX-TASK.1"]).is_active())
+        # 7d) TEST: BUILD-A-CHAIR is still "active"
+        self.assertGoalExists(agent, isa="EXE.BUILD-A-CHAIR", status=Goal.Status.ACTIVE, query=lambda goal: goal.plans()[0].steps()[1].status() == Step.Status.PENDING)
+
+        #######
 
         # 8a) Callback input capability GET(foot_bracket)
-        agent.callback("SELF.CALLBACK.2")
+        agent.callback("SELF.CALLBACK.3")
 
         # 8b) IIDEA loop
         self.iidea_loop(agent)
 
-        # 8c) TEST: The PHYSICAL-EFFECTOR is released
-        self.assertTrue(Effector(agent.internal["PHYSICAL-EFFECTOR.1"]).is_free())
+        # 8c) TEST: An instance of BUILD-A-CHAIR is in progress, with the second step finished
+        self.assertGoalExists(agent, isa="EXE.BUILD-A-CHAIR", status=Goal.Status.ACTIVE, query=lambda goal: goal.plans()[0].steps()[0].status() == Step.Status.FINISHED)
+        self.assertGoalExists(agent, isa="EXE.BUILD-A-CHAIR", status=Goal.Status.ACTIVE, query=lambda goal: goal.plans()[0].steps()[1].status() == Step.Status.FINISHED)
+        self.assertGoalExists(agent, isa="EXE.BUILD-A-CHAIR", status=Goal.Status.ACTIVE, query=lambda goal: goal.plans()[0].steps()[2].status() == Step.Status.PENDING)
 
-        # 8d) TEST: PERFORM-COMPLEX-TASK is still "active" (the chair is not yet built)
-        self.assertTrue(Goal(agent.internal["PERFORM-COMPLEX-TASK.1"]).is_active())
+        # 8d) IIDEA loop
+        self.iidea_loop(agent)
 
+        # 8e) TEST: An instance of BUILD-A-CHAIR is in progress, with the third step waiting on the physical effector
+        self.assertGoalExists(agent, isa="EXE.BUILD-A-CHAIR", status=Goal.Status.ACTIVE, query=lambda goal: goal.plans()[0].steps()[2].status() == Step.Status.PENDING)
+        self.assertFalse(Effector(agent.internal["PHYSICAL-EFFECTOR.1"]).is_free())
+        self.assertEqual(agent.exe["FETCH-OBJECT-CAPABILITY"], Effector(agent.internal["PHYSICAL-EFFECTOR.1"]).on_capability())
+        self.assertEqual(agent.internal["XMR.13"], Effector(agent.internal["PHYSICAL-EFFECTOR.1"]).on_output())
+        self.assertEqual(agent.environment["BRACKET.2"], OutputXMR(agent.internal["XMR.13"]).graph(agent)["FETCH.1"]["THEME"].singleton())
