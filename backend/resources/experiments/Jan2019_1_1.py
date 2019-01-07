@@ -34,6 +34,11 @@ class FetchObjectCapability(OutputMethod):
         print("TODO: issue command to robot to fetch " + str(target))
 
 
+class SpeakCapability(OutputMethod):
+    def run(self):
+        print("TODO: convert tmr to language, speak it")
+
+
 class ShouldAcknowledgeVisualInput(AgentMethod):
     def run(self, input_vmr):
         vmr = XMR(input_vmr).graph(self.agent)
@@ -69,14 +74,11 @@ class ShouldAcknowledgeVisualInput(AgentMethod):
         return False
 
 
-class SelectGoalFromVisualInput(AgentMethod):
+class ShouldGreetHuman(AgentMethod):
     def run(self, input_vmr):
         vmr = XMR(input_vmr).graph(self.agent)
 
-        if self._acknowledge_due_to_human_entering(vmr):
-            return self.agent.lookup("EXE.GREET-HUMAN")
-
-        return None
+        return self._acknowledge_due_to_human_entering(vmr)
 
     def _acknowledge_due_to_human_entering(self, vmr):
         # 1) Check to see that there is at least a previous history
@@ -102,6 +104,33 @@ class SelectGoalFromVisualInput(AgentMethod):
                     except:
                         return True
         return False
+
+
+class SelectHumanToGreet(AgentMethod):
+    def run(self, input_vmr):
+        vmr = XMR(input_vmr).graph(self.agent)
+
+        history = self.agent.env().history()
+        if len(history) < 2:
+            return None
+
+        for frame in vmr:
+            frame = vmr[frame]
+            if frame._identifier.name == "LOCATION":
+                domain = frame["DOMAIN"].singleton()
+                if domain ^ "ONT.HUMAN":
+                    try:
+                        # The agent is currently in the environment
+                        self.agent.env().location(domain)
+                    except:
+                        continue
+                    try:
+                        # The agent was not previously in the environment
+                        self.agent.env().location(domain, epoch=len(history) - 2)
+                    except:
+                        return domain
+
+        return None
 
 
 ######################

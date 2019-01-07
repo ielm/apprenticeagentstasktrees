@@ -14,7 +14,7 @@
 
 @EXE.SPEAK-CAPABILITY = {
     ISA @EXE.CAPABILITY;
-    MP  "speak";
+    MP  "speak_capability";
 };
 
 @SELF.PHYSICAL-EFFECTOR.1 = {
@@ -146,13 +146,32 @@ DEFINE fetch-object($object) AS TEMPLATE
     }
 ;
 
+DEFINE greet-human($human) AS TEMPLATE
+    TYPE VERBAL
+    REQUIRES @EXE.SPEAK-CAPABILITY
+    ROOT @OUT.SPEECH-ACT.1
+    INCLUDE
+
+    @OUT.SPEECH-ACT.1 = {
+        AGENT @SELF;
+        THEME @OUT.GREET.1;
+    }
+
+    @OUT.GREET.1 = {
+        AGENT @SELF;
+        THEME $human;
+    }
+;
+
 // Define GOALS --------------------
 
 REGISTER MP backend.resources.experiments.Jan2019_1_1.SelectGoalFromLanguageInput AS select_goal_from_language_input;
 REGISTER MP backend.resources.experiments.Jan2019_1_1.InitGoalCapability AS init_goal_capability;
 REGISTER MP backend.resources.experiments.Jan2019_1_1.FetchObjectCapability AS fetch_object_capability;
+REGISTER MP backend.resources.experiments.Jan2019_1_1.SpeakCapability AS speak_capability;
 REGISTER MP backend.resources.experiments.Jan2019_1_1.ShouldAcknowledgeVisualInput AS should_acknowledge_visual_input;
-REGISTER MP backend.resources.experiments.Jan2019_1_1.SelectGoalFromVisualInput AS select_goal_from_visual_input;
+REGISTER MP backend.resources.experiments.Jan2019_1_1.ShouldGreetHuman AS should_greet_human;
+REGISTER MP backend.resources.experiments.Jan2019_1_1.SelectHumanToGreet AS select_human_to_greet;
 
 DEFINE ACKNOWLEDGE-LANGUAGE-INPUT($tmr)
     AS GOAL
@@ -181,11 +200,11 @@ DEFINE ACKNOWLEDGE-VISUAL-INPUT($vmr)
         STEP
             DO IDLE
     PLAN (acknowledge visual input)
-        SELECT IF SELF.should_acknowledge_visual_input($vmr)
+        SELECT IF SELF.should_greet_human($vmr)
         STEP
-            DO $goal = SELF.select_goal_from_visual_input($vmr)
+            DO $goal = @EXE.GREET-HUMAN
             DO $vmr[STATUS] = "ACKNOWLEDGED"
-            DO $params = [$vmr]
+            DO $params = [SELF.select_human_to_greet($vmr)]
             DO OUTPUT init-goal($goal, $params) BY SELF
     WHEN EXECUTED THEN satisfied
 ;
@@ -214,7 +233,7 @@ DEFINE BUILD-A-CHAIR()
     WHEN EXECUTED THEN satisfied
 ;
 
-DEFINE GREET-HUMAN($vmr)
+DEFINE GREET-HUMAN($human)
     AS GOAL
     IN EXE
     PRIORITY 0.5
@@ -222,7 +241,7 @@ DEFINE GREET-HUMAN($vmr)
     PLAN (greet-normal)
         SELECT DEFAULT
         STEP
-            DO IDLE
+            DO OUTPUT greet-human($human) BY SELF
     WHEN EXECUTED THEN SATISFIED
 ;
 
