@@ -89,7 +89,7 @@ argument: ARGUMENT
 output_arguments: "(" (output_argument ("," output_argument)*)? ")"
 output_argument: (argument | literal | statement_instance)
 
-list: "[" list_element ("," list_element)* "]"
+list: ("[]" | "[" list_element ("," list_element)* "]")
 list_element: (literal | identifier | ARGUMENT | statement | list)
 
 ABANDONED: "abandoned"i
