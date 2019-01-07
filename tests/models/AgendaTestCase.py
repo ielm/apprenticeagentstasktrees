@@ -804,6 +804,32 @@ class PlanTestCase(unittest.TestCase):
 
         self.assertTrue(Plan(plan).select(VariableMap(varmap)))
 
+    def test_select_with_mp(self):
+        from backend.models.mps import AgentMethod
+        from backend.models.statement import MeaningProcedureStatement, MPRegistry
+
+        Bootstrap.bootstrap_resource(self.n, "backend.resources", "exe.knowledge")
+
+        class TestMP(AgentMethod):
+            def run(self, var1):
+                return var1
+
+        MPRegistry.register(TestMP)
+
+        mp_statement = MeaningProcedureStatement.instance(self.g, TestMP.__name__, ["$var1"])
+        plan = Plan.build(self.g, "X", mp_statement, [])
+
+        varmap = self.g.register("VARMAP.1")
+        variable = self.g.register("VARIABLE.1")
+        varmap["_WITH"] = variable
+        variable["NAME"] = Literal("$var1")
+
+        variable["VALUE"] = True
+        self.assertTrue(plan.select(VariableMap(varmap)))
+
+        variable["VALUE"] = False
+        self.assertFalse(plan.select(VariableMap(varmap)))
+
     def test_select_when_default(self):
         plan = self.g.register("PLAN.1")
         plan["SELECT"] = Literal(Plan.DEFAULT)

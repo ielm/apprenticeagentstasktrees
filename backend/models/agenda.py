@@ -310,7 +310,7 @@ class Plan(object):
 
         if "SELECT" in self.frame:
             select = self.frame["SELECT"].singleton()
-            if isinstance(select, Frame) and select ^ "EXE.BOOLEAN-STATEMENT":
+            if isinstance(select, Frame) and (select ^ "EXE.BOOLEAN-STATEMENT" or select ^ "EXE.MP-STATEMENT"):
                 return Statement.from_instance(select).run(StatementScope(), varmap)
         return False
 
