@@ -13,6 +13,9 @@ class Variable(object):
 
     @classmethod
     def instance(cls, graph: Graph, name: str, value: Any, varmap: 'VariableMap', assign: bool=True):
+        if value == []:
+            value = [[]]
+
         frame = graph.register("VARIABLE", generate_index=True)
         frame["NAME"] = Literal(name)
         frame["VALUE"] = value
