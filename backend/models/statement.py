@@ -296,19 +296,24 @@ class AssignVariableStatement(Statement):
     def run(self, scope: StatementScope, varmap: VariableMap):
         variable = self.frame["TO"].singleton()
         value = self.frame["ASSIGN"].singleton()
-
-        if isinstance(value, str):
-            try:
-                value = varmap.resolve(value)
-            except: pass
-
-        if isinstance(value, Statement) and value.frame ^ "EXE.RETURNING-STATEMENT":
-            value = value.run(StatementScope(), varmap)
-
-        if isinstance(value, Frame) and value ^ "EXE.RETURNING-STATEMENT":
-            value = Statement.from_instance(value).run(StatementScope(), varmap)
+        value = self._resolve(value, scope, varmap)
 
         Variable.instance(self.frame._graph, variable, value, varmap)
+
+    def _resolve(self, value, scope: StatementScope, varmap: VariableMap):
+        if isinstance(value, list):
+            return list(map(lambda v: self._resolve(v, scope, varmap), value))
+        if isinstance(value, str):
+            try:
+                return varmap.resolve(value)
+            except:
+                pass
+        if isinstance(value, Statement) and value.frame ^ "EXE.RETURNING-STATEMENT":
+            return value.run(StatementScope(), varmap)
+        if isinstance(value, Frame) and value ^ "EXE.RETURNING-STATEMENT":
+            return Statement.from_instance(value).run(StatementScope(), varmap)
+
+        return value
 
     def __eq__(self, other):
         if isinstance(other, AssignVariableStatement):
