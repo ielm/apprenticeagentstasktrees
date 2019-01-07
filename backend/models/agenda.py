@@ -296,7 +296,7 @@ class Plan(object):
         if isinstance(plan, Frame):
             plan = Plan(plan)
 
-        return Plan.build(graph, plan.name(), plan.frame["SELECT"].singleton(), list(map(lambda step: Step.instance_of(graph, step).frame, plan.steps())))
+        return Plan.build(graph, plan.name(), plan.frame["SELECT"].singleton(), list(map(lambda step: Step.instance_of(graph, step).frame, plan.steps())), negate=plan.is_negated())
 
     def __init__(self, frame: Frame):
         self.frame = frame

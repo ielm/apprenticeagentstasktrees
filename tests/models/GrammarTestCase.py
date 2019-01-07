@@ -295,6 +295,11 @@ class AgendaGrammarTestCase(unittest.TestCase):
         self.assertIsInstance(parsed.frame._storage["ASSIGN"]._storage[0]._value.value, list)
         self.assertEqual(statement, parsed)
 
+        statement = AssignVariableStatement.instance(self.g, "$var1", Literal([]))
+        parsed = Grammar.parse(self.agent, "$var1 = []", start="assign_variable_statement", agent=self.agent)
+        self.assertIsInstance(parsed.frame._storage["ASSIGN"]._storage[0]._value.value, list)
+        self.assertEqual(statement, parsed)
+
     def test_exists_statement(self):
         statement = ExistsStatement.instance(self.g, SlotQuery(self.agent, AndQuery(self.agent, [NameQuery(self.agent, "THEME"), FillerQuery(self.agent, LiteralQuery(self.agent, 123))])))
         parsed = Grammar.parse(self.agent, "EXISTS THEME = 123", start="exists_statement", agent=self.agent)
