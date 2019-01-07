@@ -273,7 +273,7 @@ class Plan(object):
     DEFAULT = "DEFAULT"
 
     @classmethod
-    def build(cls, graph: Graph, name: str, select: Union[Statement, str], steps: Union['Step', Frame, List[Union['Step', Frame]]]):
+    def build(cls, graph: Graph, name: str, select: Union[Statement, str], steps: Union['Step', Frame, List[Union['Step', Frame]]], negate: bool=False):
 
         if isinstance(select, Statement):
             select = select.frame
@@ -284,6 +284,7 @@ class Plan(object):
 
         frame = graph.register("PLAN", generate_index=True)
         frame["NAME"] = Literal(name)
+        frame["NEGATE"] = negate
         frame["SELECT"] = Literal(Plan.DEFAULT) if select == Plan.DEFAULT else select
         frame["HAS-STEP"] = steps
 
@@ -295,7 +296,7 @@ class Plan(object):
         if isinstance(plan, Frame):
             plan = Plan(plan)
 
-        return Plan.build(graph, plan.name(), plan.frame["SELECT"].singleton(), list(map(lambda step: Step.instance_of(graph, step).frame, plan.steps())))
+        return Plan.build(graph, plan.name(), plan.frame["SELECT"].singleton(), list(map(lambda step: Step.instance_of(graph, step).frame, plan.steps())), negate=plan.is_negated())
 
     def __init__(self, frame: Frame):
         self.frame = frame
@@ -304,14 +305,22 @@ class Plan(object):
         if "NAME" in self.frame:
             return self.frame["NAME"].singleton()
 
+    def is_negated(self) -> bool:
+        if "NEGATE" in self.frame:
+            return self.frame["NEGATE"].singleton()
+        return False
+
     def select(self, varmap: VariableMap) -> bool:
         if self.is_default():
             return True
 
         if "SELECT" in self.frame:
             select = self.frame["SELECT"].singleton()
-            if isinstance(select, Frame) and select ^ "EXE.BOOLEAN-STATEMENT":
-                return Statement.from_instance(select).run(StatementScope(), varmap)
+            if isinstance(select, Frame) and (select ^ "EXE.BOOLEAN-STATEMENT" or select ^ "EXE.MP-STATEMENT"):
+                result = Statement.from_instance(select).run(StatementScope(), varmap)
+                if self.is_negated():
+                    result = not result
+                return result
         return False
 
     def is_default(self):
@@ -336,6 +345,7 @@ class Plan(object):
         if isinstance(other, Plan):
             return (self.frame == other.frame) or (
                 self.frame["NAME"] == other.frame["NAME"] and
+                self.frame["NEGATE"] == other.frame["NEGATE"] and
                 self.__eqSELECT(other) and
                 self.__eqSTEPS(other)
             )
