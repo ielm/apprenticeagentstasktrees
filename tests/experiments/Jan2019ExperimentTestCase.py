@@ -124,8 +124,8 @@ class Jan2019Experiment(unittest.TestCase):
         self.assertGoalExists(agent, isa="EXE.BUILD-A-CHAIR", status=Goal.Status.ACTIVE, query=lambda goal: goal.plans()[0].steps()[0].status() == Step.Status.PENDING)
         self.assertFalse(Effector(agent.internal["PHYSICAL-EFFECTOR.1"]).is_free())
         self.assertEqual(agent.exe["FETCH-OBJECT-CAPABILITY"], Effector(agent.internal["PHYSICAL-EFFECTOR.1"]).on_capability())
-        self.assertEqual(agent.internal["XMR.3"], Effector(agent.internal["PHYSICAL-EFFECTOR.1"]).on_output())
-        self.assertEqual(agent.environment["SCREWDRIVER.1"], OutputXMR(agent.internal["XMR.3"]).graph(agent)["FETCH.1"]["THEME"].singleton())
+        self.assertEqual(agent.outputs["XMR.2"], Effector(agent.internal["PHYSICAL-EFFECTOR.1"]).on_output())
+        self.assertEqual(agent.environment["SCREWDRIVER.1"], OutputXMR(agent.outputs["XMR.2"]).graph(agent)["FETCH.1"]["THEME"].singleton())
 
         #######
 
@@ -174,8 +174,8 @@ class Jan2019Experiment(unittest.TestCase):
         self.assertGoalExists(agent, isa="EXE.BUILD-A-CHAIR", status=Goal.Status.ACTIVE, query=lambda goal: goal.plans()[0].steps()[1].status() == Step.Status.PENDING)
         self.assertFalse(Effector(agent.internal["PHYSICAL-EFFECTOR.1"]).is_free())
         self.assertEqual(agent.exe["FETCH-OBJECT-CAPABILITY"], Effector(agent.internal["PHYSICAL-EFFECTOR.1"]).on_capability())
-        self.assertEqual(agent.internal["XMR.6"], Effector(agent.internal["PHYSICAL-EFFECTOR.1"]).on_output())
-        self.assertEqual(agent.environment["BRACKET.1"], OutputXMR(agent.internal["XMR.6"]).graph(agent)["FETCH.1"]["THEME"].singleton())
+        self.assertEqual(agent.outputs["XMR.3"], Effector(agent.internal["PHYSICAL-EFFECTOR.1"]).on_output())
+        self.assertEqual(agent.environment["BRACKET.1"], OutputXMR(agent.outputs["XMR.3"]).graph(agent)["FETCH.1"]["THEME"].singleton())
 
         #######
 
@@ -200,8 +200,8 @@ class Jan2019Experiment(unittest.TestCase):
         self.assertGoalExists(agent, isa="EXE.GREET-HUMAN", status=Goal.Status.ACTIVE, query=lambda goal: goal.plans()[0].steps()[0].status() == Step.Status.PENDING)
         self.assertFalse(Effector(agent.internal["VERBAL-EFFECTOR.1"]).is_free())
         self.assertEqual(agent.exe["SPEAK-CAPABILITY"], Effector(agent.internal["VERBAL-EFFECTOR.1"]).on_capability())
-        self.assertEqual(agent.internal["XMR.9"], Effector(agent.internal["VERBAL-EFFECTOR.1"]).on_output())
-        self.assertEqual(agent.environment["HUMAN.1"], OutputXMR(agent.internal["XMR.9"]).graph(agent)["GREET.1"]["THEME"].singleton())
+        self.assertEqual(agent.outputs["XMR.5"], Effector(agent.internal["VERBAL-EFFECTOR.1"]).on_output())
+        self.assertEqual(agent.environment["HUMAN.1"], OutputXMR(agent.outputs["XMR.5"]).graph(agent)["GREET.1"]["THEME"].singleton())
 
         #######
 
@@ -241,8 +241,8 @@ class Jan2019Experiment(unittest.TestCase):
         self.assertGoalExists(agent, isa="EXE.RESPOND-TO-QUERY", status=Goal.Status.ACTIVE, query=lambda goal: goal.resolve("$tmr")["REFERS-TO-GRAPH"].singleton() == "TMR#2")
         self.assertFalse(Effector(agent.internal["VERBAL-EFFECTOR.1"]).is_free())
         self.assertEqual(agent.exe["SPEAK-CAPABILITY"], Effector(agent.internal["VERBAL-EFFECTOR.1"]).on_capability())
-        self.assertEqual(agent.internal["XMR.12"], Effector(agent.internal["VERBAL-EFFECTOR.1"]).on_output())
-        self.assertEqual(agent["XMR#3"]["FETCH.1"], OutputXMR(agent.internal["XMR.12"]).graph(agent)["DESCRIBE.1"]["THEME"].singleton())
+        self.assertEqual(agent.outputs["XMR.7"], Effector(agent.internal["VERBAL-EFFECTOR.1"]).on_output())
+        self.assertEqual(agent["XMR#3"]["FETCH.1"], OutputXMR(agent.outputs["XMR.7"]).graph(agent)["DESCRIBE.1"]["THEME"].singleton())
 
         # 6g) TEST: BUILD-A-CHAIR is still "active"
         self.assertGoalExists(agent, isa="EXE.BUILD-A-CHAIR", status=Goal.Status.ACTIVE, query=lambda goal: goal.plans()[0].steps()[1].status() == Step.Status.PENDING)
@@ -282,5 +282,5 @@ class Jan2019Experiment(unittest.TestCase):
         self.assertGoalExists(agent, isa="EXE.BUILD-A-CHAIR", status=Goal.Status.ACTIVE, query=lambda goal: goal.plans()[0].steps()[2].status() == Step.Status.PENDING)
         self.assertFalse(Effector(agent.internal["PHYSICAL-EFFECTOR.1"]).is_free())
         self.assertEqual(agent.exe["FETCH-OBJECT-CAPABILITY"], Effector(agent.internal["PHYSICAL-EFFECTOR.1"]).on_capability())
-        self.assertEqual(agent.internal["XMR.13"], Effector(agent.internal["PHYSICAL-EFFECTOR.1"]).on_output())
-        self.assertEqual(agent.environment["BRACKET.2"], OutputXMR(agent.internal["XMR.13"]).graph(agent)["FETCH.1"]["THEME"].singleton())
+        self.assertEqual(agent.outputs["XMR.8"], Effector(agent.internal["PHYSICAL-EFFECTOR.1"]).on_output())
+        self.assertEqual(agent.environment["BRACKET.2"], OutputXMR(agent.outputs["XMR.8"]).graph(agent)["FETCH.1"]["THEME"].singleton())
