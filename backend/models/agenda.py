@@ -6,6 +6,8 @@ from enum import Enum
 from functools import reduce
 from typing import Any, Dict, List, Tuple, Union
 
+import time
+
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from backend.agent import Agent
@@ -730,6 +732,7 @@ class Decision(object):
             self.frame["HAS-CALLBACK"] += callback.frame
 
             effector.on_capability().run(agent, effector.on_output(), callback)
+            effector.on_output().frame["TIMESTAMP"] = time.time()
 
     def callback_received(self, callback: 'Callback'):
         self.frame["HAS-EFFECTOR"] -= callback.effector().frame

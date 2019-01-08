@@ -3,6 +3,8 @@ from backend.models.graph import Frame, Graph, Identifier, Literal, Network
 from enum import Enum
 from typing import Union
 
+import time
+
 
 # XMR is a Frame wrapper object for holding a node as a reference to a particular meaning representation, and resolving
 # a graph from a network for that MR.  An example usage is holding a reference to a TMR as part of agent input
@@ -42,6 +44,7 @@ class XMR(object):
         frame["REFERS-TO-GRAPH"] = Literal(refers_to)
         frame["STATUS"] = Literal(status)
         frame["TYPE"] = Literal(type)
+        frame["TIMESTAMP"] = time.time()
 
         if source is not None:
             frame["SOURCE"] = source
