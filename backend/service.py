@@ -12,6 +12,7 @@ from backend.models.agenda import Decision, Goal, Plan
 from backend.models.grammar import Grammar
 from backend.models.graph import Frame, Identifier, Literal
 from backend.models.ontology import Ontology
+from backend.models.output import OutputXMR
 from backend.models.xmr import XMR
 from backend.utils.AgentLogger import CachedAgentLogger
 from backend.utils.YaleUtils import format_learned_event_yale, input_to_tmrs
@@ -202,13 +203,21 @@ class IIDEAConverter(object):
             "goal": decision.goal().name(),
             "plan": decision.plan().name(),
             "step": "Step " + str(decision.step().index()),
-            "outputs": list(map(lambda output: output.frame.name(), decision.outputs())),
+            "outputs": list(map(lambda output: IIDEAConverter.convert_output(output), decision.outputs())),
             "priority": decision.priority(),
             "cost": decision.cost(),
             "requires": list(map(lambda required: required.frame.name(), decision.requires())),
             "status": decision.status().name,
             "effectors": list(map(lambda effector: effector.frame.name(), decision.effectors())),
             "callbacks": list(map(lambda callback: callback.frame.name(), decision.callbacks()))
+        }
+
+    @classmethod
+    def convert_output(cls, output: OutputXMR):
+        return {
+            "frame": output.frame.name(),
+            "graph": output.graph(agent)._namespace,
+            "status": output.status().name
         }
 
     @classmethod
@@ -409,6 +418,20 @@ def input():
         })
 
     return "OK"
+
+
+@app.route("/components/graph", methods=["GET"])
+def components_graph():
+    if "namespace" not in request.args:
+        abort(400)
+
+    include_sources = True
+    if "include_sources" in request.args:
+        include_sources = request.args["include_sources"].lower() == "true"
+
+    graph = request.args["namespace"]
+    graph = graph_to_json(agent[graph])
+    return render_template("graph.html", gj=json.loads(graph), include_sources=include_sources)
 
 
 @app.route("/htn", methods=["GET"])
