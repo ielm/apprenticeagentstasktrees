@@ -39,8 +39,10 @@ class Agent(Network):
         self.lt_memory = self.register(FR("LT", self.ontology))
         self.environment = self.register(FR("ENV", self.ontology))
 
+        self.inputs = self.register(FR("INPUTS", self.ontology))
+        self.outputs = self.register(FR("OUTPUTS", self.ontology))
+
         self.identity = self.internal.register("ROBOT", isa="ONT.ROBOT")
-        self.exe.register("INPUT-TMR", generate_index=False)
         self._bootstrap()
 
         self.input_memory = []
@@ -152,7 +154,7 @@ class Agent(Network):
         if type is not None:
             kwargs["type"] = type
 
-        xmr = XMR.instance(self.internal, registered_xMR, status=XMR.Status.RECEIVED, **kwargs)
+        xmr = XMR.instance(self.inputs, registered_xMR, status=XMR.Status.RECEIVED, **kwargs)
         self.identity["HAS-INPUT"] += xmr.frame
 
         if type == "VISUAL":

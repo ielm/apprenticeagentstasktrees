@@ -169,21 +169,21 @@ class ExampleExperimentTestCase(unittest.TestCase):
         agent.iidea()
 
         # 1b) There is one instance of ACKNOWLEDGE-LANGUAGE-INPUT; it is active, and focused on SELF.XMR.1
-        self.assertGoalExists(agent, isa="EXE.ACKNOWLEDGE-LANGUAGE-INPUT", status=Goal.Status.ACTIVE, query=lambda goal: goal.resolve("$tmr")._identifier == "SELF.XMR.1")
+        self.assertGoalExists(agent, isa="EXE.ACKNOWLEDGE-LANGUAGE-INPUT", status=Goal.Status.ACTIVE, query=lambda goal: goal.resolve("$tmr")._identifier == "INPUTS.XMR.1")
 
         # 1c) There is one decision, for ACKNOWLEDGE-LANGUAGE-INPUT > acknowledge language input > Step 1; it is selected, and has an output, no effectors, and no callbacks
         self.assertEqual(1, len(agent.decisions()))
-        self.assertDecisionExists(agent, status=Decision.Status.SELECTED, goal="SELF.GOAL.1", plan="SELF.PLAN.1", step="SELF.STEP.1", outputs=["SELF.XMR.2"], effectors=[], callbacks=[])
+        self.assertDecisionExists(agent, status=Decision.Status.SELECTED, goal="SELF.GOAL.1", plan="SELF.PLAN.1", step="SELF.STEP.1", outputs=["OUTPUTS.XMR.1"], effectors=[], callbacks=[])
 
         # 2a) Execute
         agent.iidea()
 
         # 2b) There is one instance of ACKNOWLEDGE-LANGUAGE-INPUT; it is active, and focused on SELF.XMR.1
-        self.assertGoalExists(agent, isa="EXE.ACKNOWLEDGE-LANGUAGE-INPUT", status=Goal.Status.ACTIVE, query=lambda goal: goal.resolve("$tmr")._identifier == "SELF.XMR.1")
+        self.assertGoalExists(agent, isa="EXE.ACKNOWLEDGE-LANGUAGE-INPUT", status=Goal.Status.ACTIVE, query=lambda goal: goal.resolve("$tmr")._identifier == "INPUTS.XMR.1")
 
         # 2c) There is one decision, for ACKNOWLEDGE-LANGUAGE-INPUT > acknowledge language input > Step 1; it is executing, and has an output, an effector, and a callback
         self.assertEqual(1, len(agent.decisions()))
-        self.assertDecisionExists(agent, status=Decision.Status.EXECUTING, goal="SELF.GOAL.1", plan="SELF.PLAN.1", step="SELF.STEP.1", outputs=["SELF.XMR.2"], effectors=["SELF.MENTAL-EFFECTOR.1"], callbacks=["SELF.CALLBACK.1"])
+        self.assertDecisionExists(agent, status=Decision.Status.EXECUTING, goal="SELF.GOAL.1", plan="SELF.PLAN.1", step="SELF.STEP.1", outputs=["OUTPUTS.XMR.1"], effectors=["SELF.MENTAL-EFFECTOR.1"], callbacks=["SELF.CALLBACK.1"])
 
         # 2d) The decision's callback is received
         self.assertEqual(Callback.Status.RECEIVED, agent.decisions()[0].callbacks()[0].status())
@@ -203,7 +203,7 @@ class ExampleExperimentTestCase(unittest.TestCase):
 
         # 3c) There is one decision, for ACKNOWLEDGE-LANGUAGE-INPUT > acknowledge language input > Step 1; it is finished
         self.assertEqual(1, len(agent.decisions()))
-        self.assertDecisionExists(agent, status=Decision.Status.FINISHED, goal="SELF.GOAL.1", plan="SELF.PLAN.1", step="SELF.STEP.1", outputs=["SELF.XMR.2"])
+        self.assertDecisionExists(agent, status=Decision.Status.FINISHED, goal="SELF.GOAL.1", plan="SELF.PLAN.1", step="SELF.STEP.1", outputs=["OUTPUTS.XMR.1"])
 
         # 3d) There is one instance of BUILD-A-CHAIR; it is pending
         self.assertGoalExists(agent, isa="EXE.BUILD-A-CHAIR", status=Goal.Status.PENDING)
@@ -220,7 +220,7 @@ class ExampleExperimentTestCase(unittest.TestCase):
 
         # 4c) There is one incomplete decision, for BUILD-A-CHAIR > as-taught-by-jake > Step 1; it is selected, and has an output, no effectors, and no callbacks
         self.assertEqual(2, len(agent.decisions()))
-        self.assertDecisionExists(agent, status=Decision.Status.SELECTED, goal="SELF.GOAL.2", plan="SELF.PLAN.2", step="SELF.STEP.2", outputs=["SELF.XMR.3"], effectors=[], callbacks=[])
+        self.assertDecisionExists(agent, status=Decision.Status.SELECTED, goal="SELF.GOAL.2", plan="SELF.PLAN.2", step="SELF.STEP.2", outputs=["OUTPUTS.XMR.2"], effectors=[], callbacks=[])
 
         # 5a) Execute
         agent.iidea()
@@ -230,7 +230,7 @@ class ExampleExperimentTestCase(unittest.TestCase):
 
         # 5c) There is one incomplete decision, for BUILD-A-CHAIR > as-taught-by-jake > Step 1; it is executing, and has an output, an effector, and a callback
         self.assertEqual(2, len(agent.decisions()))
-        self.assertDecisionExists(agent, status=Decision.Status.EXECUTING, goal="SELF.GOAL.2", plan="SELF.PLAN.2", step="SELF.STEP.2", outputs=["SELF.XMR.3"], effectors=["SELF.PHYSICAL-EFFECTOR.1"], callbacks=["SELF.CALLBACK.2"])
+        self.assertDecisionExists(agent, status=Decision.Status.EXECUTING, goal="SELF.GOAL.2", plan="SELF.PLAN.2", step="SELF.STEP.2", outputs=["OUTPUTS.XMR.2"], effectors=["SELF.PHYSICAL-EFFECTOR.1"], callbacks=["SELF.CALLBACK.2"])
 
         # 5d) The decision's callback is waiting
         self.assertEqual(Callback.Status.WAITING, agent.decisions()[1].callbacks()[0].status())
@@ -245,7 +245,7 @@ class ExampleExperimentTestCase(unittest.TestCase):
         # 6b) The state has not changed; repeat all tests from #5
         self.assertGoalExists(agent, isa="EXE.BUILD-A-CHAIR", status=Goal.Status.ACTIVE)
         self.assertEqual(2, len(agent.decisions()))
-        self.assertDecisionExists(agent, status=Decision.Status.EXECUTING, goal="SELF.GOAL.2", plan="SELF.PLAN.2", step="SELF.STEP.2", outputs=["SELF.XMR.3"], effectors=["SELF.PHYSICAL-EFFECTOR.1"], callbacks=["SELF.CALLBACK.2"])
+        self.assertDecisionExists(agent, status=Decision.Status.EXECUTING, goal="SELF.GOAL.2", plan="SELF.PLAN.2", step="SELF.STEP.2", outputs=["OUTPUTS.XMR.2"], effectors=["SELF.PHYSICAL-EFFECTOR.1"], callbacks=["SELF.CALLBACK.2"])
         self.assertEqual(Callback.Status.WAITING, agent.decisions()[1].callbacks()[0].status())
         self.assertFalse(Effector(agent.internal["SELF.PHYSICAL-EFFECTOR.1"]).is_free())
         self.assertTrue(Effector(agent.internal["SELF.MENTAL-EFFECTOR.1"]).is_free())
@@ -263,7 +263,7 @@ class ExampleExperimentTestCase(unittest.TestCase):
         # 7b) The state has not changed; repeat all tests from #5
         self.assertGoalExists(agent, isa="EXE.BUILD-A-CHAIR", status=Goal.Status.ACTIVE)
         self.assertEqual(2, len(agent.decisions()))
-        self.assertDecisionExists(agent, status=Decision.Status.EXECUTING, goal="SELF.GOAL.2", plan="SELF.PLAN.2", step="SELF.STEP.2", outputs=["SELF.XMR.3"], effectors=["SELF.PHYSICAL-EFFECTOR.1"], callbacks=["SELF.CALLBACK.2"])
+        self.assertDecisionExists(agent, status=Decision.Status.EXECUTING, goal="SELF.GOAL.2", plan="SELF.PLAN.2", step="SELF.STEP.2", outputs=["OUTPUTS.XMR.2"], effectors=["SELF.PHYSICAL-EFFECTOR.1"], callbacks=["SELF.CALLBACK.2"])
         self.assertEqual(Callback.Status.WAITING, agent.decisions()[1].callbacks()[0].status())
         self.assertFalse(Effector(agent.internal["SELF.PHYSICAL-EFFECTOR.1"]).is_free())
         self.assertTrue(Effector(agent.internal["SELF.MENTAL-EFFECTOR.1"]).is_free())
