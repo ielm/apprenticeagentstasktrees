@@ -1011,6 +1011,7 @@ class DecisionTestCase(unittest.TestCase):
     def setUp(self):
         self.n = Network()
         self.g = self.n.register("TEST")
+        self.n.register("OUTPUTS")
 
     def test_goal(self):
         goal = self.g.register("GOAL")
@@ -1159,7 +1160,7 @@ class DecisionTestCase(unittest.TestCase):
 
         decision._generate_outputs()
 
-        self.assertEqual([self.n.lookup("TEST.XMR.1")], decision.outputs())
+        self.assertEqual([self.n.lookup("OUTPUTS.XMR.1")], decision.outputs())
 
     def test_calculate_priority(self):
         definition = Goal.define(self.g, "TEST-GOAL", 1.0, 0.0, [], [], [])

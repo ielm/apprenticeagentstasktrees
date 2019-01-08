@@ -65,16 +65,16 @@ class AgentTestCase(unittest.TestCase):
         self.assertTrue(f2 in self.agent.decisions())
 
     def test_idea_input(self):
-        self.assertEqual(6, len(self.agent))
+        self.assertEqual(8, len(self.agent))
         self.assertEqual(0, len(self.agent.input_memory))
 
         self.agent._input()
-        self.assertEqual(6, len(self.agent))
+        self.assertEqual(8, len(self.agent))
         self.assertEqual(0, len(self.agent.input_memory))
 
         tmr = self.tmr()
         self.agent._input(input=tmr)
-        self.assertEqual(7, len(self.agent))
+        self.assertEqual(9, len(self.agent))
         self.assertIn("TMR#1", self.agent)
         self.assertEqual(1, len(self.agent.pending_inputs()))
         self.assertEqual(tmr["sentence"], self.agent.pending_inputs()[0].sentence)
@@ -82,15 +82,15 @@ class AgentTestCase(unittest.TestCase):
         tmr = self.tmr()
         source = self.agent.lt_memory.register("HUMAN")
         self.agent._input(input=tmr, source=source)
-        self.assertEqual(8, len(self.agent))
+        self.assertEqual(10, len(self.agent))
         self.assertIn("TMR#2", self.agent)
-        self.assertTrue(self.agent.internal["XMR.2"]["SOURCE"] == source)
+        self.assertTrue(self.agent.inputs["XMR.2"]["SOURCE"] == source)
 
         tmr = self.tmr()
         self.agent._input(input=tmr, type="LANGUAGE")
-        self.assertEqual(9, len(self.agent))
+        self.assertEqual(11, len(self.agent))
         self.assertIn("TMR#3", self.agent)
-        self.assertTrue(self.agent.internal["XMR.3"]["TYPE"] == XMR.Type.LANGUAGE.value)
+        self.assertTrue(self.agent.inputs["XMR.3"]["TYPE"] == XMR.Type.LANGUAGE.value)
 
     def test_iidea(self):
         agent = Agent(ontology=Ontology.init_default("ONT"))
