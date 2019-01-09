@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>OntoGraph Viewer</title>
+
+    {% if include_sources %}
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis.min.css">
+
+        <script src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
+        <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/mustache.js/2.3.0/mustache.min.js"></script>
+    {% endif %}
+
+    <script>
+        var colors = {
+            "TMRInstance": {
+                border: "#4286f4",
+                background: "#9bc1ff",
+                highlight: {
+                    border: "#4286f4",
+                    background: "#9bc1ff",
+                }
+            },
+            "FRInstance": {
+                border: "#488962",
+                background: "#7cba95",
+                highlight: {
+                    border: "#488962",
+                    background: "#7cba95",
+                }
+            },
+            "OntologyFrame": {
+                border: "#aa6536",
+                background: "#d8a988",
+                highlight: {
+                    border: "#aa6536",
+                    background: "#d8a988",
+                }
+            }
+        };
+    </script>
+
+    <script>
+
+        var _graph;
+        var _network;  // VIS network object, not a LEIA network of graphs
+
+        function render_graph(graph) {
+            _graph = graph;
+
+            var framesByID = {};
+            for (var frame in graph) {
+                framesByID[graph[frame]["graph"] + "." + graph[frame]["name"]] = graph[frame];
+            }
+
+            var frames = graph
+                .map(function(frame) {
+                    return {
+                        id: frame["graph"] + "." + frame["name"],
+                        label: frame["name"],
+                        color: colors[frame["type"]],
+                    }
+                });
+
+            var relations = frames.length == 0 ? [] : graph
+                .map(function(frame) {
+                    return Array.from(frame["relations"])
+                        .filter(r => ["AGENT-OF", "THEME-OF", "INSTRUMENT-OF", "SCOPE-OF", "DESTINATION-OF"].indexOf(r.slot) == -1)
+                        .map(function(relation) {
+                            return {
+                                from: frame["graph"] + "." + frame["name"],
+                                to: relation["graph"] + "." + relation["value"],
+                                label: relation["slot"],
+                                arrows: "to",
+                            }
+                        })
+                })
+                .reduce(function (f1, f2) {return f1.concat(f2)});
+
+            var nodes = new vis.DataSet(frames);
+            var edges = new vis.DataSet(relations);
+
+            var data = {
+                nodes: nodes,
+                edges: edges
+            };
+            var options = {
+                "physics": {
+                    "barnesHut": {
+                        "springLength": 300
+                    }
+                },
+                "layout": {
+                    "randomSeed": 3
+                }
+            };
+
+            var network = new vis.Network($(document).find("#graph")[0], data, options);
+
+            network.on("selectNode", function(params) {
+                load_frame(framesByID[params["nodes"][0]]);
+            });
+
+            network.on("deselectNode", function(params) {
+                $(document).find("#frame").empty();
+            });
+
+
+            network.on("dragStart", function(params) {
+                if (params["nodes"][0] == undefined) {
+                    return;
+                }
+                load_frame(framesByID[params["nodes"][0]]);
+            });
+
+            _network = network;
+
+        }
+
+        function load_frame(frame) {
+
+            var content = {
+                frame: frame,
+            };
+
+            var template = document.getElementById('frame-template').innerHTML;
+            Mustache.parse(template, ["{|", "|}"]);
+            var rendered = Mustache.render(template, content);
+            $(document).find("#frame")[0].innerHTML = rendered;
+
+        }
+
+    </script>
+
+    <script>
+        $(document).ready(function() {
+            var graph = JSON.parse('{{ gj|tojson }}');
+            render_graph(graph);
+            _network.fit();
+        });
+    </script>
+
+    <script id="frame-template" type="x-tmpl-mustache">
+        <p><strong>{|frame.name|}</strong></p>
+        <table class='relations-table'>
+            {|#frame.relations|}
+            <tr>
+                <td>{|slot|}</td>
+                <td class="property-icon"><img src="/assets/svg/arrow-thick-right.svg" alt="arrow-thick-right" style="height: 12px"></td>
+                <td><a class='frame-link' data-frame='{|graph|}.{|value|}'>{|graph|}.{|value|}</a></td>
+            </tr>
+            {|/frame.relations|}
+        </table>
+        <p></p>
+        <table class='attributes-table'>
+            {|#frame.attributes|}
+            <tr>
+                <td>{|slot|}
+                <td class="property-icon"><img src="/assets/svg/list.svg" alt="list" style="height: 12px"></td>
+                <td style="word-break: break-all;">{|value|}</td>
+            </tr>
+            {|/frame.attributes|}
+        </table>
+    </script>
+
+</head>
+<body>
+    <div class="container">
+        <div class="row" style="margin-top: 25px;">
+            <div class="col-sm-12">
+                <div class="card">
+                    <div class="card-body">
+                        <div id="graph" style="height: 500px;"></div>
+                        <div id="frame" style="position: absolute; top: 15px;"></div>
+                    </div>
+                </div>
+            </div>
+            <!--<div class="col-sm-8">-->
+                <!--<div class="card">-->
+                    <!--<div class="card-body">-->
+                        <!--<div id="graph" style="height: 500px;"></div>-->
+                    <!--</div>-->
+                <!--</div>-->
+            <!--</div>-->
+            <!--<div class="col-sm-4">-->
+                <!--<div class="card">-->
+                    <!--<div class="card-body">-->
+                        <!--<div id="frame"></div>-->
+                    <!--</div>-->
+                <!--</div>-->
+            <!--</div>-->
+        </div>
+    </div>
+</body>
+</html>

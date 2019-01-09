@@ -630,6 +630,7 @@ class OutputXMRStatementTestCase(unittest.TestCase):
     def setUp(self):
         self.n = Network()
         self.g = self.n.register("EXE")
+        self.n.register("OUTPUTS")
         Bootstrap.bootstrap_resource(self.n, "backend.resources", "exe.knowledge")
 
     def test_template(self):
@@ -697,7 +698,7 @@ class OutputXMRStatementTestCase(unittest.TestCase):
 
         self.assertIn("XMR#1", self.n)
         self.assertIsInstance(output, OutputXMR)
-        self.assertIn(output.frame.name(), agent._graph)
+        self.assertIn(output.frame.name(), self.n["OUTPUTS"])
 
     def test_run_affects_scope(self):
         from backend.models.output import OutputXMR, OutputXMRTemplate

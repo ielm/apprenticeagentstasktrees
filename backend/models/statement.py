@@ -523,7 +523,7 @@ class OutputXMRStatement(Statement):
     def run(self, scope: StatementScope, varmap: VariableMap) -> 'OutputXMR':
         agent = self.agent()
         network = self.frame._graph._network
-        graph = agent._graph
+        graph = network["OUTPUTS"]
 
         params = self.params()
         params = list(map(lambda param: self._resolve_param(param, varmap), params))

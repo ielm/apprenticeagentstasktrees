@@ -58,6 +58,10 @@
         .decision-breadcrumbs {
             font-size: small;
         }
+        .output-details {
+            color: grey;
+            font-size: small;
+        }
     </style>
 
     <script>
@@ -213,7 +217,7 @@
                     ignored: "warning"
                 }[input["status"]];
 
-                var link = $('<a href="#" class="input-link badge badge-' + status + '">' + input["name"] + '</a>');
+                var link = $('<a href="#" class="input-link badge badge-' + status + '" data-graph="' + input["name"] + '">' + input["name"] + '</a>');
                 $("#inputList").append(link);
             }
         }
@@ -372,6 +376,21 @@
                 var id = $(e.currentTarget).data("callback");
                 callback(id);
             });
+            $(document).on("click", ".input-link", function(e) {
+                var graph = $(e.currentTarget).data("graph");
+                $("#modalGraphBody").load("/components/graph?include_sources=false&namespace=" + escape(graph), function(){
+                    $("#modalGraph").modal({show:true});
+                });
+            });
+            $(document).on("click", ".output-link", function(e) {
+                var graph = $(e.currentTarget).data("graph");
+                $("#modalGraphBody").load("/components/graph?include_sources=false&namespace=" + escape(graph), function(){
+                    $("#modalGraph").modal({show:true});
+                });
+            });
+            $('#modalGraph').on('shown.bs.modal', function (e) {
+                _network.fit();
+            });
             $(function () {
                 $('[data-toggle="tooltip"]').tooltip();
             });
@@ -436,7 +455,12 @@
             </div>
             <div class="card-body">
                 <div><strong>Priority:</strong> {| priority |}, <strong>Cost:</strong> {| cost |}</div>
-                <div><strong>Outputs:</strong> {| outputs |}</div>
+                <div><strong>Outputs:</strong>
+                    {|#outputs|}
+                        <a href="#" class="output-link badge badge-secondary" data-graph="{| graph |}">{| graph |}</a>
+                        <span class="output-details">({| frame |})</span>
+                    {|/outputs|}
+                </div>
                 <div><strong>Requires:</strong> {| requires |}</div>
                 <div><strong>Effectors:</strong> {| effectors |}</div>
                 <div><strong>Callbacks:</strong> {| callbacks |}</div>
@@ -609,13 +633,13 @@
                         <div id="inputList" style="padding-top: 10px;">
                             {% for i in inputs %}
                                 {% if i.status == "received" %}
-                                    <a href="#" class="input-link badge badge-secondary">{{i.name}}</a>
+                                    <a href="#" class="input-link badge badge-secondary" data-graph="{{i.name}}">{{i.name}}</a>
                                 {% elif i.status == "acknowledged" %}
-                                    <a href="#" class="input-link badge badge-info">{{i.name}}</a>
+                                    <a href="#" class="input-link badge badge-info" data-graph="{{i.name}}">{{i.name}}</a>
                                 {% elif i.status == "understood" %}
-                                    <a href="#" class="input-link badge badge-success">{{i.name}}</a>
+                                    <a href="#" class="input-link badge badge-success" data-graph="{{i.name}}">{{i.name}}</a>
                                 {% elif i.status == "ignored" %}
-                                    <a href="#" class="input-link badge badge-warning">{{i.name}}</a>
+                                    <a href="#" class="input-link badge badge-warning" data-graph="{{i.name}}">{{i.name}}</a>
                                 {% endif %}
                             {% endfor %}
                         </div>
@@ -645,6 +669,14 @@
                         <div id="logList"></div>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="modalGraph" role="dialog">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div id="modalGraphBody" class="modal-body"></div>
             </div>
         </div>
     </div>
