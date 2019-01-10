@@ -322,6 +322,8 @@
                     decision["style"] = "badge-success";
                 } else if (decision.status == "FINISHED") {
                     decision["style"] = "badge-secondary";
+                } else if (decision.status == "BLOCKED") {
+                    decision["style"] = "badge-warning";
                 }
 
                 var template = document.getElementById('decision-template').innerHTML;

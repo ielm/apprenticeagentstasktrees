@@ -868,7 +868,7 @@ class AgentAssessTestCase(unittest.TestCase):
         self.assertIn(subgoal, decision.impasses())
 
         self.agent._assess()
-        self.assertEqual(Decision.Status.EXECUTING, decision.status())
+        self.assertEqual(Decision.Status.PENDING, decision.status())
         self.assertEqual(0, len(decision.impasses()))
 
     def test_assess_decision_not_removed_if_blocked(self):

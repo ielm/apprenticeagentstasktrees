@@ -232,11 +232,6 @@ class Agent(Network):
                     callback.process()
 
         for decision in self.decisions():
-            decision.assess_impasses()
-            if len(decision.impasses()) == 0 and decision.status() == Decision.Status.BLOCKED:
-                decision.frame["STATUS"] = Decision.Status.EXECUTING
-
-        for decision in self.decisions():
             for impasse in decision.impasses():
                 if impasse.frame.name() not in list(map(lambda g: g.frame.name(), self.agenda().goals(pending=True, active=True, abandoned=True, satisfied=True))):
                     self.agenda().add_goal(impasse)
@@ -253,6 +248,11 @@ class Agent(Network):
             for output in decision.outputs():
                 del output.frame._graph[output.frame.name()]
                 del self[output.graph(self)._namespace]
+
+        for decision in self.decisions():
+            decision.assess_impasses()
+            if len(decision.impasses()) == 0 and decision.status() == Decision.Status.BLOCKED:
+                decision.frame["STATUS"] = Decision.Status.PENDING
 
         for active in self.agenda().goals(pending=True, active=True, abandoned=True, satisfied=True):
             active.assess()

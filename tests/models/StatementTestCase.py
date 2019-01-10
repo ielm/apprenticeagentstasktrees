@@ -113,17 +113,6 @@ class VariableMapTestCase(unittest.TestCase):
         self.assertEqual(f["_WITH"], v3)
         self.assertEqual(f["_WITH"], v4)
 
-    def test_assign_requires_unique_names(self):
-        g = Graph("TEST")
-        f = g.register("VARMAP.1")
-        v = g.register("VARIABLE")
-
-        vm = VariableMap(f)
-        vm.assign("VAR1", v)
-
-        with self.assertRaises(Exception):
-            vm.assign("VAR1", v)
-
     def test_resolve(self):
         g = Graph("TEST")
         f = g.register("VARMAP.1")

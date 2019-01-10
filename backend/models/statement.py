@@ -92,11 +92,6 @@ class VariableMap(object):
         if isinstance(variable, Variable):
             variable = variable.frame._identifier
 
-        for var in self.frame["_WITH"]:
-            var = var.resolve()
-            if Variable(var).name() == name:
-                raise Exception("Variable '" + name + "' is already mapped.")
-
         self.frame["_WITH"] += variable
 
     def resolve(self, name: str) -> Any:
