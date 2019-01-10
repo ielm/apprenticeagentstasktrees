@@ -274,6 +274,79 @@ class AddFillerStatementTestCase(unittest.TestCase):
         self.assertTrue(target["X"] == 123)
 
 
+class AssertStatementTestCase(unittest.TestCase):
+
+    def setUp(self):
+        self.n = Network()
+        self.g = self.n.register("EXE")
+        Bootstrap.bootstrap_resource(self.n, "backend.resources", "exe.knowledge")
+
+    def test_assertion(self):
+        from backend.models.statement import AssertStatement, ExistsStatement
+
+        assertion = ExistsStatement.instance(self.g, Frame.q(self.n).has("TEST"))
+
+        stmt = self.g.register("ASSERT-STATEMENT", generate_index=True)
+        stmt["ASSERTION"] = assertion.frame
+
+        self.assertEqual(assertion, AssertStatement(stmt).assertion())
+
+    def test_resolutions(self):
+        from backend.models.statement import AssertStatement, MakeInstanceStatement
+
+        mi1 = MakeInstanceStatement.instance(self.g, self.g._namespace, "EXE.TEST-GOAL-A", [])
+        mi2 = MakeInstanceStatement.instance(self.g, self.g._namespace, "EXE.TEST-GOAL-B", [])
+
+        stmt = self.g.register("ASSERT-STATEMENT", generate_index=True)
+        stmt["RESOLUTION"] = [mi1.frame, mi2.frame]
+
+        self.assertEqual([mi1, mi2], AssertStatement(stmt).resolutions())
+
+    def test_instance(self):
+        from backend.models.statement import AssertStatement, ExistsStatement, MakeInstanceStatement
+
+        assertion = ExistsStatement.instance(self.g, Frame.q(self.n).has("TEST"))
+        mi1 = MakeInstanceStatement.instance(self.g, self.g._namespace, "EXE.TEST-GOAL-A", [])
+        mi2 = MakeInstanceStatement.instance(self.g, self.g._namespace, "EXE.TEST-GOAL-B", [])
+
+        stmt = AssertStatement.instance(self.g, assertion, [mi1, mi2])
+        self.assertEqual(assertion, stmt.assertion())
+        self.assertEqual([mi1, mi2], stmt.resolutions())
+
+    def test_from_instance(self):
+        from backend.models.statement import AssertStatement
+
+        stmt = self.g.register("TEST", isa="EXE.ASSERT-STATEMENT")
+        stmt = Statement.from_instance(stmt)
+        self.assertIsInstance(stmt, AssertStatement)
+
+    def test_run_query_passes(self):
+        from backend.models.statement import AssertStatement, ExistsStatement
+
+        target = self.g.register("TARGET")
+        target["TEST"] = 123
+
+        assertion = ExistsStatement.instance(self.g, Frame.q(self.n).has("TEST"))
+        stmt = AssertStatement.instance(self.g, assertion, [])
+
+        stmt.run(StatementScope(), VariableMap(self.g.register("VARMAP")))
+
+    def test_run_query_fails(self):
+        from backend.models.statement import AssertStatement, ExistsStatement, MakeInstanceStatement
+
+        self.g.register("TARGET")
+
+        assertion = ExistsStatement.instance(self.g, Frame.q(self.n).has("TEST"))
+        mi = MakeInstanceStatement.instance(self.g, self.g._namespace, "EXE.TEST-GOAL", [])
+        stmt = AssertStatement.instance(self.g, assertion, [mi])
+
+        try:
+            stmt.run(StatementScope(), VariableMap(self.g.register("VARMAP")))
+            self.fail()
+        except AssertStatement.ImpasseException as e:
+            self.assertEqual([mi], e.resolutions)
+
+
 class AssignFillerStatementTestCase(unittest.TestCase):
 
     def setUp(self):

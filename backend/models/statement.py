@@ -238,6 +238,42 @@ class AddFillerStatement(Statement):
         return False
 
 
+class AssertStatement(Statement):
+
+    class ImpasseException(Exception):
+
+        def __init__(self, resolutions: List['MakeInstanceStatement']):
+            self.resolutions = resolutions
+
+    @classmethod
+    def instance(cls, graph: Graph, assertion: Union[str, Identifier, Frame, Statement], resolutions: List[Union[str, Identifier, Frame, 'MakeInstanceStatement']]):
+        if isinstance(assertion, Statement):
+            assertion = assertion.frame
+        resolutions = list(map(lambda r: r.frame if isinstance(r, MakeInstanceStatement) else r, resolutions))
+
+        stmt = graph.register("ASSERT-STATEMENT", isa="EXE.ASSERT-STATEMENT", generate_index=True)
+        stmt["ASSERTION"] = assertion
+        stmt["RESOLUTION"] = resolutions
+
+        return AssertStatement(stmt)
+
+    def assertion(self) -> Statement:
+        return Statement.from_instance(self.frame["ASSERTION"].singleton())
+
+    def resolutions(self) -> List['MakeInstanceStatement']:
+        return list(map(lambda s: MakeInstanceStatement(s.resolve()), self.frame["RESOLUTION"]))
+
+    def run(self, scope: StatementScope, varmap: VariableMap):
+        if not self.assertion().run(scope, varmap):
+            raise AssertStatement.ImpasseException(self.resolutions())
+
+    def __eq__(self, other):
+        if isinstance(other, AssertStatement):
+            return self.assertion() == other.assertion() and \
+                   self.resolutions() == other.resolutions()
+        return super().__eq__(other)
+
+
 class AssignFillerStatement(Statement):
 
     @classmethod

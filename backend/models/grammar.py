@@ -316,6 +316,13 @@ class GrammarTransformer(Transformer):
 
         return AddFillerStatement.instance(self.agent.exe, domain, slot, filler)
 
+    def assert_statement(self, matches):
+        from backend.models.statement import AssertStatement
+        assertion = matches[1]
+        resolutions = matches[5]
+
+        return AssertStatement.instance(self.agent.exe, assertion, resolutions)
+
     def assign_filler_statement(self, matches):
         from backend.models.statement import AssignFillerStatement
         domain = matches[0]
@@ -382,6 +389,17 @@ class GrammarTransformer(Transformer):
         agent = matches[4]
 
         return OutputXMRStatement.instance(self.agent.exe, template, params, agent)
+
+    def assertion(self, matches):
+        return matches[0]
+
+    def impasses(self, matches):
+        from backend.models.statement import MakeInstanceStatement
+
+        return list(filter(lambda m: isinstance(m, MakeInstanceStatement), matches))
+
+    def impasse(self, matches):
+        return matches[0]
 
     def arguments(self, matches):
         return matches
