@@ -482,6 +482,29 @@ class AgentDecideTestCase(unittest.TestCase):
         self.assertEqual(1, len(list(filter(lambda decision: decision.status() == Decision.Status.SELECTED, self.agent.decisions()))))
         self.assertEqual(1, len(list(filter(lambda decision: decision.status() == Decision.Status.DECLINED, self.agent.decisions()))))
 
+    def test_decide_blocked_decisions_cannot_be_selected(self):
+
+        capability = Capability.instance(self.g, "TEST-CAPABILITY", "", ["ONT.EVENT"])
+        effector = Effector.instance(self.g, Effector.Type.PHYSICAL, [capability])
+        self.agent.identity["HAS-EFFECTOR"] += effector.frame
+
+        template = OutputXMRTemplate.build(self.agent, "template", OutputXMRTemplate.Type.PHYSICAL, capability, [])
+        statement = OutputXMRStatement.instance(self.g, template, [], self.agent.identity)
+
+        step = Step.build(self.g, 1, [statement])
+        plan = Plan.build(self.g, "plan", Plan.DEFAULT, [step])
+        definition = Goal.define(self.g, "goal", 1.0, 0.5, [plan], [], [])
+        goal = Goal.instance_of(self.g, definition, [])
+
+        decision = Decision.build(self.g, goal, plan, step)
+        decision.frame["STATUS"] = Decision.Status.BLOCKED
+
+        self.agent.agenda().add_goal(goal.frame)
+        self.agent.identity["HAS-DECISION"] += decision.frame
+
+        self.agent._decide()
+        self.assertTrue(goal.is_pending())
+
     @patch.object(Trigger, 'fire')
     def test_decide_runs_triggers(self, mocked):
         trigger1 = Trigger.build(self.g, None, None)
@@ -912,3 +935,25 @@ class AgentAssessTestCase(unittest.TestCase):
         self.agent._assess()
 
         self.assertNotIn(subgoal, self.agent.agenda().goals())
+
+    def test_newly_generated_impasses_are_added_to_the_agenda(self):
+        step = Step.build(self.g, 1, [])
+
+        goal = self.g.register("GOAL", generate_index=True)
+        goal["STATUS"] = Goal.Status.ACTIVE
+        self.agent.agenda().add_goal(goal)
+
+        subgoal = self.g.register("GOAL", generate_index=True)
+        subgoal["STATUS"] = Goal.Status.ACTIVE
+
+        goal["HAS-GOAL"] += subgoal
+
+        decision = Decision.build(self.g, goal, "PLAN", step)
+        decision.frame["HAS-IMPASSE"] += subgoal
+        self.agent.identity["HAS-DECISION"] += decision.frame
+
+        self.assertNotIn(subgoal, self.agent.agenda().goals())
+
+        self.agent._assess()
+
+        self.assertIn(subgoal, self.agent.agenda().goals())

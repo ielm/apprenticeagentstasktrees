@@ -191,6 +191,8 @@ class Agent(Network):
         for decision in decisions:
             decision.inspect()
 
+        decisions = list(filter(lambda decision: decision.status() != Decision.Status.BLOCKED, decisions))
+
         decisions = sorted(decisions, key=lambda d: (d.priority() * priority_weight) - (d.cost() * resources_weight), reverse=True)
         effectors = self.effectors()
 
@@ -233,6 +235,11 @@ class Agent(Network):
             decision.assess_impasses()
             if len(decision.impasses()) == 0 and decision.status() == Decision.Status.BLOCKED:
                 decision.frame["STATUS"] = Decision.Status.EXECUTING
+
+        for decision in self.decisions():
+            for impasse in decision.impasses():
+                if impasse.frame.name() not in list(map(lambda g: g.frame.name(), self.agenda().goals(pending=True, active=True, abandoned=True, satisfied=True))):
+                    self.agenda().add_goal(impasse)
 
         for decision in list(filter(lambda decision: decision.status() == Decision.Status.EXECUTING, self.decisions())):
             if len(decision.callbacks()) == 0:

@@ -755,7 +755,7 @@ class Decision(object):
         self.frame["HAS-CALLBACK"] -= callback.frame
 
     def assess_impasses(self):
-        self.frame["HAS-IMPASSE"] = list(filter(lambda i: not i.is_satisfied(), self.impasses()))
+        self.frame["HAS-IMPASSE"] = list(map(lambda i: i.frame, filter(lambda i: not i.is_satisfied(), self.impasses())))
 
     def __eq__(self, other):
         if isinstance(other, Decision):
