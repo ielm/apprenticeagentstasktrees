@@ -219,6 +219,9 @@ class Agent(Network):
                 decision.decline()
         for goal in selected_goals:
             Goal(self.lookup(goal)).status(Goal.Status.ACTIVE)
+        for decision in self.decisions():
+            if decision.status() == Decision.Status.BLOCKED and decision.goal().is_pending():
+                decision.goal().status(Goal.Status.ACTIVE)
 
     def _execute(self):
         for decision in list(filter(lambda decision: decision.status() == Decision.Status.SELECTED, self.decisions())):

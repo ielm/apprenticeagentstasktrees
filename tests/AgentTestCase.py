@@ -503,7 +503,27 @@ class AgentDecideTestCase(unittest.TestCase):
         self.agent.identity["HAS-DECISION"] += decision.frame
 
         self.agent._decide()
-        self.assertTrue(goal.is_pending())
+        self.assertEqual(Decision.Status.BLOCKED, decision.status())
+
+    def test_decide_goals_whose_decisions_are_blocked_are_still_marked_as_active(self):
+        from backend.models.graph import Frame
+        from backend.models.statement import AssertStatement, ExistsStatement, MakeInstanceStatement
+
+        assertion = ExistsStatement.instance(self.g, Frame.q(self.agent).id("SELF.DNE"))
+        resolutions = [MakeInstanceStatement.instance(self.g, self.g._namespace, Goal.define(self.g, "resolution", 1.0, 0.5, [], [], []).frame, [])]
+        statement = AssertStatement.instance(self.g, assertion, resolutions)
+
+        step = Step.build(self.g, 1, [statement])
+        plan = Plan.build(self.g, "plan", Plan.DEFAULT, [step])
+        definition = Goal.define(self.g, "goal", 1.0, 0.5, [plan], [], [])
+        goal = Goal.instance_of(self.g, definition, [])
+
+        self.agent.agenda().add_goal(goal.frame)
+
+        self.agent._decide()
+        self.assertEqual(1, len(self.agent.decisions()))
+        self.assertEqual(Decision.Status.BLOCKED, self.agent.decisions()[0].status())
+        self.assertTrue(goal.is_active())
 
     @patch.object(Trigger, 'fire')
     def test_decide_runs_triggers(self, mocked):
