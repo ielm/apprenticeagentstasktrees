@@ -317,13 +317,15 @@
                 var decision = decisions[i];
 
                 if (decision.status == "SELECTED") {
-                    decision["style"] = "badge-info";
+                    decision["style"] = "badge-primary";
                 } else if (decision.status == "EXECUTING") {
                     decision["style"] = "badge-success";
                 } else if (decision.status == "FINISHED") {
                     decision["style"] = "badge-secondary";
                 } else if (decision.status == "BLOCKED") {
                     decision["style"] = "badge-warning";
+                } else if (decision.status == "PENDING") {
+                    decision["style"] = "badge-info";
                 }
 
                 var template = document.getElementById('decision-template').innerHTML;
@@ -466,6 +468,7 @@
                 <div><strong>Requires:</strong> {| requires |}</div>
                 <div><strong>Effectors:</strong> {| effectors |}</div>
                 <div><strong>Callbacks:</strong> {| callbacks |}</div>
+                <div><strong>Impasses:</strong> {| impasses |}</div>
             </div>
         </div>
     </script>

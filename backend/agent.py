@@ -229,6 +229,8 @@ class Agent(Network):
             decision.execute(self, effectors)
 
     def _assess(self):
+        reassess = False
+
         for decision in self.decisions():
             for callback in decision.callbacks():
                 if callback.status() == Callback.Status.RECEIVED:
@@ -258,7 +260,13 @@ class Agent(Network):
                 decision.frame["STATUS"] = Decision.Status.PENDING
 
         for active in self.agenda().goals(pending=True, active=True, abandoned=True, satisfied=True):
+            status = active.frame["STATUS"].singleton()
             active.assess()
+            if status != active.frame["STATUS"].singleton():
+                reassess = True
+
+        if reassess:
+            self._assess()
 
     def agenda(self):
         return Agenda(self.identity)
