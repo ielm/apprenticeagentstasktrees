@@ -703,7 +703,6 @@ class AgentAssessTestCase(unittest.TestCase):
         self.assertIn(effector2, decision2.effectors())
         self.assertIn(callback2.frame._identifier, self.agent.exe)
 
-
     def test_assess_marks_executing_decisions_as_finished_if_no_callbacks_remain(self):
         step = Step.build(self.g, 1, [])
 
@@ -829,3 +828,87 @@ class AgentAssessTestCase(unittest.TestCase):
 
         self.assertTrue(goal1.is_satisfied())
         self.assertTrue(goal2.is_active())
+
+    def test_assess_removes_satisfied_impasses(self):
+        step = Step.build(self.g, 1, [])
+
+        subgoal = self.g.register("GOAL")
+        subgoal["STATUS"] = Goal.Status.SATISFIED
+
+        decision = Decision.build(self.g, "GOAL", "PLAN", step)
+        decision.frame["HAS-IMPASSE"] += subgoal
+        decision.frame["HAS-CALLBACK"] += self.g.register("CALLBACK")
+        decision.frame["STATUS"] = Decision.Status.BLOCKED
+        self.agent.identity["HAS-DECISION"] += decision.frame
+
+        self.assertEqual(Decision.Status.BLOCKED, decision.status())
+        self.assertIn(subgoal, decision.impasses())
+
+        self.agent._assess()
+        self.assertEqual(Decision.Status.EXECUTING, decision.status())
+        self.assertEqual(0, len(decision.impasses()))
+
+    def test_assess_decision_not_removed_if_blocked(self):
+        step = Step.build(self.g, 1, [])
+
+        subgoal = self.g.register("GOAL")
+        subgoal["STATUS"] = Goal.Status.ACTIVE
+
+        decision = Decision.build(self.g, "GOAL", "PLAN", step)
+        decision.frame["HAS-IMPASSE"] += subgoal
+        decision.frame["STATUS"] = Decision.Status.BLOCKED
+        self.agent.identity["HAS-DECISION"] += decision.frame
+
+        self.assertEqual(Decision.Status.BLOCKED, decision.status())
+        self.assertIn(subgoal, decision.impasses())
+
+        self.agent._assess()
+        self.assertIn(decision, self.agent.decisions())
+
+    def test_subgoals_are_cleared_if_a_goal_is_otherwise_satisfied(self):
+        step = Step.build(self.g, 1, [])
+
+        goal = self.g.register("GOAL", generate_index=True)
+        goal["STATUS"] = Goal.Status.SATISFIED
+        self.agent.agenda().add_goal(goal)
+
+        subgoal = self.g.register("GOAL", generate_index=True)
+        subgoal["STATUS"] = Goal.Status.ACTIVE
+        self.agent.agenda().add_goal(subgoal)
+
+        goal["HAS-GOAL"] += subgoal
+
+        decision = Decision.build(self.g, goal, "PLAN", step)
+        decision.frame["HAS-IMPASSE"] += subgoal
+        decision.frame["STATUS"] = Decision.Status.BLOCKED
+        self.agent.identity["HAS-DECISION"] += decision.frame
+
+        self.assertIn(subgoal, self.agent.agenda().goals())
+
+        self.agent._assess()
+
+        self.assertNotIn(subgoal, self.agent.agenda().goals())
+
+    def test_subgoals_are_cleared_if_a_goal_is_otherwise_abandoned(self):
+        step = Step.build(self.g, 1, [])
+
+        goal = self.g.register("GOAL", generate_index=True)
+        goal["STATUS"] = Goal.Status.ABANDONED
+        self.agent.agenda().add_goal(goal)
+
+        subgoal = self.g.register("GOAL", generate_index=True)
+        subgoal["STATUS"] = Goal.Status.ACTIVE
+        self.agent.agenda().add_goal(subgoal)
+
+        goal["HAS-GOAL"] += subgoal
+
+        decision = Decision.build(self.g, goal, "PLAN", step)
+        decision.frame["HAS-IMPASSE"] += subgoal
+        decision.frame["STATUS"] = Decision.Status.BLOCKED
+        self.agent.identity["HAS-DECISION"] += decision.frame
+
+        self.assertIn(subgoal, self.agent.agenda().goals())
+
+        self.agent._assess()
+
+        self.assertNotIn(subgoal, self.agent.agenda().goals())

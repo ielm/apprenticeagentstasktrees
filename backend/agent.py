@@ -229,12 +229,17 @@ class Agent(Network):
                 if callback.status() == Callback.Status.RECEIVED:
                     callback.process()
 
+        for decision in self.decisions():
+            decision.assess_impasses()
+            if len(decision.impasses()) == 0 and decision.status() == Decision.Status.BLOCKED:
+                decision.frame["STATUS"] = Decision.Status.EXECUTING
+
         for decision in list(filter(lambda decision: decision.status() == Decision.Status.EXECUTING, self.decisions())):
             if len(decision.callbacks()) == 0:
                 decision.frame["STATUS"] = Decision.Status.FINISHED
                 decision.step().frame["STATUS"] = Step.Status.FINISHED
 
-        for decision in list(filter(lambda decision: decision.status() != Decision.Status.EXECUTING and decision.status() != Decision.Status.FINISHED, self.decisions())):
+        for decision in list(filter(lambda decision: decision.status() != Decision.Status.BLOCKED and decision.status() != Decision.Status.EXECUTING and decision.status() != Decision.Status.FINISHED, self.decisions())):
             self.identity["HAS-DECISION"] -= decision.frame
             del decision.frame._graph[decision.frame.name()]
 
@@ -242,7 +247,7 @@ class Agent(Network):
                 del output.frame._graph[output.frame.name()]
                 del self[output.graph(self)._namespace]
 
-        for active in self.agenda().goals(pending=True, active=True):
+        for active in self.agenda().goals(pending=True, active=True, abandoned=True, satisfied=True):
             active.assess()
 
     def agenda(self):

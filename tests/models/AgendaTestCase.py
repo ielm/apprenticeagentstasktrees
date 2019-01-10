@@ -358,6 +358,58 @@ class GoalTestCase(unittest.TestCase):
         Goal(goal).assess()
         self.assertTrue(Goal(goal).is_satisfied())
 
+    def test_assess_abandons_subgoals_if_goal_satisfied(self):
+        network = Network()
+        graph = network.register("EXE")
+
+        subgoal1 = graph.register("SUBGOAL.1")
+        subgoal1["STATUS"] = Goal.Status.ACTIVE
+
+        subgoal2 = graph.register("SUBGOAL.2")
+        subgoal2["STATUS"] = Goal.Status.SATISFIED
+
+        goal = graph.register("GOAL.1")
+        goal["STATUS"] = Goal.Status.ACTIVE
+        goal["HAS-GOAL"] += subgoal1
+        goal["HAS-GOAL"] += subgoal2
+
+        self.assertEqual([subgoal1, subgoal2], Goal(goal).subgoals())
+        self.assertTrue(Goal(subgoal1).is_active())
+        self.assertTrue(Goal(subgoal2).is_satisfied())
+
+        goal["STATUS"] = Goal.Status.SATISFIED
+        Goal(goal).assess()
+
+        self.assertEqual([subgoal1, subgoal2], Goal(goal).subgoals())
+        self.assertTrue(Goal(subgoal1).is_abandoned())
+        self.assertTrue(Goal(subgoal2).is_satisfied())
+
+    def test_assess_abandons_subgoals_if_goal_abandoned(self):
+        network = Network()
+        graph = network.register("EXE")
+
+        subgoal1 = graph.register("SUBGOAL.1")
+        subgoal1["STATUS"] = Goal.Status.ACTIVE
+
+        subgoal2 = graph.register("SUBGOAL.2")
+        subgoal2["STATUS"] = Goal.Status.SATISFIED
+
+        goal = graph.register("GOAL.1")
+        goal["STATUS"] = Goal.Status.ACTIVE
+        goal["HAS-GOAL"] += subgoal1
+        goal["HAS-GOAL"] += subgoal2
+
+        self.assertEqual([subgoal1, subgoal2], Goal(goal).subgoals())
+        self.assertTrue(Goal(subgoal1).is_active())
+        self.assertTrue(Goal(subgoal2).is_satisfied())
+
+        goal["STATUS"] = Goal.Status.ABANDONED
+        Goal(goal).assess()
+
+        self.assertEqual([subgoal1, subgoal2], Goal(goal).subgoals())
+        self.assertTrue(Goal(subgoal1).is_abandoned())
+        self.assertTrue(Goal(subgoal2).is_satisfied())
+
     def test_instance_of(self):
         graph = Graph("TEST")
         definition = graph.register("GOAL-DEF")
@@ -1005,6 +1057,21 @@ class StepTestCase(unittest.TestCase):
 
         Step(step).perform(VariableMap(self.g.register("VARMAP")))
 
+    def test_perform_raises_impasse_exceptions(self):
+        Bootstrap.bootstrap_resource(self.n, "backend.resources", "exe.knowledge")
+
+        from backend.models.statement import AssertStatement, ExistsStatement
+
+        perform = [AssertStatement.instance(self.g, ExistsStatement.instance(self.g, Frame.q(self.n).id("EXE.DNE")), [])]
+
+        step = Step.build(self.g, 1, perform)
+
+        with self.assertRaises(AssertStatement.ImpasseException):
+            step.perform(VariableMap(self.g.register("VARMAP")))
+
+        self.g.register("DNE")
+        step.perform(VariableMap(self.g.register("VARMAP")))
+
 
 class DecisionTestCase(unittest.TestCase):
 
@@ -1036,6 +1103,21 @@ class DecisionTestCase(unittest.TestCase):
         decision["ON-STEP"] = step
 
         self.assertEqual(step, Decision(decision).step())
+
+    def test_impasses(self):
+        decision = self.g.register("DECISION")
+
+        self.assertEqual([], Decision(decision).impasses())
+
+        impasse1 = self.g.register("GOAL", generate_index=True)
+        impasse2 = self.g.register("GOAL", generate_index=True)
+
+        decision["HAS-IMPASSE"] += impasse1
+        decision["HAS-IMPASSE"] += impasse2
+
+        self.assertEqual([impasse1, impasse2], Decision(decision).impasses())
+        self.assertIsInstance(Decision(decision).impasses()[0], Goal)
+        self.assertIsInstance(Decision(decision).impasses()[1], Goal)
 
     def test_outputs(self):
         decision = self.g.register("DECISION")
@@ -1161,6 +1243,43 @@ class DecisionTestCase(unittest.TestCase):
         decision._generate_outputs()
 
         self.assertEqual([self.n.lookup("OUTPUTS.XMR.1")], decision.outputs())
+
+    def test_generate_outputs_halts_and_registers_impasses(self):
+        from backend.models.output import OutputXMRTemplate
+        from backend.models.statement import AssertStatement, ExistsStatement, MakeInstanceStatement, OutputXMRStatement, Variable
+
+        self.n.register("EXE")
+        Bootstrap.bootstrap_resource(self.n, "backend.resources", "exe.knowledge")
+
+        Goal.define(self.g, "IMPASSE-GOAL", 0.5, 0.5, [], [], ["$var1"])
+
+        resolution = MakeInstanceStatement.instance(self.g, self.g._namespace, "TEST.IMPASSE-GOAL", ["$var1"])
+        statement1 = AssertStatement.instance(self.g, ExistsStatement.instance(self.g, Frame.q(self.n).id("EXE.DNE")), [resolution])
+
+        template = OutputXMRTemplate.build(self.n, "test-template", OutputXMRTemplate.Type.PHYSICAL, None, [])
+        statement2 = OutputXMRStatement.instance(self.g, template, [], None)
+
+        goal = Goal(self.g.register("GOAL"))
+        Variable.instance(self.g, "$var1", 123, goal)
+        step = Step.build(self.g, 1, [statement1, statement2])
+        decision = Decision.build(self.g, goal, "TEST-PLAN", step)
+
+        self.assertEqual([], decision.impasses())
+        self.assertEqual([], decision.outputs())
+        self.assertEqual([], goal.subgoals())
+
+        decision._generate_outputs()
+
+        self.assertEqual(1, len(decision.impasses()))
+        self.assertEqual("IMPASSE-GOAL", decision.impasses()[0].name())
+        self.assertEqual("TEST.IMPASSE-GOAL.1", decision.impasses()[0].frame.name())
+        self.assertEqual(123, decision.impasses()[0].resolve("$var1"))
+
+        self.assertEqual("TEST.IMPASSE-GOAL.1", goal.subgoals()[0].frame.name())
+
+        self.assertEqual(Decision.Status.BLOCKED, decision.status())
+
+        self.assertEqual([], decision.outputs())
 
     def test_calculate_priority(self):
         definition = Goal.define(self.g, "TEST-GOAL", 1.0, 0.0, [], [], [])
@@ -1292,3 +1411,21 @@ class DecisionTestCase(unittest.TestCase):
         decision.callback_received(callback)
         self.assertNotIn(effector, decision.effectors())
         self.assertNotIn(callback, decision.callbacks())
+
+    def test_assess_impasses(self):
+
+        subgoal1 = self.g.register("GOAL", generate_index=True)
+        subgoal1["STATUS"] = Goal.Status.ACTIVE
+
+        subgoal2 = self.g.register("GOAL", generate_index=True)
+        subgoal2["STATUS"] = Goal.Status.SATISFIED
+
+        decision = self.g.register("DECISION")
+        decision["HAS-IMPASSE"] += subgoal1
+        decision["HAS-IMPASSE"] += subgoal2
+
+        self.assertEqual([subgoal1, subgoal2], Decision(decision).impasses())
+
+        Decision(decision).assess_impasses()
+
+        self.assertEqual([subgoal1], Decision(decision).impasses())
