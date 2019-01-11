@@ -428,7 +428,7 @@ class Step(object):
     def is_finished(self) -> bool:
         return self.frame["STATUS"].singleton() == Step.Status.FINISHED
 
-    def perform(self, varmap: VariableMap) -> List['OutputXMR']:
+    def perform(self, varmap: VariableMap) -> StatementScope:
         scope = StatementScope()
         for statement in self.frame["PERFORM"]:
             statement = statement.resolve()
@@ -437,7 +437,7 @@ class Step(object):
             if isinstance(statement, Frame) and statement ^ "EXE.STATEMENT":
                 Statement.from_instance(statement).run(scope, varmap)
 
-        return scope.outputs
+        return scope
 
     def __eq__(self, other):
         if isinstance(other, Step):
@@ -719,7 +719,8 @@ class Decision(object):
 
     def _generate_outputs(self):
         try:
-            self.frame["HAS-OUTPUT"] = list(map(lambda output: output.frame, self.step().perform(self.goal())))
+            scope = self.step().perform(self.goal())
+            self.frame["HAS-OUTPUT"] = list(map(lambda output: output.frame, scope.outputs))
         except AssertStatement.ImpasseException as e:
             for r in e.resolutions:
                 impasse: Frame = r.run(StatementScope(), self.goal())

@@ -1005,7 +1005,7 @@ class StepTestCase(unittest.TestCase):
 
         self.assertEqual(out, ["X", "Y"])
 
-    def test_perform_returns_outputs(self):
+    def test_perform_returns_scope_with_outputs(self):
         Bootstrap.bootstrap_resource(self.n, "backend.resources", "exe.knowledge")
 
         class TestStatement(Statement):
@@ -1021,8 +1021,27 @@ class StepTestCase(unittest.TestCase):
         self.g["STATEMENT"]["CLASSMAP"] = Literal(TestStatement)
         step["PERFORM"] = [statement]
 
-        outputs = Step(step).perform(VariableMap(self.g.register("VARMAP")))
-        self.assertEqual([123], outputs)
+        scope = Step(step).perform(VariableMap(self.g.register("VARMAP")))
+        self.assertEqual([123], scope.outputs)
+
+    def test_perform_returns_scope_with_expectations(self):
+        Bootstrap.bootstrap_resource(self.n, "backend.resources", "exe.knowledge")
+
+        class TestStatement(Statement):
+            def run(self, scope: StatementScope(), varmap: VariableMap):
+                scope.expectations.append(123)
+
+        agent = self.g.register("AGENT")
+        goal = self.g.register("GOAL")
+        plan = self.g.register("PLAN")
+        step = self.g.register("STEP")
+
+        statement = self.g.register("STATEMENT", generate_index=True, isa="EXE.STATEMENT")
+        self.g["STATEMENT"]["CLASSMAP"] = Literal(TestStatement)
+        step["PERFORM"] = [statement]
+
+        scope = Step(step).perform(VariableMap(self.g.register("VARMAP")))
+        self.assertEqual([123], scope.expectations)
 
     def test_perform_with_variables(self):
         Bootstrap.bootstrap_resource(self.n, "backend.resources", "exe.knowledge")
