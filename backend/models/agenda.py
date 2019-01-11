@@ -429,17 +429,15 @@ class Step(object):
         return self.frame["STATUS"].singleton() == Step.Status.FINISHED
 
     def perform(self, varmap: VariableMap) -> List['OutputXMR']:
-        outputs = []
+        scope = StatementScope()
         for statement in self.frame["PERFORM"]:
             statement = statement.resolve()
             if statement == Step.IDLE:
                 pass
             if isinstance(statement, Frame) and statement ^ "EXE.STATEMENT":
-                scope = StatementScope()
                 Statement.from_instance(statement).run(scope, varmap)
-                outputs.extend(scope.outputs)
 
-        return outputs
+        return scope.outputs
 
     def __eq__(self, other):
         if isinstance(other, Step):
