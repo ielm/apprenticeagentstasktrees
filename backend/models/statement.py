@@ -118,8 +118,11 @@ class VariableMap(object):
 class StatementScope(object):
 
     def __init__(self):
+        from backend.models.agenda import Expectation
         from backend.models.output import OutputXMR
+
         self.outputs: List[OutputXMR] = []
+        self.expectations: List[Expectation] = []
 
 
 class Statement(object):
@@ -372,6 +375,31 @@ class ExistsStatement(Statement):
     def __eq__(self, other):
         if isinstance(other, ExistsStatement):
             return other.frame["FIND"] == self.frame["FIND"]
+
+        return super().__eq__(other)
+
+
+class ExpectationStatement(Statement):
+
+    @classmethod
+    def instance(cls, graph: Graph, condition: Union[str, Identifier, Frame, Statement]):
+        if isinstance(condition, Statement):
+            condition = condition.frame
+
+        frame = graph.register("EXPECTATION-STATEMENT", isa="EXE.EXPECTATION-STATEMENT", generate_index=True)
+        frame["CONDITION"] = condition
+
+        return ExpectationStatement(frame)
+
+    def condition(self) -> Statement:
+        return Statement.from_instance(self.frame["CONDITION"].singleton())
+
+    def run(self, scope: StatementScope, varmap: VariableMap):
+        scope.expectations.append(self.condition())
+
+    def __eq__(self, other):
+        if isinstance(other, ExpectationStatement):
+            return self.condition() == other.condition()
 
         return super().__eq__(other)
 

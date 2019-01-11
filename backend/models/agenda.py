@@ -763,3 +763,32 @@ class Decision(object):
         if isinstance(other, Frame):
             return self.frame == other
         return super().__eq__(other)
+
+
+class Expectation(object):
+
+    class Status(Enum):
+        PENDING = "PENDING"
+        EXPECTING = "EXPECTING"
+        SATISFIED = "SATISFIED"
+
+    @classmethod
+    def build(cls, graph: Graph, status: 'Expectation.Status', condition: Union[str, Identifier, Frame, Statement]):
+        if isinstance(condition, Statement):
+            condition = condition.frame
+
+        frame = graph.register("EXPECTATION", generate_index=True)
+
+        frame["STATUS"] = status
+        frame["CONDITION"] = condition
+
+        return Expectation(frame)
+
+    def __init__(self, frame: Frame):
+        self.frame = frame
+
+    def status(self) -> 'Expectation.Status':
+        return self.frame["STATUS"].singleton()
+
+    def condition(self) -> Statement:
+        return Statement.from_instance(self.frame["CONDITION"].singleton())

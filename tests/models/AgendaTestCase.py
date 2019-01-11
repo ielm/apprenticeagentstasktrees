@@ -1,4 +1,4 @@
-from backend.models.agenda import Agenda, Condition, Decision, Goal, Plan, Step, Trigger
+from backend.models.agenda import Agenda, Condition, Decision, Expectation, Goal, Plan, Step, Trigger
 from backend.models.bootstrap import Bootstrap
 from backend.models.graph import Frame, Graph, Literal, Network
 from backend.models.statement import Statement, StatementScope, VariableMap
@@ -1429,3 +1429,35 @@ class DecisionTestCase(unittest.TestCase):
         Decision(decision).assess_impasses()
 
         self.assertEqual([subgoal1], Decision(decision).impasses())
+
+
+class ExpectationTestCase(unittest.TestCase):
+
+    def setUp(self):
+        self.n = Network()
+        self.g = self.n.register("TEST")
+
+        self.n.register("EXE")
+        Bootstrap.bootstrap_resource(self.n, "backend.resources", "exe.knowledge")
+
+    def test_status(self):
+        e = self.g.register("EXPECTATION")
+        e["STATUS"] = Expectation.Status.EXPECTING
+
+        self.assertEqual(Expectation.Status.EXPECTING, Expectation(e).status())
+
+    def test_condition(self):
+        from backend.models.statement import ExistsStatement
+
+        e = self.g.register("EXPECTATION")
+        e["CONDITION"] = ExistsStatement.instance(self.g, Frame.q(self.n).id("TEST.FRAME.1")).frame
+
+        self.assertEqual(ExistsStatement.instance(self.g, Frame.q(self.n).id("TEST.FRAME.1")), Expectation(e).condition())
+
+    def test_build(self):
+        from backend.models.statement import ExistsStatement
+
+        e = Expectation.build(self.g, Expectation.Status.EXPECTING, ExistsStatement.instance(self.g, Frame.q(self.n).id("TEST.FRAME.1")))
+
+        self.assertEqual(Expectation.Status.EXPECTING, e.status())
+        self.assertEqual(ExistsStatement.instance(self.g, Frame.q(self.n).id("TEST.FRAME.1")), e.condition())

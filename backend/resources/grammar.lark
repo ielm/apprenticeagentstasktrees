@@ -69,7 +69,7 @@ condition_nor: boolean_statement (NOR boolean_statement)+
 condition_not: boolean_statement (NOT boolean_statement)+
 condition_on: (EXECUTED)
 
-statement: (add_filler_statement | assert_statement | assign_filler_statement | assign_variable_statement | exists_statement | foreach_statement | is_statement | make_instance_statement | mp_statement | output_statement)
+statement: (add_filler_statement | assert_statement | assign_filler_statement | assign_variable_statement | exists_statement | expectation_statement |foreach_statement | is_statement | make_instance_statement | mp_statement | output_statement)
 boolean_statement: (exists_statement | is_statement)
 
 add_filler_statement: statement_instance "[" NAME "]" "+=" (statement_instance | literal)
@@ -77,6 +77,7 @@ assert_statement: ASSERT assertion ELSE IMPASSE WITH impasses
 assign_filler_statement: statement_instance "[" NAME "]" "=" (statement_instance | literal)
 assign_variable_statement: ARGUMENT "=" (literal | identifier | ARGUMENT | statement | list)
 exists_statement: EXISTS logical_slot_query
+expectation_statement: EXPECT (boolean_statement | mp_statement)
 foreach_statement: FOR EACH ARGUMENT IN logical_slot_query ("|" statement)*
 is_statement: statement_instance "[" NAME "]" EQUALS EQUALS literal
 make_instance_statement: "@" (graph | special_agent_graph) ":" identifier arguments
@@ -111,6 +112,7 @@ ELSE: "else"i
 EXE: "exe"i
 EXECUTED: "executed"i
 EXISTS: "exists"i
+EXPECT: "expect"i
 FOR: "for"i
 GOAL: "goal"i
 IDLE: "idle"i
