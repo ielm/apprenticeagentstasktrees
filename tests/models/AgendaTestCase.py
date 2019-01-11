@@ -1513,3 +1513,23 @@ class ExpectationTestCase(unittest.TestCase):
 
         self.assertEqual(Expectation.Status.EXPECTING, e.status())
         self.assertEqual(ExistsStatement.instance(self.g, Frame.q(self.n).id("TEST.FRAME.1")), e.condition())
+
+    def test_assess(self):
+        from backend.models.statement import IsStatement
+
+        target = self.g.register("TARGET")
+        varmap = VariableMap(self.g.register("VARMAP"))
+
+        e = Expectation.build(self.g, Expectation.Status.PENDING, IsStatement.instance(self.g, target, "SLOT", 123))
+        self.assertEqual(Expectation.Status.PENDING, e.status())
+
+        e.assess(varmap)
+        self.assertEqual(Expectation.Status.PENDING, e.status())
+
+        target["SLOT"] = 123
+        e.assess(varmap)
+        self.assertEqual(Expectation.Status.SATISFIED, e.status())
+
+        target["SLOT"] = 456
+        e.assess(varmap)
+        self.assertEqual(Expectation.Status.PENDING, e.status())

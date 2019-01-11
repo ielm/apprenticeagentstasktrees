@@ -1,5 +1,5 @@
 from backend.agent import Agent
-from backend.models.agenda import Decision, Goal, Plan, Step, Trigger
+from backend.models.agenda import Decision, Expectation, Goal, Plan, Step, Trigger
 from backend.models.effectors import Capability, Effector
 from backend.models.graph import Literal, Network
 from backend.models.ontology import Ontology
@@ -977,3 +977,31 @@ class AgentAssessTestCase(unittest.TestCase):
         self.agent._assess()
 
         self.assertIn(subgoal, self.agent.agenda().goals())
+
+    def test_assess_updates_expectation_status(self):
+        from backend.models.bootstrap import Bootstrap
+        from backend.models.statement import IsStatement
+
+        Bootstrap.bootstrap_resource(self.agent, "backend.resources", "exe.knowledge")
+
+        target = self.g.register("TARGET")
+        target["SLOT"] = 123
+
+        goal = self.g.register("GOAL", generate_index=True)
+        goal["STATUS"] = Goal.Status.ACTIVE
+        self.agent.agenda().add_goal(goal)
+
+        step = Step.build(self.g, 1, [])
+
+        decision = Decision.build(self.g, goal, "PLAN", step)
+
+        statement = IsStatement.instance(self.g, target, "SLOT", 123)
+        expectation = Expectation.build(self.g, Expectation.Status.PENDING, statement)
+        decision.frame["HAS-EXPECTATION"] += expectation.frame
+        self.agent.identity["HAS-DECISION"] += decision.frame
+
+        self.assertEqual(Expectation.Status.PENDING, expectation.status())
+
+        self.agent._assess()
+
+        self.assertEqual(Expectation.Status.SATISFIED, expectation.status())

@@ -237,6 +237,10 @@ class Agent(Network):
                     callback.process()
 
         for decision in self.decisions():
+            for expectation in decision.expectations():
+                expectation.assess(decision.goal())
+
+        for decision in self.decisions():
             for impasse in decision.impasses():
                 if impasse.frame.name() not in list(map(lambda g: g.frame.name(), self.agenda().goals(pending=True, active=True, abandoned=True, satisfied=True))):
                     self.agenda().add_goal(impasse)

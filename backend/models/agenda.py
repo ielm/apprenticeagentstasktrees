@@ -796,6 +796,12 @@ class Expectation(object):
     def condition(self) -> Statement:
         return Statement.from_instance(self.frame["CONDITION"].singleton())
 
+    def assess(self, varmap: VariableMap):
+        if self.condition().run(StatementScope(), varmap):
+            self.frame["STATUS"] = Expectation.Status.SATISFIED
+        else:
+            self.frame["STATUS"] = Expectation.Status.PENDING
+
     def __eq__(self, other):
         if isinstance(other, Expectation):
             return self.frame == other.frame
