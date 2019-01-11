@@ -31,6 +31,11 @@
     CLASSMAP "backend.models.statement.AddFillerStatement";
 };
 
+@EXE.ASSERT-STATEMENT = {
+    ISA @EXE.STATEMENT;
+    CLASSMAP "backend.models.statement.AssertStatement";
+};
+
 @EXE.ASSIGNFILLER-STATEMENT = {
     ISA @EXE.STATEMENT;
     CLASSMAP "backend.models.statement.AssignFillerStatement";
