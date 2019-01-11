@@ -191,6 +191,8 @@ class Agent(Network):
         for decision in decisions:
             decision.inspect()
 
+        decisions = list(filter(lambda decision: decision.status() != Decision.Status.BLOCKED, decisions))
+
         decisions = sorted(decisions, key=lambda d: (d.priority() * priority_weight) - (d.cost() * resources_weight), reverse=True)
         effectors = self.effectors()
 
@@ -217,6 +219,9 @@ class Agent(Network):
                 decision.decline()
         for goal in selected_goals:
             Goal(self.lookup(goal)).status(Goal.Status.ACTIVE)
+        for decision in self.decisions():
+            if decision.status() == Decision.Status.BLOCKED and decision.goal().is_pending():
+                decision.goal().status(Goal.Status.ACTIVE)
 
     def _execute(self):
         for decision in list(filter(lambda decision: decision.status() == Decision.Status.SELECTED, self.decisions())):
@@ -224,17 +229,24 @@ class Agent(Network):
             decision.execute(self, effectors)
 
     def _assess(self):
+        reassess = False
+
         for decision in self.decisions():
             for callback in decision.callbacks():
                 if callback.status() == Callback.Status.RECEIVED:
                     callback.process()
+
+        for decision in self.decisions():
+            for impasse in decision.impasses():
+                if impasse.frame.name() not in list(map(lambda g: g.frame.name(), self.agenda().goals(pending=True, active=True, abandoned=True, satisfied=True))):
+                    self.agenda().add_goal(impasse)
 
         for decision in list(filter(lambda decision: decision.status() == Decision.Status.EXECUTING, self.decisions())):
             if len(decision.callbacks()) == 0:
                 decision.frame["STATUS"] = Decision.Status.FINISHED
                 decision.step().frame["STATUS"] = Step.Status.FINISHED
 
-        for decision in list(filter(lambda decision: decision.status() != Decision.Status.EXECUTING and decision.status() != Decision.Status.FINISHED, self.decisions())):
+        for decision in list(filter(lambda decision: decision.status() != Decision.Status.BLOCKED and decision.status() != Decision.Status.EXECUTING and decision.status() != Decision.Status.FINISHED, self.decisions())):
             self.identity["HAS-DECISION"] -= decision.frame
             del decision.frame._graph[decision.frame.name()]
 
@@ -242,8 +254,19 @@ class Agent(Network):
                 del output.frame._graph[output.frame.name()]
                 del self[output.graph(self)._namespace]
 
-        for active in self.agenda().goals(pending=True, active=True):
+        for decision in self.decisions():
+            decision.assess_impasses()
+            if len(decision.impasses()) == 0 and decision.status() == Decision.Status.BLOCKED:
+                decision.frame["STATUS"] = Decision.Status.PENDING
+
+        for active in self.agenda().goals(pending=True, active=True, abandoned=True, satisfied=True):
+            status = active.frame["STATUS"].singleton()
             active.assess()
+            if status != active.frame["STATUS"].singleton():
+                reassess = True
+
+        if reassess:
+            self._assess()
 
     def agenda(self):
         return Agenda(self.identity)

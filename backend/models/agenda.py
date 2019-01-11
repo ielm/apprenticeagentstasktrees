@@ -1,7 +1,7 @@
 from backend.models.grammar import Grammar
 from backend.models.graph import Frame, Graph, Identifier, Literal
 from backend.models.query import Query
-from backend.models.statement import Statement, StatementScope, VariableMap
+from backend.models.statement import AssertStatement, MakeInstanceStatement, Statement, StatementScope, VariableMap
 from enum import Enum
 from functools import reduce
 from typing import Any, Dict, List, Tuple, Union
@@ -162,7 +162,12 @@ class Goal(VariableMap):
         for condition in conditions:
             if condition.assess(self):
                 self.status(condition.status())
-                return
+                break
+
+        if self.is_abandoned() or self.is_satisfied():
+            for subgoal in self.subgoals():
+                if not subgoal.is_satisfied():
+                    subgoal.frame["STATUS"] = Goal.Status.ABANDONED
 
     def conditions(self) -> List['Condition']:
         return list(map(lambda condition: Condition(condition.resolve()), self.frame["WHEN"]))
@@ -620,6 +625,7 @@ class Decision(object):
         PENDING = "PENDING"
         SELECTED = "SELECTED"
         DECLINED = "DECLINED"
+        BLOCKED = "BLOCKED"
         EXECUTING = "EXECUTING"
         FINISHED = "FINISHED"
 
@@ -633,7 +639,7 @@ class Decision(object):
       HAS-PRIORITY? Literal(dbl);
       HAS-COST?     Literal(dbl);
       REQUIRES*     ^EXE.CAPABILITY;
-      STATUS        Literal(str[PENDING | SELECTED | DECLINED | EXECUTING | FINISHED]);
+      STATUS        Literal(str[PENDING | SELECTED | DECLINED | BLOCKED | EXECUTING | FINISHED]);
       HAS-EFFECTOR* ^EXE.EFFECTOR;
       HAS-CALLBACK* ^EXE.CALLBACK;
     }
@@ -667,6 +673,9 @@ class Decision(object):
 
     def step(self) -> Step:
         return Step(self.frame["ON-STEP"].singleton())
+
+    def impasses(self) -> List[Goal]:
+        return list(map(lambda i: Goal(i.resolve()), self.frame["HAS-IMPASSE"]))
 
     def outputs(self) -> List['OutputXMR']:
         from backend.models.output import OutputXMR
@@ -711,7 +720,14 @@ class Decision(object):
         self._calculate_cost()
 
     def _generate_outputs(self):
-        self.frame["HAS-OUTPUT"] = list(map(lambda output: output.frame, self.step().perform(self.goal())))
+        try:
+            self.frame["HAS-OUTPUT"] = list(map(lambda output: output.frame, self.step().perform(self.goal())))
+        except AssertStatement.ImpasseException as e:
+            for r in e.resolutions:
+                impasse: Frame = r.run(StatementScope(), self.goal())
+                self.frame["HAS-IMPASSE"] += impasse
+                self.goal().frame["HAS-GOAL"] += impasse
+            self.frame["STATUS"] = Decision.Status.BLOCKED
 
     def _calculate_priority(self):
         self.frame["HAS-PRIORITY"] = self.goal().priority()
@@ -737,6 +753,9 @@ class Decision(object):
     def callback_received(self, callback: 'Callback'):
         self.frame["HAS-EFFECTOR"] -= callback.effector().frame
         self.frame["HAS-CALLBACK"] -= callback.frame
+
+    def assess_impasses(self):
+        self.frame["HAS-IMPASSE"] = list(map(lambda i: i.frame, filter(lambda i: not i.is_satisfied(), self.impasses())))
 
     def __eq__(self, other):
         if isinstance(other, Decision):

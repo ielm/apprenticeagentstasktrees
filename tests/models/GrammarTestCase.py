@@ -2,12 +2,12 @@ from backend.agent import Agent
 from backend.models.bootstrap import Bootstrap
 from backend.models.agenda import Condition, Goal, Plan, Step
 from backend.models.grammar import Grammar
-from backend.models.graph import Identifier, Literal, Network
+from backend.models.graph import Frame, Identifier, Literal, Network
 from backend.models.mps import AgentMethod
 from backend.models.output import OutputXMRTemplate
 from backend.models.path import Path
 from backend.models.query import AndQuery, ExactQuery, FillerQuery, FrameQuery, IdentifierQuery, LiteralQuery, NameQuery, NotQuery, OrQuery, SlotQuery
-from backend.models.statement import AddFillerStatement, AssignFillerStatement, AssignVariableStatement, ExistsStatement, ForEachStatement, IsStatement, MakeInstanceStatement, MeaningProcedureStatement, OutputXMRStatement
+from backend.models.statement import AddFillerStatement, AssertStatement, AssignFillerStatement, AssignVariableStatement, ExistsStatement, ForEachStatement, IsStatement, MakeInstanceStatement, MeaningProcedureStatement, OutputXMRStatement
 from backend.models.view import View
 
 import unittest
@@ -246,6 +246,30 @@ class AgendaGrammarTestCase(unittest.TestCase):
 
         statement = AddFillerStatement.instance(self.g, f, "SLOT", 123)
         parsed = Grammar.parse(self.agent, "@SELF.FRAME[SLOT] += 123", start="add_filler_statement", agent=self.agent)
+        self.assertEqual(statement, parsed)
+
+    def test_assert_statement(self):
+        Bootstrap.bootstrap_resource(self.agent, "backend.resources", "exe.knowledge")
+
+        f = self.g.register("FRAME")
+
+        resolution1 = MakeInstanceStatement.instance(self.g, "TEST", "TEST.MYGOAL", [])
+        resolution2 = MakeInstanceStatement.instance(self.g, "TEST", "TEST.MYGOAL", ["$var1", "$var2"])
+
+        statement = AssertStatement.instance(self.g, ExistsStatement.instance(self.g, SlotQuery(self.agent, NameQuery(self.agent, "XYZ"))), [resolution1])
+        parsed = Grammar.parse(self.agent, "ASSERT EXISTS HAS XYZ ELSE IMPASSE WITH @TEST:@TEST.MYGOAL()", start="assert_statement", agent=self.agent)
+        self.assertEqual(statement, parsed)
+
+        statement = AssertStatement.instance(self.g, IsStatement.instance(self.g, f, "SLOT", 123), [resolution1])
+        parsed = Grammar.parse(self.agent, "ASSERT @SELF.FRAME[SLOT] == 123 ELSE IMPASSE WITH @TEST:@TEST.MYGOAL()", start="assert_statement", agent=self.agent)
+        self.assertEqual(statement, parsed)
+
+        statement = AssertStatement.instance(self.g, MeaningProcedureStatement.instance(self.g, "some_mp", ["$var1"]), [resolution1])
+        parsed = Grammar.parse(self.agent, "ASSERT SELF.some_mp($var1) ELSE IMPASSE WITH @TEST:@TEST.MYGOAL()", start="assert_statement", agent=self.agent)
+        self.assertEqual(statement, parsed)
+
+        statement = AssertStatement.instance(self.g, ExistsStatement.instance(self.g, SlotQuery(self.agent, NameQuery(self.agent, "XYZ"))), [resolution1, resolution2])
+        parsed = Grammar.parse(self.agent, "ASSERT EXISTS HAS XYZ ELSE IMPASSE WITH @TEST:@TEST.MYGOAL() OR @TEST:@TEST.MYGOAL($var1, $var2)", start="assert_statement", agent=self.agent)
         self.assertEqual(statement, parsed)
 
     def test_assign_filler_statement(self):

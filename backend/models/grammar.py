@@ -316,6 +316,13 @@ class GrammarTransformer(Transformer):
 
         return AddFillerStatement.instance(self.agent.exe, domain, slot, filler)
 
+    def assert_statement(self, matches):
+        from backend.models.statement import AssertStatement
+        assertion = matches[1]
+        resolutions = matches[5]
+
+        return AssertStatement.instance(self.agent.exe, assertion, resolutions)
+
     def assign_filler_statement(self, matches):
         from backend.models.statement import AssignFillerStatement
         domain = matches[0]
@@ -360,7 +367,7 @@ class GrammarTransformer(Transformer):
         if isinstance(matches[0], Identifier):
             if matches[0].render() == "SELF":
                 return self.agent.identity
-            return matches[0].resolve(None, network=self.network)
+            return matches[0]
         if str(matches[0]) == "SELF":
             return self.agent.identity
 
@@ -383,6 +390,17 @@ class GrammarTransformer(Transformer):
 
         return OutputXMRStatement.instance(self.agent.exe, template, params, agent)
 
+    def assertion(self, matches):
+        return matches[0]
+
+    def impasses(self, matches):
+        from backend.models.statement import MakeInstanceStatement
+
+        return list(filter(lambda m: isinstance(m, MakeInstanceStatement), matches))
+
+    def impasse(self, matches):
+        return matches[0]
+
     def arguments(self, matches):
         return matches
 
@@ -391,7 +409,7 @@ class GrammarTransformer(Transformer):
 
     def output_arguments(self, matches):
         from backend.models.graph import Frame
-        return list(map(lambda match: Literal(match) if not isinstance(match, Frame) else match, matches))
+        return list(map(lambda match: Literal(match) if not isinstance(match, Frame) and not isinstance(match, Identifier) else match, matches))
 
     def output_argument(self, matches):
         return matches[0]
