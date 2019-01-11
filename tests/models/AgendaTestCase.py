@@ -1151,6 +1151,19 @@ class DecisionTestCase(unittest.TestCase):
 
         self.assertEqual([output1, output2], Decision(decision).outputs())
 
+    def test_expectations(self):
+        decision = self.g.register("DECISION")
+
+        self.assertEqual([], Decision(decision).expectations())
+
+        expectation1 = self.g.register("EXPECTATION", generate_index=True)
+        expectation2 = self.g.register("EXPECTATION", generate_index=True)
+
+        decision["HAS-EXPECTATION"] += expectation1
+        decision["HAS-EXPECTATION"] += expectation2
+
+        self.assertEqual([expectation1, expectation2], Decision(decision).expectations())
+
     def test_priority(self):
         decision = self.g.register("DECISION")
 
@@ -1240,7 +1253,7 @@ class DecisionTestCase(unittest.TestCase):
         self.assertEqual(Decision.Status.PENDING, decision.status())
         self.assertEqual([], decision.callbacks())
 
-    def test_generate_outputs(self):
+    def test_generate_outputs_populates_outputs(self):
         from backend.models.output import OutputXMRTemplate
         from backend.models.statement import OutputXMRStatement
 
@@ -1262,6 +1275,26 @@ class DecisionTestCase(unittest.TestCase):
         decision._generate_outputs()
 
         self.assertEqual([self.n.lookup("OUTPUTS.XMR.1")], decision.outputs())
+
+    def test_generate_outputs_populates_expectations(self):
+        from backend.models.statement import ExpectationStatement, IsStatement
+
+        self.n.register("EXE")
+        Bootstrap.bootstrap_resource(self.n, "backend.resources", "exe.knowledge")
+
+        target = self.g.register("TARGET")
+
+        statement = ExpectationStatement.instance(self.g, IsStatement.instance(self.g, target, "SLOT", 123))
+        goal = Goal(self.g.register("GOAL"))
+        step = Step.build(self.g, 1, statement)
+
+        decision = Decision.build(self.g, goal, "TEST-PLAN", step)
+
+        self.assertEqual([], decision.expectations())
+
+        decision._generate_outputs()
+
+        self.assertEqual([self.n.lookup("TEST.EXPECTATION.1")], decision.expectations())
 
     def test_generate_outputs_halts_and_registers_impasses(self):
         from backend.models.output import OutputXMRTemplate

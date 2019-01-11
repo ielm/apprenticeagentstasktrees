@@ -679,6 +679,9 @@ class Decision(object):
         from backend.models.output import OutputXMR
         return list(map(lambda output: OutputXMR(output.resolve()), self.frame["HAS-OUTPUT"]))
 
+    def expectations(self) -> List['Expectation']:
+        return list(map(lambda expectation: Expectation(expectation.resolve()), self.frame["HAS-EXPECTATION"]))
+
     def priority(self) -> Union[float, None]:
         if "HAS-PRIORITY" not in self.frame:
             return None
@@ -721,6 +724,7 @@ class Decision(object):
         try:
             scope = self.step().perform(self.goal())
             self.frame["HAS-OUTPUT"] = list(map(lambda output: output.frame, scope.outputs))
+            self.frame["HAS-EXPECTATION"] = list(map(lambda expectation: Expectation.build(self.goal().frame._graph, Expectation.Status.PENDING, expectation), scope.expectations))
         except AssertStatement.ImpasseException as e:
             for r in e.resolutions:
                 impasse: Frame = r.run(StatementScope(), self.goal())
@@ -791,3 +795,10 @@ class Expectation(object):
 
     def condition(self) -> Statement:
         return Statement.from_instance(self.frame["CONDITION"].singleton())
+
+    def __eq__(self, other):
+        if isinstance(other, Expectation):
+            return self.frame == other.frame
+        if isinstance(other, Frame):
+            return self.frame == other
+        return super().__eq__(other)
