@@ -188,8 +188,22 @@ class IIDEAConverter(object):
 
     @classmethod
     def convert_step(cls, step):
+        next = False
+        blocked = False
+
+        decisions = list(filter(lambda d: d.step() == step, agent.decisions()))
+        if len(decisions) == 1:
+            if decisions[0].status() == Decision.Status.BLOCKED:
+                blocked = True
+            if decisions[0].status() == Decision.Status.PENDING or \
+                decisions[0].status() == Decision.Status.SELECTED or \
+                decisions[0].status() == Decision.Status.EXECUTING:
+                next = True
+
         return {
             "name": "Step " + str(step.index()),
+            "next": next,
+            "blocked": blocked,
             "finished": step.is_finished()
         }
 
