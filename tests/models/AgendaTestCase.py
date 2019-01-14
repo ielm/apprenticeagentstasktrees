@@ -1,4 +1,4 @@
-from backend.models.agenda import Agenda, Condition, Decision, Goal, Plan, Step, Trigger
+from backend.models.agenda import Agenda, Condition, Decision, Expectation, Goal, Plan, Step, Trigger
 from backend.models.bootstrap import Bootstrap
 from backend.models.graph import Frame, Graph, Literal, Network
 from backend.models.statement import Statement, StatementScope, VariableMap
@@ -1005,7 +1005,7 @@ class StepTestCase(unittest.TestCase):
 
         self.assertEqual(out, ["X", "Y"])
 
-    def test_perform_returns_outputs(self):
+    def test_perform_returns_scope_with_outputs(self):
         Bootstrap.bootstrap_resource(self.n, "backend.resources", "exe.knowledge")
 
         class TestStatement(Statement):
@@ -1021,8 +1021,27 @@ class StepTestCase(unittest.TestCase):
         self.g["STATEMENT"]["CLASSMAP"] = Literal(TestStatement)
         step["PERFORM"] = [statement]
 
-        outputs = Step(step).perform(VariableMap(self.g.register("VARMAP")))
-        self.assertEqual([123], outputs)
+        scope = Step(step).perform(VariableMap(self.g.register("VARMAP")))
+        self.assertEqual([123], scope.outputs)
+
+    def test_perform_returns_scope_with_expectations(self):
+        Bootstrap.bootstrap_resource(self.n, "backend.resources", "exe.knowledge")
+
+        class TestStatement(Statement):
+            def run(self, scope: StatementScope(), varmap: VariableMap):
+                scope.expectations.append(123)
+
+        agent = self.g.register("AGENT")
+        goal = self.g.register("GOAL")
+        plan = self.g.register("PLAN")
+        step = self.g.register("STEP")
+
+        statement = self.g.register("STATEMENT", generate_index=True, isa="EXE.STATEMENT")
+        self.g["STATEMENT"]["CLASSMAP"] = Literal(TestStatement)
+        step["PERFORM"] = [statement]
+
+        scope = Step(step).perform(VariableMap(self.g.register("VARMAP")))
+        self.assertEqual([123], scope.expectations)
 
     def test_perform_with_variables(self):
         Bootstrap.bootstrap_resource(self.n, "backend.resources", "exe.knowledge")
@@ -1132,6 +1151,19 @@ class DecisionTestCase(unittest.TestCase):
 
         self.assertEqual([output1, output2], Decision(decision).outputs())
 
+    def test_expectations(self):
+        decision = self.g.register("DECISION")
+
+        self.assertEqual([], Decision(decision).expectations())
+
+        expectation1 = self.g.register("EXPECTATION", generate_index=True)
+        expectation2 = self.g.register("EXPECTATION", generate_index=True)
+
+        decision["HAS-EXPECTATION"] += expectation1
+        decision["HAS-EXPECTATION"] += expectation2
+
+        self.assertEqual([expectation1, expectation2], Decision(decision).expectations())
+
     def test_priority(self):
         decision = self.g.register("DECISION")
 
@@ -1221,7 +1253,7 @@ class DecisionTestCase(unittest.TestCase):
         self.assertEqual(Decision.Status.PENDING, decision.status())
         self.assertEqual([], decision.callbacks())
 
-    def test_generate_outputs(self):
+    def test_generate_outputs_populates_outputs(self):
         from backend.models.output import OutputXMRTemplate
         from backend.models.statement import OutputXMRStatement
 
@@ -1243,6 +1275,26 @@ class DecisionTestCase(unittest.TestCase):
         decision._generate_outputs()
 
         self.assertEqual([self.n.lookup("OUTPUTS.XMR.1")], decision.outputs())
+
+    def test_generate_outputs_populates_expectations(self):
+        from backend.models.statement import ExpectationStatement, IsStatement
+
+        self.n.register("EXE")
+        Bootstrap.bootstrap_resource(self.n, "backend.resources", "exe.knowledge")
+
+        target = self.g.register("TARGET")
+
+        statement = ExpectationStatement.instance(self.g, IsStatement.instance(self.g, target, "SLOT", 123))
+        goal = Goal(self.g.register("GOAL"))
+        step = Step.build(self.g, 1, statement)
+
+        decision = Decision.build(self.g, goal, "TEST-PLAN", step)
+
+        self.assertEqual([], decision.expectations())
+
+        decision._generate_outputs()
+
+        self.assertEqual([self.n.lookup("TEST.EXPECTATION.1")], decision.expectations())
 
     def test_generate_outputs_halts_and_registers_impasses(self):
         from backend.models.output import OutputXMRTemplate
@@ -1429,3 +1481,55 @@ class DecisionTestCase(unittest.TestCase):
         Decision(decision).assess_impasses()
 
         self.assertEqual([subgoal1], Decision(decision).impasses())
+
+
+class ExpectationTestCase(unittest.TestCase):
+
+    def setUp(self):
+        self.n = Network()
+        self.g = self.n.register("TEST")
+
+        self.n.register("EXE")
+        Bootstrap.bootstrap_resource(self.n, "backend.resources", "exe.knowledge")
+
+    def test_status(self):
+        e = self.g.register("EXPECTATION")
+        e["STATUS"] = Expectation.Status.EXPECTING
+
+        self.assertEqual(Expectation.Status.EXPECTING, Expectation(e).status())
+
+    def test_condition(self):
+        from backend.models.statement import ExistsStatement
+
+        e = self.g.register("EXPECTATION")
+        e["CONDITION"] = ExistsStatement.instance(self.g, Frame.q(self.n).id("TEST.FRAME.1")).frame
+
+        self.assertEqual(ExistsStatement.instance(self.g, Frame.q(self.n).id("TEST.FRAME.1")), Expectation(e).condition())
+
+    def test_build(self):
+        from backend.models.statement import ExistsStatement
+
+        e = Expectation.build(self.g, Expectation.Status.EXPECTING, ExistsStatement.instance(self.g, Frame.q(self.n).id("TEST.FRAME.1")))
+
+        self.assertEqual(Expectation.Status.EXPECTING, e.status())
+        self.assertEqual(ExistsStatement.instance(self.g, Frame.q(self.n).id("TEST.FRAME.1")), e.condition())
+
+    def test_assess(self):
+        from backend.models.statement import IsStatement
+
+        target = self.g.register("TARGET")
+        varmap = VariableMap(self.g.register("VARMAP"))
+
+        e = Expectation.build(self.g, Expectation.Status.PENDING, IsStatement.instance(self.g, target, "SLOT", 123))
+        self.assertEqual(Expectation.Status.PENDING, e.status())
+
+        e.assess(varmap)
+        self.assertEqual(Expectation.Status.PENDING, e.status())
+
+        target["SLOT"] = 123
+        e.assess(varmap)
+        self.assertEqual(Expectation.Status.SATISFIED, e.status())
+
+        target["SLOT"] = 456
+        e.assess(varmap)
+        self.assertEqual(Expectation.Status.PENDING, e.status())

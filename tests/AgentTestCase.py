@@ -1,5 +1,5 @@
 from backend.agent import Agent
-from backend.models.agenda import Decision, Goal, Plan, Step, Trigger
+from backend.models.agenda import Decision, Expectation, Goal, Plan, Step, Trigger
 from backend.models.effectors import Capability, Effector
 from backend.models.graph import Literal, Network
 from backend.models.ontology import Ontology
@@ -765,6 +765,34 @@ class AgentAssessTestCase(unittest.TestCase):
         self.assertEqual(Decision.Status.FINISHED, decision1.status())
         self.assertEqual(Decision.Status.EXECUTING, decision2.status())
 
+    def test_assess_marks_executing_decisions_as_finished_if_no_pending_expectations_remain(self):
+        from backend.models.bootstrap import Bootstrap
+        from backend.models.statement import IsStatement
+
+        Bootstrap.bootstrap_resource(self.agent, "backend.resources", "exe.knowledge")
+
+        target = self.g.register("TARGET")
+        target["SLOT"] = 123
+
+        step = Step.build(self.g, 1, [])
+
+        decision1 = Decision.build(self.g, VariableMap(self.g.register("VARMAP", generate_index=True)).frame, "PLAN", step)
+        decision2 = Decision.build(self.g, VariableMap(self.g.register("VARMAP", generate_index=True)).frame, "PLAN", step)
+
+        decision1.frame["HAS-EXPECTATION"] = Expectation.build(self.g, Expectation.Status.PENDING, IsStatement.instance(self.g, target, "SLOT", 123)).frame
+        decision2.frame["HAS-EXPECTATION"] = Expectation.build(self.g, Expectation.Status.PENDING, IsStatement.instance(self.g, target, "SLOT", 456)).frame
+
+        decision1.frame["STATUS"] = Decision.Status.EXECUTING
+        decision2.frame["STATUS"] = Decision.Status.EXECUTING
+
+        self.agent.identity["HAS-DECISION"] += decision1.frame
+        self.agent.identity["HAS-DECISION"] += decision2.frame
+
+        self.agent._assess()
+
+        self.assertEqual(Decision.Status.FINISHED, decision1.status())
+        self.assertEqual(Decision.Status.EXECUTING, decision2.status())
+
     def test_assess_removes_all_non_executing_non_finished_decisions(self):
         step = Step.build(self.g, 1, [])
 
@@ -977,3 +1005,31 @@ class AgentAssessTestCase(unittest.TestCase):
         self.agent._assess()
 
         self.assertIn(subgoal, self.agent.agenda().goals())
+
+    def test_assess_updates_expectation_status(self):
+        from backend.models.bootstrap import Bootstrap
+        from backend.models.statement import IsStatement
+
+        Bootstrap.bootstrap_resource(self.agent, "backend.resources", "exe.knowledge")
+
+        target = self.g.register("TARGET")
+        target["SLOT"] = 123
+
+        goal = self.g.register("GOAL", generate_index=True)
+        goal["STATUS"] = Goal.Status.ACTIVE
+        self.agent.agenda().add_goal(goal)
+
+        step = Step.build(self.g, 1, [])
+
+        decision = Decision.build(self.g, goal, "PLAN", step)
+
+        statement = IsStatement.instance(self.g, target, "SLOT", 123)
+        expectation = Expectation.build(self.g, Expectation.Status.PENDING, statement)
+        decision.frame["HAS-EXPECTATION"] += expectation.frame
+        self.agent.identity["HAS-DECISION"] += decision.frame
+
+        self.assertEqual(Expectation.Status.PENDING, expectation.status())
+
+        self.agent._assess()
+
+        self.assertEqual(Expectation.Status.SATISFIED, expectation.status())

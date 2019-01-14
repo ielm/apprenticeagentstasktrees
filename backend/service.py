@@ -8,7 +8,7 @@ from backend.agent import Agent
 from backend.models.effectors import Callback
 from backend.models.bootstrap import Bootstrap
 from backend.contexts.LCTContext import LCTContext
-from backend.models.agenda import Decision, Goal, Plan
+from backend.models.agenda import Decision, Expectation, Goal, Plan
 from backend.models.grammar import Grammar
 from backend.models.graph import Frame, Identifier, Literal
 from backend.models.ontology import Ontology
@@ -224,7 +224,8 @@ class IIDEAConverter(object):
             "status": decision.status().name,
             "effectors": list(map(lambda effector: effector.frame.name(), decision.effectors())),
             "callbacks": list(map(lambda callback: callback.frame.name(), decision.callbacks())),
-            "impasses": list(map(lambda impasse: impasse.frame.name(), decision.impasses()))
+            "impasses": list(map(lambda impasse: impasse.frame.name(), decision.impasses())),
+            "expectations": list(map(lambda expectation: IIDEAConverter.convert_expectation(expectation), decision.expectations()))
         }
 
     @classmethod
@@ -233,6 +234,26 @@ class IIDEAConverter(object):
             "frame": output.frame.name(),
             "graph": output.graph(agent)._namespace,
             "status": output.status().name
+        }
+
+    @classmethod
+    def convert_expectation(cls, expectation: Expectation):
+        from backend.models.statement import ExistsStatement, IsStatement, MeaningProcedureStatement
+
+        condition = expectation.condition()
+        if isinstance(condition, IsStatement):
+            condition = str(condition.frame["DOMAIN"].singleton()) + "[" + condition.frame["SLOT"].singleton() + "] == " + str(condition.frame["FILLER"].singleton())
+        elif isinstance(condition, ExistsStatement):
+            condition = str(condition.frame["FIND"].singleton())
+        elif isinstance(condition, MeaningProcedureStatement):
+            condition = condition.frame["CALLS"].singleton() + "(" + ",".join(map(str, condition.frame["PARAMS"])) + ")"
+        else:
+            condition = str(condition)
+
+        return {
+            "frame": expectation.frame.name(),
+            "status": expectation.status().name,
+            "condition": condition
         }
 
     @classmethod

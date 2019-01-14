@@ -7,7 +7,7 @@ from backend.models.mps import AgentMethod
 from backend.models.output import OutputXMRTemplate
 from backend.models.path import Path
 from backend.models.query import AndQuery, ExactQuery, FillerQuery, FrameQuery, IdentifierQuery, LiteralQuery, NameQuery, NotQuery, OrQuery, SlotQuery
-from backend.models.statement import AddFillerStatement, AssertStatement, AssignFillerStatement, AssignVariableStatement, ExistsStatement, ForEachStatement, IsStatement, MakeInstanceStatement, MeaningProcedureStatement, OutputXMRStatement
+from backend.models.statement import AddFillerStatement, AssertStatement, AssignFillerStatement, AssignVariableStatement, ExistsStatement, ExpectationStatement, ForEachStatement, IsStatement, MakeInstanceStatement, MeaningProcedureStatement, OutputXMRStatement
 from backend.models.view import View
 
 import unittest
@@ -327,6 +327,21 @@ class AgendaGrammarTestCase(unittest.TestCase):
     def test_exists_statement(self):
         statement = ExistsStatement.instance(self.g, SlotQuery(self.agent, AndQuery(self.agent, [NameQuery(self.agent, "THEME"), FillerQuery(self.agent, LiteralQuery(self.agent, 123))])))
         parsed = Grammar.parse(self.agent, "EXISTS THEME = 123", start="exists_statement", agent=self.agent)
+        self.assertEqual(statement, parsed)
+
+    def test_expectation_statement(self):
+        Bootstrap.bootstrap_resource(self.agent, "backend.resources", "exe.knowledge")
+
+        statement = ExpectationStatement.instance(self.g, ExistsStatement.instance(self.g, SlotQuery(self.agent, NameQuery(self.agent, "XYZ"))))
+        parsed = Grammar.parse(self.agent, "EXPECT EXISTS HAS XYZ", start="expectation_statement", agent=self.agent)
+        self.assertEqual(statement, parsed)
+
+        statement = ExpectationStatement.instance(self.g, MeaningProcedureStatement.instance(self.g, "test_mp", ["$var1"]))
+        parsed = Grammar.parse(self.agent, "EXPECT SELF.test_mp($var1)", start="expectation_statement", agent=self.agent)
+        self.assertEqual(statement, parsed)
+
+        statement = ExpectationStatement.instance(self.g, IsStatement.instance(self.g, Identifier.parse("SELF.FRAME.1"), "SLOT", 123))
+        parsed = Grammar.parse(self.agent, "EXPECT @SELF.FRAME.1[SLOT] == 123", start="expectation_statement", agent=self.agent)
         self.assertEqual(statement, parsed)
 
     def test_foreach_statement(self):

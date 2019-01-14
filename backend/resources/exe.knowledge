@@ -51,6 +51,11 @@
     CLASSMAP "backend.models.statement.ExistsStatement";
 };
 
+@EXE.EXPECTATION-STATEMENT = {
+    ISA @EXE.STATEMENT;
+    CLASSMAP "backend.models.statement.ExpectationStatement";
+};
+
 @EXE.FOREACH-STATEMENT = {
     ISA @EXE.STATEMENT;
     CLASSMAP "backend.models.statement.ForEachStatement";

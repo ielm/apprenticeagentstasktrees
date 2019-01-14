@@ -428,18 +428,16 @@ class Step(object):
     def is_finished(self) -> bool:
         return self.frame["STATUS"].singleton() == Step.Status.FINISHED
 
-    def perform(self, varmap: VariableMap) -> List['OutputXMR']:
-        outputs = []
+    def perform(self, varmap: VariableMap) -> StatementScope:
+        scope = StatementScope()
         for statement in self.frame["PERFORM"]:
             statement = statement.resolve()
             if statement == Step.IDLE:
                 pass
             if isinstance(statement, Frame) and statement ^ "EXE.STATEMENT":
-                scope = StatementScope()
                 Statement.from_instance(statement).run(scope, varmap)
-                outputs.extend(scope.outputs)
 
-        return outputs
+        return scope
 
     def __eq__(self, other):
         if isinstance(other, Step):
@@ -681,6 +679,9 @@ class Decision(object):
         from backend.models.output import OutputXMR
         return list(map(lambda output: OutputXMR(output.resolve()), self.frame["HAS-OUTPUT"]))
 
+    def expectations(self) -> List['Expectation']:
+        return list(map(lambda expectation: Expectation(expectation.resolve()), self.frame["HAS-EXPECTATION"]))
+
     def priority(self) -> Union[float, None]:
         if "HAS-PRIORITY" not in self.frame:
             return None
@@ -721,7 +722,9 @@ class Decision(object):
 
     def _generate_outputs(self):
         try:
-            self.frame["HAS-OUTPUT"] = list(map(lambda output: output.frame, self.step().perform(self.goal())))
+            scope = self.step().perform(self.goal())
+            self.frame["HAS-OUTPUT"] = list(map(lambda output: output.frame, scope.outputs))
+            self.frame["HAS-EXPECTATION"] = list(map(lambda expectation: Expectation.build(self.goal().frame._graph, Expectation.Status.PENDING, expectation).frame, scope.expectations))
         except AssertStatement.ImpasseException as e:
             for r in e.resolutions:
                 impasse: Frame = r.run(StatementScope(), self.goal())
@@ -759,6 +762,48 @@ class Decision(object):
 
     def __eq__(self, other):
         if isinstance(other, Decision):
+            return self.frame == other.frame
+        if isinstance(other, Frame):
+            return self.frame == other
+        return super().__eq__(other)
+
+
+class Expectation(object):
+
+    class Status(Enum):
+        PENDING = "PENDING"
+        EXPECTING = "EXPECTING"
+        SATISFIED = "SATISFIED"
+
+    @classmethod
+    def build(cls, graph: Graph, status: 'Expectation.Status', condition: Union[str, Identifier, Frame, Statement]):
+        if isinstance(condition, Statement):
+            condition = condition.frame
+
+        frame = graph.register("EXPECTATION", generate_index=True)
+
+        frame["STATUS"] = status
+        frame["CONDITION"] = condition
+
+        return Expectation(frame)
+
+    def __init__(self, frame: Frame):
+        self.frame = frame
+
+    def status(self) -> 'Expectation.Status':
+        return self.frame["STATUS"].singleton()
+
+    def condition(self) -> Statement:
+        return Statement.from_instance(self.frame["CONDITION"].singleton())
+
+    def assess(self, varmap: VariableMap):
+        if self.condition().run(StatementScope(), varmap):
+            self.frame["STATUS"] = Expectation.Status.SATISFIED
+        else:
+            self.frame["STATUS"] = Expectation.Status.PENDING
+
+    def __eq__(self, other):
+        if isinstance(other, Expectation):
             return self.frame == other.frame
         if isinstance(other, Frame):
             return self.frame == other
