@@ -62,6 +62,10 @@
             color: grey;
             font-size: small;
         }
+        .expectation-details {
+            color: grey;
+            font-size: small;
+        }
     </style>
 
     <script>
@@ -328,6 +332,18 @@
                     decision["style"] = "badge-info";
                 }
 
+                for (var e in decision.expectations) {
+                    var expectation = decision.expectations[e];
+
+                    if (expectation.status == "PENDING") {
+                        expectation["style"] = "badge-info";
+                    } else if (expectation.status == "EXPECTING") {
+                        expectation["style"] = "badge-success";
+                    } else if (expectation.status == "SATISFIED") {
+                        expectation["style"] = "badge-secondary";
+                    }
+                }
+
                 var template = document.getElementById('decision-template').innerHTML;
                 Mustache.parse(template, ["{|", "|}"]);
                 var rendered = Mustache.render(template, decision);
@@ -475,6 +491,13 @@
                 <div><strong>Effectors:</strong> {| effectors |}</div>
                 <div><strong>Callbacks:</strong> {| callbacks |}</div>
                 <div><strong>Impasses:</strong> {| impasses |}</div>
+                <div><strong>Expectations:</strong>
+                    {|#expectations|}
+                        <span class="badge badge-pill {| style |}">{| status |}</span>
+                        <span class="expectation-details">({| frame |})</span>
+                        {| condition |}
+                    {|/expectations|}
+                </div>
             </div>
         </div>
     </script>

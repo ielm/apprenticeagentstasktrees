@@ -1,5 +1,5 @@
 from backend.contexts.LCTContext import LCTContext
-from backend.models.agenda import Agenda, Decision, Goal, Step
+from backend.models.agenda import Agenda, Decision, Expectation, Goal, Step
 from backend.models.effectors import Callback, Effector
 from backend.models.environment import Environment
 from backend.models.fr import FR
@@ -237,12 +237,16 @@ class Agent(Network):
                     callback.process()
 
         for decision in self.decisions():
+            for expectation in decision.expectations():
+                expectation.assess(decision.goal())
+
+        for decision in self.decisions():
             for impasse in decision.impasses():
                 if impasse.frame.name() not in list(map(lambda g: g.frame.name(), self.agenda().goals(pending=True, active=True, abandoned=True, satisfied=True))):
                     self.agenda().add_goal(impasse)
 
         for decision in list(filter(lambda decision: decision.status() == Decision.Status.EXECUTING, self.decisions())):
-            if len(decision.callbacks()) == 0:
+            if len(decision.callbacks()) == 0 and len(list(filter(lambda e: e.status() != Expectation.Status.SATISFIED, decision.expectations()))) == 0:
                 decision.frame["STATUS"] = Decision.Status.FINISHED
                 decision.step().frame["STATUS"] = Step.Status.FINISHED
 

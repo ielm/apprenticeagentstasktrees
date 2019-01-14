@@ -1,5 +1,5 @@
 from backend.agent import Agent
-from backend.models.agenda import Decision, Goal, Plan, Step
+from backend.models.agenda import Decision, Expectation, Goal, Plan, Step
 from backend.models.effectors import Callback, Effector
 from backend.models.graph import Frame, Identifier
 from backend.models.mps import AgentMethod
@@ -59,7 +59,7 @@ class ExperimentTestCase(unittest.TestCase):
         if len(goals) == 0:
             self.fail("No such matching goal.")
 
-    def assertDecisionExists(self, agent: Agent, status: Decision.Status=None, goal: [str, Identifier, Frame, Goal]=None, plan: [str, Identifier, Frame, Plan]=None, step: [str, Identifier, Frame, Step]=None, outputs: List[Union[str, Identifier, Frame, OutputXMR]]=None, effectors: List[Union[str, Identifier, Frame, Effector]]=None, callbacks: List[Union[str, Identifier, Frame, Callback]]=None, impasses: List[Union[str, Identifier, Frame, Goal]]=None, query: Callable=None):
+    def assertDecisionExists(self, agent: Agent, status: Decision.Status=None, goal: [str, Identifier, Frame, Goal]=None, plan: [str, Identifier, Frame, Plan]=None, step: [str, Identifier, Frame, Step]=None, outputs: List[Union[str, Identifier, Frame, OutputXMR]]=None, effectors: List[Union[str, Identifier, Frame, Effector]]=None, callbacks: List[Union[str, Identifier, Frame, Callback]]=None, impasses: List[Union[str, Identifier, Frame, Goal]]=None, expectations: List[Union[str, Identifier, Frame, Expectation]]=None, query: Callable=None):
 
         if isinstance(goal, str):
             goal = Identifier.parse(goal)
@@ -134,6 +134,19 @@ class ExperimentTestCase(unittest.TestCase):
 
             impasses = list(map(lambda impasse: convert_impasse(impasse), impasses))
 
+        if expectations is not None:
+
+            def convert_expectation(expectation):
+                if isinstance(expectation, str):
+                    expectation = Identifier.parse(expectation)
+                if isinstance(expectation, Identifier):
+                    expectation = agent.lookup(expectation)
+                if isinstance(expectation, Frame):
+                    expectation = Expectation(expectation)
+                return expectation
+
+            expectations = list(map(lambda expectation: convert_expectation(expectation), expectations))
+
         decisions = agent.decisions()
 
         if status is not None:
@@ -159,6 +172,9 @@ class ExperimentTestCase(unittest.TestCase):
 
         if impasses is not None:
             decisions = list(filter(lambda decision: decision.impasses() == impasses, decisions))
+
+        if expectations is not None:
+            decisions = list(filter(lambda decision: decision.expectations() == expectations, decisions))
 
         if query is not None:
             decisions = list(filter(query, decisions))

@@ -489,6 +489,52 @@ class ExistsStatementTestCase(unittest.TestCase):
         self.assertFalse(Statement.from_instance(stmt).run(StatementScope(), None))
 
 
+class ExpectationStatementTestCase(unittest.TestCase):
+
+    def setUp(self):
+        self.n = Network()
+        self.g = self.n.register("EXE")
+        Bootstrap.bootstrap_resource(self.n, "backend.resources", "exe.knowledge")
+
+    def test_condition(self):
+        from backend.models.statement import ExistsStatement, ExpectationStatement
+
+        stmt = self.g.register("STATEMENT")
+        stmt["CONDITION"] = ExistsStatement.instance(self.g, Frame.q(self.n).id("TEST.FRAME.1")).frame
+
+        self.assertEqual(ExistsStatement.instance(self.g, Frame.q(self.n).id("TEST.FRAME.1")), ExpectationStatement(stmt).condition())
+
+    def test_instance(self):
+        from backend.models.statement import ExistsStatement, ExpectationStatement
+
+        stmt = ExpectationStatement.instance(self.g, ExistsStatement.instance(self.g, Frame.q(self.n).id("TEST.FRAME.1")))
+
+        self.assertEqual(ExistsStatement.instance(self.g, Frame.q(self.n).id("TEST.FRAME.1")), stmt.condition())
+
+    def test_from_instance(self):
+        from backend.models.statement import ExpectationStatement
+
+        stmt = self.g.register("TEST", isa="EXE.EXPECTATION-STATEMENT")
+        stmt = Statement.from_instance(stmt)
+
+        self.assertIsInstance(stmt, ExpectationStatement)
+
+    def test_run(self):
+        from backend.models.statement import ExistsStatement, ExpectationStatement
+
+        condition = ExistsStatement.instance(self.g, Frame.q(self.n).id("TEST.FRAME.1"))
+        stmt = ExpectationStatement.instance(self.g, condition)
+
+        scope = StatementScope()
+        self.assertEqual([], scope.expectations)
+
+        stmt.run(scope, None)
+        self.assertEqual([condition], scope.expectations)
+
+        stmt.run(scope, None)
+        self.assertEqual([condition, condition], scope.expectations)
+
+
 class ForEachStatementTestCase(unittest.TestCase):
 
     def setUp(self):

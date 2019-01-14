@@ -343,6 +343,11 @@ class GrammarTransformer(Transformer):
 
         return ExistsStatement.instance(self.agent.exe, matches[1])
 
+    def expectation_statement(self, matches):
+        from backend.models.statement import ExpectationStatement
+
+        return ExpectationStatement.instance(self.agent.exe, matches[1])
+
     def foreach_statement(self, matches):
         from backend.models.statement import ForEachStatement
 
