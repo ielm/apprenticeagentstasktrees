@@ -159,6 +159,7 @@ class Agent(Network):
 
         if type == "VISUAL":
             input.update_environment(self.env())
+            input.update_memory(self.wo_memory)
             self._logger.log("Input: <<VMR INSTANCE HERE>>")
         else:
             self._logger.log("Input: " + registered_xMR.sentence)
