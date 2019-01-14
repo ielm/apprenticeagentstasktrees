@@ -273,6 +273,11 @@ class Agent(Network):
         if reassess:
             self._assess()
 
+        for transient_frame in self.exe.search(Frame.q(self).isa("EXE.TRANSIENT-FRAME")):
+            if transient_frame.name() == "EXE.TRANSIENT-FRAME":
+                continue
+            del self.exe[transient_frame.name()]
+
     def agenda(self):
         return Agenda(self.identity)
 

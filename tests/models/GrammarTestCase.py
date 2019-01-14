@@ -7,7 +7,7 @@ from backend.models.mps import AgentMethod
 from backend.models.output import OutputXMRTemplate
 from backend.models.path import Path
 from backend.models.query import AndQuery, ExactQuery, FillerQuery, FrameQuery, IdentifierQuery, LiteralQuery, NameQuery, NotQuery, OrQuery, SlotQuery
-from backend.models.statement import AddFillerStatement, AssertStatement, AssignFillerStatement, AssignVariableStatement, ExistsStatement, ExpectationStatement, ForEachStatement, IsStatement, MakeInstanceStatement, MeaningProcedureStatement, OutputXMRStatement
+from backend.models.statement import AddFillerStatement, AssertStatement, AssignFillerStatement, AssignVariableStatement, ExistsStatement, ExpectationStatement, ForEachStatement, IsStatement, MakeInstanceStatement, MeaningProcedureStatement, OutputXMRStatement, TransientFrameStatement
 from backend.models.view import View
 
 import unittest
@@ -288,6 +288,8 @@ class AgendaGrammarTestCase(unittest.TestCase):
         self.assertEqual(statement, parsed)
 
     def test_assign_variable_statement(self):
+        from backend.models.bootstrap import BootstrapTriple
+
         f = self.g.register("FRAME")
 
         statement = AssignVariableStatement.instance(self.g, "$var1", 123)
@@ -322,6 +324,10 @@ class AgendaGrammarTestCase(unittest.TestCase):
         statement = AssignVariableStatement.instance(self.g, "$var1", Literal([]))
         parsed = Grammar.parse(self.agent, "$var1 = []", start="assign_variable_statement", agent=self.agent)
         self.assertIsInstance(parsed.frame._storage["ASSIGN"]._storage[0]._value.value, list)
+        self.assertEqual(statement, parsed)
+
+        statement = AssignVariableStatement.instance(self.g, "$var1", TransientFrameStatement.instance(self.g, [BootstrapTriple("SLOT", Literal(123))]))
+        parsed = Grammar.parse(self.agent, "$var1 = {SLOT 123;}", start="assign_variable_statement", agent=self.agent)
         self.assertEqual(statement, parsed)
 
     def test_exists_statement(self):
@@ -380,6 +386,27 @@ class AgendaGrammarTestCase(unittest.TestCase):
 
         statement = OutputXMRStatement.instance(self.agent.exe, template, [1, Literal("abc"), Literal("$var1"), Identifier.parse("SELF.TEST")], self.agent.identity)
         parsed = Grammar.parse(self.agent, "OUTPUT test-xmr(1, \"abc\", $var1, @SELF.TEST) BY SELF", start="output_statement", agent=self.agent)
+        self.assertEqual(statement, parsed)
+
+    def test_transientframe_statement(self):
+        from backend.models.bootstrap import BootstrapTriple
+
+        property1 = BootstrapTriple("SLOTA", Literal(123))
+        property2 = BootstrapTriple("SLOTA", Literal(456))
+        property3 = BootstrapTriple("SLOTB", Literal("abc"))
+        property4 = BootstrapTriple("SLOTC", Literal("$var1"))
+        property5 = BootstrapTriple("SLOTD", Identifier.parse("TEST.FRAME.1"))
+
+        statement = TransientFrameStatement.instance(self.agent.exe, [property1])
+        parsed = Grammar.parse(self.agent, "{SLOTA 123;}", start="transient_statement", agent=self.agent)
+        self.assertEqual(statement, parsed)
+
+        statement = TransientFrameStatement.instance(self.agent.exe, [property1, property2])
+        parsed = Grammar.parse(self.agent, "{SLOTA 123; SLOTA 456;}", start="transient_statement", agent=self.agent)
+        self.assertEqual(statement, parsed)
+
+        statement = TransientFrameStatement.instance(self.agent.exe, [property3, property4, property5])
+        parsed = Grammar.parse(self.agent, "{SLOTB \"abc\"; SLOTC $var1; SLOTD @TEST.FRAME.1;}", start="transient_statement", agent=self.agent)
         self.assertEqual(statement, parsed)
 
     def test_plan(self):
