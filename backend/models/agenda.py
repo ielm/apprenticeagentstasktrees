@@ -724,7 +724,7 @@ class Decision(object):
         try:
             scope = self.step().perform(self.goal())
             self.frame["HAS-OUTPUT"] = list(map(lambda output: output.frame, scope.outputs))
-            self.frame["HAS-EXPECTATION"] = list(map(lambda expectation: Expectation.build(self.goal().frame._graph, Expectation.Status.PENDING, expectation), scope.expectations))
+            self.frame["HAS-EXPECTATION"] = list(map(lambda expectation: Expectation.build(self.goal().frame._graph, Expectation.Status.PENDING, expectation).frame, scope.expectations))
         except AssertStatement.ImpasseException as e:
             for r in e.resolutions:
                 impasse: Frame = r.run(StatementScope(), self.goal())
