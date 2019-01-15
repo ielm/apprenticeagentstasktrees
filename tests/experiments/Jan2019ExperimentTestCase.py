@@ -325,7 +325,7 @@ class Jan2019Experiment(ExperimentTestCase):
 
         #######
 
-        # 5a) Callback input capability GET(bracket) is complete
+        # 5a) Callback input capability GET(dowel) is complete
         agent.callback("SELF.CALLBACK.4")
 
         # 5b) IIDEA loop
