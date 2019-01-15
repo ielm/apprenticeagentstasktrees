@@ -1033,17 +1033,28 @@ class AgentAssessTestCase(unittest.TestCase):
 
         self.assertEqual(Expectation.Status.SATISFIED, expectation.status())
 
-    def test_assess_removes_all_transient_frames(self):
+    def test_assess_removes_transient_frames_out_of_scope(self):
         from backend.models.bootstrap import Bootstrap
+        from backend.models.statement import TransientFrame
 
         Bootstrap.bootstrap_resource(self.agent, "backend.resources", "exe.knowledge")
 
-        self.g.register("FRAME", isa="EXE.TRANSIENT-FRAME", generate_index=True)
-        self.g.register("FRAME", isa="EXE.TRANSIENT-FRAME", generate_index=True)
-        self.g.register("FRAME", isa="EXE.TRANSIENT-FRAME", generate_index=True)
-        self.g.register("FRAME", isa="EXE.TRANSIENT-FRAME", generate_index=True)
+        f1 = self.g.register("FRAME", isa="EXE.TRANSIENT-FRAME", generate_index=True)
+        f2 = self.g.register("FRAME", isa="EXE.TRANSIENT-FRAME", generate_index=True)
+        f3 = self.g.register("FRAME", isa="EXE.TRANSIENT-FRAME", generate_index=True)
+        f4 = self.g.register("FRAME", isa="EXE.TRANSIENT-FRAME", generate_index=True)
 
         count = len(self.g)
 
         self.agent._assess()
+
+        self.assertEqual(count, len(self.g))
+
+        TransientFrame(f1).update_scope(lambda: False)
+        TransientFrame(f2).update_scope(lambda: False)
+        TransientFrame(f3).update_scope(lambda: False)
+        TransientFrame(f4).update_scope(lambda: False)
+
+        self.agent._assess()
+
         self.assertEqual(count - 4, len(self.g))

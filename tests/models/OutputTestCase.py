@@ -169,6 +169,33 @@ class OutputXMRTemplateTestCase(unittest.TestCase):
         self.assertEqual("a", xmr.graph(self.n)["XMR#1.FRAME.1"]["PROP2"])
         self.assertEqual("b", xmr.graph(self.n)["XMR#1.FRAME.1"]["PROP3"])
 
+    def test_create_with_transient_parameters(self):
+        exe = self.n.register("EXE")
+        exe.register("TRANSIENT-FRAME")
+
+        agent = self.n.register(Graph("SELF"))
+        agent.register("TEST")
+
+        output = OutputXMRTemplate.build(self.n, "Test Name", OutputXMRTemplate.Type.PHYSICAL, self.capability, ["$var1", "$var2"])
+        f = output.graph.register("FRAME", generate_index=True)
+        f["PROP1"] = Literal("$var1")
+        f["PROP2"] = Literal("$var1")
+        f["PROP3"] = Literal("$var2")
+
+        transient = self.g.register("TRANSIENT-FRAME", isa="EXE.TRANSIENT-FRAME", generate_index=True)
+        transient["INSTANCE-OF"] = "SELF.TEST"
+        transient["PROP4"] = 123
+        transient["PROP5"] = 456
+
+        xmr = output.create(self.n, agent, ["a", transient._identifier])
+
+        self.assertEqual("a", xmr.graph(self.n)["XMR#1.FRAME.1"]["PROP1"])
+        self.assertEqual("a", xmr.graph(self.n)["XMR#1.FRAME.1"]["PROP2"])
+        self.assertEqual("XMR#1.TEST.1", xmr.graph(self.n)["XMR#1.FRAME.1"]["PROP3"])
+
+        self.assertEqual(123, xmr.graph(self.n)["XMR#1.TEST.1"]["PROP4"])
+        self.assertEqual(456, xmr.graph(self.n)["XMR#1.TEST.1"]["PROP5"])
+
     def test_lookup(self):
         template1 = OutputXMRTemplate.build(self.n, "Test 1", OutputXMRTemplate.Type.PHYSICAL, self.capability, [])
         template2 = OutputXMRTemplate.build(self.n, "Test 2", OutputXMRTemplate.Type.PHYSICAL, self.capability, [])

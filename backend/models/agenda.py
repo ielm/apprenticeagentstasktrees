@@ -437,6 +437,9 @@ class Step(object):
             if isinstance(statement, Frame) and statement ^ "EXE.STATEMENT":
                 Statement.from_instance(statement).run(scope, varmap)
 
+        for transient in scope.transients:
+            transient.update_scope(lambda: self.is_pending())
+
         return scope
 
     def __eq__(self, other):

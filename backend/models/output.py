@@ -151,6 +151,28 @@ class OutputXMRTemplate(object):
             root = Identifier(graph_id, self.root()._identifier.name, self.root()._identifier.instance)
         anchor = OutputXMR.build(graph, self.type(), self.capability(), graph_id, root)
 
+        def materialize_transient_frame(param: Any):
+            if isinstance(param, Identifier):
+                param = param.resolve(None, network)
+            if not isinstance(param, Frame):
+                return param
+            if not param ^ "EXE.TRANSIENT-FRAME":
+                return param
+
+            transient_frame: Frame = param
+            parent = transient_frame["INSTANCE-OF"].singleton()
+
+            materialized_id = Identifier(graph_id, parent._identifier.name)
+            materialized_frame = xmr_graph.register(str(materialized_id), generate_index=True)
+
+            for slot in transient_frame:
+                for filler in transient_frame[slot]:
+                    materialized_frame[slot] += filler
+
+            return materialized_frame
+
+        params = list(map(lambda param: materialize_transient_frame(param), params))
+
         for frame in self.graph.values():
             if frame == self.anchor():
                 continue
