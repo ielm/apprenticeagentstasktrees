@@ -159,6 +159,7 @@ class Agent(Network):
 
         if type == "VISUAL":
             input.update_environment(self.env())
+            input.update_memory(self.wo_memory)
             self._logger.log("Input: <<VMR INSTANCE HERE>>")
         else:
             self._logger.log("Input: " + registered_xMR.sentence)
@@ -271,6 +272,11 @@ class Agent(Network):
 
         if reassess:
             self._assess()
+
+        for transient_frame in self.exe.search(Frame.q(self).isa("EXE.TRANSIENT-FRAME")):
+            if transient_frame.name() == "EXE.TRANSIENT-FRAME":
+                continue
+            del self.exe[transient_frame.name()]
 
     def agenda(self):
         return Agenda(self.identity)

@@ -856,3 +856,72 @@ class OutputXMRStatementTestCase(unittest.TestCase):
         self.assertEqual(123, fi["PROP1"])
         self.assertEqual(123, fi["PROP2"])
         self.assertEqual("abc", fi["PROP3"])
+
+
+class TransientFrameStatementTestCase(unittest.TestCase):
+
+    def setUp(self):
+        self.n = Network()
+        self.g = self.n.register("EXE")
+        Bootstrap.bootstrap_resource(self.n, "backend.resources", "exe.knowledge")
+
+    def test_properties(self):
+        from backend.models.bootstrap import BootstrapTriple
+        from backend.models.statement import TransientFrameStatement
+
+        triple1 = BootstrapTriple("TEST", Literal(123))
+        triple2 = BootstrapTriple("TEST", Literal(456))
+        triple3 = BootstrapTriple("XYZ", Identifier.parse("TEST.FRAME.1"))
+
+        statement = self.g.register("STATEMENT")
+        statement["HAS-PROPERTY"] += triple1
+        statement["HAS-PROPERTY"] += triple2
+        statement["HAS-PROPERTY"] += triple3
+
+        self.assertEqual([triple1, triple2, triple3], TransientFrameStatement(statement).properties())
+
+    def test_instance(self):
+        from backend.models.bootstrap import BootstrapTriple
+        from backend.models.statement import TransientFrameStatement
+
+        triple1 = BootstrapTriple("TEST", Literal(123))
+        triple2 = BootstrapTriple("TEST", Literal(456))
+        triple3 = BootstrapTriple("XYZ", Identifier.parse("TEST.FRAME.1"))
+
+        statement = TransientFrameStatement.instance(self.g, [triple1, triple2, triple3])
+
+        self.assertEqual([triple1, triple2, triple3], statement.properties())
+
+    def test_from_instance(self):
+        from backend.models.statement import TransientFrameStatement
+
+        frame = self.g.register("STATEMENT", isa="EXE.TRANSIENTFRAME-STATEMENT")
+        statement = Statement.from_instance(frame)
+
+        self.assertIsInstance(statement, TransientFrameStatement)
+
+    def test_run(self):
+        from backend.models.bootstrap import BootstrapTriple
+        from backend.models.statement import TransientFrameStatement
+
+        triple1 = BootstrapTriple("TEST", Literal(123))
+        triple2 = BootstrapTriple("TEST", Literal(456))
+        triple3 = BootstrapTriple("XYZ", Identifier.parse("TEST.FRAME.1"))
+        triple4 = BootstrapTriple("ABC", Literal("$var1"))
+        triple5 = BootstrapTriple("DEF", Literal("test"))
+
+        statement = TransientFrameStatement.instance(self.g, [triple1, triple2, triple3, triple4, triple5])
+
+        varmap = VariableMap(self.g.register("VARMAP"))
+        Variable.instance(self.g, "$var1", 789, varmap)
+
+        scope = StatementScope()
+        frame = statement.run(scope, varmap)
+
+        self.assertEqual("EXE.TRANSIENT-FRAME.1", frame.name())
+        self.assertEqual(self.g, frame._graph)
+        self.assertIn(frame.name(), self.g)
+        self.assertEqual([123, 456], frame["TEST"])
+        self.assertEqual("TEST.FRAME.1", frame["XYZ"])
+        self.assertEqual(789, frame["ABC"])
+        self.assertEqual("test", frame["DEF"])

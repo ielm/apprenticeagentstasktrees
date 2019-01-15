@@ -69,7 +69,7 @@ condition_nor: boolean_statement (NOR boolean_statement)+
 condition_not: boolean_statement (NOT boolean_statement)+
 condition_on: (EXECUTED)
 
-statement: (add_filler_statement | assert_statement | assign_filler_statement | assign_variable_statement | exists_statement | expectation_statement |foreach_statement | is_statement | make_instance_statement | mp_statement | output_statement)
+statement: (add_filler_statement | assert_statement | assign_filler_statement | assign_variable_statement | exists_statement | expectation_statement |foreach_statement | is_statement | make_instance_statement | mp_statement | output_statement | transient_statement)
 boolean_statement: (exists_statement | is_statement)
 
 add_filler_statement: statement_instance "[" NAME "]" "+=" (statement_instance | literal)
@@ -83,6 +83,7 @@ is_statement: statement_instance "[" NAME "]" EQUALS EQUALS literal
 make_instance_statement: "@" (graph | special_agent_graph) ":" identifier arguments
 mp_statement: SELF "." MP output_arguments
 output_statement: OUTPUT NAME output_arguments BY statement_instance
+transient_statement: "{" (declare_property_knowledge (BOOTSTRAPDELIMITER declare_property_knowledge)*)? (BOOTSTRAPDELIMITER)? "}"
 
 assertion: (exists_statement | is_statement | mp_statement)
 impasses: impasse (OR impasse)*
