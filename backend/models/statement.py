@@ -2,7 +2,7 @@ from backend.models.graph import Filler, Frame, Graph, Identifier, Literal
 from backend.models.mps import MPRegistry
 from backend.models.query import Query
 from pydoc import locate
-from typing import Any, List, Union
+from typing import Any, Callable, List, Union
 
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
@@ -116,6 +116,28 @@ class VariableMap(object):
         return super().__eq__(other)
 
 
+class TransientFrame(object):
+
+    def __init__(self, frame: Frame):
+        self.frame = frame
+
+    def is_in_scope(self) -> bool:
+        if "__IN_SCOPE__" in self.frame:
+            return self.frame["__IN_SCOPE__"].singleton()()
+        return True
+
+    def update_scope(self, condition: Callable):
+        self.frame["__IN_SCOPE__"] = condition
+
+    def __eq__(self, other):
+        if isinstance(other, TransientFrame):
+            return self.frame == other.frame
+        elif isinstance(other, Frame):
+            return self.frame == other
+
+        return super().__eq__(other)
+
+
 class StatementScope(object):
 
     def __init__(self):
@@ -124,6 +146,7 @@ class StatementScope(object):
 
         self.outputs: List[OutputXMR] = []
         self.expectations: List[Expectation] = []
+        self.transients: List[TransientFrame] = []
         self.variables = {}
 
 
@@ -630,6 +653,8 @@ class TransientFrameStatement(Statement):
                 except: pass
 
             frame[property.slot] += filler
+
+        scope.transients.append(TransientFrame(frame))
 
         return frame
 
