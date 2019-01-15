@@ -1043,6 +1043,36 @@ class StepTestCase(unittest.TestCase):
         scope = Step(step).perform(VariableMap(self.g.register("VARMAP")))
         self.assertEqual([123], scope.expectations)
 
+    def test_perform_with_transients_overrides_scope_detection(self):
+        from backend.models.statement import TransientFrame
+
+        Bootstrap.bootstrap_resource(self.n, "backend.resources", "exe.knowledge")
+
+        transient: Frame = None
+
+        class TestStatement(Statement):
+            def run(self, scope: StatementScope(), varmap: VariableMap):
+                nonlocal transient
+                transient = self.frame._graph.register("TRANSIENT")
+                scope.transients.append(TransientFrame(transient))
+
+        agent = self.g.register("AGENT")
+        goal = self.g.register("GOAL")
+        plan = self.g.register("PLAN")
+        step = self.g.register("STEP")
+
+        statement = self.g.register("STATEMENT", generate_index=True, isa="EXE.STATEMENT")
+        self.g["STATEMENT"]["CLASSMAP"] = Literal(TestStatement)
+        step["PERFORM"] = [statement]
+
+        Step(step).perform(VariableMap(self.g.register("VARMAP")))
+
+        step["STATUS"] = Step.Status.PENDING
+        self.assertTrue(TransientFrame(transient).is_in_scope())
+
+        step["STATUS"] = Step.Status.FINISHED
+        self.assertFalse(TransientFrame(transient).is_in_scope())
+
     def test_perform_with_variables(self):
         Bootstrap.bootstrap_resource(self.n, "backend.resources", "exe.knowledge")
 

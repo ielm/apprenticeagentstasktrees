@@ -4,10 +4,9 @@ from backend.models.effectors import Callback, Effector
 from backend.models.environment import Environment
 from backend.models.fr import FR
 from backend.models.graph import Frame, Graph, Identifier, Network
-from backend.models.mps import AgentMethod
 from backend.models.ontology import Ontology
 from backend.models.output import OutputXMR
-from backend.models.statement import Statement
+from backend.models.statement import TransientFrame
 from backend.models.tmr import TMR
 from backend.models.vmr import VMR
 from backend.models.xmr import XMR
@@ -275,6 +274,8 @@ class Agent(Network):
 
         for transient_frame in self.exe.search(Frame.q(self).isa("EXE.TRANSIENT-FRAME")):
             if transient_frame.name() == "EXE.TRANSIENT-FRAME":
+                continue
+            if TransientFrame(transient_frame).is_in_scope():
                 continue
             del self.exe[transient_frame.name()]
 

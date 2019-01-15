@@ -2,7 +2,7 @@ from backend.models.bootstrap import Bootstrap
 from backend.models.graph import Frame, Graph, Identifier, Literal, Network
 from backend.models.mps import AgentMethod, MPRegistry
 from backend.models.query import Query
-from backend.models.statement import Statement, StatementScope, Variable, VariableMap
+from backend.models.statement import TransientFrame, Statement, StatementScope, Variable, VariableMap
 
 import unittest
 
@@ -155,6 +155,22 @@ class VariableMapTestCase(unittest.TestCase):
         f["WITH"] += Literal("$var2")
 
         self.assertEqual(["$var1", "$var2"], VariableMap(f).variables())
+
+
+class TransientFrameTestCase(unittest.TestCase):
+
+    def setUp(self):
+        self.n = Network()
+        self.g = self.n.register("EXE")
+
+    def test_is_in_scope(self):
+        f = TransientFrame(self.g.register("FRAME"))
+
+        self.assertTrue(f.is_in_scope())
+
+        f.update_scope(lambda: False)
+
+        self.assertFalse(f.is_in_scope())
 
 
 class StatementTestCase(unittest.TestCase):
@@ -925,3 +941,4 @@ class TransientFrameStatementTestCase(unittest.TestCase):
         self.assertEqual("TEST.FRAME.1", frame["XYZ"])
         self.assertEqual(789, frame["ABC"])
         self.assertEqual("test", frame["DEF"])
+        self.assertIn(frame, scope.transients)
