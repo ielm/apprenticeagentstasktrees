@@ -38,6 +38,13 @@ class FetchObjectCapability(OutputMethod):
         print("TODO: issue command to robot to fetch " + str(target))
 
 
+class HoldObjectCapability(OutputMethod):
+    def run(self):
+        target = self.output.root()["THEME"].singleton()
+
+        print("TODO: issue command to robot to hold " + str(target))
+
+
 class SpeakCapability(OutputMethod):
     def run(self):
         print("TODO: convert tmr to language, speak it")
@@ -135,3 +142,12 @@ class SelectHumanToGreet(AgentMethod):
                         return domain
 
         return None
+
+
+class IsInEnvironment(AgentMethod):
+    def run(self, object):
+        try:
+            self.agent.env().location(object)
+            return True
+        except:
+            return False

@@ -6,6 +6,12 @@
     COVERS-EVENT @ONT.TAKE;
 };
 
+@EXE.HOLD-OBJECT-CAPABILITY = {
+    ISA @EXE.CAPABILITY;
+    MP "hold_object_capability";
+    COVERS-EVENT @ONT.HOLD;
+};
+
 @EXE.INIT-GOAL-CAPABILITY = {
     ISA @EXE.CAPABILITY;
     MP "init_goal_capability";
@@ -20,6 +26,7 @@
 @SELF.PHYSICAL-EFFECTOR.1 = {
     ISA @EXE.PHYSICAL-EFFECTOR;
     HAS-CAPABILITY @EXE.FETCH-OBJECT-CAPABILITY;
+    HAS-CAPABILITY @EXE.HOLD-OBJECT-CAPABILITY;
     STATUS "FREE";
 };
 
@@ -70,6 +77,11 @@
 @ENV.BRACKET.1 = {
     ISA @ONT.BRACKET;
     SIDE-TB "BOTTOM";
+};
+
+@ENV.BRACKET.2 = {
+    ISA @ONT.BRACKET;
+    SIDE-FB "FRONT";
 };
 
 @ENV.DOWEL.1 = {
@@ -135,6 +147,18 @@ DEFINE fetch-object($object) AS TEMPLATE
     }
 ;
 
+DEFINE hold-object($object) AS TEMPLATE
+    TYPE PHYSICAL
+    REQUIRES @EXE.HOLD-OBJECT-CAPABILITY
+    ROOT @OUT.HOLD.1
+    INCLUDE
+
+    @OUT.HOLD.1 = {
+        AGENT @SELF;
+        THEME $object;
+    }
+;
+
 DEFINE greet-human($human) AS TEMPLATE
     TYPE VERBAL
     REQUIRES @EXE.SPEAK-CAPABILITY
@@ -152,15 +176,41 @@ DEFINE greet-human($human) AS TEMPLATE
     }
 ;
 
+DEFINE summon-agent($agent, $purpose) AS TEMPLATE
+    TYPE VERBAL
+    REQUIRES @EXE.SPEAK-CAPABILITY
+    ROOT @OUT.SPEECH-ACT.1
+    INCLUDE
+
+    @OUT.SPEECH-ACT.1 = {
+        AGENT @SELF;
+        THEME @OUT.REQUEST-ACTION.1;
+    }
+
+    @OUT.REQUEST-ACTION.1 = {
+        AGENT @SELF;
+        BENEFICIARY $agent;
+        THEME @OUT.CHANGE-LOCATION.1;
+        PURPOSE $purpose;
+    }
+
+    @OUT.CHANGE-LOCATION.1 = {
+        BENEFICIARY $agent;
+        DESTINATION @ONT.LOCATION;
+    }
+;
+
 // Define GOALS --------------------
 
 REGISTER MP backend.resources.experiments.Jan2019_1_2.SelectGoalFromLanguageInput AS select_goal_from_language_input;
 REGISTER MP backend.resources.experiments.Jan2019_1_2.InitGoalCapability AS init_goal_capability;
 REGISTER MP backend.resources.experiments.Jan2019_1_2.FetchObjectCapability AS fetch_object_capability;
+REGISTER MP backend.resources.experiments.Jan2019_1_2.HoldObjectCapability AS hold_object_capability;
 REGISTER MP backend.resources.experiments.Jan2019_1_2.SpeakCapability AS speak_capability;
 REGISTER MP backend.resources.experiments.Jan2019_1_2.ShouldAcknowledgeVisualInput AS should_acknowledge_visual_input;
 REGISTER MP backend.resources.experiments.Jan2019_1_2.ShouldGreetHuman AS should_greet_human;
 REGISTER MP backend.resources.experiments.Jan2019_1_2.SelectHumanToGreet AS select_human_to_greet;
+REGISTER MP backend.resources.experiments.Jan2019_1_2.IsInEnvironment AS is_in_environment;
 
 DEFINE ACKNOWLEDGE-LANGUAGE-INPUT($tmr)
     AS GOAL
@@ -217,9 +267,19 @@ DEFINE BUILD-A-CHAIR()
             DO $dowel = @ENV.DOWEL.1
             DO OUTPUT fetch-object($dowel) BY SELF
         STEP
-            ... hold dowel
+            DO $dowel = @ENV.DOWEL.1
+            DO OUTPUT hold-object($dowel) BY SELF
         STEP
-            ... wait for jake to screw the stuff together
+            DO $human = @ENV.HUMAN.1
+            DO $purpose = {
+                INSTANCE-OF @ONT.ATTACH;
+                AGENT @ENV.HUMAN.1;
+                THEME @ENV.BRACKET.1;
+                DESTINATION @ENV.DOWEL.1;
+                INSTRUMENT @ENV.SCREWDRIVER.1;
+            }
+            DO ASSERT SELF.is_in_environment($human) ELSE IMPASSE WITH @SELF:@EXE.REQUEST-HELP($human, $purpose)
+            DO EXPECT EXISTS (@ ^ @ONT.ATTACH AND AGENT=@ENV.HUMAN.1 AND THEME=@ENV.BRACKET.1 AND DESTINATION=@ENV.DOWEL.1 AND INSTRUMENT=@ENV.SCREWDRIVER.1)
     WHEN EXECUTED THEN satisfied
 ;
 
@@ -232,5 +292,17 @@ DEFINE GREET-HUMAN($human)
         SELECT DEFAULT
         STEP
             DO OUTPUT greet-human($human) BY SELF
+    WHEN EXECUTED THEN SATISFIED
+;
+
+DEFINE REQUEST-HELP($agent, $purpose)
+    AS GOAL
+    IN EXE
+    PRIORITY 0.5
+    RESOURCES 0.5
+    PLAN (summon-for-purpose)
+        SELECT DEFAULT
+        STEP
+            DO OUTPUT summon-agent($agent, $purpose) BY SELF
     WHEN EXECUTED THEN SATISFIED
 ;
