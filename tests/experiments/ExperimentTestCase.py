@@ -17,9 +17,11 @@ class ExperimentTestCase(unittest.TestCase):
 
     def setUp(self):
         from backend.models.tmr import TMR
+        from backend.models.vmr import VMR
         from backend.utils.AtomicCounter import AtomicCounter
 
         TMR.counter = AtomicCounter()
+        VMR.counter = AtomicCounter()
         Agent.IDEA.reset()
 
     @staticmethod
