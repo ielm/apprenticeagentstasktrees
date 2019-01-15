@@ -395,6 +395,14 @@ class GrammarTransformer(Transformer):
 
         return OutputXMRStatement.instance(self.agent.exe, template, params, agent)
 
+    def transient_statement(self, matches):
+        from backend.models.bootstrap import BootstrapTriple
+        from backend.models.statement import TransientFrameStatement
+
+        properties = list(filter(lambda m: isinstance(m, BootstrapTriple), matches))
+
+        return TransientFrameStatement.instance(self.agent.exe, properties)
+
     def assertion(self, matches):
         return matches[0]
 

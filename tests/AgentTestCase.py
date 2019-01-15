@@ -676,8 +676,7 @@ class AgentAssessTestCase(unittest.TestCase):
     def setUp(self):
 
         class TestableAgent(Agent):
-            def _bootstrap(self):
-                pass
+            pass
 
         self.n = Network()
         self.ontology = self.n.register(Ontology("ONT"))
@@ -708,7 +707,7 @@ class AgentAssessTestCase(unittest.TestCase):
         goal = VariableMap.instance_of(self.agent.exe, definition, params)
 
         # Now define a capability statement with two callbacks
-        capability = Capability.instance(self.agent.exe, "CAPABILITY", "TestMP", ["ONT.EVENT"])
+        capability = Capability.instance(self.agent.exe, "TEST-CAPABILITY", "TestMP", ["ONT.EVENT"])
         effector1 = Effector.instance(self.agent.exe, Effector.Type.PHYSICAL, [capability])
         effector2 = Effector.instance(self.agent.exe, Effector.Type.PHYSICAL, [capability])
 
@@ -1033,3 +1032,18 @@ class AgentAssessTestCase(unittest.TestCase):
         self.agent._assess()
 
         self.assertEqual(Expectation.Status.SATISFIED, expectation.status())
+
+    def test_assess_removes_all_transient_frames(self):
+        from backend.models.bootstrap import Bootstrap
+
+        Bootstrap.bootstrap_resource(self.agent, "backend.resources", "exe.knowledge")
+
+        self.g.register("FRAME", isa="EXE.TRANSIENT-FRAME", generate_index=True)
+        self.g.register("FRAME", isa="EXE.TRANSIENT-FRAME", generate_index=True)
+        self.g.register("FRAME", isa="EXE.TRANSIENT-FRAME", generate_index=True)
+        self.g.register("FRAME", isa="EXE.TRANSIENT-FRAME", generate_index=True)
+
+        count = len(self.g)
+
+        self.agent._assess()
+        self.assertEqual(count - 4, len(self.g))

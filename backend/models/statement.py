@@ -6,6 +6,7 @@ from typing import Any, List, Union
 
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
+    from backend.models.bootstrap import BootstrapTriple
     from backend.models.output import OutputXMR, OutputXMRTemplate
 
 
@@ -123,6 +124,7 @@ class StatementScope(object):
 
         self.outputs: List[OutputXMR] = []
         self.expectations: List[Expectation] = []
+        self.variables = {}
 
 
 class Statement(object):
@@ -597,6 +599,43 @@ class OutputXMRStatement(Statement):
             return self.template() == other.template() and \
                 self.params() == other.params() and \
                 self.agent() == other.agent()
+        elif isinstance(other, Frame):
+            return self.frame == other
+
+        return super().__eq__(other)
+
+
+class TransientFrameStatement(Statement):
+
+    @classmethod
+    def instance(cls, graph: Graph, properties: List['BootstrapTriple']):
+        frame = graph.register("TRANSIENTFRAME-STATEMENT", isa="EXE.TRANSIENTFRAME-STATEMENT", generate_index=True)
+
+        for property in properties:
+            frame["HAS-PROPERTY"] += property
+
+        return TransientFrameStatement(frame)
+
+    def properties(self) -> List['BootstrapTriple']:
+        return list(map(lambda p: p.resolve().value, self.frame["HAS-PROPERTY"]))
+
+    def run(self, scope: StatementScope, varmap: VariableMap):
+        frame = self.frame._network["EXE"].register("TRANSIENT-FRAME", isa="EXE.TRANSIENT-FRAME", generate_index=True)
+
+        for property in self.properties():
+            filler = property.filler
+            if isinstance(filler, Literal) and isinstance(filler.value, str):
+                try:
+                    filler = varmap.resolve(filler.value)
+                except: pass
+
+            frame[property.slot] += filler
+
+        return frame
+
+    def __eq__(self, other):
+        if isinstance(other, TransientFrameStatement):
+            return self.properties() == other.properties()
         elif isinstance(other, Frame):
             return self.frame == other
 

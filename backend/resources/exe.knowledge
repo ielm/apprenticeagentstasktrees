@@ -3,6 +3,7 @@
 @EXE.CAPABILITY = {};
 @EXE.CALLBACK = {};
 @EXE.INPUT-TMR = {};
+@EXE.TRANSIENT-FRAME = {};
 
 @EXE.PHYSICAL-EFFECTOR = {
     ISA @EXE.EFFECTOR
@@ -79,4 +80,9 @@
 @EXE.OUTPUTXMR-STATEMENT = {
     ISA @EXE.RETURNING-STATEMENT;
     CLASSMAP "backend.models.statement.OutputXMRStatement";
+};
+
+@EXE.TRANSIENTFRAME-STATEMENT = {
+    ISA @EXE.RETURNING-STATEMENT;
+    CLASSMAP "backend.models.statement.TransientFrameStatement";
 };

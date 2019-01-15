@@ -12,7 +12,7 @@ class VMR(Graph):
     counter = AtomicCounter()
 
     @staticmethod
-    def new(ontology: Ontology, refers_to: str=None, timestamp: str=None, contains: dict=None, namespace: str=None):
+    def new(ontology: Ontology, refers_to: str=None, timestamp: str=None, contains: dict=None, events: dict=None, namespace: str=None):
         if refers_to is None:
             refers_to = "ENV"
 
@@ -22,12 +22,16 @@ class VMR(Graph):
         if contains is None:
             contains = {}
 
+        if events is None:
+            events = {}
+
         vmr_dict = {
             "ENVIRONMENT": {
                 "_refers_to": refers_to,
                 "timestamp": timestamp,
                 "contains": contains
-            }
+            },
+            "EVENTS": events
         }
 
         return VMR(vmr_dict, ontology, namespace=namespace)
@@ -43,20 +47,34 @@ class VMR(Graph):
         self.ontology = ontology._namespace
 
         reference = self.register("ENVIRONMENT", generate_index=False)
-        reference["REFERS-TO"] = Literal(vmr_dict["ENVIRONMENT"]["_refers_to"])
-        reference["TIMESTAMP"] = Literal(vmr_dict["ENVIRONMENT"]["timestamp"])
+        events = self.register("EVENTS", generate_index=False)
 
-        for frame in vmr_dict["ENVIRONMENT"]["contains"]:
-            location = vmr_dict["ENVIRONMENT"]["contains"][frame]["LOCATION"]
-            if location == "NOT-HERE":
-                continue
+        if "ENVIRONMENT" in vmr_dict:
 
-            if location == "HERE":
-                location = reference
+            reference["REFERS-TO"] = Literal(vmr_dict["ENVIRONMENT"]["_refers_to"])
+            reference["TIMESTAMP"] = Literal(vmr_dict["ENVIRONMENT"]["timestamp"])
 
-            location_frame = self.register("LOCATION", generate_index=True)
-            location_frame["DOMAIN"] = frame
-            location_frame["RANGE"] = location
+            for frame in vmr_dict["ENVIRONMENT"]["contains"]:
+                location = vmr_dict["ENVIRONMENT"]["contains"][frame]["LOCATION"]
+                if location == "NOT-HERE":
+                    continue
+
+                if location == "HERE":
+                    location = reference
+
+                location_frame = self.register("LOCATION", generate_index=True)
+                location_frame["DOMAIN"] = frame
+                location_frame["RANGE"] = location
+
+        if "EVENTS" in vmr_dict:
+
+            for frame in vmr_dict["EVENTS"]:
+                contents = vmr_dict["EVENTS"][frame]
+                frame = self.register(frame)
+                for slot in contents:
+                    for filler in contents[slot]:
+                        frame[slot] += filler
+                events["HAS-EVENT"] += frame
 
     def locations(self) -> List[Frame]:
         return list(map(lambda f: self[f], filter(lambda f: self[f]._identifier.name == "LOCATION", self)))
@@ -78,3 +96,19 @@ class VMR(Graph):
 
             environment.enter(object, location=location)
 
+    def events(self) -> List[Frame]:
+        return list(map(lambda f: f.resolve(), self["EVENTS"]["HAS-EVENT"]))
+
+    def update_memory(self, graph: Graph):
+        for event in self.events():
+            parents = event.parents()
+            if len(parents) == 0:
+                parents = [event._identifier.name]
+
+            frame = graph.register(event._identifier.name, isa=parents, generate_index=True)
+
+            for slot in event:
+                if slot == event._ISA_type():
+                    continue
+                for filler in event[slot]:
+                    frame[slot] += filler
