@@ -380,12 +380,13 @@ class Jan2019Experiment(ExperimentTestCase):
         self.assertFalse(Effector(agent.internal["VERBAL-EFFECTOR.1"]).is_free())
         self.assertEqual(agent.exe["SPEAK-CAPABILITY"], Effector(agent.internal["VERBAL-EFFECTOR.1"]).on_capability())
         self.assertEqual(agent.outputs["XMR.6"], Effector(agent.internal["VERBAL-EFFECTOR.1"]).on_output())
-        self.assertEqual(agent.exe["ATTACH.1"], OutputXMR(agent.outputs["XMR.6"]).graph(agent)["REQUEST-ACTION.1"]["THEME"].singleton())
+        self.assertEqual(OutputXMR(agent.outputs["XMR.6"]).graph(agent)["ATTACH.1"], OutputXMR(agent.outputs["XMR.6"]).graph(agent)["REQUEST-ACTION.1"]["PURPOSE"].singleton())
+        self.assertDecisionExists(agent, status=Decision.Status.BLOCKED, goal="SELF.GOAL.2", impasses=["SELF.REQUEST-HELP.1"])
 
         #######
 
         # 7a) Callback input capability SPEAK("Jake, come back, you need to screw the bracket to the dowel.") is complete
-        agent.callback("SELF.CALLBACK.8")
+        agent.callback("SELF.CALLBACK.6")
 
         # 7b) IIDEA loop
         self.iidea_loop(agent)
@@ -399,7 +400,7 @@ class Jan2019Experiment(ExperimentTestCase):
 
         # 7d) TEST: The verbal effector is released; the decision is still blocked
         self.assertTrue(Effector(agent.internal["VERBAL-EFFECTOR.1"]).is_free())
-        self.assertDecisionExists(agent, status=Decision.Status.BLOCKED, goal="SELF.BUILD-A-CHAIR.1", impasses=["SELF.REQUEST-HELP.1"])
+        self.assertDecisionExists(agent, status=Decision.Status.BLOCKED, goal="SELF.GOAL.2", impasses=["SELF.REQUEST-HELP.1"])
 
         #######
 
@@ -414,8 +415,12 @@ class Jan2019Experiment(ExperimentTestCase):
 
         # 8d) TEST: An instance of ACKNOWLEDGE-VISUAL-INPUT with the correct VMR was triggered, and executed
         #     TEST: An instance of GREET-AGENT with the correct VMR was created
+        #     TEST: An instance of SELF.REQUEST-HELP was satisfied
+        #     TEST: An instance of BUILD-A-CHAIR is no longer blocked
         self.assertGoalExists(agent, isa="EXE.ACKNOWLEDGE-VISUAL-INPUT", status=Goal.Status.SATISFIED, query=lambda goal: XMR(goal.resolve("$vmr")).graph(agent) == agent["VMR#3"])
         self.assertGoalExists(agent, isa="EXE.GREET-HUMAN", status=Goal.Status.PENDING, query=lambda goal: goal.resolve("$human") == agent.environment["HUMAN.1"])
+        self.assertGoalExists(agent, isa="EXE.REQUEST-HELP", status=Goal.Status.SATISFIED)
+        self.assertDecisionExists(agent, status=Decision.Status.PENDING, goal="SELF.GOAL.2", impasses=[])
 
         # 8e) IIDEA loop
         self.iidea_loop(agent)
@@ -424,13 +429,13 @@ class Jan2019Experiment(ExperimentTestCase):
         self.assertGoalExists(agent, isa="EXE.GREET-HUMAN", status=Goal.Status.ACTIVE, query=lambda goal: goal.plans()[0].steps()[0].status() == Step.Status.PENDING)
         self.assertFalse(Effector(agent.internal["VERBAL-EFFECTOR.1"]).is_free())
         self.assertEqual(agent.exe["SPEAK-CAPABILITY"], Effector(agent.internal["VERBAL-EFFECTOR.1"]).on_capability())
-        self.assertEqual(agent.outputs["XMR.11"], Effector(agent.internal["VERBAL-EFFECTOR.1"]).on_output())
-        self.assertEqual(agent.environment["HUMAN.1"], OutputXMR(agent.outputs["XMR.11"]).graph(agent)["GREET.1"]["THEME"].singleton())
+        self.assertEqual(agent.outputs["XMR.8"], Effector(agent.internal["VERBAL-EFFECTOR.1"]).on_output())
+        self.assertEqual(agent.environment["HUMAN.1"], OutputXMR(agent.outputs["XMR.8"]).graph(agent)["GREET.1"]["THEME"].singleton())
 
         #######
 
         # 9a) Callback input capability SPEAK("Hi Jake.") is complete
-        agent.callback("SELF.CALLBACK.9")
+        agent.callback("SELF.CALLBACK.8")
 
         # 9b) IIDEA loop
         self.iidea_loop(agent)
@@ -445,7 +450,7 @@ class Jan2019Experiment(ExperimentTestCase):
         self.assertGoalExists(agent, isa="EXE.BUILD-A-CHAIR", status=Goal.Status.ACTIVE, query=lambda goal: goal.plans()[0].steps()[2].status() == Step.Status.FINISHED)
         self.assertGoalExists(agent, isa="EXE.BUILD-A-CHAIR", status=Goal.Status.ACTIVE, query=lambda goal: goal.plans()[0].steps()[3].status() == Step.Status.FINISHED)
         self.assertGoalExists(agent, isa="EXE.BUILD-A-CHAIR", status=Goal.Status.ACTIVE, query=lambda goal: goal.plans()[0].steps()[4].status() == Step.Status.PENDING)
-        self.assertDecisionExists(agent, status=Decision.Status.BLOCKED, goal="SELF.BUILD-A-CHAIR.1", impasses=["SELF.REQUEST-HELP.1"])
+        self.assertDecisionExists(agent, status=Decision.Status.EXECUTING, goal="SELF.GOAL.2", impasses=[])
 
         #######
 

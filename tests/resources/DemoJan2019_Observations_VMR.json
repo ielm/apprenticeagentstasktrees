@@ -67,5 +67,16 @@
         }
       }
     }
+  },
+  "Jake affixes the bracket to the dowel with the screwdriver": {
+    "EVENTS": {
+      "ATTACH.1": {
+        "IS-A": ["ONT.ATTACH"],
+        "AGENT": ["ENV.HUMAN.1"],
+        "THEME": ["ENV.BRACKET.1"],
+        "DESTINATION": ["ENV.DOWEL.1"],
+        "INSTRUMENT": ["ENV.SCREWDRIVER.1"]
+      }
+    }
   }
 }

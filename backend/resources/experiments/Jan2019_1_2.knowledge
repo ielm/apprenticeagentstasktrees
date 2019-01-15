@@ -304,5 +304,7 @@ DEFINE REQUEST-HELP($agent, $purpose)
         SELECT DEFAULT
         STEP
             DO OUTPUT summon-agent($agent, $purpose) BY SELF
+        STEP
+            DO EXPECT SELF.is_in_environment($agent)
     WHEN EXECUTED THEN SATISFIED
 ;
