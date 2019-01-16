@@ -1,4 +1,4 @@
-from backend.models.agenda import Agenda, Condition, Decision, Expectation, Goal, Plan, Step, Trigger
+from backend.models.agenda import Agenda, Condition, Decision, Effect, Expectation, Goal, Plan, Step, Trigger
 from backend.models.bootstrap import Bootstrap
 from backend.models.graph import Frame, Graph, Literal, Network
 from backend.models.statement import Statement, StatementScope, VariableMap
@@ -438,6 +438,55 @@ class GoalTestCase(unittest.TestCase):
         self.assertEqual(var["NAME"], "VAR_X")
         self.assertEqual(var["FROM"], goal.frame)
         self.assertEqual(var["VALUE"], 123)
+
+    def test_effects(self):
+        graph = Graph("TEST")
+        goal = graph.register("GOAL.1")
+
+        from backend.models.statement import AddFillerStatement
+
+        statement1 = AddFillerStatement.instance(graph, "TEST.FRAME.1", "SLOT", 123)
+        statement2 = AddFillerStatement.instance(graph, "TEST.FRAME.1", "SLOT", Literal("$var1"))
+
+        effect1 = Effect.build(graph, [statement1])
+        effect2 = Effect.build(graph, [statement2])
+
+        goal["HAS-EFFECT"] += effect1.frame
+        goal["HAS-EFFECT"] += effect2.frame
+
+        self.assertEqual([effect1, effect2], Goal(goal).effects())
+
+    def test_effects_applied_in_assess_if_goal_satisfied(self):
+        n = Network()
+        graph = n.register("TEST")
+
+        n.register("EXE")
+        Bootstrap.bootstrap_resource(n, "backend.resources", "exe.knowledge")
+
+        goal = graph.register("GOAL.1")
+
+        from backend.models.statement import AddFillerStatement, Variable
+
+        frame = graph.register("FRAME", generate_index=True)
+
+        statement1 = AddFillerStatement.instance(graph, "TEST.FRAME.1", "SLOT", 123)
+        statement2 = AddFillerStatement.instance(graph, "TEST.FRAME.1", "SLOT", Literal("$var1"))
+
+        effect1 = Effect.build(graph, [statement1])
+        effect2 = Effect.build(graph, [statement2])
+
+        goal["HAS-EFFECT"] += effect1.frame
+        goal["HAS-EFFECT"] += effect2.frame
+
+        Variable.instance(graph, "$var1", 456, Goal(goal))
+
+        goal["STATUS"] = Goal.Status.ACTIVE
+        Goal(goal).assess()
+        self.assertEqual([], frame["SLOT"])
+
+        goal["STATUS"] = Goal.Status.SATISFIED
+        Goal(goal).assess()
+        self.assertEqual([123, 456], frame["SLOT"])
 
 
 class TriggerTestCase(unittest.TestCase):
@@ -1333,7 +1382,7 @@ class DecisionTestCase(unittest.TestCase):
         self.n.register("EXE")
         Bootstrap.bootstrap_resource(self.n, "backend.resources", "exe.knowledge")
 
-        Goal.define(self.g, "IMPASSE-GOAL", 0.5, 0.5, [], [], ["$var1"])
+        Goal.define(self.g, "IMPASSE-GOAL", 0.5, 0.5, [], [], ["$var1"], [])
 
         resolution = MakeInstanceStatement.instance(self.g, self.g._namespace, "TEST.IMPASSE-GOAL", ["$var1"])
         statement1 = AssertStatement.instance(self.g, ExistsStatement.instance(self.g, Frame.q(self.n).id("EXE.DNE")), [resolution])
@@ -1364,7 +1413,7 @@ class DecisionTestCase(unittest.TestCase):
         self.assertEqual([], decision.outputs())
 
     def test_calculate_priority(self):
-        definition = Goal.define(self.g, "TEST-GOAL", 1.0, 0.0, [], [], [])
+        definition = Goal.define(self.g, "TEST-GOAL", 1.0, 0.0, [], [], [], [])
         goal = Goal.instance_of(self.g, definition, [])
 
         decision = Decision.build(self.g, goal, "TEST.PLAN", "TEST.STEP")
@@ -1376,7 +1425,7 @@ class DecisionTestCase(unittest.TestCase):
         self.assertEqual(1.0, decision.priority())
 
     def test_calculate_cost(self):
-        definition = Goal.define(self.g, "TEST-GOAL", 0.0, 1.0, [], [], [])
+        definition = Goal.define(self.g, "TEST-GOAL", 0.0, 1.0, [], [], [], [])
         goal = Goal.instance_of(self.g, definition, [])
 
         decision = Decision.build(self.g, goal, "TEST.PLAN", "TEST.STEP")
@@ -1563,3 +1612,53 @@ class ExpectationTestCase(unittest.TestCase):
         target["SLOT"] = 456
         e.assess(varmap)
         self.assertEqual(Expectation.Status.PENDING, e.status())
+
+
+class EffectTestCase(unittest.TestCase):
+
+    def setUp(self):
+        self.n = Network()
+        self.g = self.n.register("TEST")
+
+        self.n.register("EXE")
+        Bootstrap.bootstrap_resource(self.n, "backend.resources", "exe.knowledge")
+
+    def test_statements(self):
+        from backend.models.statement import AddFillerStatement
+
+        statement1 = AddFillerStatement.instance(self.g, "TEST.FRAME.1", "SLOT", 123)
+        statement2 = AddFillerStatement.instance(self.g, "TEST.FRAME.1", "SLOT", 123)
+
+        frame = self.g.register("EFFECT")
+        frame["HAS-STATEMENT"] += statement1.frame
+        frame["HAS-STATEMENT"] += statement2.frame
+
+        self.assertEqual([statement1, statement2], Effect(frame).statements())
+
+    def test_build(self):
+        from backend.models.statement import AddFillerStatement
+
+        statement1 = AddFillerStatement.instance(self.g, "TEST.FRAME.1", "SLOT", 123)
+        statement2 = AddFillerStatement.instance(self.g, "TEST.FRAME.1", "SLOT", 123)
+
+        effect = Effect.build(self.g, [statement1, statement2])
+
+        self.assertEqual([statement1, statement2], effect.statements())
+
+    def test_apply(self):
+        from backend.models.statement import AddFillerStatement, Variable
+
+        statement1 = AddFillerStatement.instance(self.g, "TEST.FRAME.1", "SLOT", 123)
+        statement2 = AddFillerStatement.instance(self.g, "TEST.FRAME.1", "SLOT", Literal("$var1"))
+
+        effect = Effect.build(self.g, [statement1, statement2])
+
+        frame = self.g.register("FRAME", generate_index=True)
+
+        self.assertEqual([], frame["SLOT"])
+
+        varmap = VariableMap(self.g.register("VARMAP"))
+        Variable.instance(self.g, "$var1", 456, varmap)
+        effect.apply(varmap)
+
+        self.assertEqual([123, 456], frame["SLOT"])

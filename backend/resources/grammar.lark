@@ -51,7 +51,7 @@ VERBAL: "verbal"i
 // Statements and executables
 
 define: DEFINE goal
-goal: NAME arguments AS GOAL IN GRAPH priority resources (plan)* (condition)*
+goal: NAME arguments AS GOAL IN GRAPH priority resources (plan)* (condition)* (effect)*
 priority: (PRIORITY (double | mp_statement))?
 resources: (RESOURCES (double | mp_statement))?
 goal_status: (PENDING | ACTIVE | ABANDONED | SATISFIED)
@@ -68,6 +68,9 @@ condition_nand: boolean_statement (NAND boolean_statement)+
 condition_nor: boolean_statement (NOR boolean_statement)+
 condition_not: boolean_statement (NOT boolean_statement)+
 condition_on: (EXECUTED)
+
+effect: EFFECT effect_do+
+effect_do: DO statement
 
 statement: (add_filler_statement | assert_statement | assign_filler_statement | assign_variable_statement | exists_statement | expectation_statement |foreach_statement | is_statement | make_instance_statement | mp_statement | output_statement | transient_statement)
 boolean_statement: (exists_statement | is_statement)
@@ -109,6 +112,7 @@ DEFAULT: "default"i
 DEFINE: "define"i
 DO: "DO"i
 EACH: "each"i
+EFFECT: "effect"i
 ELSE: "else"i
 EXE: "exe"i
 EXECUTED: "executed"i
