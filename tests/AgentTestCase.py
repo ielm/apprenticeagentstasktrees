@@ -200,7 +200,7 @@ class AgentDecideTestCase(unittest.TestCase):
         step = Step.build(self.g, 1, [])
         plan1 = Plan.build(self.g, "plan-1", Plan.DEFAULT, [step])
         plan2 = Plan.build(self.g, "plan-2", Plan.DEFAULT, [step])
-        definition = Goal.define(self.g, "goal-1", 0.5, 0.5, [plan1, plan2], [], [])
+        definition = Goal.define(self.g, "goal-1", 0.5, 0.5, [plan1, plan2], [], [], [])
 
         goal1 = Goal.instance_of(self.g, definition, [])
         goal2 = Goal.instance_of(self.g, definition, [])
@@ -229,7 +229,7 @@ class AgentDecideTestCase(unittest.TestCase):
         step = Step.build(self.g, 1, [])
         plan1 = Plan.build(self.g, "plan-1", Plan.DEFAULT, [step])
         plan2 = Plan.build(self.g, "plan-2", stmt, [step])
-        definition = Goal.define(self.g, "goal", 0.5, 0.5, [plan1, plan2], [], [])
+        definition = Goal.define(self.g, "goal", 0.5, 0.5, [plan1, plan2], [], [], [])
 
         goal = Goal.instance_of(self.g, definition, [])
 
@@ -249,7 +249,7 @@ class AgentDecideTestCase(unittest.TestCase):
         step = Step.build(self.g, 1, [])
         plan1 = Plan.build(self.g, "plan-1", Plan.DEFAULT, [step])
         plan2 = Plan.build(self.g, "plan-2", Plan.DEFAULT, [step])
-        definition = Goal.define(self.g, "goal", 0.5, 0.5, [plan1, plan2], [], [])
+        definition = Goal.define(self.g, "goal", 0.5, 0.5, [plan1, plan2], [], [], [])
 
         goal = Goal.instance_of(self.g, definition, [])
 
@@ -273,7 +273,7 @@ class AgentDecideTestCase(unittest.TestCase):
     def test_decide_inspects_decisions(self):
         step = Step.build(self.g, 1, [])
         plan = Plan.build(self.g, "plan-1", Plan.DEFAULT, [step])
-        definition = Goal.define(self.g, "goal-1", 0.5, 0.5, [plan], [], [])
+        definition = Goal.define(self.g, "goal-1", 0.5, 0.5, [plan], [], [], [])
 
         goal = Goal.instance_of(self.g, definition, [])
         self.agent.agenda().add_goal(goal)
@@ -288,7 +288,7 @@ class AgentDecideTestCase(unittest.TestCase):
     def test_decide_selects_decisions(self):
         step = Step.build(self.g, 1, [])
         plan = Plan.build(self.g, "plan-1", Plan.DEFAULT, [step])
-        definition = Goal.define(self.g, "goal-1", 0.5, 0.5, [plan], [], [])
+        definition = Goal.define(self.g, "goal-1", 0.5, 0.5, [plan], [], [], [])
 
         goal = Goal.instance_of(self.g, definition, [])
         self.agent.agenda().add_goal(goal)
@@ -304,7 +304,7 @@ class AgentDecideTestCase(unittest.TestCase):
 
         step = Step.build(self.g, 1, [statement])
         plan = Plan.build(self.g, "plan-1", Plan.DEFAULT, [step])
-        definition = Goal.define(self.g, "goal-1", 0.5, 0.5, [plan], [], [])
+        definition = Goal.define(self.g, "goal-1", 0.5, 0.5, [plan], [], [], [])
 
         goal = Goal.instance_of(self.g, definition, [])
         self.agent.agenda().add_goal(goal)
@@ -324,7 +324,7 @@ class AgentDecideTestCase(unittest.TestCase):
 
         step = Step.build(self.g, 1, [statement])
         plan = Plan.build(self.g, "plan-1", Plan.DEFAULT, [step])
-        definition = Goal.define(self.g, "goal-1", 0.5, 0.5, [plan], [], [])
+        definition = Goal.define(self.g, "goal-1", 0.5, 0.5, [plan], [], [], [])
 
         goal = Goal.instance_of(self.g, definition, [])
         self.agent.agenda().add_goal(goal)
@@ -348,7 +348,7 @@ class AgentDecideTestCase(unittest.TestCase):
 
         step = Step.build(self.g, 1, [statement])
         plan = Plan.build(self.g, "plan-1", Plan.DEFAULT, [step])
-        definition = Goal.define(self.g, "goal-1", 0.5, 0.5, [plan], [], [])
+        definition = Goal.define(self.g, "goal-1", 0.5, 0.5, [plan], [], [], [])
 
         goal1 = Goal.instance_of(self.g, definition, [])
         goal2 = Goal.instance_of(self.g, definition, [])
@@ -384,7 +384,7 @@ class AgentDecideTestCase(unittest.TestCase):
 
         step = Step.build(self.g, 1, [statement1, statement2])
         plan = Plan.build(self.g, "plan-1", Plan.DEFAULT, [step])
-        definition = Goal.define(self.g, "goal-1", 0.5, 0.5, [plan], [], [])
+        definition = Goal.define(self.g, "goal-1", 0.5, 0.5, [plan], [], [], [])
 
         goal = Goal.instance_of(self.g, definition, [])
         self.agent.agenda().add_goal(goal)
@@ -418,7 +418,7 @@ class AgentDecideTestCase(unittest.TestCase):
 
         step = Step.build(self.g, 1, [statement])
         plan = Plan.build(self.g, "plan-1", Plan.DEFAULT, [step])
-        definition = Goal.define(self.g, "goal-1", 0.5, 0.5, [plan], [], [])
+        definition = Goal.define(self.g, "goal-1", 0.5, 0.5, [plan], [], [], [])
 
         goal1 = Goal.instance_of(self.g, definition, [])
         goal2 = Goal.instance_of(self.g, definition, [])
@@ -441,8 +441,8 @@ class AgentDecideTestCase(unittest.TestCase):
 
         step = Step.build(self.g, 1, [statement])
         plan = Plan.build(self.g, "plan-1", Plan.DEFAULT, [step])
-        definition1 = Goal.define(self.g, "goal-1", 1.0, 0.5, [plan], [], [])
-        definition2 = Goal.define(self.g, "goal-1", 0.0, 0.5, [plan], [], [])
+        definition1 = Goal.define(self.g, "goal-1", 1.0, 0.5, [plan], [], [], [])
+        definition2 = Goal.define(self.g, "goal-1", 0.0, 0.5, [plan], [], [], [])
 
         goal1 = Goal.instance_of(self.g, definition1, [])
         goal2 = Goal.instance_of(self.g, definition2, [])
@@ -470,7 +470,7 @@ class AgentDecideTestCase(unittest.TestCase):
         step = Step.build(self.g, 1, [statement])
         plan1 = Plan.build(self.g, "plan-1", Plan.DEFAULT, [step])
         plan2 = Plan.build(self.g, "plan-2", Plan.DEFAULT, [step])
-        definition = Goal.define(self.g, "goal-1", 1.0, 0.5, [plan1, plan2], [], [])
+        definition = Goal.define(self.g, "goal-1", 1.0, 0.5, [plan1, plan2], [], [], [])
 
         goal = Goal.instance_of(self.g, definition, [])
 
@@ -493,7 +493,7 @@ class AgentDecideTestCase(unittest.TestCase):
 
         step = Step.build(self.g, 1, [statement])
         plan = Plan.build(self.g, "plan", Plan.DEFAULT, [step])
-        definition = Goal.define(self.g, "goal", 1.0, 0.5, [plan], [], [])
+        definition = Goal.define(self.g, "goal", 1.0, 0.5, [plan], [], [], [])
         goal = Goal.instance_of(self.g, definition, [])
 
         decision = Decision.build(self.g, goal, plan, step)
@@ -510,12 +510,12 @@ class AgentDecideTestCase(unittest.TestCase):
         from backend.models.statement import AssertStatement, ExistsStatement, MakeInstanceStatement
 
         assertion = ExistsStatement.instance(self.g, Frame.q(self.agent).id("SELF.DNE"))
-        resolutions = [MakeInstanceStatement.instance(self.g, self.g._namespace, Goal.define(self.g, "resolution", 1.0, 0.5, [], [], []).frame, [])]
+        resolutions = [MakeInstanceStatement.instance(self.g, self.g._namespace, Goal.define(self.g, "resolution", 1.0, 0.5, [], [], [], []).frame, [])]
         statement = AssertStatement.instance(self.g, assertion, resolutions)
 
         step = Step.build(self.g, 1, [statement])
         plan = Plan.build(self.g, "plan", Plan.DEFAULT, [step])
-        definition = Goal.define(self.g, "goal", 1.0, 0.5, [plan], [], [])
+        definition = Goal.define(self.g, "goal", 1.0, 0.5, [plan], [], [], [])
         goal = Goal.instance_of(self.g, definition, [])
 
         self.agent.agenda().add_goal(goal.frame)
@@ -578,7 +578,7 @@ class AgentExecuteTestCase(unittest.TestCase):
 
         step = Step.build(self.g, 1, [statement])
         plan = Plan.build(self.g, "plan-1", Plan.DEFAULT, [step])
-        definition = Goal.define(self.g, "goal-1", 1.0, 0.5, [plan], [], [])
+        definition = Goal.define(self.g, "goal-1", 1.0, 0.5, [plan], [], [], [])
         goal = Goal.instance_of(self.g, definition, [])
 
         decision = Decision.build(self.g, goal, plan, step)
@@ -607,7 +607,7 @@ class AgentExecuteTestCase(unittest.TestCase):
 
         step = Step.build(self.g, 1, [statement])
         plan = Plan.build(self.g, "plan-1", Plan.DEFAULT, [step])
-        definition = Goal.define(self.g, "goal-1", 1.0, 0.5, [plan], [], [])
+        definition = Goal.define(self.g, "goal-1", 1.0, 0.5, [plan], [], [], [])
         goal = Goal.instance_of(self.g, definition, [])
 
         decision1 = Decision.build(self.g, goal, plan, step)
@@ -648,7 +648,7 @@ class AgentExecuteTestCase(unittest.TestCase):
 
         step = Step.build(self.g, 1, [statement])
         plan = Plan.build(self.g, "plan-1", Plan.DEFAULT, [step])
-        definition = Goal.define(self.g, "goal-1", 1.0, 0.5, [plan], [], [])
+        definition = Goal.define(self.g, "goal-1", 1.0, 0.5, [plan], [], [], [])
         goal = Goal.instance_of(self.g, definition, [])
 
         decision1 = Decision.build(self.g, goal, plan, step)
@@ -878,7 +878,7 @@ class AgentAssessTestCase(unittest.TestCase):
     def test_assess_calls_assess_on_all_non_satisfied_goals(self):
         from backend.models.agenda import Condition
 
-        definition = Goal.define(self.g, "test-goal", 0.5, 0.5, [], [Condition.build(self.g, [], Goal.Status.SATISFIED, on=Condition.On.EXECUTED)], [])
+        definition = Goal.define(self.g, "test-goal", 0.5, 0.5, [], [Condition.build(self.g, [], Goal.Status.SATISFIED, on=Condition.On.EXECUTED)], [], [])
 
         goal1 = Goal.instance_of(self.g, definition, [])
         goal2 = Goal.instance_of(self.g, definition, [])
