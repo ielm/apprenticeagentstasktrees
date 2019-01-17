@@ -85,7 +85,7 @@ class Goal(VariableMap):
         SATISFIED = 4
 
     @classmethod
-    def define(cls, graph: Graph, name: str, priority: Union[Statement, float], resources: Union[Statement, float], plan: List['Plan'], conditions: List['Condition'], variables: List[str]):
+    def define(cls, graph: Graph, name: str, priority: Union[Statement, float], resources: Union[Statement, float], plan: List['Plan'], conditions: List['Condition'], variables: List[str], effects: List['Effect']):
         frame = graph.register(name, generate_index=False)
         frame["NAME"] = Literal(name)
         frame["PRIORITY"] = priority
@@ -93,6 +93,7 @@ class Goal(VariableMap):
         frame["PLAN"] = list(map(lambda p: p.frame, plan))
         frame["WHEN"] = list(map(lambda c: c.frame, conditions))
         frame["WITH"] = list(map(lambda var: Literal(var), variables))
+        frame["HAS-EFFECT"] = list(map(lambda e: e.frame, effects))
 
         return Goal(frame)
 
@@ -114,6 +115,7 @@ class Goal(VariableMap):
         frame["STATUS"] = Goal.Status.PENDING
         frame["PLAN"] = list(map(lambda plan: Plan.instance_of(graph, plan.resolve()).frame, definition["PLAN"]))
         frame["WHEN"] = definition["WHEN"]
+        frame["HAS-EFFECT"] = definition["HAS-EFFECT"]
 
         super().instance_of(graph, definition, params, existing=frame)
 
@@ -169,11 +171,18 @@ class Goal(VariableMap):
                 if not subgoal.is_satisfied():
                     subgoal.frame["STATUS"] = Goal.Status.ABANDONED
 
+        if self.is_satisfied():
+            for effect in self.effects():
+                effect.apply(self)
+
     def conditions(self) -> List['Condition']:
         return list(map(lambda condition: Condition(condition.resolve()), self.frame["WHEN"]))
 
     def subgoals(self) -> List['Goal']:
         return list(map(lambda goal: Goal(goal.resolve()), self.frame["HAS-GOAL"]))
+
+    def effects(self) -> List['Effect']:
+        return list(map(lambda effect: Effect(effect.resolve()), self.frame["HAS-EFFECT"]))
 
     def priority(self):
         try:
@@ -807,6 +816,41 @@ class Expectation(object):
 
     def __eq__(self, other):
         if isinstance(other, Expectation):
+            return self.frame == other.frame
+        if isinstance(other, Frame):
+            return self.frame == other
+        return super().__eq__(other)
+
+
+class Effect(object):
+
+    @classmethod
+    def build(cls, graph: Graph, statements: List[Union[str, Identifier, Frame, Statement]]) -> 'Effect':
+        statements = list(map(lambda s: Identifier.parse(s) if isinstance(s, str) else s, statements))
+        statements = list(map(lambda s: s.frame if isinstance(s, Statement) else s, statements))
+        statements = list(map(lambda s: s._identifier if isinstance(s, Frame) else s, statements))
+
+        effect = graph.register("EFFECT", isa="EXE.EFFECT", generate_index=True)
+
+        for statement in statements:
+            effect["HAS-STATEMENT"] += statement
+
+        return Effect(effect)
+
+    def __init__(self, frame: Frame):
+        self.frame = frame
+
+    def statements(self) -> List[Statement]:
+        return list(map(lambda s: Statement.from_instance(s.resolve()), self.frame["HAS-STATEMENT"]))
+
+    def apply(self, varmap: VariableMap):
+        scope = StatementScope()
+
+        for statement in self.statements():
+            statement.run(scope, varmap)
+
+    def __eq__(self, other):
+        if isinstance(other, Effect):
             return self.frame == other.frame
         if isinstance(other, Frame):
             return self.frame == other
