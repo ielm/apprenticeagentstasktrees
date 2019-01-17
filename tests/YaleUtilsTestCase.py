@@ -4,7 +4,7 @@ import os
 from backend.agent import Agent
 from backend.models.graph import Graph, Literal, Network
 from backend.models.ontology import Ontology
-from backend.utils.YaleUtils import bootstrap, format_learned_event_yale, visual_input
+from backend.utils.YaleUtils import bootstrap, format_learned_event_yale, lookup_by_visual_id, visual_input
 from tests.ApprenticeAgentsTestCase import ApprenticeAgentsTestCase
 
 from unittest import skip
@@ -122,6 +122,25 @@ class YaleUtilsTestCase(ApprenticeAgentsTestCase):
 
         self.assertEqual(expected["ENVIRONMENT"]["_refers_to"], results["ENVIRONMENT"]["_refers_to"])
         self.assertEqual(expected["ENVIRONMENT"]["contains"], results["ENVIRONMENT"]["contains"])
+
+    def test_lookup_by_visual_id(self):
+        network = Network()
+        env = network.register(Graph("ENV"))
+        test = network.register(Graph("TEST"))
+
+        frame1 = env.register("FRAME")
+        frame1["visual-object-id"] = 123
+
+        frame2 = test.register("FRAME")
+        frame2["visual-object-id"] = 123
+
+        frame3 = test.register("FRAME")
+        frame3["visual-object-id"] = 456
+
+        self.assertEqual(frame1, lookup_by_visual_id(network, 123))
+        self.assertEqual(456, lookup_by_visual_id(network, 456))
+        self.assertEqual(frame1, lookup_by_visual_id(network, frame1))
+        self.assertEqual("ENV.FRAME", lookup_by_visual_id(network, "ENV.FRAME"))
 
     def test_simple_format(self):
 

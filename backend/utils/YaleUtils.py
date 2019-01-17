@@ -7,7 +7,7 @@ from uuid import UUID
 
 from backend.config import ontosem_service
 from backend.models.fr import FRInstance
-from backend.models.graph import Graph, Literal
+from backend.models.graph import Graph, Literal, Network
 from backend.models.ontology import Ontology
 
 
@@ -81,8 +81,18 @@ def visual_input(input: dict, graph: Graph) -> dict:
 
     return results
 
+def lookup_by_visual_id(network: Network, id: int):
+    from backend.models.graph import Frame
 
+    if "ENV" not in network:
+        return id
 
+    env: Graph = network["ENV"]
+
+    results = env.search(Frame.q(network).f("visual-object-id", id))
+    if len(results) == 1:
+        return results[0]
+    return id
 
 def format_learned_event_yale(event: FRInstance, ontology: Ontology) -> dict:
 

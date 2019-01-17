@@ -15,7 +15,7 @@ from backend.models.ontology import Ontology
 from backend.models.output import OutputXMR
 from backend.models.xmr import XMR
 from backend.utils.AgentLogger import CachedAgentLogger
-from backend.utils.YaleUtils import format_learned_event_yale, input_to_tmrs
+from backend.utils.YaleUtils import format_learned_event_yale, input_to_tmrs, lookup_by_visual_id
 
 from pkgutil import get_data
 
@@ -353,7 +353,8 @@ def iidea_input():
         from backend.utils.YaleUtils import analyze
         tmr = analyze(data["input"])
 
-    agent._input(input=tmr, source=data["source"], type=data["type"])
+    source = lookup_by_visual_id(agent, data["source"])
+    agent._input(input=tmr, source=source, type=data["type"])
 
     return json.dumps({
         "time": agent.IDEA.time(),
