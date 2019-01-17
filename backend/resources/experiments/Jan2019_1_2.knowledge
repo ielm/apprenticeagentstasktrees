@@ -267,9 +267,6 @@ DEFINE BUILD-A-CHAIR()
             DO $dowel = @ENV.DOWEL.1
             DO OUTPUT fetch-object($dowel) BY SELF
         STEP
-            DO $dowel = @ENV.DOWEL.1
-            DO OUTPUT hold-object($dowel) BY SELF
-        STEP
             DO $human = @ENV.HUMAN.1
             DO $purpose = {
                 INSTANCE-OF @ONT.ATTACH;
