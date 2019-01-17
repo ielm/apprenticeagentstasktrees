@@ -10,6 +10,30 @@
     COVERS-EVENT @ONT.TAKE;
 };
 
+@EXE.GET-CAPABILITY = {
+    ISA @EXE.CAPABILITY;
+    MP  "get_physical_object";
+    COVERS-EVENT @ONT.TAKE;
+};
+
+@EXE.HOLD-CAPABILITY = {
+    ISA @EXE.CAPABILITY;
+    MP  "hold_physical_object";
+    COVERS-EVENT @ONT.HOLD;
+};
+
+@EXE.FASTEN-CAPABILITY = {
+    ISA @EXE.CAPABILITY;
+    MP "fasten_physical_object";
+    COVERS-EVENT @ONT.FASTEN;
+};
+
+@EXE.RESTRAIN-CAPABILITY = {
+    ISA @EXE.CAPABILITY;
+    MP "restrain_physical_object";
+    COVERS-EVENT @ONT.RESTRAIN;
+};
+
 @SELF.MENTAL-EFFECTOR.1 = {
     ISA @EXE.MENTAL-EFFECTOR;
     HAS-CAPABILITY @EXE.INIT-GOAL-CAPABILITY;

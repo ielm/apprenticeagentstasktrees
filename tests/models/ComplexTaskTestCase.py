@@ -19,9 +19,10 @@ class ComplexTaskTestCase(unittest.TestCase):
 
         self.agent = Agent(ontology=Ontology.init_default())
 
-        Bootstrap.bootstrap_resource(self.agent, "backend.resources", "chair.knowledge")
+        Bootstrap.bootstrap_resource(self.agent, "backend.resources.experiments", "chair.knowledge")
         # Bootstrap.bootstrap_resource(self.agent, "backend.resources", "goals.aa")
         Bootstrap.bootstrap_resource(self.agent, "backend.resources", "Templates.knowledge")
+        Bootstrap.bootstrap_resource(self.agent, "backend.resources.example", "example.knowledge")
 
     def action(self):
         return self.agent.lt_memory["LT.BUILD.1"]
@@ -45,7 +46,7 @@ class ComplexTaskTestCase(unittest.TestCase):
 
         action = self.action()
 
-        complex_task = ComplexTask(action, action.name())  # len = 7
+        complex_task = ComplexTask(self.agent, action, action.name())
 
         for subtask in complex_task.subtasks():
             print(subtask)
@@ -76,11 +77,13 @@ class ComplexTaskTestCase(unittest.TestCase):
 
         action = self.action()
 
-        complex_task = ComplexTask(action, action.name())
+        complex_task = ComplexTask(self.agent, action, action.name())
 
         # print(complex_task.plan())
         # for step in complex_task.steps():
         #     print(step.index())
 
-        for s in complex_task.steps():
-            print(s.status())
+        # for s in complex_task.steps():
+            # print(s.__str__())
+        # print("debug")
+        print(complex_task.plan().steps())

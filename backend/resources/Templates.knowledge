@@ -1,6 +1,7 @@
 DEFINE take($agent, $theme) AS TEMPLATE
     TYPE PHYSICAL
     REQUIRES @EXE.GET-CAPABILITY
+    ROOT @OUT.TAKE.1
     INCLUDE
 
     @OUT.TAKE.1 = {
@@ -28,7 +29,7 @@ DEFINE fasten($agent, $theme) AS TEMPLATE
         THEME $theme;
     }
 ;
-DEFINE RESTRAIN($agent, $theme) AS TEMPLATE
+DEFINE restrain($agent, $theme) AS TEMPLATE
     TYPE PHYSICAL
     REQUIRES @EXE.RESTRAIN-CAPABILITY
     INCLUDE

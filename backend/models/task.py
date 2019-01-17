@@ -1,6 +1,8 @@
-from backend.models.graph import Graph, Frame
+from backend.models.graph import Network, Graph, Frame
 from backend.utils.AtomicCounter import AtomicCounter
 from backend.models.agenda import Step, Plan
+from backend.models.output import OutputXMRTemplate
+from backend.models.statement import OutputXMRStatement
 
 
 class ComplexTask(Graph):
@@ -10,20 +12,22 @@ class ComplexTask(Graph):
 
     counter = AtomicCounter()
 
-    def __init__(self, task: Frame, namespace: str = None):
+    def __init__(self, agent: Network, task: Frame, namespace: str = None):
         if namespace is None:
             namespace = "COMPLEX-TASK" + str(ComplexTask.counter.increment())
 
         super().__init__(namespace)
         self.name = namespace
 
+        self.agent = agent
+
         self.complex_tasks = []
 
         for key in task:
             # self[key] = task[key].singleton()
-            if key == "AGENT":
+            # if key == "AGENT":
                 # self[key] = task[key]
-                self.agent = task[key].singleton()
+                # self.agent = task[key].singleton()
             if key == "INSTRUMENT":
                 self.instrument = task[key].singleton()
             if key == "THEME":
@@ -36,7 +40,7 @@ class ComplexTask(Graph):
             actionable_task = ActionableTask(task, task.name(), task["INSTANCE-OF"])
             self[task.name()] = actionable_task
         else:
-            complex_task = ComplexTask(task, task.name())
+            complex_task = ComplexTask(self.agent, task, task.name())
             self.complex_tasks.append(complex_task)
 
             for subtask in complex_task.subtasks():
@@ -53,21 +57,36 @@ class ComplexTask(Graph):
 
         return subtasks
 
-    def step(self, step, index, statement=None):
-        print("Step: ", step)
-        print("Type: ", type(step))
-        step = Step.build(self, index, step)
+    def get_statement(self, step):
+        # TODO - return OutputXMRStatement for now. In the future this may also return other statement types
+        # step_id = step.name().split(".")[-2]
+        template = ""
+
+        # print(step["INSTANCE-OF"])
+        ont_event = step["INSTANCE-OF"]
+        for t in OutputXMRTemplate.list(self.agent):
+            # print(t.capability())
+            # if t.name().upper() == step_id:
+            #     template = t
+            if t.capability()["COVERS-EVENT"].singleton() == ont_event.singleton():
+                template = t
+
+        params = [step["AGENT"], step["THEME"]]
+
+        statement = OutputXMRStatement.instance(self.agent['EXE'], template=template, params=params, agent=step["AGENT"])
+        return statement
+
+    def step(self, step, index):
+        statement = self.get_statement(step=step)
+        step = Step.build(self, index, perform=statement)
         return step
 
     def steps(self):
         index = 0
-
         steps = []
 
         for subtask in self.subtasks():
-            # TODO - should Step.build["PERFORM"] be the MP or target goal?
             s = self.step(subtask, index)
-            # s = Step.build(self, index, subtask)
             index += 1
             steps.append(s)
 
@@ -76,11 +95,9 @@ class ComplexTask(Graph):
     def plan(self):
         """
         Generates a plan object with a set of step frames
-
-        :return:
+        :return: Plan
         """
         steps = self.steps()
-
         plan = Plan.build(self, self.name, Plan.DEFAULT, steps)
 
         return plan
