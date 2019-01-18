@@ -13,6 +13,9 @@ class LCTPreHeuristicsTestCase(ApprenticeAgentsTestCase):
         pass  # Do not load the usual ontology
 
     def setUp(self):
+        from backend.utils.AtomicCounter import AtomicCounter
+        TMR.counter = AtomicCounter()
+
         self.n = Network()
 
         self.ontology = self.n.register(Graph("ONT"))
@@ -37,8 +40,9 @@ class LCTPreHeuristicsTestCase(ApprenticeAgentsTestCase):
         event[LCTContext.LEARNING] = True
         event[LCTContext.CURRENT] = True
 
-        tmr = self.n.register(TMR.new(self.ontology))
-        event1 = tmr.register("EVENT.1", isa="ONT.EVENT")
+        tmr = TMR.from_contents(agent, self.ontology)
+
+        event1 = tmr.graph(agent).register("EVENT.1", isa="ONT.EVENT")
         event1["TIME"] = [["<", "FIND-ANCHOR-TIME"]]
 
         IdentifyClosingOfKnownTaskUnderstandingProcessor(context).process(agent, tmr)
@@ -53,8 +57,9 @@ class LCTPreHeuristicsTestCase(ApprenticeAgentsTestCase):
             agent = Agent(ontology=self.ontology)
             context = LCTContext(agent)
 
-            tmr = agent.register(TMR.new(self.ontology))
-            event1 = tmr.register("EVENT", isa="ONT.EVENT")
+            tmr = TMR.from_contents(agent, self.ontology)
+
+            event1 = tmr.graph(agent).register("EVENT", isa="ONT.EVENT", generate_index=True)
             event1["TIME"] = [["<", "FIND-ANCHOR-TIME"]]
 
             event = agent.wo_memory.register("EVENT", isa="ONT.EVENT")
@@ -70,7 +75,7 @@ class LCTPreHeuristicsTestCase(ApprenticeAgentsTestCase):
 
         # Fail if the TMR is not in postfix.
         agent, context, tmr = setup()
-        tmr["EVENT.1"]["TIME"] = [[">", "FIND-ANCHOR-TIME"]]
+        tmr.graph(agent)["EVENT.1"]["TIME"] = [[">", "FIND-ANCHOR-TIME"]]
         with self.assertRaises(HeuristicException):
             IdentifyCompletedTaskUnderstandingProcessor(context)._logic(agent, tmr)
 
@@ -96,16 +101,18 @@ class LCTPreHeuristicsTestCase(ApprenticeAgentsTestCase):
             agent = Agent(ontology=self.ontology)
             context = LCTContext(agent)
 
-            previous = agent.register(TMR.new(self.ontology))
-            prevevent = previous.register("EVENT", isa="ONT.EVENT")
-            prevtheme = previous.register("OBJECT", isa="ONT.BIRD")
+            previous = TMR.from_contents(agent, self.ontology)
+
+            prevevent = previous.graph(agent).register("EVENT", isa="ONT.EVENT", generate_index=True)
+            prevtheme = previous.graph(agent).register("OBJECT", isa="ONT.BIRD", generate_index=True)
             prevevent["PURPOSE"] = 123  # Any purpose is sufficient
             prevevent["THEME"] = prevtheme
 
-            tmr = agent.register(TMR.new(self.ontology))
-            event1 = tmr.register("EVENT", isa="ONT.REQUEST-ACTION")
-            theme1 = tmr.register("EVENT", isa="ONT.EVENT")
-            object1 = tmr.register("OBJECT", isa="ONT.BIRD")
+            tmr = TMR.from_contents(agent, self.ontology)
+
+            event1 = tmr.graph(agent).register("EVENT", isa="ONT.REQUEST-ACTION", generate_index=True)
+            theme1 = tmr.graph(agent).register("EVENT", isa="ONT.EVENT", generate_index=True)
+            object1 = tmr.graph(agent).register("OBJECT", isa="ONT.BIRD", generate_index=True)
 
             event1["BENEFICIARY"] += "ROBOT"
             event1["THEME"] = theme1
@@ -132,55 +139,55 @@ class LCTPreHeuristicsTestCase(ApprenticeAgentsTestCase):
 
         # Fail if the TMR is prefix.
         agent, context, tmr, previous = setup()
-        tmr["EVENT.1"]["TIME"] = [[">", "FIND-ANCHOR-TIME"]]
+        tmr.graph(agent)["EVENT.1"]["TIME"] = [[">", "FIND-ANCHOR-TIME"]]
         with self.assertRaises(HeuristicException):
             MockedHeuristic(context)._logic(agent, tmr)
 
         # Fail if the TMR is postfix.
         agent, context, tmr, previous = setup()
-        tmr["EVENT.1"]["TIME"] = [["<", "FIND-ANCHOR-TIME"]]
+        tmr.graph(agent)["EVENT.1"]["TIME"] = [["<", "FIND-ANCHOR-TIME"]]
         with self.assertRaises(HeuristicException):
             MockedHeuristic(context)._logic(agent, tmr)
 
         # Fail if there is no previous input (this is the first TMR).
         agent, context, tmr, previous = setup()
         agent.input_memory.remove(previous)
-        del agent[previous._namespace]
+        del agent[previous.graph(agent)._namespace]
         with self.assertRaises(HeuristicException):
             MockedHeuristic(context)._logic(agent, tmr)
 
         # Fail if the main event is not a REQUEST-ACTION
         agent, context, tmr, previous = setup()
-        tmr["EVENT.1"]["INSTANCE-OF"] = ["ONT.EVENT"]
+        tmr.graph(agent)["EVENT.1"]["INSTANCE-OF"] = ["ONT.EVENT"]
         with self.assertRaises(HeuristicException):
             MockedHeuristic(context)._logic(agent, tmr)
 
         # Fail if the main event does not have the ROBOT as the BENEFICIARY.
         agent, context, tmr, previous = setup()
-        tmr["EVENT.1"]["BENEFICIARY"] = ["OTHER"]
+        tmr.graph(agent)["EVENT.1"]["BENEFICIARY"] = ["OTHER"]
         with self.assertRaises(HeuristicException):
             MockedHeuristic(context)._logic(agent, tmr)
 
         # Fail if the previous TMR's event is prefix.
         agent, context, tmr, previous = setup()
-        previous["EVENT.1"]["TIME"] = [[">", "FIND-ANCHOR-TIME"]]
+        previous.graph(agent)["EVENT.1"]["TIME"] = [[">", "FIND-ANCHOR-TIME"]]
         with self.assertRaises(HeuristicException):
             MockedHeuristic(context)._logic(agent, tmr)
 
         # Fail if the previous TMR's event is postfix.
         agent, context, tmr, previous = setup()
-        previous["EVENT.1"]["TIME"] = [["<", "FIND-ANCHOR-TIME"]]
+        previous.graph(agent)["EVENT.1"]["TIME"] = [["<", "FIND-ANCHOR-TIME"]]
         with self.assertRaises(HeuristicException):
             MockedHeuristic(context)._logic(agent, tmr)
 
         # Fail if the previous TMR has no purpose.
         agent, context, tmr, previous = setup()
-        del previous["EVENT.1"]["PURPOSE"]
+        del previous.graph(agent)["EVENT.1"]["PURPOSE"]
         with self.assertRaises(HeuristicException):
             MockedHeuristic(context)._logic(agent, tmr)
 
         # Fail if this TMR's REQUEST-ACTION.THEME is not ontologically similar to the previous TMR's THEME.
         agent, context, tmr, previous = setup()
-        tmr["OBJECT.1"]["INSTANCE-OF"] = ["ONT.HUMAN"]
+        tmr.graph(agent)["OBJECT.1"]["INSTANCE-OF"] = ["ONT.HUMAN"]
         with self.assertRaises(HeuristicException):
             MockedHeuristic(context)._logic(agent, tmr)

@@ -12,7 +12,6 @@ from backend.models.agenda import Decision, Expectation, Goal, Plan
 from backend.models.grammar import Grammar
 from backend.models.graph import Frame, Identifier, Literal
 from backend.models.ontology import Ontology
-from backend.models.output import OutputXMR
 from backend.models.xmr import XMR
 from backend.utils.AgentLogger import CachedAgentLogger
 from backend.utils.YaleUtils import format_learned_event_yale, input_to_tmrs, lookup_by_visual_id
@@ -229,7 +228,7 @@ class IIDEAConverter(object):
         }
 
     @classmethod
-    def convert_output(cls, output: OutputXMR):
+    def convert_output(cls, output: XMR):
         return {
             "frame": output.frame.name(),
             "graph": output.graph(agent)._namespace,

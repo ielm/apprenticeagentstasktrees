@@ -12,6 +12,7 @@ class VMRTestCase(unittest.TestCase):
         super().setUp()
 
         self.n = Network()
+        self.n.register("INPUTS")
 
         self.ontology = self.n.register("ONT")
         self.ontology.register("ALL")
@@ -57,7 +58,8 @@ class VMRTestCase(unittest.TestCase):
             }
         }
 
-        vmr = self.n.register(VMR(input, self.ontology))
+        vmr = VMR.from_json(self.n, self.ontology, input)
+        vmr = vmr.graph(self.n)
 
         self.assertEqual("ENV", vmr["ENVIRONMENT"]["REFERS-TO"].singleton())
         self.assertIn("LOCATION.1", vmr)
@@ -98,7 +100,8 @@ class VMRTestCase(unittest.TestCase):
             }
         }
 
-        vmr = self.n.register(VMR(input, self.ontology))
+        vmr = VMR.from_json(self.n, self.ontology, input)
+        vmr = vmr.graph(self.n)
 
         self.assertIn("PHYSICAL-EVENT.1", vmr)
         self.assertIn("PHYSICAL-EVENT.2", vmr)
@@ -142,7 +145,8 @@ class VMRTestCase(unittest.TestCase):
             }
         }
 
-        vmr = self.n.register(VMR.new(self.ontology, contains=contains, events=events))
+        vmr = VMR.from_contents(self.n, self.ontology, contains=contains, events=events)
+        vmr = vmr.graph(self.n)
 
         self.assertEqual("ENV", vmr["ENVIRONMENT"]["REFERS-TO"].singleton())
         self.assertIn("LOCATION.1", vmr)
@@ -199,7 +203,7 @@ class VMRTestCase(unittest.TestCase):
             }
         }
 
-        vmr = self.n.register(VMR(input1, self.ontology))
+        vmr = VMR.from_json(self.n, self.ontology, input1)
         vmr.update_environment(env)
 
         e = Environment(env)
@@ -226,7 +230,7 @@ class VMRTestCase(unittest.TestCase):
             }
         }
 
-        vmr = self.n.register(VMR(input2, self.ontology))
+        vmr = VMR.from_json(self.n, self.ontology, input2)
         vmr.update_environment(env)
 
         e = Environment(env)
@@ -252,7 +256,7 @@ class VMRTestCase(unittest.TestCase):
             }
         }
 
-        vmr = self.n.register(VMR.new(self.ontology, events=events))
+        vmr = VMR.from_contents(self.n, self.ontology, events=events)
         vmr.update_memory(wm)
 
         self.assertEqual(3, len(wm))

@@ -34,6 +34,7 @@ class ServiceTestCase(unittest.TestCase):
         from backend.models.view import View
 
         net = Network()
+        net.register("INPUTS")
 
         g1 = net.register(Graph("G1"))
         g1.register("TEST.1", generate_index=False)
@@ -41,7 +42,8 @@ class ServiceTestCase(unittest.TestCase):
         g2 = net.register(Ontology("ONT"))
         g2.register("ALL", generate_index=False)
 
-        g3 = net.register(TMR.new(g2, namespace="TMR#1"))
+        # g3 = net.register(TMR.new(g2, namespace="TMR#1"))
+        g3 = TMR.from_contents(net, g2, namespace="TMR#1").graph(net)
         g3.register("TEST.3", generate_index=False)
 
         g4 = net.register(FR("FR#1", g2))
@@ -51,7 +53,7 @@ class ServiceTestCase(unittest.TestCase):
 
         self.assertEqual(json.loads(graph_to_json(g1)), [{"type": "Frame", "graph": "G1", "name": "TEST.1", "relations": [], "attributes": []}])
         self.assertEqual(json.loads(graph_to_json(g2)), [{"type": "OntologyFrame", "graph": "ONT", "name": "ALL", "relations": [], "attributes": []}])
-        self.assertEqual(json.loads(graph_to_json(g3)), [{"type": "TMRInstance", "graph": "TMR#1", "name": "TEST.3", "relations": [], "attributes": []}])
+        self.assertEqual(json.loads(graph_to_json(g3)), [{"type": "TMRFrame", "graph": "TMR#1", "name": "TEST.3", "relations": [], "attributes": []}])
         self.assertEqual(json.loads(graph_to_json(g4)), [{"type": "FRInstance", "graph": "FR#1", "name": "TEST.4", "relations": [], "attributes": []}])
         self.assertEqual(json.loads(graph_to_json(g5)), [{"type": "FRInstance", "graph": "FR#1", "name": "TEST.4", "relations": [], "attributes": []}])
 

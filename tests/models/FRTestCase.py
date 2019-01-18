@@ -13,7 +13,12 @@ class FRTestCase(unittest.TestCase):
         pass  # Do not load the usual ontology
 
     def setUp(self):
+
+        from backend.utils.AtomicCounter import AtomicCounter
+        TMR.counter = AtomicCounter()
+
         self.n = Network()
+        self.n.register("INPUTS")
         self.ontology = self.n.register("ONT")
         self.fr = self.n.register(FR("FR", self.ontology))
 
@@ -156,8 +161,8 @@ class FRTestCase(unittest.TestCase):
 
         class TestHeuristicA(FRResolutionHeuristic):
             def resolve(self, instance, resolves, tmr=None):
-                if instance.name() == "TMR.CONCEPT-A.1":
-                    resolves["TMR.CONCEPT-A.1"] = {"FR.CONCEPT-A.1"}
+                if instance.name() == "TMR#1.CONCEPT-A.1":
+                    resolves["TMR#1.CONCEPT-A.1"] = {"FR.CONCEPT-A.1"}
 
         called = 0
 
@@ -166,8 +171,8 @@ class FRTestCase(unittest.TestCase):
                 nonlocal called
                 if called == 0:
                     called = 1
-                elif instance.name() == "TMR.CONCEPT-B.1":
-                    resolves["TMR.CONCEPT-B.1"] = {"FR.CONCEPT-B.1"}
+                elif instance.name() == "TMR#1.CONCEPT-B.1":
+                    resolves["TMR#1.CONCEPT-B.1"] = {"FR.CONCEPT-B.1"}
 
         self.fr.heuristics = [
             TestHeuristicA,
@@ -177,7 +182,7 @@ class FRTestCase(unittest.TestCase):
         self.fr.register("CONCEPT-A", isa="CONCEPT-A")
         self.fr.register("CONCEPT-B", isa="CONCEPT-B")
 
-        tmr = self.n.register(TMR({
+        tmr = TMR.from_json(self.n, self.ontology, {
             "sentence": "Test.",
             "tmr": [{
                 "results": [{
@@ -198,14 +203,14 @@ class FRTestCase(unittest.TestCase):
                 "1": {},
                 "basicDeps": []
             }]
-        }, self.ontology, namespace="TMR"))
+        })
 
         iresolves = self.fr.resolve_tmr(tmr)
 
         self.assertEqual(1, called)
         self.assertEqual(iresolves, {
-            "TMR.CONCEPT-A.1": {"FR.CONCEPT-A.1"},
-            "TMR.CONCEPT-B.1": {"FR.CONCEPT-B.1"},
+            "TMR#1.CONCEPT-A.1": {"FR.CONCEPT-A.1"},
+            "TMR#1.CONCEPT-B.1": {"FR.CONCEPT-B.1"},
         })
 
     def test_learn_tmr(self):
@@ -221,7 +226,7 @@ class FRTestCase(unittest.TestCase):
         self.ontology.register("AGENT", isa="RELATION")
         self.ontology.register("AGENT-OF", isa="RELATION")
 
-        tmr = self.n.register(TMR({
+        tmr = TMR.from_json(self.n, self.ontology, {
             "sentence": "Test.",
             "tmr": [{
                 "results": [{
@@ -244,7 +249,7 @@ class FRTestCase(unittest.TestCase):
                 "1": {},
                 "basicDeps": []
             }]
-        }, self.ontology))
+        })
 
         self.fr.learn_tmr(tmr)
 

@@ -5,7 +5,6 @@ from backend.models.environment import Environment
 from backend.models.fr import FR
 from backend.models.graph import Frame, Graph, Identifier, Network
 from backend.models.ontology import Ontology
-from backend.models.output import OutputXMR
 from backend.models.statement import TransientFrame
 from backend.models.tmr import TMR
 from backend.models.vmr import VMR
@@ -58,10 +57,10 @@ class Agent(Network):
         return self._logger
 
     def input(self, input):
-        tmr = self.register(TMR(input, ontology=self.ontology))
+        tmr = TMR.from_json(self, self.ontology, input)
         self.input_memory.append(tmr)
 
-        self._logger.log("Input: " + tmr.sentence)
+        self._logger.log("Input: " + tmr.render())
 
         agenda = self.context.default_understanding()
         agenda.logger(self._logger)
@@ -134,34 +133,24 @@ class Agent(Network):
         print("T" + str(Agent.IDEA.time()) + " " + Agent.IDEA.stage())
         print(self.internal)
 
-    def _input(self, input: Union[dict, TMR, VMR]=None, source: Union[str, Identifier, Frame]=None, type: str=None):
+    def _input(self, input: dict=None, source: Union[str, Identifier, Frame]=None, type: str=None):
         if input is None:
             return
 
         # If input is visual input, create VMR, else create tmr and continue
         if type == "VISUAL":
-            input = VMR(input, ontology=self.ontology)
-        elif isinstance(input, dict):
-            input = TMR(input, ontology=self.ontology)
+            xmr = VMR.from_json(self, self.ontology, input, source=source)
+            xmr.update_environment(self.env())
+            xmr.update_memory(self.wo_memory)
+        else:
+            xmr = TMR.from_json(self, self.ontology, input, source=source)
 
         # Takes graph obj and writes it to the network
-        registered_xMR = self.register(input)
+        # registered_xMR = self.register(input)
 
-        kwargs = {}
-        if source is not None:
-            kwargs["source"] = source
-        if type is not None:
-            kwargs["type"] = type
-
-        xmr = XMR.instance(self.inputs, registered_xMR, status=XMR.Status.RECEIVED, **kwargs)
         self.identity["HAS-INPUT"] += xmr.frame
 
-        if type == "VISUAL":
-            input.update_environment(self.env())
-            input.update_memory(self.wo_memory)
-            self._logger.log("Input: <<VMR INSTANCE HERE>>")
-        else:
-            self._logger.log("Input: " + registered_xMR.sentence)
+        self._logger.log("Input: " + xmr.render())
 
     def _decide(self):
         agenda = self.agenda()
@@ -212,7 +201,7 @@ class Agent(Network):
                 selected_goals.append(decision.goal().frame.name())
                 decision.select()
                 for output in effector_map.keys():
-                    output = OutputXMR(self.lookup(output))
+                    output = XMR(self.lookup(output))
                     effector = effector_map[output.frame.name()]
                     effector.reserve(decision, output, output.capability())
             else:
@@ -293,7 +282,7 @@ class Agent(Network):
 
     def pending_inputs(self) -> List[Graph]:
         inputs = map(lambda input: XMR(input.resolve()), self.identity["HAS-INPUT"])
-        inputs = filter(lambda input: input.status() == XMR.Status.RECEIVED, inputs)
+        inputs = filter(lambda input: input.status() == XMR.InputStatus.RECEIVED, inputs)
         inputs = map(lambda input: input.graph(self), inputs)
 
         return list(inputs)

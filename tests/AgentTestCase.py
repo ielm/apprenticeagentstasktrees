@@ -77,7 +77,7 @@ class AgentTestCase(unittest.TestCase):
         self.assertEqual(9, len(self.agent))
         self.assertIn("TMR#1", self.agent)
         self.assertEqual(1, len(self.agent.pending_inputs()))
-        self.assertEqual(tmr["sentence"], self.agent.pending_inputs()[0].sentence)
+        self.assertEqual(tmr["sentence"], self.agent["INPUTS"]["XMR.1"]["SENTENCE"].singleton())
 
         tmr = self.tmr()
         source = self.agent.lt_memory.register("HUMAN")
@@ -90,7 +90,7 @@ class AgentTestCase(unittest.TestCase):
         self.agent._input(input=tmr, type="LANGUAGE")
         self.assertEqual(11, len(self.agent))
         self.assertIn("TMR#3", self.agent)
-        self.assertTrue(self.agent.inputs["XMR.3"]["TYPE"] == XMR.Type.LANGUAGE.value)
+        self.assertTrue(self.agent.inputs["XMR.3"]["TYPE"] == XMR.Type.LANGUAGE)
 
     def test_iidea(self):
         agent = Agent(ontology=Ontology.init_default("ONT"))
@@ -299,7 +299,7 @@ class AgentDecideTestCase(unittest.TestCase):
         self.assertEqual(Decision.Status.SELECTED, decision.status())
 
     def test_decide_declines_decisions(self):
-        template = OutputXMRTemplate.build(self.agent, "template", OutputXMRTemplate.Type.PHYSICAL, "EXE.TEST-CAPABILITY", [])
+        template = OutputXMRTemplate.build(self.agent, "template", XMR.Type.ACTION, "EXE.TEST-CAPABILITY", [])
         statement = OutputXMRStatement.instance(self.g, template, [], self.agent.identity)
 
         step = Step.build(self.g, 1, [statement])
@@ -319,7 +319,7 @@ class AgentDecideTestCase(unittest.TestCase):
         effector = Effector.instance(self.g, Effector.Type.PHYSICAL, [capability])
         self.agent.identity["HAS-EFFECTOR"] += effector.frame
 
-        template = OutputXMRTemplate.build(self.agent, "template", OutputXMRTemplate.Type.PHYSICAL, capability, [])
+        template = OutputXMRTemplate.build(self.agent, "template", XMR.Type.ACTION, capability, [])
         statement = OutputXMRStatement.instance(self.g, template, [], self.agent.identity)
 
         step = Step.build(self.g, 1, [statement])
@@ -343,7 +343,7 @@ class AgentDecideTestCase(unittest.TestCase):
         self.agent.identity["HAS-EFFECTOR"] += effector1.frame
         self.agent.identity["HAS-EFFECTOR"] += effector2.frame
 
-        template = OutputXMRTemplate.build(self.agent, "template", OutputXMRTemplate.Type.PHYSICAL, capability, [])
+        template = OutputXMRTemplate.build(self.agent, "template", XMR.Type.ACTION, capability, [])
         statement = OutputXMRStatement.instance(self.g, template, [], self.agent.identity)
 
         step = Step.build(self.g, 1, [statement])
@@ -378,7 +378,7 @@ class AgentDecideTestCase(unittest.TestCase):
         self.agent.identity["HAS-EFFECTOR"] += effector1.frame
         self.agent.identity["HAS-EFFECTOR"] += effector2.frame
 
-        template = OutputXMRTemplate.build(self.agent, "template", OutputXMRTemplate.Type.PHYSICAL, capability, [])
+        template = OutputXMRTemplate.build(self.agent, "template", XMR.Type.ACTION, capability, [])
         statement1 = OutputXMRStatement.instance(self.g, template, [], self.agent.identity)
         statement2 = OutputXMRStatement.instance(self.g, template, [], self.agent.identity)
 
@@ -413,7 +413,7 @@ class AgentDecideTestCase(unittest.TestCase):
         self.agent.identity["HAS-EFFECTOR"] += effector1.frame
         self.agent.identity["HAS-EFFECTOR"] += effector2.frame
 
-        template = OutputXMRTemplate.build(self.agent, "template", OutputXMRTemplate.Type.PHYSICAL, capability, [])
+        template = OutputXMRTemplate.build(self.agent, "template", XMR.Type.ACTION, capability, [])
         statement = OutputXMRStatement.instance(self.g, template, [], self.agent.identity)
 
         step = Step.build(self.g, 1, [statement])
@@ -436,7 +436,7 @@ class AgentDecideTestCase(unittest.TestCase):
         effector = Effector.instance(self.g, Effector.Type.PHYSICAL, [capability])
         self.agent.identity["HAS-EFFECTOR"] += effector.frame
 
-        template = OutputXMRTemplate.build(self.agent, "template", OutputXMRTemplate.Type.PHYSICAL, capability, [])
+        template = OutputXMRTemplate.build(self.agent, "template", XMR.Type.ACTION, capability, [])
         statement = OutputXMRStatement.instance(self.g, template, [], self.agent.identity)
 
         step = Step.build(self.g, 1, [statement])
@@ -464,7 +464,7 @@ class AgentDecideTestCase(unittest.TestCase):
         effector = Effector.instance(self.g, Effector.Type.PHYSICAL, [capability])
         self.agent.identity["HAS-EFFECTOR"] += effector.frame
 
-        template = OutputXMRTemplate.build(self.agent, "template", OutputXMRTemplate.Type.PHYSICAL, capability, [])
+        template = OutputXMRTemplate.build(self.agent, "template", XMR.Type.ACTION, capability, [])
         statement = OutputXMRStatement.instance(self.g, template, [], self.agent.identity)
 
         step = Step.build(self.g, 1, [statement])
@@ -488,7 +488,7 @@ class AgentDecideTestCase(unittest.TestCase):
         effector = Effector.instance(self.g, Effector.Type.PHYSICAL, [capability])
         self.agent.identity["HAS-EFFECTOR"] += effector.frame
 
-        template = OutputXMRTemplate.build(self.agent, "template", OutputXMRTemplate.Type.PHYSICAL, capability, [])
+        template = OutputXMRTemplate.build(self.agent, "template", XMR.Type.ACTION, capability, [])
         statement = OutputXMRStatement.instance(self.g, template, [], self.agent.identity)
 
         step = Step.build(self.g, 1, [statement])
@@ -573,7 +573,7 @@ class AgentExecuteTestCase(unittest.TestCase):
         self.agent.identity["HAS-EFFECTOR"] += effector1.frame
         self.agent.identity["HAS-EFFECTOR"] += effector2.frame
 
-        template = OutputXMRTemplate.build(self.agent, "template", OutputXMRTemplate.Type.PHYSICAL, capability, [])
+        template = OutputXMRTemplate.build(self.agent, "template", XMR.Type.ACTION, capability, [])
         statement = OutputXMRStatement.instance(self.g, template, [], self.agent.identity)
 
         step = Step.build(self.g, 1, [statement])
@@ -602,7 +602,7 @@ class AgentExecuteTestCase(unittest.TestCase):
         self.agent.identity["HAS-EFFECTOR"] += effector1.frame
         self.agent.identity["HAS-EFFECTOR"] += effector2.frame
 
-        template = OutputXMRTemplate.build(self.agent, "template", OutputXMRTemplate.Type.PHYSICAL, capability, [])
+        template = OutputXMRTemplate.build(self.agent, "template", XMR.Type.ACTION, capability, [])
         statement = OutputXMRStatement.instance(self.g, template, [], self.agent.identity)
 
         step = Step.build(self.g, 1, [statement])
@@ -643,7 +643,7 @@ class AgentExecuteTestCase(unittest.TestCase):
         self.agent.identity["HAS-EFFECTOR"] += effector1.frame
         self.agent.identity["HAS-EFFECTOR"] += effector2.frame
 
-        template = OutputXMRTemplate.build(self.agent, "template", OutputXMRTemplate.Type.PHYSICAL, capability, [])
+        template = OutputXMRTemplate.build(self.agent, "template", XMR.Type.ACTION, capability, [])
         statement = OutputXMRStatement.instance(self.g, template, [], self.agent.identity)
 
         step = Step.build(self.g, 1, [statement])
@@ -824,7 +824,7 @@ class AgentAssessTestCase(unittest.TestCase):
         self.assertNotIn(decision5, self.agent.decisions())
 
     def test_assess_removes_any_output_xmrs_associated_with_removed_decisions(self):
-        from backend.models.output import OutputXMR
+        from backend.models.xmr import XMR
 
         step = Step.build(self.g, 1, [])
 
@@ -834,8 +834,8 @@ class AgentAssessTestCase(unittest.TestCase):
         decision1.frame["STATUS"] = Decision.Status.FINISHED
         decision2.frame["STATUS"] = Decision.Status.DECLINED
 
-        output1 = OutputXMR.build(self.g, OutputXMRTemplate.Type.PHYSICAL, "CAPABILITY", "XMR#1")
-        output2 = OutputXMR.build(self.g, OutputXMRTemplate.Type.PHYSICAL, "CAPABILITY", "XMR#2")
+        output1 = XMR.instance(self.g, "XMR#1", XMR.Signal.OUTPUT, XMR.Type.ACTION, XMR.OutputStatus.PENDING, "", "")
+        output2 = XMR.instance(self.g, "XMR#2", XMR.Signal.OUTPUT, XMR.Type.ACTION, XMR.OutputStatus.PENDING, "", "")
 
         decision1.frame["HAS-OUTPUT"] = output1.frame
         decision2.frame["HAS-OUTPUT"] = output2.frame

@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from backend.agent import Agent
     from backend.models.effectors import Callback, Capability, Effector
-    from backend.models.output import OutputXMR
+    from backend.models.output import XMR
 
 
 class Agenda(object):
@@ -687,9 +687,9 @@ class Decision(object):
     def impasses(self) -> List[Goal]:
         return list(map(lambda i: Goal(i.resolve()), self.frame["HAS-IMPASSE"]))
 
-    def outputs(self) -> List['OutputXMR']:
-        from backend.models.output import OutputXMR
-        return list(map(lambda output: OutputXMR(output.resolve()), self.frame["HAS-OUTPUT"]))
+    def outputs(self) -> List['XMR']:
+        from backend.models.output import XMR
+        return list(map(lambda output: XMR(output.resolve()), self.frame["HAS-OUTPUT"]))
 
     def expectations(self) -> List['Expectation']:
         return list(map(lambda expectation: Expectation(expectation.resolve()), self.frame["HAS-EXPECTATION"]))

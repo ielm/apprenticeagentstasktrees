@@ -9,6 +9,7 @@ from backend.models.path import Path
 from backend.models.query import AndQuery, ExactQuery, FillerQuery, FrameQuery, IdentifierQuery, LiteralQuery, NameQuery, NotQuery, OrQuery, SlotQuery
 from backend.models.statement import AddFillerStatement, AssertStatement, AssignFillerStatement, AssignVariableStatement, ExistsStatement, ExpectationStatement, ForEachStatement, IsStatement, MakeInstanceStatement, MeaningProcedureStatement, OutputXMRStatement, TransientFrameStatement
 from backend.models.view import View
+from backend.models.xmr import XMR
 
 import unittest
 
@@ -382,7 +383,7 @@ class AgendaGrammarTestCase(unittest.TestCase):
         self.agent.exe.register("TEST")
         self.agent.exe.register("TEST-CAPABILITY")
 
-        template = OutputXMRTemplate.build(self.agent, "test-xmr", OutputXMRTemplate.Type.PHYSICAL, "SELF.TEST-CAPABILITY", ["$var1", "$var2", "$var3", "$var4"])
+        template = OutputXMRTemplate.build(self.agent, "test-xmr", XMR.Type.ACTION, "SELF.TEST-CAPABILITY", ["$var1", "$var2", "$var3", "$var4"])
 
         statement = OutputXMRStatement.instance(self.agent.exe, template, [1, Literal("abc"), Literal("$var1"), Identifier.parse("SELF.TEST")], self.agent.identity)
         parsed = Grammar.parse(self.agent, "OUTPUT test-xmr(1, \"abc\", $var1, @SELF.TEST) BY SELF", start="output_statement", agent=self.agent)
@@ -692,15 +693,15 @@ class OutputXMRTemplateGrammarTestCase(unittest.TestCase):
         self.n = self.agent
 
     def test_parse_type(self):
-        type = OutputXMRTemplate.Type.PHYSICAL
+        type = XMR.Type.ACTION
         parsed = Grammar.parse(self.n, "TYPE PHYSICAL", start="output_xmr_template_type")
         self.assertEqual(type, parsed)
 
-        type = OutputXMRTemplate.Type.MENTAL
+        type = XMR.Type.MENTAL
         parsed = Grammar.parse(self.n, "TYPE MENTAL", start="output_xmr_template_type")
         self.assertEqual(type, parsed)
 
-        type = OutputXMRTemplate.Type.VERBAL
+        type = XMR.Type.LANGUAGE
         parsed = Grammar.parse(self.n, "TYPE VERBAL", start="output_xmr_template_type")
         self.assertEqual(type, parsed)
 
@@ -762,7 +763,7 @@ class OutputXMRTemplateGrammarTestCase(unittest.TestCase):
         '''
 
         name = "get-item-template"
-        type = OutputXMRTemplate.Type.PHYSICAL
+        type = XMR.Type.ACTION
         capability = "EXE.GET-CAPABILITY"
         params = ["$var1", "$var2"]
         root = "OUT.POSSESSION-EVENT.1"

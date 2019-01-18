@@ -47,9 +47,10 @@ class LCTPostHeuristicsTestCase(ApprenticeAgentsTestCase):
             frevent[LCTContext.LEARNING] = True
             frevent["AGENT"] = fragent
 
-            tmr = agent.register(TMR.new(self.ontology))
-            event = tmr.register("EVENT", isa="ONT.EVENT")
-            purpose = tmr.register("EVENT", isa="ONT.EVENT")
+            tmr = TMR.from_contents(agent, self.ontology)
+
+            event = tmr.graph(agent).register("EVENT", isa="ONT.EVENT", generate_index=True)
+            purpose = tmr.graph(agent).register("EVENT", isa="ONT.EVENT", generate_index=True)
             event["PURPOSE"] = purpose
             purpose["AGENT"] = "HUMAN"
 
@@ -71,19 +72,19 @@ class LCTPostHeuristicsTestCase(ApprenticeAgentsTestCase):
 
         # Fails if tmr is prefix.
         agent, context, tmr = setup()
-        tmr["EVENT.1"]["TIME"] = [[">", "FIND-ANCHOR-TIME"]]
+        tmr.graph(agent)["EVENT.1"]["TIME"] = [[">", "FIND-ANCHOR-TIME"]]
         with self.assertRaises(HeuristicException):
             MockedHeuristic(context)._logic(agent, tmr)
 
         # Fails if tmr is postfix.
         agent, context, tmr = setup()
-        tmr["EVENT.1"]["TIME"] = [["<", "FIND-ANCHOR-TIME"]]
+        tmr.graph(agent)["EVENT.1"]["TIME"] = [["<", "FIND-ANCHOR-TIME"]]
         with self.assertRaises(HeuristicException):
             MockedHeuristic(context)._logic(agent, tmr)
 
         # Fails if the event has no PURPOSE.
         agent, context, tmr = setup()
-        del tmr["EVENT.1"]["PURPOSE"]
+        del tmr.graph(agent)["EVENT.1"]["PURPOSE"]
         del agent.wo_memory["EVENT.2"]["PURPOSE"]
         with self.assertRaises(HeuristicException):
             MockedHeuristic(context)._logic(agent, tmr)
@@ -114,9 +115,10 @@ class LCTPostHeuristicsTestCase(ApprenticeAgentsTestCase):
             frevent[LCTContext.LEARNING] = True
             frevent[LCTContext.CURRENT] = True
 
-            tmr = agent.register(TMR.new(self.ontology))
-            event = tmr.register("EVENT", isa="ONT.REQUEST-ACTION")
-            theme = tmr.register("EVENT", isa="ONT.EVENT")
+            tmr = TMR.from_contents(agent, self.ontology)
+
+            event = tmr.graph(agent).register("EVENT", isa="ONT.REQUEST-ACTION", generate_index=True)
+            theme = tmr.graph(agent).register("EVENT", isa="ONT.EVENT", generate_index=True)
             event["BENEFICIARY"] = "ROBOT"
             event["THEME"] = theme
 
@@ -138,25 +140,25 @@ class LCTPostHeuristicsTestCase(ApprenticeAgentsTestCase):
 
         # Fails if tmr is prefix.
         agent, context, tmr = setup()
-        tmr["EVENT.1"]["TIME"] = [[">", "FIND-ANCHOR-TIME"]]
+        tmr.graph(agent)["EVENT.1"]["TIME"] = [[">", "FIND-ANCHOR-TIME"]]
         with self.assertRaises(HeuristicException):
             MockedHeuristic(context)._logic(agent, tmr)
 
         # Fails if tmr is postfix.
         agent, context, tmr = setup()
-        tmr["EVENT.1"]["TIME"] = [["<", "FIND-ANCHOR-TIME"]]
+        tmr.graph(agent)["EVENT.1"]["TIME"] = [["<", "FIND-ANCHOR-TIME"]]
         with self.assertRaises(HeuristicException):
             MockedHeuristic(context)._logic(agent, tmr)
 
         # Fails if the main event is not a REQUEST-ACTION.
         agent, context, tmr = setup()
-        tmr["EVENT.1"]["INSTANCE-OF"] = "ONT.EVENT"
+        tmr.graph(agent)["EVENT.1"]["INSTANCE-OF"] = "ONT.EVENT"
         with self.assertRaises(HeuristicException):
             MockedHeuristic(context)._logic(agent, tmr)
 
         # Fails if the robot is not the BENEFICIARY.
         agent, context, tmr = setup()
-        del tmr["EVENT.1"]["BENEFICIARY"]
+        del tmr.graph(agent)["EVENT.1"]["BENEFICIARY"]
         with self.assertRaises(HeuristicException):
             MockedHeuristic(context)._logic(agent, tmr)
 
@@ -172,8 +174,8 @@ class LCTPostHeuristicsTestCase(ApprenticeAgentsTestCase):
             frevent[LCTContext.LEARNING] = True
             frevent[LCTContext.CURRENT] = True
 
-            tmr = agent.register(TMR.new(self.ontology))
-            event = tmr.register("EVENT", isa="ONT.EVENT")
+            tmr = TMR.from_contents(agent, self.ontology)
+            event = tmr.graph(agent).register("EVENT", isa="ONT.EVENT", generate_index=True)
 
             agent.wo_memory.learn_tmr(tmr)
 
@@ -194,13 +196,13 @@ class LCTPostHeuristicsTestCase(ApprenticeAgentsTestCase):
 
         # Fails if tmr is prefix.
         agent, context, tmr = setup()
-        tmr["EVENT.1"]["TIME"] = [[">", "FIND-ANCHOR-TIME"]]
+        tmr.graph(agent)["EVENT.1"]["TIME"] = [[">", "FIND-ANCHOR-TIME"]]
         with self.assertRaises(HeuristicException):
             MockedHeuristic(context)._logic(agent, tmr)
 
         # Fails if tmr is postfix.
         agent, context, tmr = setup()
-        tmr["EVENT.1"]["TIME"] = [["<", "FIND-ANCHOR-TIME"]]
+        tmr.graph(agent)["EVENT.1"]["TIME"] = [["<", "FIND-ANCHOR-TIME"]]
         with self.assertRaises(HeuristicException):
             MockedHeuristic(context)._logic(agent, tmr)
 
@@ -216,8 +218,9 @@ class LCTPostHeuristicsTestCase(ApprenticeAgentsTestCase):
             frevent[LCTContext.LEARNING] = True
             frevent[LCTContext.CURRENT] = True
 
-            tmr = agent.register(TMR.new(self.ontology))
-            event = tmr.register("EVENT", isa="ONT.EVENT")
+            tmr = TMR.from_contents(agent, self.ontology)
+
+            event = tmr.graph(agent).register("EVENT", isa="ONT.EVENT", generate_index=True)
             event["TIME"] = [[">", "FIND-ANCHOR-TIME"]]
 
             agent.wo_memory.learn_tmr(tmr)
@@ -243,13 +246,13 @@ class LCTPostHeuristicsTestCase(ApprenticeAgentsTestCase):
 
         # Fails if tmr is not prefix.
         agent, context, tmr = setup()
-        del tmr["EVENT.1"]["TIME"]
+        del tmr.graph(agent)["EVENT.1"]["TIME"]
         with self.assertRaises(HeuristicException):
             MockedHeuristic(context)._logic(agent, tmr)
 
         # Fails if tmr is postfix.
         agent, context, tmr = setup()
-        tmr["EVENT.1"]["TIME"] = [["<", "FIND-ANCHOR-TIME"]]
+        tmr.graph(agent)["EVENT.1"]["TIME"] = [["<", "FIND-ANCHOR-TIME"]]
         with self.assertRaises(HeuristicException):
             MockedHeuristic(context)._logic(agent, tmr)
 
@@ -276,9 +279,10 @@ class LCTPostHeuristicsTestCase(ApprenticeAgentsTestCase):
             child2["HAS-EVENT-AS-PART"] = [child3]
             frevent["THEME"] = frtheme
 
-            tmr = agent.register(TMR.new(self.ontology))
-            event = tmr.register("EVENT", isa="ONT.EVENT-B")
-            theme = tmr.register("EVENT", isa="ONT.EVENT-B")
+            tmr = TMR.from_contents(agent, self.ontology)
+
+            event = tmr.graph(agent).register("EVENT", isa="ONT.EVENT-B", generate_index=True)
+            theme = tmr.graph(agent).register("EVENT", isa="ONT.EVENT-B", generate_index=True)
             event["TIME"] = [["<", "FIND-ANCHOR-TIME"]]
             event["THEME"] = theme
 
@@ -301,13 +305,13 @@ class LCTPostHeuristicsTestCase(ApprenticeAgentsTestCase):
 
         # Fails if tmr is prefix.
         agent, context, tmr = setup()
-        tmr["EVENT.1"]["TIME"] = [[">", "FIND-ANCHOR-TIME"]]
+        tmr.graph(agent)["EVENT.1"]["TIME"] = [[">", "FIND-ANCHOR-TIME"]]
         with self.assertRaises(HeuristicException):
             MockedHeuristic(context)._logic(agent, tmr)
 
         # Fails if tmr is not postfix.
         agent, context, tmr = setup()
-        del tmr["EVENT.1"]["TIME"]
+        del tmr.graph(agent)["EVENT.1"]["TIME"]
         with self.assertRaises(HeuristicException):
             MockedHeuristic(context)._logic(agent, tmr)
 
@@ -337,9 +341,10 @@ class LCTPostHeuristicsTestCase(ApprenticeAgentsTestCase):
             frevent[LCTContext.LEARNING] = True
             frevent["THEME"] = frtheme
 
-            tmr = agent.register(TMR.new(self.ontology))
-            event = tmr.register("EVENT", isa="ONT.BUILD")
-            theme = tmr.register("EVENT", isa="ONT.OBJECT")
+            tmr = TMR.from_contents(agent, self.ontology)
+
+            event = tmr.graph(agent).register("EVENT", isa="ONT.BUILD", generate_index=True)
+            theme = tmr.graph(agent).register("EVENT", isa="ONT.OBJECT", generate_index=True)
             event[LCTContext.LEARNING] = True
             event["THEME"] = theme
 
@@ -360,7 +365,7 @@ class LCTPostHeuristicsTestCase(ApprenticeAgentsTestCase):
 
         # Fails if there are no "parts" (THEMEs or DESTINATIONs) to the input event.
         agent, context, tmr = setup()
-        del tmr["EVENT.1"]["THEME"]
+        del tmr.graph(agent)["EVENT.1"]["THEME"]
         with self.assertRaises(HeuristicException):
             MockedHeuristic(context)._logic(agent, tmr)
 
