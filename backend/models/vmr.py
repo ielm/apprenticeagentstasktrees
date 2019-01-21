@@ -84,7 +84,9 @@ class VMR(XMR):
         if isinstance(environment, Graph):
             environment = Environment(environment)
 
-        environment.advance()
+        epoch = environment.advance()
+        self.frame["EPOCH"] = epoch
+
         for object in environment.current():
             environment.exit(object)
 
@@ -100,6 +102,9 @@ class VMR(XMR):
     def events(self) -> List[Frame]:
         return list(map(lambda f: f.resolve(), self.graph(self._network())["EVENTS"]["HAS-EVENT"]))
 
+    def epoch(self) -> Frame:
+        return self.frame["EPOCH"].singleton()
+
     def update_memory(self, graph: Graph):
         for event in self.events():
             parents = event.parents()
@@ -113,3 +118,70 @@ class VMR(XMR):
                     continue
                 for filler in event[slot]:
                     frame[slot] += filler
+
+    def render(self):
+
+        observations = []
+
+        def get_location(env: Environment, object: Frame, epoch: Frame) -> Union[Frame, None]:
+            try:
+                return env.location(object, epoch)
+            except:
+                return None
+
+        def get_then(now: Frame) -> Frame:
+            if len(now["FOLLOWS"]) == 0:
+                return Frame("NO-SUCH-EPOCH")
+            return now["FOLLOWS"].singleton()
+
+        def get_view(env: Environment, epoch: Frame) -> List[Frame]:
+            try:
+                return env.view(epoch)
+            except:
+                return []
+
+        def get_name(frame: Frame) -> str:
+            if "NAME" in frame:
+                return frame["NAME"].singleton()
+            if "HAS-NAME" in frame:
+                return frame["HAS-NAME"].singleton()
+            return frame.name()
+
+        try:
+            env = Environment(self.frame._graph._network["ENV"])
+
+            now = self.epoch()
+            then = get_then(now)
+
+            all_known_objects = set(get_view(env, now))
+            all_known_objects = all_known_objects.union(get_view(env, then))
+
+            for o in all_known_objects:
+                location_now = get_location(env, o, now)
+                location_then = get_location(env, o, then)
+
+                if location_now != None and location_then != None and location_now != location_then:
+                    observations.append("I see that " + get_name(o) + " moved from the " + get_name(location_then) + " to the " + get_name(location_now))
+
+                if location_now != None and location_then == None:
+                    observations.append("I see that " + get_name(o) + " is now in the environment, at the " + get_name(location_now))
+
+                if location_now == None and location_then != None:
+                    observations.append("I see that " + get_name(o) + " has left the environment")
+        except: pass
+
+        try:
+            for e in self.events():
+                agent = e["AGENT"].singleton()
+                theme = e["THEME"].singleton()
+                action = e._identifier.name
+
+                observations.append("I see that " + get_name(agent) + " did " + action + "(" + get_name(theme) + ")")
+
+
+        except: pass
+
+        if len(observations) == 0:
+            return super().render()
+
+        return "; and ".join(observations) + "."

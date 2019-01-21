@@ -247,9 +247,152 @@ class TMRTestCase(unittest.TestCase):
 
 class VMRTestCase(unittest.TestCase):
 
+    def setUp(self):
+        self.n = Network()
+        self.env = self.n.register("ENV")
+        self.ont = self.n.register("ONT")
+
+        self.env.register("EPOCH")
+        self.ont.register("LOCATION")
+
     def test_render(self):
-        n = Network()
-        g = n.register("TEST")
+        g = self.n.register("TEST")
         f = g.register("VMR", generate_index=True)
 
         self.assertEqual("TEST.VMR.1", VMR(f).render())
+
+    def test_render_entered_location(self):
+        from backend.models.environment import Environment
+
+        g = self.n.register("TEST")
+
+        human = g.register("HUMAN")
+        location = g.register("LOCATION")
+
+        env = Environment(self.env)
+
+        epoch = env.advance()
+        env.enter(human, location)
+
+        vmr_graph = self.n.register("VMR")
+        vmr_graph.register("EVENTS")
+
+        vmr = VMR.instance(g, "VMR", XMR.Signal.INPUT, XMR.Type.VISUAL, XMR.InputStatus.RECEIVED, "SELF.ROBOT.1", "")
+        vmr.frame["EPOCH"] = epoch
+
+        self.assertEqual("I see that TEST.HUMAN is now in the environment, at the TEST.LOCATION.", vmr.render())
+
+        human["HAS-NAME"] = Literal("Jake")
+        location["HAS-NAME"] = Literal("workshop")
+        self.assertEqual("I see that Jake is now in the environment, at the workshop.", vmr.render())
+
+    def test_render_changed_location(self):
+        from backend.models.environment import Environment
+
+        g = self.n.register("TEST")
+
+        human = g.register("HUMAN")
+        location1 = g.register("LOCATION", generate_index=True)
+        location2 = g.register("LOCATION", generate_index=True)
+
+        env = Environment(self.env)
+
+        epoch = env.advance()
+        env.enter(human, location1)
+
+        epoch = env.advance()
+        env.enter(human, location2)
+
+        vmr_graph = self.n.register("VMR")
+        vmr_graph.register("EVENTS")
+
+        vmr = VMR.instance(g, "VMR", XMR.Signal.INPUT, XMR.Type.VISUAL, XMR.InputStatus.RECEIVED, "SELF.ROBOT.1", "")
+        vmr.frame["EPOCH"] = epoch
+
+        self.assertEqual("I see that TEST.HUMAN moved from the TEST.LOCATION.1 to the TEST.LOCATION.2.", vmr.render())
+
+        human["HAS-NAME"] = Literal("Jake")
+        location1["HAS-NAME"] = Literal("workshop")
+        location2["HAS-NAME"] = Literal("bench")
+        self.assertEqual("I see that Jake moved from the workshop to the bench.", vmr.render())
+
+    def test_render_left_environment(self):
+        from backend.models.environment import Environment
+
+        g = self.n.register("TEST")
+
+        human = g.register("HUMAN")
+        location = g.register("LOCATION", generate_index=True)
+
+        env = Environment(self.env)
+
+        epoch = env.advance()
+        env.enter(human, location)
+
+        epoch = env.advance()
+        env.exit(human)
+
+        vmr_graph = self.n.register("VMR")
+        vmr_graph.register("EVENTS")
+
+        vmr = VMR.instance(g, "VMR", XMR.Signal.INPUT, XMR.Type.VISUAL, XMR.InputStatus.RECEIVED, "SELF.ROBOT.1", "")
+        vmr.frame["EPOCH"] = epoch
+
+        self.assertEqual("I see that TEST.HUMAN has left the environment.", vmr.render())
+
+        human["HAS-NAME"] = Literal("Jake")
+        location["HAS-NAME"] = Literal("workshop")
+        self.assertEqual("I see that Jake has left the environment.", vmr.render())
+
+    def test_render_observed_event(self):
+
+        human = self.env.register("HUMAN")
+        bracket = self.env.register("BRACKET")
+
+        vmr_graph = self.n.register("VMR")
+        vmr_graph.register("EVENTS")
+
+        root = vmr_graph.register("GET", generate_index=True)
+        root["AGENT"] = "ENV.HUMAN"
+        root["THEME"] = "ENV.BRACKET"
+
+        events = vmr_graph.register("EVENTS")
+        events["HAS-EVENT"] += root
+
+        vmr = VMR.instance(self.n.register("TEST"), "VMR", XMR.Signal.INPUT, XMR.Type.VISUAL, XMR.InputStatus.RECEIVED, "SELF.ROBOT.1", "")
+        vmr.frame["EPOCH"] = self.env.register("EPOCH", isa="ENV.EPOCH", generate_index=True)
+
+        self.assertEqual("I see that ENV.HUMAN did GET(ENV.BRACKET).", vmr.render())
+
+        human["HAS-NAME"] = Literal("Jake")
+        bracket["HAS-NAME"] = Literal("bracket")
+        self.assertEqual("I see that Jake did GET(bracket).", vmr.render())
+
+    def test_render_multiple_observations(self):
+
+        human = self.env.register("HUMAN")
+        bracket = self.env.register("BRACKET")
+
+        vmr_graph = self.n.register("VMR")
+        vmr_graph.register("EVENTS")
+
+        get = vmr_graph.register("GET", generate_index=True)
+        get["AGENT"] = "ENV.HUMAN"
+        get["THEME"] = "ENV.BRACKET"
+
+        hold = vmr_graph.register("HOLD", generate_index=True)
+        hold["AGENT"] = "ENV.HUMAN"
+        hold["THEME"] = "ENV.BRACKET"
+
+        events = vmr_graph.register("EVENTS")
+        events["HAS-EVENT"] += get
+        events["HAS-EVENT"] += hold
+
+        vmr = VMR.instance(self.n.register("TEST"), "VMR", XMR.Signal.INPUT, XMR.Type.VISUAL, XMR.InputStatus.RECEIVED, "SELF.ROBOT.1", "")
+        vmr.frame["EPOCH"] = self.env.register("EPOCH", isa="ENV.EPOCH", generate_index=True)
+
+        self.assertEqual("I see that ENV.HUMAN did GET(ENV.BRACKET); and I see that ENV.HUMAN did HOLD(ENV.BRACKET).", vmr.render())
+
+        human["HAS-NAME"] = Literal("Jake")
+        bracket["HAS-NAME"] = Literal("bracket")
+        self.assertEqual("I see that Jake did GET(bracket); and I see that Jake did HOLD(bracket).", vmr.render())
