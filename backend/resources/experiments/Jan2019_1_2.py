@@ -35,7 +35,14 @@ class FetchObjectCapability(OutputMethod):
     def run(self):
         target = self.output.root()["THEME"].singleton()
 
-        print("TODO: issue command to robot to fetch " + str(target))
+        try:
+            id = target["visual-object-id"].singleton()
+
+            from backend.utils.YaleUtils import signal_action
+
+            signal_action("get", id, self.callback.frame.name())
+        except:
+            print("Warning: unable to signal robot to fetch " + str(target) + ".")
 
 
 class HoldObjectCapability(OutputMethod):

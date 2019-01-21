@@ -11,6 +11,50 @@ from backend.models.graph import Graph, Literal, Network
 from backend.models.ontology import Ontology
 
 
+def signal_action(action: str, object_id: int, callback: str):
+    from backend import config
+    endpoint = config.yale_robot_service() + "/robotcommand"
+
+    import urllib.request
+    import json
+
+    body = {
+        action: object_id,
+        "callback": callback
+    }
+
+    req = urllib.request.Request(endpoint)
+    req.add_header('Content-Type', 'application/json; charset=utf-8')
+
+    jsondata = json.dumps(body)
+    jsondataasbytes = jsondata.encode('utf-8')
+
+    req.add_header('Content-Length', len(jsondataasbytes))
+    response = urllib.request.urlopen(req, jsondataasbytes)
+
+
+def signal_speech(text: str, callback: str):
+    from backend import config
+    endpoint = config.yale_robot_service() + "/robotcommand"
+
+    import urllib.request
+    import json
+
+    body = {
+        "speak": text,
+        "callback": callback
+    }
+
+    req = urllib.request.Request(endpoint)
+    req.add_header('Content-Type', 'application/json; charset=utf-8')
+
+    jsondata = json.dumps(body)
+    jsondataasbytes = jsondata.encode('utf-8')
+
+    req.add_header('Content-Length', len(jsondataasbytes))
+    response = urllib.request.urlopen(req, jsondataasbytes)
+
+
 def bootstrap(input: dict, graph: Graph):
     types = {
         "dowel": {"IS-A": "DOWEL"},
