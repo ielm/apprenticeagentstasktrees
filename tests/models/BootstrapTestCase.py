@@ -3,6 +3,7 @@ from backend.models.bootstrap import BootstrapAddTrigger, BootstrapAppendKnowled
 from backend.models.graph import Frame, Identifier, Literal, Network
 from backend.models.mps import AgentMethod, MPRegistry
 from backend.models.output import OutputXMRTemplate
+from backend.models.xmr import XMR
 
 import unittest
 
@@ -215,7 +216,7 @@ class BootstrapDefineOutputXMRTemplateTestCase(unittest.TestCase):
 
     def test_call(self):
         name = "Test Name"
-        type = OutputXMRTemplate.Type.PHYSICAL
+        type = XMR.Type.ACTION
         capability = self.capability
         params = ["$var1", "$var2"]
         root = "OUT.EVENT.1"
@@ -235,6 +236,6 @@ class BootstrapDefineOutputXMRTemplateTestCase(unittest.TestCase):
         self.assertEqual("$var1", object["PROP"])
 
         self.assertEqual("Test Name", OutputXMRTemplate(template).name())
-        self.assertEqual(OutputXMRTemplate.Type.PHYSICAL, OutputXMRTemplate(template).type())
+        self.assertEqual(XMR.Type.ACTION, OutputXMRTemplate(template).type())
         self.assertEqual("TEST.CAPABILITY", OutputXMRTemplate(template).capability().name())
         self.assertEqual(["$var1", "$var2"], OutputXMRTemplate(template).params())

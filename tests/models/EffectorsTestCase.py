@@ -3,6 +3,7 @@ from backend.models.effectors import Callback, Capability, Effector
 from backend.models.graph import Literal, Network
 from backend.models.mps import MPRegistry, OutputMethod
 from backend.models.statement import VariableMap
+from backend.models.xmr import XMR
 
 import unittest
 
@@ -63,9 +64,7 @@ class EffectorTestCase(unittest.TestCase):
         self.assertEqual(decision, Effector(f).on_decision())
 
     def test_effector_on_output(self):
-        from backend.models.output import OutputXMR, OutputXMRTemplate
-
-        output = OutputXMR.build(self.g, OutputXMRTemplate.Type.PHYSICAL, "CAPABILITY", "TEST")
+        output = XMR.instance(self.g, "TEST", XMR.Signal.OUTPUT, XMR.Type.ACTION, XMR.OutputStatus.PENDING, "", "", capability="CAPABILITY")
 
         f = self.g.register("TEST-EFFECTOR", isa="EXE.EFFECTOR")
         f["ON-OUTPUT"] = output.frame
@@ -82,7 +81,6 @@ class EffectorTestCase(unittest.TestCase):
 
     def test_reserve(self):
         from backend.models.agenda import Decision
-        from backend.models.output import OutputXMR, OutputXMRTemplate
 
         effector = Effector.instance(self.g, Effector.Type.PHYSICAL, [])
 
@@ -92,7 +90,7 @@ class EffectorTestCase(unittest.TestCase):
         self.assertIsNone(effector.on_capability())
 
         decision = Decision.build(self.g, "GOAL", "PLAN", "STEP")
-        output = OutputXMR.build(self.g, OutputXMRTemplate.Type.PHYSICAL, "CAPABILITY", "TEST")
+        output = XMR.instance(self.g, "TEST", XMR.Signal.OUTPUT, XMR.Type.ACTION, XMR.OutputStatus.PENDING, "", "", capability="CAPABILITY")
         capability = Capability.instance(self.g, "TEST-CAPABILITY", "TestMP", ["ONT.EVENT"])
 
         effector.reserve(decision, output, capability)
@@ -104,12 +102,11 @@ class EffectorTestCase(unittest.TestCase):
 
     def test_release(self):
         from backend.models.agenda import Decision
-        from backend.models.output import OutputXMR, OutputXMRTemplate
 
         effector = Effector.instance(self.g, Effector.Type.PHYSICAL, [])
 
         decision = Decision.build(self.g, "GOAL", "PLAN", "STEP")
-        output = OutputXMR.build(self.g, OutputXMRTemplate.Type.PHYSICAL, "CAPABILITY", "TEST")
+        output = XMR.instance(self.g, "TEST", XMR.Signal.OUTPUT, XMR.Type.ACTION, XMR.OutputStatus.PENDING, "", "", capability="CAPABILITY")
         capability = Capability.instance(self.g, "TEST-CAPABILITY", "TestMP", ["ONT.EVENT"])
 
         effector.reserve(decision, output, capability)
@@ -175,7 +172,6 @@ class CapabilityTestCase(unittest.TestCase):
 
     def test_run(self):
         from backend.models.mps import OutputMethod
-        from backend.models.output import OutputXMR, OutputXMRTemplate
 
         out = []
 
@@ -189,7 +185,7 @@ class CapabilityTestCase(unittest.TestCase):
 
         capability = Capability.instance(self.g, "TEST-CAPABILITY", TestMP.__name__, ["ONT.EVENT"])
 
-        output = OutputXMR.build(self.g, OutputXMRTemplate.Type.PHYSICAL, capability, "TEST")
+        output = XMR.instance(self.g, "TEST", XMR.Signal.OUTPUT, XMR.Type.ACTION, XMR.OutputStatus.PENDING, "", "", capability=capability)
         callback = Callback.build(self.g, "DECISION", "EFFECTOR")
 
         capability.run(None, output, callback)

@@ -7,6 +7,7 @@ from backend.models.mps import AgentMethod, MPRegistry, OutputMethod
 from backend.models.ontology import Ontology, OntologyFrame, OntologyFiller
 from backend.models.output import OutputXMRTemplate
 from backend.models.query import Query
+from backend.models.xmr import XMR
 from pkgutil import get_data
 from typing import Callable, List, Type, Union
 
@@ -183,7 +184,7 @@ class BootstrapAddTrigger(Bootstrap):
 
 class BootstrapDefineOutputXMRTemplate(Bootstrap):
 
-    def __init__(self, network: Network, name: str, type: OutputXMRTemplate.Type, capability: Union[str, Identifier, Frame, Capability], params: List[str], root: Union[str, Identifier, Frame, None], frames: List[BootstrapDeclareKnowledge]):
+    def __init__(self, network: Network, name: str, type: XMR.Type, capability: Union[str, Identifier, Frame, Capability], params: List[str], root: Union[str, Identifier, Frame, None], frames: List[BootstrapDeclareKnowledge]):
         self.network = network
         self.name = name
         self.type = type

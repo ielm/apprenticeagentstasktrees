@@ -142,9 +142,9 @@ class StatementScope(object):
 
     def __init__(self):
         from backend.models.agenda import Expectation
-        from backend.models.output import OutputXMR
+        from backend.models.output import XMR
 
-        self.outputs: List[OutputXMR] = []
+        self.outputs: List[XMR] = []
         self.expectations: List[Expectation] = []
         self.transients: List[TransientFrame] = []
         self.variables = {}

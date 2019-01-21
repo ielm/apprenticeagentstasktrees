@@ -1,57 +1,7 @@
 from backend.models.graph import Frame, Graph, Literal, Network
-from backend.models.output import OutputXMR, OutputXMRTemplate
+from backend.models.output import OutputXMRTemplate
+from backend.models.xmr import XMR
 import unittest
-
-
-class OutputXMRTestCase(unittest.TestCase):
-
-    def setUp(self):
-        self.n = Network()
-        self.g = self.n.register("TEST")
-        self.capability = self.g.register("CAPABILITY")
-
-    def test_type(self):
-        f = self.g.register("XMR")
-        f["TYPE"] = OutputXMRTemplate.Type.PHYSICAL
-
-        self.assertEqual(OutputXMRTemplate.Type.PHYSICAL, OutputXMR(f).type())
-
-    def test_capability(self):
-        f = self.g.register("XMR")
-        f["REQUIRES"] = self.capability
-
-        self.assertEqual(self.capability, OutputXMR(f).capability())
-
-    def test_graph(self):
-        f = self.g.register("XMR")
-        f["REFERS-TO-GRAPH"] = Literal("TEST")
-
-        self.assertEqual(self.g, OutputXMR(f).graph(self.n))
-
-    def test_status(self):
-        f = self.g.register("XMR")
-        f["STATUS"] = OutputXMR.Status.PENDING
-
-        self.assertEqual(OutputXMR.Status.PENDING, OutputXMR(f).status())
-
-    def test_root(self):
-        f = self.g.register("XMR")
-        self.assertIsNone(OutputXMR(f).root())
-
-        root = self.g.register("ROOT")
-        f["ROOT"] = root
-
-        self.assertEqual(root, OutputXMR(f).root())
-
-    def test_build(self):
-        root = self.g.register("ROOT")
-
-        xmr = OutputXMR.build(self.g, OutputXMRTemplate.Type.PHYSICAL, self.capability, "TEST", root=root)
-        self.assertEqual(OutputXMRTemplate.Type.PHYSICAL, xmr.type())
-        self.assertEqual(self.capability, xmr.capability())
-        self.assertEqual(self.g, xmr.graph(self.n))
-        self.assertEqual(OutputXMR.Status.PENDING, xmr.status())
-        self.assertEqual(root, xmr.root())
 
 
 class OutputXMRTemplateTestCase(unittest.TestCase):
@@ -76,9 +26,9 @@ class OutputXMRTemplateTestCase(unittest.TestCase):
 
     def test_type(self):
         f = self.g.register("TEMPLATE-ANCHOR", generate_index=True)
-        f["TYPE"] = OutputXMRTemplate.Type.PHYSICAL
+        f["TYPE"] = XMR.Type.ACTION
 
-        self.assertEqual(OutputXMRTemplate.Type.PHYSICAL, OutputXMRTemplate(self.g).type())
+        self.assertEqual(XMR.Type.ACTION, OutputXMRTemplate(self.g).type())
 
     def test_capability(self):
         f = self.g.register("TEMPLATE-ANCHOR", generate_index=True)
@@ -103,31 +53,31 @@ class OutputXMRTemplateTestCase(unittest.TestCase):
         self.assertEqual(root, OutputXMRTemplate(self.g).root())
 
     def test_build(self):
-        output = OutputXMRTemplate.build(self.n, "Test Name", OutputXMRTemplate.Type.PHYSICAL, self.capability, ["$var1", "$var2"])
+        output = OutputXMRTemplate.build(self.n, "Test Name", XMR.Type.ACTION, self.capability, ["$var1", "$var2"])
 
         self.assertEqual("Test Name", output.name())
-        self.assertEqual(OutputXMRTemplate.Type.PHYSICAL, output.type())
+        self.assertEqual(XMR.Type.ACTION, output.type())
         self.assertEqual("TEST.CAPABILITY", output.capability().name())
         self.assertEqual(["$var1", "$var2"], output.params())
 
     def test_create(self):
         agent = self.n.register(Graph("SELF"))
 
-        output = OutputXMRTemplate.build(self.n, "Test Name", OutputXMRTemplate.Type.PHYSICAL, self.capability, [])
+        output = OutputXMRTemplate.build(self.n, "Test Name", XMR.Type.ACTION, self.capability, [])
         f = output.graph.register("FRAME", generate_index=True)
 
         xmr = output.create(self.n, agent, [])
         self.assertEqual("SELF.XMR.1", xmr.frame.name())
-        self.assertEqual(OutputXMRTemplate.Type.PHYSICAL, xmr.type())
-        self.assertEqual("TEST.CAPABILITY", xmr.capability().name())
-        self.assertEqual(OutputXMR.Status.PENDING, xmr.status())
+        self.assertEqual(XMR.Type.ACTION, xmr.type())
+        self.assertEqual("TEST.CAPABILITY", xmr.capability().frame.name())
+        self.assertEqual(XMR.OutputStatus.PENDING, xmr.status())
         self.assertEqual(self.n["XMR#1"], xmr.graph(self.n))
         self.assertIn("XMR#1.FRAME.1", xmr.graph(self.n))
 
     def test_create_with_root(self):
         agent = self.n.register(Graph("SELF"))
 
-        output = OutputXMRTemplate.build(self.n, "Test Name", OutputXMRTemplate.Type.PHYSICAL, self.capability, [])
+        output = OutputXMRTemplate.build(self.n, "Test Name", XMR.Type.ACTION, self.capability, [])
         f = output.graph.register("FRAME", generate_index=True)
 
         output.set_root(f)
@@ -139,7 +89,7 @@ class OutputXMRTemplateTestCase(unittest.TestCase):
     def test_create_with_properties(self):
         agent = self.n.register(Graph("SELF"))
 
-        output = OutputXMRTemplate.build(self.n, "Test Name", OutputXMRTemplate.Type.PHYSICAL, self.capability, [])
+        output = OutputXMRTemplate.build(self.n, "Test Name", XMR.Type.ACTION, self.capability, [])
         f1 = output.graph.register("FRAME", generate_index=True)
         f2 = output.graph.register("FRAME", generate_index=True)
         f3 = self.g.register("OTHER", generate_index=True)
@@ -158,7 +108,7 @@ class OutputXMRTemplateTestCase(unittest.TestCase):
     def test_create_with_parameters(self):
         agent = self.n.register(Graph("SELF"))
 
-        output = OutputXMRTemplate.build(self.n, "Test Name", OutputXMRTemplate.Type.PHYSICAL, self.capability, ["$var1", "$var2"])
+        output = OutputXMRTemplate.build(self.n, "Test Name", XMR.Type.ACTION, self.capability, ["$var1", "$var2"])
         f = output.graph.register("FRAME", generate_index=True)
         f["PROP1"] = Literal("$var1")
         f["PROP2"] = Literal("$var1")
@@ -176,7 +126,7 @@ class OutputXMRTemplateTestCase(unittest.TestCase):
         agent = self.n.register(Graph("SELF"))
         agent.register("TEST")
 
-        output = OutputXMRTemplate.build(self.n, "Test Name", OutputXMRTemplate.Type.PHYSICAL, self.capability, ["$var1", "$var2"])
+        output = OutputXMRTemplate.build(self.n, "Test Name", XMR.Type.ACTION, self.capability, ["$var1", "$var2"])
         f = output.graph.register("FRAME", generate_index=True)
         f["PROP1"] = Literal("$var1")
         f["PROP2"] = Literal("$var1")
@@ -197,16 +147,16 @@ class OutputXMRTemplateTestCase(unittest.TestCase):
         self.assertEqual(456, xmr.graph(self.n)["XMR#1.TEST.1"]["PROP5"])
 
     def test_lookup(self):
-        template1 = OutputXMRTemplate.build(self.n, "Test 1", OutputXMRTemplate.Type.PHYSICAL, self.capability, [])
-        template2 = OutputXMRTemplate.build(self.n, "Test 2", OutputXMRTemplate.Type.PHYSICAL, self.capability, [])
+        template1 = OutputXMRTemplate.build(self.n, "Test 1", XMR.Type.ACTION, self.capability, [])
+        template2 = OutputXMRTemplate.build(self.n, "Test 2", XMR.Type.ACTION, self.capability, [])
 
         self.assertEqual(template1, OutputXMRTemplate.lookup(self.n, "Test 1"))
         self.assertEqual(template2, OutputXMRTemplate.lookup(self.n, "Test 2"))
         self.assertIsNone(OutputXMRTemplate.lookup(self.n, "Test 3"))
 
     def test_list(self):
-        template1 = OutputXMRTemplate.build(self.n, "Test 1", OutputXMRTemplate.Type.PHYSICAL, self.capability, [])
-        template2 = OutputXMRTemplate.build(self.n, "Test 2", OutputXMRTemplate.Type.PHYSICAL, self.capability, [])
+        template1 = OutputXMRTemplate.build(self.n, "Test 1", XMR.Type.ACTION, self.capability, [])
+        template2 = OutputXMRTemplate.build(self.n, "Test 2", XMR.Type.ACTION, self.capability, [])
         other = self.n.register("OTHER")
 
         self.assertEqual(2, len(OutputXMRTemplate.list(self.n)))

@@ -1,23 +1,18 @@
 from backend.models.environment import Environment
-from backend.models.graph import Frame, Graph, Literal
+from backend.models.graph import Frame, Graph, Identifier, Literal, Network
 from backend.models.ontology import Ontology
+from backend.models.xmr import XMR
 from backend.utils.AtomicCounter import AtomicCounter
 
 import time
 from typing import List, Union
 
 
-class VMR(Graph):
-    # TODO - create environment modifier function that takes Environment as input and decides if it needs to change anything in Environment
+class VMR(XMR):
     counter = AtomicCounter()
 
-    @staticmethod
-    def new(ontology: Ontology, refers_to: str=None, timestamp: str=None, contains: dict=None, events: dict=None, namespace: str=None):
-        if refers_to is None:
-            refers_to = "ENV"
-
-        if timestamp is None:
-            timestamp = time.time()
+    @classmethod
+    def from_contents(cls, network: Network, ontology: Ontology, contains: dict=None, events: dict=None, namespace: str=None, source: Union[str, Identifier, Frame]=None) -> 'VMR':
 
         if contains is None:
             contains = {}
@@ -27,27 +22,26 @@ class VMR(Graph):
 
         vmr_dict = {
             "ENVIRONMENT": {
-                "_refers_to": refers_to,
-                "timestamp": timestamp,
+                "_refers_to": "ENV",
+                "timestamp": time.time(),
                 "contains": contains
             },
             "EVENTS": events
         }
 
-        return VMR(vmr_dict, ontology, namespace=namespace)
+        return VMR.from_json(network, ontology, vmr_dict, namespace=namespace, source=source)
 
-    def __init__(self, vmr_dict: dict, ontology: Ontology, namespace: str = None):
+    @classmethod
+    def from_json(cls, network: Network, ontology: Ontology, vmr_dict: dict, namespace: str=None, source: Union[str, Identifier, Frame]=None) -> 'VMR':
         if ontology is None:
             raise Exception("VMRs must have an anchoring ontology provided.")
         if namespace is None:
             namespace = "VMR#" + str(VMR.counter.increment())
 
-        super().__init__(namespace)
+        graph = network.register(namespace)
 
-        self.ontology = ontology._namespace
-
-        reference = self.register("ENVIRONMENT", generate_index=False)
-        events = self.register("EVENTS", generate_index=False)
+        reference = graph.register("ENVIRONMENT", generate_index=False)
+        events = graph.register("EVENTS", generate_index=False)
 
         if "ENVIRONMENT" in vmr_dict:
 
@@ -62,7 +56,7 @@ class VMR(Graph):
                 if location == "HERE":
                     location = reference
 
-                location_frame = self.register("LOCATION", generate_index=True)
+                location_frame = graph.register("LOCATION", generate_index=True)
                 location_frame["DOMAIN"] = frame
                 location_frame["RANGE"] = location
 
@@ -70,14 +64,21 @@ class VMR(Graph):
 
             for frame in vmr_dict["EVENTS"]:
                 contents = vmr_dict["EVENTS"][frame]
-                frame = self.register(frame)
+                frame = graph.register(frame)
                 for slot in contents:
                     for filler in contents[slot]:
                         frame[slot] += filler
                 events["HAS-EVENT"] += frame
 
+        vmr: VMR = XMR.instance(network["INPUTS"], graph, XMR.Signal.INPUT, XMR.Type.VISUAL, XMR.InputStatus.RECEIVED, source, graph["ENVIRONMENT"])
+        return vmr
+
+    def _network(self) -> Network:
+        return self.frame._graph._network
+
     def locations(self) -> List[Frame]:
-        return list(map(lambda f: self[f], filter(lambda f: self[f]._identifier.name == "LOCATION", self)))
+        graph = self.graph(self._network())
+        return list(map(lambda f: graph[f], filter(lambda f: graph[f]._identifier.name == "LOCATION", graph)))
 
     def update_environment(self, environment: Union[Graph, Environment]):
         if isinstance(environment, Graph):
@@ -91,13 +92,13 @@ class VMR(Graph):
             object = location_marker["DOMAIN"].singleton()
             location = location_marker["RANGE"].singleton()
 
-            if location == self["ENVIRONMENT"]:
+            if location == self.graph(self._network())["ENVIRONMENT"]:
                 location = "ONT.LOCATION"
 
             environment.enter(object, location=location)
 
     def events(self) -> List[Frame]:
-        return list(map(lambda f: f.resolve(), self["EVENTS"]["HAS-EVENT"]))
+        return list(map(lambda f: f.resolve(), self.graph(self._network())["EVENTS"]["HAS-EVENT"]))
 
     def update_memory(self, graph: Graph):
         for event in self.events():

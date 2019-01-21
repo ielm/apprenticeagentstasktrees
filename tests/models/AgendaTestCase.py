@@ -2,6 +2,7 @@ from backend.models.agenda import Agenda, Condition, Decision, Effect, Expectati
 from backend.models.bootstrap import Bootstrap
 from backend.models.graph import Frame, Graph, Literal, Network
 from backend.models.statement import Statement, StatementScope, VariableMap
+from backend.models.xmr import XMR
 
 import unittest
 
@@ -1342,7 +1343,7 @@ class DecisionTestCase(unittest.TestCase):
         agent = self.g.register("AGENT")
         capability = self.g.register("CAPABILITY")
 
-        template = OutputXMRTemplate.build(self.n, "test-template", OutputXMRTemplate.Type.PHYSICAL, capability, [])
+        template = OutputXMRTemplate.build(self.n, "test-template", XMR.Type.ACTION, capability, [])
         statement = OutputXMRStatement.instance(self.g, template, [], agent)
         goal = Goal(self.g.register("GOAL"))
         step = Step.build(self.g, 1, statement)
@@ -1387,7 +1388,7 @@ class DecisionTestCase(unittest.TestCase):
         resolution = MakeInstanceStatement.instance(self.g, self.g._namespace, "TEST.IMPASSE-GOAL", ["$var1"])
         statement1 = AssertStatement.instance(self.g, ExistsStatement.instance(self.g, Frame.q(self.n).id("EXE.DNE")), [resolution])
 
-        template = OutputXMRTemplate.build(self.n, "test-template", OutputXMRTemplate.Type.PHYSICAL, None, [])
+        template = OutputXMRTemplate.build(self.n, "test-template", XMR.Type.ACTION, None, [])
         statement2 = OutputXMRStatement.instance(self.g, template, [], None)
 
         goal = Goal(self.g.register("GOAL"))
@@ -1466,7 +1467,6 @@ class DecisionTestCase(unittest.TestCase):
     def test_execute(self):
         from backend.models.effectors import Capability, Effector
         from backend.models.mps import MPRegistry, OutputMethod
-        from backend.models.output import OutputXMR, OutputXMRTemplate
 
         out = False
 
@@ -1477,7 +1477,7 @@ class DecisionTestCase(unittest.TestCase):
 
         MPRegistry.register(TestMP)
         capability = Capability.instance(self.g, "CAPABILITY", "TestMP", ["ONT.EVENT"])
-        output = OutputXMR.build(self.g, OutputXMRTemplate.Type.PHYSICAL, capability, "OUTPUT-XMR")
+        output = XMR.instance(self.g, "OUTPUT-XMR", XMR.Signal.OUTPUT, XMR.Type.ACTION, XMR.OutputStatus.PENDING, "", "", capability=capability)
 
         decision = Decision.build(self.g, "GOAL", "PLAN", "STEP")
         decision.frame["HAS-OUTPUT"] += output.frame
@@ -1494,14 +1494,13 @@ class DecisionTestCase(unittest.TestCase):
     def test_creates_callback(self):
         from backend.models.effectors import Callback, Capability, Effector
         from backend.models.mps import MPRegistry, OutputMethod
-        from backend.models.output import OutputXMR, OutputXMRTemplate
 
         class TestMP(OutputMethod):
             def run(self): pass
 
         MPRegistry.register(TestMP)
         capability = Capability.instance(self.g, "CAPABILITY", "TestMP", ["ONT.EVENT"])
-        output = OutputXMR.build(self.g, OutputXMRTemplate.Type.PHYSICAL, capability, "OUTPUT-XMR")
+        output = XMR.instance(self.g, "OUTPUT-XMR", XMR.Signal.OUTPUT, XMR.Type.ACTION, XMR.OutputStatus.PENDING, "", "", capability=capability)
 
         decision = Decision.build(self.g, "GOAL", "PLAN", "STEP")
         decision.frame["HAS-OUTPUT"] += output.frame
@@ -1519,14 +1518,13 @@ class DecisionTestCase(unittest.TestCase):
     def test_callback_received(self):
         from backend.models.effectors import Callback, Capability, Effector
         from backend.models.mps import MPRegistry, OutputMethod
-        from backend.models.output import OutputXMR, OutputXMRTemplate
 
         class TestMP(OutputMethod):
             def run(self): pass
 
         MPRegistry.register(TestMP)
         capability = Capability.instance(self.g, "CAPABILITY", "TestMP", ["ONT.EVENT"])
-        output = OutputXMR.build(self.g, OutputXMRTemplate.Type.PHYSICAL, capability, "OUTPUT-XMR")
+        output = XMR.instance(self.g, "OUTPUT-XMR", XMR.Signal.OUTPUT, XMR.Type.ACTION, XMR.OutputStatus.PENDING, "", "", capability=capability)
 
         decision = Decision.build(self.g, "GOAL", "PLAN", "STEP")
         decision.frame["HAS-OUTPUT"] += output.frame

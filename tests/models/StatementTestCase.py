@@ -3,6 +3,7 @@ from backend.models.graph import Frame, Graph, Identifier, Literal, Network
 from backend.models.mps import AgentMethod, MPRegistry
 from backend.models.query import Query
 from backend.models.statement import TransientFrame, Statement, StatementScope, Variable, VariableMap
+from backend.models.xmr import XMR
 
 import unittest
 
@@ -761,7 +762,7 @@ class OutputXMRStatementTestCase(unittest.TestCase):
         from backend.models.output import OutputXMRTemplate
         from backend.models.statement import OutputXMRStatement
 
-        template = OutputXMRTemplate.build(self.n, "test-template", OutputXMRTemplate.Type.PHYSICAL, "EXE.CAPABILITY", [])
+        template = OutputXMRTemplate.build(self.n, "test-template", XMR.Type.ACTION, "EXE.CAPABILITY", [])
 
         frame = self.g.register("TEST", isa="EXE.OUTPUTXMR-STATEMENT")
         frame["TEMPLATE"] = Literal("test-template")
@@ -793,7 +794,7 @@ class OutputXMRStatementTestCase(unittest.TestCase):
         from backend.models.output import OutputXMRTemplate
         from backend.models.statement import OutputXMRStatement
 
-        template = OutputXMRTemplate.build(self.n, "test-template", OutputXMRTemplate.Type.PHYSICAL, "EXE.CAPABILITY", [])
+        template = OutputXMRTemplate.build(self.n, "test-template", XMR.Type.ACTION, "EXE.CAPABILITY", [])
         params = [1, 2, Literal("$var1"), Literal("$var2")]
         agent = self.g.register("AGENT")
 
@@ -804,12 +805,12 @@ class OutputXMRStatementTestCase(unittest.TestCase):
         self.assertEqual(agent, stmt.agent())
 
     def test_run(self):
-        from backend.models.output import OutputXMR, OutputXMRTemplate
+        from backend.models.output import OutputXMRTemplate
         from backend.models.statement import OutputXMRStatement
 
         self.g.register("CAPABILITY")
 
-        template = OutputXMRTemplate.build(self.n, "test-template", OutputXMRTemplate.Type.PHYSICAL, "EXE.CAPABILITY", [])
+        template = OutputXMRTemplate.build(self.n, "test-template", XMR.Type.ACTION, "EXE.CAPABILITY", [])
         agent = self.g.register("AGENT")
 
         stmt = OutputXMRStatement.instance(self.g, template, [], agent)
@@ -821,16 +822,16 @@ class OutputXMRStatementTestCase(unittest.TestCase):
         output = stmt.run(StatementScope(), varmap)
 
         self.assertIn("XMR#1", self.n)
-        self.assertIsInstance(output, OutputXMR)
+        self.assertIsInstance(output, XMR)
         self.assertIn(output.frame.name(), self.n["OUTPUTS"])
 
     def test_run_affects_scope(self):
-        from backend.models.output import OutputXMR, OutputXMRTemplate
+        from backend.models.output import OutputXMRTemplate
         from backend.models.statement import OutputXMRStatement
 
         self.g.register("CAPABILITY")
 
-        template = OutputXMRTemplate.build(self.n, "test-template", OutputXMRTemplate.Type.PHYSICAL, "EXE.CAPABILITY",
+        template = OutputXMRTemplate.build(self.n, "test-template", XMR.Type.ACTION, "EXE.CAPABILITY",
                                            [])
         agent = self.g.register("AGENT")
         test1 = self.g.register("TEST1")
@@ -848,12 +849,12 @@ class OutputXMRStatementTestCase(unittest.TestCase):
         self.assertIn(output.frame, scope.outputs)
 
     def test_run_with_variables(self):
-        from backend.models.output import OutputXMR, OutputXMRTemplate
+        from backend.models.output import OutputXMRTemplate
         from backend.models.statement import OutputXMRStatement
 
         self.g.register("CAPABILITY")
 
-        template = OutputXMRTemplate.build(self.n, "test-template", OutputXMRTemplate.Type.PHYSICAL, "EXE.CAPABILITY", ["$var1", "$var2"])
+        template = OutputXMRTemplate.build(self.n, "test-template", XMR.Type.ACTION, "EXE.CAPABILITY", ["$var1", "$var2"])
         f = template.graph.register("FRAME", generate_index=True)
         f["PROP1"] = Literal("$var1")
         f["PROP2"] = Literal("$var1")
