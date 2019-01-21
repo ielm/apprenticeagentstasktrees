@@ -129,9 +129,13 @@ class GrammarTransformer(Transformer):
         return BootstrapDefineOutputXMRTemplate(self.network, name, type, capability, params, root, include)
 
     def output_xmr_template_type(self, matches):
-        from backend.models.output import OutputXMRTemplate
+        from backend.models.xmr import XMR
 
-        return OutputXMRTemplate.Type[matches[1]]
+        return {
+            "PHYSICAL": XMR.Type.ACTION,
+            "MENTAL": XMR.Type.MENTAL,
+            "VERBAL": XMR.Type.LANGUAGE
+        }[matches[1]]
 
     def output_xmr_template_requires(self, matches):
         return matches[1]

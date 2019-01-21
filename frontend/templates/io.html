@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>I/O</title>
+
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis.min.css">
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.3.1/css/all.css" integrity="sha384-mzrmE5qonljUremFsqc01SB46JvROS7bZs3IO2EmfFsd15uHvIt+Y8vEf7N7fWAU" crossorigin="anonymous">
+
+    <script src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mustache.js/2.3.0/mustache.min.js"></script>
+
+    <style>
+        .io {
+            margin-bottom: 20px;
+        }
+        .io > .card-body {
+            padding: 5px;
+        }
+        .io > .card-footer {
+            padding: 0px;
+            padding-left: 5px;
+            padding-right: 5px;
+            font-size: smaller;
+        }
+        .io-icon-container {
+            display: inline-block;
+            width: 36px;
+            text-align: center;
+        }
+        .input {
+            text-align: right;
+        }
+        .rendered {
+            vertical-align: top;
+            font-size: large;
+            padding-left: 10px;
+            padding-right: 10px;
+        }
+        .non-language {
+            font-style: italic;
+        }
+    </style>
+
+    <script>
+        $(document).ready(function() {
+            $(document).on("click", ".graph-link", function(e) {
+                var graph = $(e.currentTarget).data("graph");
+                $("#modalGraphBody").load("/components/graph?include_sources=false&namespace=" + escape(graph), function(){
+                    $("#modalGraph").modal({show:true});
+                });
+            });
+            $('#modalGraph').on('shown.bs.modal', function (e) {
+                _network.fit();
+            });
+        });
+
+    </script>
+
+</head>
+<body>
+
+    {% include 'nav.html' %}
+    <script>
+        $(document).ready(function() {
+            $("#nav-io").addClass("active");
+        });
+    </script>
+
+    <div class="container">
+        <div class="row" style="margin-top: 25px;">
+            <div class="col-sm-2"></div>
+            <div class="col-sm-8">
+
+                {% for xmr in io %}
+
+                    <div class="card io {% if xmr.source != 'SELF.ROBOT.1' %} input {% endif %}">
+                        <div class="card-body">
+                            {% if xmr.source == "SELF.ROBOT.1" %}
+                                <div class="io-icon-container">
+                                    {% if xmr.type == "ACTION" %}
+                                        <i class="fas fa-walking fa-2x"></i>
+                                    {% elif xmr.type == "LANGUAGE" %}
+                                        <i class="fas fa-comment fa-2x"></i>
+                                    {% elif xmr.type == "MENTAL" %}
+                                        <i class="fas fa-brain fa-2x"></i>
+                                    {% elif xmr.type == "VISUAL" %}
+                                        <i class="fas fa-eye fa-2x"></i>
+                                    {% endif %}
+                                </div>
+                            {% endif %}
+
+                            <span class="rendered {% if xmr.type != 'LANGUAGE' %} non-language {% endif %}">
+                                {% if xmr.type == "LANGUAGE" %} " {% endif %}
+                                {{ xmr.rendered }}
+                                {% if xmr.type == "LANGUAGE" %} " {% endif %}
+                            </span>
+
+                            {% if xmr.source != "SELF.ROBOT.1" %}
+                                <div class="io-icon-container">
+                                    {% if xmr.type == "ACTION" %}
+                                        <i class="fas fa-walking fa-2x"></i>
+                                    {% elif xmr.type == "LANGUAGE" %}
+                                        <i class="fas fa-comment fa-2x"></i>
+                                    {% elif xmr.type == "MENTAL" %}
+                                        <i class="fas fa-brain fa-2x"></i>
+                                    {% elif xmr.type == "VISUAL" %}
+                                        <i class="fas fa-eye fa-2x"></i>
+                                    {% endif %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="card-footer">
+                            <strong>{{ xmr.source }}</strong> • {{ xmr.timestamp }} • {{ xmr.id }} • <a href="#" class="graph-link badge badge-secondary" data-graph="{{ xmr.graph }}">{{ xmr.graph }}</a>
+                        </div>
+                    </div>
+
+                {% endfor %}
+
+            </div>
+            <div class="col-sm-2"></div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="modalGraph" role="dialog">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div id="modalGraphBody" class="modal-body"></div>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>

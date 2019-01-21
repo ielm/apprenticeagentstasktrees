@@ -1,4 +1,5 @@
 from backend.heuristics.fr_heuristics import FRResolutionHeuristic
+from backend.models.tmr import TMR
 from backend.utils.AgentLogger import CachedAgentLogger
 
 
@@ -54,7 +55,7 @@ class UnderstandingProcessor(object):
 
         return self
 
-    def process(self, agent, tmr):
+    def process(self, agent, tmr: TMR):
         try:
             self._logic(agent, tmr)
             self.log("+ " + self.__class__.__name__)
@@ -88,12 +89,12 @@ class UnderstandingProcessor(object):
 
 
 class RootUnderstandingProcessor(UnderstandingProcessor):
-    def _logic(self, agent, tmr):
+    def _logic(self, agent, tmr: TMR):
         pass
 
 
 class FRResolutionUnderstandingProcessor(UnderstandingProcessor):
-    def _logic(self, agent, tmr):
+    def _logic(self, agent, tmr: TMR):
         backup_logger = agent.wo_memory.logger()
 
         self.cached_logger = CachedAgentLogger()

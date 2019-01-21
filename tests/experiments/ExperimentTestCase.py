@@ -3,7 +3,7 @@ from backend.models.agenda import Decision, Expectation, Goal, Plan, Step
 from backend.models.effectors import Callback, Effector
 from backend.models.graph import Frame, Identifier
 from backend.models.mps import AgentMethod
-from backend.models.output import OutputXMR
+from backend.models.xmr import XMR
 
 from pkgutil import get_data
 from typing import Callable, List, Type, Union
@@ -61,7 +61,7 @@ class ExperimentTestCase(unittest.TestCase):
         if len(goals) == 0:
             self.fail("No such matching goal.")
 
-    def assertDecisionExists(self, agent: Agent, status: Decision.Status=None, goal: [str, Identifier, Frame, Goal]=None, plan: [str, Identifier, Frame, Plan]=None, step: [str, Identifier, Frame, Step]=None, outputs: List[Union[str, Identifier, Frame, OutputXMR]]=None, effectors: List[Union[str, Identifier, Frame, Effector]]=None, callbacks: List[Union[str, Identifier, Frame, Callback]]=None, impasses: List[Union[str, Identifier, Frame, Goal]]=None, expectations: List[Union[str, Identifier, Frame, Expectation]]=None, query: Callable=None):
+    def assertDecisionExists(self, agent: Agent, status: Decision.Status=None, goal: [str, Identifier, Frame, Goal]=None, plan: [str, Identifier, Frame, Plan]=None, step: [str, Identifier, Frame, Step]=None, outputs: List[Union[str, Identifier, Frame, XMR]]=None, effectors: List[Union[str, Identifier, Frame, Effector]]=None, callbacks: List[Union[str, Identifier, Frame, Callback]]=None, impasses: List[Union[str, Identifier, Frame, Goal]]=None, expectations: List[Union[str, Identifier, Frame, Expectation]]=None, query: Callable=None):
 
         if isinstance(goal, str):
             goal = Identifier.parse(goal)
@@ -92,7 +92,7 @@ class ExperimentTestCase(unittest.TestCase):
                 if isinstance(output, Identifier):
                     output = agent.lookup(output)
                 if isinstance(output, Frame):
-                    output = OutputXMR(output)
+                    output = XMR(output)
                 return output
 
             outputs = list(map(lambda output: convert_output(output), outputs))

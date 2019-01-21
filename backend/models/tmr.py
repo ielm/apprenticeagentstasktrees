@@ -1,17 +1,21 @@
-from backend.models.graph import Frame, Graph, Identifier, Literal
+from backend.models.graph import Frame, Graph, Identifier, Literal, Network
 from backend.models.ontology import Ontology
 from backend.models.syntax import Syntax
+from backend.models.xmr import XMR
 from backend.utils.AtomicCounter import AtomicCounter
+
+from typing import Union
 
 import re
 
 
-class TMR(Graph):
+class TMR(XMR):
 
     counter = AtomicCounter()
 
-    @staticmethod
-    def new(ontology: Ontology, sentence=None, syntax=None, tmr=None, namespace=None):
+    @classmethod
+    def from_contents(cls, network: Network, ontology: Ontology, sentence: str=None, syntax: dict=None, tmr: dict=None, namespace: str=None, source: Union[str, Identifier, Frame]=None) -> 'TMR':
+
         if sentence is None:
             sentence = ""
         if syntax is None:
@@ -25,23 +29,23 @@ class TMR(Graph):
                 }]
             }]
 
-        return TMR({
+        tmr_dict = {
             "sentence": sentence,
             "syntax": syntax,
             "tmr": tmr
-        }, ontology, namespace=namespace)
+        }
 
-    def __init__(self, tmr_dict: dict, ontology: Ontology, namespace: str=None):
+        return TMR.from_json(network, ontology, tmr_dict, namespace=namespace, source=source)
+
+    @classmethod
+    def from_json(cls, network: Network, ontology: Ontology, tmr_dict: dict, namespace: str=None, source: Union[str, Identifier, Frame]=None) -> 'TMR':
+
         if ontology is None:
             raise Exception("TMRs must have an anchoring ontology provided.")
         if namespace is None:
             namespace = "TMR#" + str(TMR.counter.increment())
 
-        super().__init__(namespace)
-
-        self.ontology = ontology._namespace
-        self.sentence = tmr_dict["sentence"]
-        self.syntax = Syntax(tmr_dict["syntax"][0])
+        graph = network.register(TMRGraph(namespace))
 
         result = tmr_dict["tmr"][0]["results"][0]["TMR"]
         for key in result:
@@ -52,36 +56,50 @@ class TMR(Graph):
 
                 concept = inst_dict["concept"]
                 if concept is not None and ontology is not None:
-                    if not concept.startswith(self.ontology):
-                        concept = self.ontology + "." + concept
+                    if not concept.startswith(ontology._namespace):
+                        concept = ontology._namespace + "." + concept
 
-                self[key] = TMRInstance(key, properties=inst_dict, isa=concept, index=inst_dict["sent-word-ind"][1], ontology=ontology)
+                graph[key] = TMRFrame.parse(key, properties=inst_dict, isa=concept, index=inst_dict["sent-word-ind"][1], ontology=ontology)
 
-        for instance in self._storage.values():
+        for instance in graph._storage.values():
             for slot in instance._storage.values():
                 for filler in slot:
-                    if isinstance(filler._value, Identifier) and filler._value.graph is None and not filler._value.render() in self:
-                        filler._value.graph = self.ontology
+                    if isinstance(filler._value, Identifier) and filler._value.graph is None and not filler._value.render() in graph:
+                        filler._value.graph = ontology._namespace
                     elif isinstance(filler._value, Identifier) and filler._value.graph is None:
                         filler._value.graph = namespace
 
-    def __setitem__(self, key, value):
-        if not isinstance(value, TMRInstance):
-            raise TypeError("TMR elements must be TMRInstance objects.")
-        super().__setitem__(key, value)
+        def find_root() -> Frame:
+            event = None
+            for instance in graph.values():
+                try:
+                    if instance ^ "ONT.EVENT":
+                        event = instance
+                        break
+                except: pass
 
-    def __getitem__(self, key):
-        return super().__getitem__(key)
+            while event is not None and "PURPOSE-OF" in event:
+                event = event["PURPOSE-OF"][0].resolve()
 
-    def _frame_type(self):
-        return TMRInstance
+            return event
 
-    def register(self, id, isa=None, generate_index=True):
-        return super().register(id, isa=isa, generate_index=generate_index)
+        tmr: TMR = XMR.instance(network["INPUTS"], graph, XMR.Signal.INPUT, XMR.Type.LANGUAGE, XMR.InputStatus.RECEIVED, source, find_root())
+        tmr.frame["SENTENCE"] = Literal(tmr_dict["sentence"])
+        tmr.frame["SYNTAX"] = Syntax(tmr_dict["syntax"][0])
+
+        return tmr
+
+    def syntax(self) -> Syntax:
+        return self.frame["SYNTAX"].singleton()
+
+    def render(self):
+        if "SENTENCE" not in self.frame:
+            return super().render()
+        return self.frame["SENTENCE"].singleton()
 
     def find_main_event(self):
         event = None
-        for instance in self.values():
+        for instance in self.graph(self.frame._graph._network).values():
             if instance.is_event():
                 event = instance
                 break
@@ -92,7 +110,7 @@ class TMR(Graph):
         return event
 
     def is_prefix(self):
-        for instance in self.values():
+        for instance in self.graph(self.frame._graph._network).values():
             if instance.is_event():
                 if instance["TIME"] == [[">", "FIND-ANCHOR-TIME"]]:
                     return True
@@ -100,31 +118,32 @@ class TMR(Graph):
         return False
 
     def is_postfix(self):
-        for instance in self.values():
+        for instance in self.graph(self.frame._graph._network).values():
             if instance.is_event():
                 if instance["TIME"] == [["<", "FIND-ANCHOR-TIME"]]:
                     return True
 
         # For closing generic events, such as "Finished."
-        for instance in self.values():
-            if instance.isa(self.ontology + ".ASPECT"):
+        for instance in self.graph(self.frame._graph._network).values():
+            if instance.isa("ONT.ASPECT"):
                 if instance["PHASE"] == "END":
                     scopes = list(map(lambda filler: filler.resolve().concept(), instance["SCOPE"]))  # TODO: this needs search functionality ("is a filler in the slot exactly concept X?")
-                    if self.ontology + ".EVENT" in scopes:
+                    if "ONT.EVENT" in scopes:
                         return True
 
         return False
 
     # TODO: Ultimately, replace with a generic querying capability
     def find_by_concept(self, concept):
-        instances = list(filter(lambda instance: instance.isa(concept), self.values()))
+        instances = list(filter(lambda instance: instance.isa(concept), self.graph(self.frame._graph._network).values()))
         return instances
 
 
-class TMRInstance(Frame):
+class TMRFrame(Frame):
 
-    def __init__(self, name, properties=None, isa=None, index=None, ontology: Ontology=None):
-        super().__init__(name, isa=isa)
+    @classmethod
+    def parse(cls, name, properties=None, isa=None, index=None, ontology: Ontology=None) -> 'TMRFrame':
+        frame = TMRFrame(name, isa=isa)
 
         if properties is None:
             properties = {}
@@ -155,17 +174,69 @@ class TMRInstance(Frame):
                     if identifier.graph is None and identifier.instance is None:
                         identifier.graph = ontology._namespace
 
-                    self[key] += identifier
+                    frame[key] += identifier
             else:
-                self[key] += Literal(_properties[original_key])
+                frame[key] += Literal(_properties[original_key])
 
-        self.token_index = index
+        frame.token_index = index
+
+        return frame
 
     def _ISA_type(self):
         return "INSTANCE-OF"
 
     def is_event(self):
-        return self.isa(self._graph.ontology + ".EVENT")
+        return self.isa("ONT.EVENT")
 
     def is_object(self):
-        return self.isa(self._graph.ontology + ".OBJECT")
+        return self.isa("ONT.OBJECT")
+
+    def tmr(self) -> TMR:
+        network: Network = self._graph._network
+        results = network.search(Frame.q(network).f("REFERS-TO-GRAPH", Literal(self._graph._namespace)))
+        if len(results) != 1:
+            raise Exception("TMR wrapper node not found.")
+
+        return TMR(results[0])
+
+
+class TMRGraph(Graph):
+
+    def _frame_type(self):
+        return TMRFrame
+
+    def find_main_event(self):
+        event = None
+        for instance in self.values():
+            if instance.is_event():
+                event = instance
+                break
+
+        while event is not None and "PURPOSE-OF" in event:
+            event = event["PURPOSE-OF"][0].resolve()
+
+        return event
+
+    def is_prefix(self):
+        for instance in self.values():
+            if instance.is_event():
+                if instance["TIME"] == [[">", "FIND-ANCHOR-TIME"]]:
+                    return True
+
+        return False
+
+    def is_postfix(self):
+        for instance in self.values():
+            if instance.is_event():
+                if instance["TIME"] == [["<", "FIND-ANCHOR-TIME"]]:
+                    return True
+
+        # For closing generic events, such as "Finished."
+        for instance in self.values():
+            if instance.isa("ONT.ASPECT"):
+                if instance["PHASE"] == "END":
+                    scopes = list(map(lambda filler: filler.resolve().concept(), instance["SCOPE"]))  # TODO: this needs search functionality ("is a filler in the slot exactly concept X?")
+                    if "ONT.EVENT" in scopes:
+                        return True
+
+        return False

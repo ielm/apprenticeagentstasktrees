@@ -87,3 +87,21 @@
     ISA @EXE.RETURNING-STATEMENT;
     CLASSMAP "backend.models.statement.TransientFrameStatement";
 };
+
+@EXE.XMR = {};
+
+@EXE.AMR = {
+    ISA @EXE.XMR;
+};
+
+@EXE.MMR = {
+    ISA @EXE.XMR;
+};
+
+@EXE.TMR = {
+    ISA @EXE.XMR;
+};
+
+@EXE.VMR = {
+    ISA @EXE.XMR;
+};

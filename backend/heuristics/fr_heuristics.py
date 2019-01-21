@@ -1,4 +1,5 @@
 from backend.models.graph import Frame
+from backend.models.tmr import TMR
 
 
 class FRResolutionHeuristic(object):
@@ -6,7 +7,7 @@ class FRResolutionHeuristic(object):
     def __init__(self, fr):
         self.fr = fr
 
-    def resolve(self, instance, resolves, tmr=None):
+    def resolve(self, instance, resolves, tmr: TMR=None):
         raise Exception("FRResolutionHeuristic.resolve must be implemented in subclasses.")
 
 
@@ -23,7 +24,7 @@ class FRImportHeuristic(object):
 # If the resolves mentions a generic (non-instanced) HUMAN or ROBOT, do the same.
 class FRResolveHumanAndRobotAsSingletonsHeuristic(FRResolutionHeuristic):
 
-    def resolve(self, instance, resolves, tmr=None):
+    def resolve(self, instance, resolves, tmr: TMR=None):
         if instance[instance._ISA_type()] == self.fr.ontology["HUMAN"] or instance[instance._ISA_type()] == self.fr.ontology["ROBOT"]:
             fr_instances = self.fr.search(Frame.q(self.fr._network).isa(instance.concept()))
             if len(fr_instances) > 0:
@@ -54,15 +55,15 @@ class FRResolveHumanAndRobotAsSingletonsHeuristic(FRResolutionHeuristic):
 # most recent fr instance of that type, and resolve it.  Most recent can be tracked by highest ID number.
 class FRResolveDeterminedObjectsHeuristic(FRResolutionHeuristic):
 
-    def resolve(self, instance, resolves, tmr=None):
+    def resolve(self, instance, resolves, tmr: TMR=None):
         if not instance ^ self.fr.ontology["OBJECT"]:
             return
 
         if tmr is None:
             return
 
-        dependencies = tmr.syntax.find_dependencies(types=["ART"], governors=instance.token_index)
-        articles = list(map(lambda dependency: tmr.syntax.index[str(dependency[2])], dependencies))
+        dependencies = tmr.syntax().find_dependencies(types=["ART"], governors=instance.token_index)
+        articles = list(map(lambda dependency: tmr.syntax().index[str(dependency[2])], dependencies))
         tokens = list(map(lambda article: article["lemma"], articles))
 
         if "THE" not in tokens:
@@ -81,7 +82,7 @@ class FRResolveDeterminedObjectsHeuristic(FRResolutionHeuristic):
 # resolve them to each other.
 class FRResolveSetsWithIdenticalMembersHeuristic(FRResolutionHeuristic):
 
-    def resolve(self, instance, resolves, tmr=None):
+    def resolve(self, instance, resolves, tmr: TMR=None):
         if not instance ^ self.fr.ontology["SET"]:
             return
 

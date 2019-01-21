@@ -6,7 +6,7 @@ from backend.models.ontology import Ontology
 from tests.experiments.ExperimentTestCase import ExperimentTestCase
 
 
-class ImpassesExperimentTestCase(ExperimentTestCase):
+class ExpectationsExperimentTestCase(ExperimentTestCase):
 
     def test_example_throughput(self):
 
