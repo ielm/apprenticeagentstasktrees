@@ -137,8 +137,35 @@ class XMR(object):
 
 
 class AMR(XMR):
-    pass
+
+    def render(self):
+        try:
+            if self.source().name() != "SELF.ROBOT.1":
+                return super().render()
+
+            action = self.root()._identifier.name.upper()
+            theme = self.root()["THEME"].singleton().name()
+
+            return "I am taking the " + action + "(" + theme + ") action."
+
+        except: return super().render()
 
 
 class MMR(XMR):
-    pass
+
+    def render(self):
+        try:
+            if self.root()._identifier.name != "INIT-GOAL":
+                return super().render()
+
+            if self.source().name() != "SELF.ROBOT.1":
+                return super().render()
+
+            from backend.models.agenda import Goal
+
+            goal = self.root()["THEME"].singleton()
+            goal = Goal(goal).name()
+
+            return "I am adding the " + goal + " goal."
+
+        except: return super().render()

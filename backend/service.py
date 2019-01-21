@@ -472,6 +472,42 @@ def components_graph():
     return render_template("graph.html", gj=json.loads(graph), include_sources=include_sources)
 
 
+@app.route("/io", methods=["GET"])
+def io():
+    from datetime import datetime
+
+    payload = []
+
+    # 1) Gather all of the inputs and outputs
+    payload.extend(agent["INPUTS"].values())
+    payload.extend(agent["OUTPUTS"].values())
+
+    # 2) Map them to the correct XMR objects
+    payload = list(map(lambda frame: XMR.from_instance(frame), payload))
+
+    # 3) Sort by timestamp
+    payload = sorted(payload, key=lambda xmr: xmr.timestamp())
+
+    # 4) Map them to simple dictionaries
+    def source(xmr: XMR) -> str:
+        if xmr.source() is not None:
+            return xmr.source().name()
+        if xmr.signal() == XMR.Signal.INPUT:
+            return "ONT.HUMAN"
+        return "SELF.ROBOT.1"
+
+    payload = list(map(lambda xmr: {
+        "type": xmr.type().value,
+        "timestamp": datetime.utcfromtimestamp(xmr.timestamp()).strftime('%H:%M:%S'),
+        "source": source(xmr),
+        "rendered": xmr.render(),
+        "id": xmr.frame.name(),
+        "graph": xmr.graph(agent)._namespace
+    }, payload))
+
+    return render_template("io.html", io=payload)
+
+
 @app.route("/htn", methods=["GET"])
 def htn():
     if "instance" not in request.args:
