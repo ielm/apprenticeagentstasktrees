@@ -201,6 +201,22 @@ class MMRTestCase(unittest.TestCase):
 
         self.assertEqual("TEST.MMR.1", MMR(f).render())
 
+    def test_render_on_init_goal(self):
+        n = Network()
+
+        g = n.register("SELF")
+        g.register("ROBOT", generate_index=True)
+        goal = g.register("GOAL")
+        goal["NAME"] = Literal("BUILD-A-CHAIR")
+
+        mmr_graph = n.register("MMR")
+        root = mmr_graph.register("INIT-GOAL", generate_index=True)
+        root["AGENT"] = "SELF.ROBOT.1"
+        root["THEME"] = goal
+
+        mmr = MMR.instance(g, "MMR", XMR.Signal.OUTPUT, XMR.Type.MENTAL, XMR.OutputStatus.PENDING, "SELF.ROBOT.1", root)
+        self.assertEqual("I am adding the BUILD-A-CHAIR goal.", mmr.render())
+
 
 class TMRTestCase(unittest.TestCase):
 
