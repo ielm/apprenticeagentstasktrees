@@ -3,7 +3,6 @@ from backend.models.agenda import Decision, Goal, Step
 from backend.models.bootstrap import Bootstrap
 from backend.models.effectors import Effector
 from backend.models.ontology import Ontology
-from backend.models.output import OutputXMR
 from backend.models.xmr import XMR
 from tests.experiments.ExperimentTestCase import ExperimentTestCase
 
@@ -55,7 +54,7 @@ class Jan2019Experiment(ExperimentTestCase):
         self.assertFalse(Effector(agent.internal["PHYSICAL-EFFECTOR.1"]).is_free())
         self.assertEqual(agent.exe["FETCH-OBJECT-CAPABILITY"], Effector(agent.internal["PHYSICAL-EFFECTOR.1"]).on_capability())
         self.assertEqual(agent.outputs["XMR.2"], Effector(agent.internal["PHYSICAL-EFFECTOR.1"]).on_output())
-        self.assertEqual(agent.environment["SCREWDRIVER.1"], OutputXMR(agent.outputs["XMR.2"]).graph(agent)["FETCH.1"]["THEME"].singleton())
+        self.assertEqual(agent.environment["SCREWDRIVER.1"], XMR(agent.outputs["XMR.2"]).graph(agent)["FETCH.1"]["THEME"].singleton())
 
         #######
 
@@ -105,7 +104,7 @@ class Jan2019Experiment(ExperimentTestCase):
         self.assertFalse(Effector(agent.internal["PHYSICAL-EFFECTOR.1"]).is_free())
         self.assertEqual(agent.exe["FETCH-OBJECT-CAPABILITY"], Effector(agent.internal["PHYSICAL-EFFECTOR.1"]).on_capability())
         self.assertEqual(agent.outputs["XMR.3"], Effector(agent.internal["PHYSICAL-EFFECTOR.1"]).on_output())
-        self.assertEqual(agent.environment["BRACKET.1"], OutputXMR(agent.outputs["XMR.3"]).graph(agent)["FETCH.1"]["THEME"].singleton())
+        self.assertEqual(agent.environment["BRACKET.1"], XMR(agent.outputs["XMR.3"]).graph(agent)["FETCH.1"]["THEME"].singleton())
 
         #######
 
@@ -131,7 +130,7 @@ class Jan2019Experiment(ExperimentTestCase):
         self.assertFalse(Effector(agent.internal["VERBAL-EFFECTOR.1"]).is_free())
         self.assertEqual(agent.exe["SPEAK-CAPABILITY"], Effector(agent.internal["VERBAL-EFFECTOR.1"]).on_capability())
         self.assertEqual(agent.outputs["XMR.5"], Effector(agent.internal["VERBAL-EFFECTOR.1"]).on_output())
-        self.assertEqual(agent.environment["HUMAN.1"], OutputXMR(agent.outputs["XMR.5"]).graph(agent)["GREET.1"]["THEME"].singleton())
+        self.assertEqual(agent.environment["HUMAN.1"], XMR(agent.outputs["XMR.5"]).graph(agent)["GREET.1"]["THEME"].singleton())
 
         #######
 
@@ -172,7 +171,7 @@ class Jan2019Experiment(ExperimentTestCase):
         self.assertFalse(Effector(agent.internal["VERBAL-EFFECTOR.1"]).is_free())
         self.assertEqual(agent.exe["SPEAK-CAPABILITY"], Effector(agent.internal["VERBAL-EFFECTOR.1"]).on_capability())
         self.assertEqual(agent.outputs["XMR.7"], Effector(agent.internal["VERBAL-EFFECTOR.1"]).on_output())
-        self.assertEqual(agent["XMR#3"]["FETCH.1"], OutputXMR(agent.outputs["XMR.7"]).graph(agent)["DESCRIBE.1"]["THEME"].singleton())
+        self.assertEqual(agent["XMR#3"]["FETCH.1"], XMR(agent.outputs["XMR.7"]).graph(agent)["DESCRIBE.1"]["THEME"].singleton())
 
         # 6g) TEST: BUILD-A-CHAIR is still "active"
         self.assertGoalExists(agent, isa="EXE.BUILD-A-CHAIR", status=Goal.Status.ACTIVE, query=lambda goal: goal.plans()[0].steps()[1].status() == Step.Status.PENDING)
@@ -213,7 +212,7 @@ class Jan2019Experiment(ExperimentTestCase):
         self.assertFalse(Effector(agent.internal["PHYSICAL-EFFECTOR.1"]).is_free())
         self.assertEqual(agent.exe["FETCH-OBJECT-CAPABILITY"], Effector(agent.internal["PHYSICAL-EFFECTOR.1"]).on_capability())
         self.assertEqual(agent.outputs["XMR.8"], Effector(agent.internal["PHYSICAL-EFFECTOR.1"]).on_output())
-        self.assertEqual(agent.environment["BRACKET.2"], OutputXMR(agent.outputs["XMR.8"]).graph(agent)["FETCH.1"]["THEME"].singleton())
+        self.assertEqual(agent.environment["BRACKET.2"], XMR(agent.outputs["XMR.8"]).graph(agent)["FETCH.1"]["THEME"].singleton())
 
     def test_1_2(self):
 
@@ -248,7 +247,7 @@ class Jan2019Experiment(ExperimentTestCase):
         self.assertFalse(Effector(agent.internal["PHYSICAL-EFFECTOR.1"]).is_free())
         self.assertEqual(agent.exe["FETCH-OBJECT-CAPABILITY"], Effector(agent.internal["PHYSICAL-EFFECTOR.1"]).on_capability())
         self.assertEqual(agent.outputs["XMR.2"], Effector(agent.internal["PHYSICAL-EFFECTOR.1"]).on_output())
-        self.assertEqual(agent.environment["SCREWDRIVER.1"], OutputXMR(agent.outputs["XMR.2"]).graph(agent)["FETCH.1"]["THEME"].singleton())
+        self.assertEqual(agent.environment["SCREWDRIVER.1"], XMR(agent.outputs["XMR.2"]).graph(agent)["FETCH.1"]["THEME"].singleton())
 
         #######
 
@@ -298,7 +297,7 @@ class Jan2019Experiment(ExperimentTestCase):
         self.assertFalse(Effector(agent.internal["PHYSICAL-EFFECTOR.1"]).is_free())
         self.assertEqual(agent.exe["FETCH-OBJECT-CAPABILITY"], Effector(agent.internal["PHYSICAL-EFFECTOR.1"]).on_capability())
         self.assertEqual(agent.outputs["XMR.3"], Effector(agent.internal["PHYSICAL-EFFECTOR.1"]).on_output())
-        self.assertEqual(agent.environment["BRACKET.1"], OutputXMR(agent.outputs["XMR.3"]).graph(agent)["FETCH.1"]["THEME"].singleton())
+        self.assertEqual(agent.environment["BRACKET.1"], XMR(agent.outputs["XMR.3"]).graph(agent)["FETCH.1"]["THEME"].singleton())
 
         #######
 
@@ -321,7 +320,7 @@ class Jan2019Experiment(ExperimentTestCase):
         self.assertFalse(Effector(agent.internal["PHYSICAL-EFFECTOR.1"]).is_free())
         self.assertEqual(agent.exe["FETCH-OBJECT-CAPABILITY"], Effector(agent.internal["PHYSICAL-EFFECTOR.1"]).on_capability())
         self.assertEqual(agent.outputs["XMR.4"], Effector(agent.internal["PHYSICAL-EFFECTOR.1"]).on_output())
-        self.assertEqual(agent.environment["DOWEL.1"], OutputXMR(agent.outputs["XMR.4"]).graph(agent)["FETCH.1"]["THEME"].singleton())
+        self.assertEqual(agent.environment["DOWEL.1"], XMR(agent.outputs["XMR.4"]).graph(agent)["FETCH.1"]["THEME"].singleton())
 
         #######
 
@@ -355,7 +354,7 @@ class Jan2019Experiment(ExperimentTestCase):
         self.assertFalse(Effector(agent.internal["VERBAL-EFFECTOR.1"]).is_free())
         self.assertEqual(agent.exe["SPEAK-CAPABILITY"], Effector(agent.internal["VERBAL-EFFECTOR.1"]).on_capability())
         self.assertEqual(agent.outputs["XMR.5"], Effector(agent.internal["VERBAL-EFFECTOR.1"]).on_output())
-        self.assertEqual(OutputXMR(agent.outputs["XMR.5"]).graph(agent)["ATTACH.1"], OutputXMR(agent.outputs["XMR.5"]).graph(agent)["REQUEST-ACTION.1"]["PURPOSE"].singleton())
+        self.assertEqual(XMR(agent.outputs["XMR.5"]).graph(agent)["ATTACH.1"], XMR(agent.outputs["XMR.5"]).graph(agent)["REQUEST-ACTION.1"]["PURPOSE"].singleton())
         self.assertDecisionExists(agent, status=Decision.Status.BLOCKED, goal="SELF.GOAL.2", impasses=["SELF.REQUEST-HELP.1"])
 
         #######
@@ -404,7 +403,7 @@ class Jan2019Experiment(ExperimentTestCase):
         self.assertFalse(Effector(agent.internal["VERBAL-EFFECTOR.1"]).is_free())
         self.assertEqual(agent.exe["SPEAK-CAPABILITY"], Effector(agent.internal["VERBAL-EFFECTOR.1"]).on_capability())
         self.assertEqual(agent.outputs["XMR.7"], Effector(agent.internal["VERBAL-EFFECTOR.1"]).on_output())
-        self.assertEqual(agent.environment["HUMAN.1"], OutputXMR(agent.outputs["XMR.7"]).graph(agent)["GREET.1"]["THEME"].singleton())
+        self.assertEqual(agent.environment["HUMAN.1"], XMR(agent.outputs["XMR.7"]).graph(agent)["GREET.1"]["THEME"].singleton())
 
         #######
 
