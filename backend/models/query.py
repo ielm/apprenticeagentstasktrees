@@ -334,6 +334,9 @@ class LiteralQuery(Query):
         self.value = value
 
     def compare(self, other) -> bool:
+        if isinstance(other, Filler) and isinstance(other._value, Literal) and isinstance(other._value.value, Enum):
+            other = other._value.value.value
+
         return self.value == other
 
     def __str__(self):
