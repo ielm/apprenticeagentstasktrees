@@ -93,6 +93,8 @@ class TMR(XMR):
         return self.frame["SYNTAX"].singleton()
 
     def render(self):
+        if "SENTENCE" not in self.frame:
+            return super().render()
         return self.frame["SENTENCE"].singleton()
 
     def find_main_event(self):
