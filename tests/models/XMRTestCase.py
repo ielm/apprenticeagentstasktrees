@@ -197,7 +197,10 @@ class MMRTestCase(unittest.TestCase):
 class TMRTestCase(unittest.TestCase):
 
     def test_render(self):
-        fail()
+        frame = Frame("TMR")
+        frame["SENTENCE"] = Literal("This is the test sentence.")
+
+        self.assertEqual("This is the test sentence.", TMR(frame).render())
 
 
 class VMRTestCase(unittest.TestCase):
