@@ -705,8 +705,7 @@ class Decision(object):
         return self.frame["HAS-COST"].singleton()
 
     def requires(self) -> List['Capability']:
-        from backend.models.effectors import Capability
-        return list(map(lambda output: Capability(output.capability()), self.outputs()))
+        return list(map(lambda output: output.capability(), self.outputs()))
 
     def status(self) -> 'Decision.Status':
         if "STATUS" not in self.frame:

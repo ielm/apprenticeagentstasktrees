@@ -99,7 +99,14 @@ class XMR(object):
         return self.signal() == XMR.Signal.OUTPUT
 
     def status(self) -> Union[InputStatus, OutputStatus]:
-        return self.frame["STATUS"].singleton()
+        status = self.frame["STATUS"].singleton()
+        if isinstance(status, str):
+            if status in [item.value for item in XMR.InputStatus]:
+                status = XMR.InputStatus[status]
+            if status in [item.value for item in XMR.OutputStatus]:
+                status = XMR.OutputStatus[status]
+
+        return status
 
     def type(self) -> Type:
         type = self.frame["TYPE"].singleton()
