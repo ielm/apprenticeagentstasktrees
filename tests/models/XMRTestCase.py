@@ -185,13 +185,21 @@ class XMRTestCase(unittest.TestCase):
 class AMRTestCase(unittest.TestCase):
 
     def test_render(self):
-        fail()
+        n = Network()
+        g = n.register("TEST")
+        f = g.register("AMR", generate_index=True)
+
+        self.assertEqual("TEST.AMR.1", AMR(f).render())
 
 
 class MMRTestCase(unittest.TestCase):
 
     def test_render(self):
-        fail()
+        n = Network()
+        g = n.register("TEST")
+        f = g.register("MMR", generate_index=True)
+
+        self.assertEqual("TEST.MMR.1", MMR(f).render())
 
 
 class TMRTestCase(unittest.TestCase):
@@ -206,4 +214,8 @@ class TMRTestCase(unittest.TestCase):
 class VMRTestCase(unittest.TestCase):
 
     def test_render(self):
-        fail()
+        n = Network()
+        g = n.register("TEST")
+        f = g.register("VMR", generate_index=True)
+
+        self.assertEqual("TEST.VMR.1", VMR(f).render())
