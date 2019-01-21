@@ -152,6 +152,18 @@ class TMRTestCase(unittest.TestCase):
 
         self.assertEqual([o1, o2, o3], tmr.find_by_concept("ONT.OBJECT"))
 
+    def test_render(self):
+        from backend.models.graph import Literal
+        
+        g = self.n.register("TEST")
+        tmr = g.register("TMR")
+
+        self.assertEqual("TEST.TMR", TMR(tmr).render())
+
+        tmr["SENTENCE"] = Literal("Test sentence.")
+
+        self.assertEqual("Test sentence.", TMR(tmr).render())
+
 
 class TMRFrameTestCase(unittest.TestCase):
 
