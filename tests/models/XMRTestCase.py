@@ -191,6 +191,24 @@ class AMRTestCase(unittest.TestCase):
 
         self.assertEqual("TEST.AMR.1", AMR(f).render())
 
+    def test_render_with_contents(self):
+        n = Network()
+
+        g = n.register("SELF")
+        g.register("ROBOT", generate_index=True)
+
+        env = n.register("ENV")
+        env.register("BRACKET", generate_index=True)
+
+        amr_graph = n.register("AMR")
+        root = amr_graph.register("GET", generate_index=True)
+        root["AGENT"] = "SELF.ROBOT.1"
+        root["THEME"] = "ENV.BRACKET.1"
+
+        amr = AMR.instance(g, "AMR", XMR.Signal.OUTPUT, XMR.Type.ACTION, XMR.OutputStatus.PENDING, "SELF.ROBOT.1", root)
+
+        self.assertEqual("I am taking the GET(ENV.BRACKET.1) action.", amr.render())
+
 
 class MMRTestCase(unittest.TestCase):
 
