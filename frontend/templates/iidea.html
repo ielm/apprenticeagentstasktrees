@@ -90,26 +90,6 @@
     </style>
 
     <script>
-        function advance(callback) {
-            $.ajax({
-                url: "/iidea/advance",
-                method: "GET",
-            }).done(function(data) {
-                var output = JSON.parse(data);
-                render_time(output);
-                render_inputs(output["inputs"]);
-                render_agenda(output["agenda"]);
-                render_effectors(output["effectors"]);
-                render_triggers(output["triggers"]);
-                render_decisions(output["decisions"]);
-                if (callback != null) {
-                    callback();
-                }
-            }).fail(function(error) {
-                console.log(error);
-            });
-        }
-
         function input() {
             var source = null;
             if ($("#custom-source-radio").is(':checked')) {
@@ -186,39 +166,16 @@
                 console.log(error);
             });
         }
-
-        function start() {
-            $("#start-button").hide();
-            $("#pause-button").show();
-            $("#advance-button").prop("disabled", true);
-
-            running = true;
-            run();
-        }
-
-        function pause() {
-            $("#start-button").show();
-            $("#pause-button").hide();
-            $("#advance-button").prop("disabled", false);
-
-            running = false;
-        }
-
     </script>
 
     <script>
-        var running = false;
-
-        function run() {
-            advance(keepRunning);
-        }
-
-        function keepRunning() {
-            setTimeout(function() {
-                if (running) {
-                    run();
-                }
-            }, 1000);
+        function updateIIDEAData(data) {
+            render_time(data);
+            render_inputs(data["inputs"]);
+            render_agenda(data["agenda"]);
+            render_effectors(data["effectors"]);
+            render_triggers(data["triggers"]);
+            render_decisions(data["decisions"]);
         }
     </script>
 
@@ -366,20 +323,11 @@
 
     <script>
         $(document).ready(function() {
-            $("#advance-button").on("click", function() {
-                advance();
-            });
             $("#inputTextButton").on("click", function() {
                 input();
             });
             $("#observationButton").on("click", function() {
                 observe();
-            });
-            $("#start-button").on("click", function() {
-                start();
-            });
-            $("#pause-button").on("click", function() {
-                pause();
             });
             $("#custom-source-input").on("keyup", function() {
                 $("#custom-source-radio").prop("checked", true);
@@ -606,7 +554,7 @@
             <div class="col-sm-8">
                 <div class="card" style="margin-bottom: 25px;">
                     <div class="card-header">
-                        Agenda
+                        Agenda • <span>T<span id="time">{{ time }}</span> - <span id="stage">{{ stage }}</span></span> (pending)
                         <div class="form-check float-right">
                             <input class="form-check-input" type="checkbox" value="" id="hideSatisfiedCheckBox">
                             <label class="form-check-label" for="hideSatisfiedCheckBox">
@@ -634,16 +582,6 @@
                 </div>
             </div>
             <div class="col-sm-4">
-                <div class="card" style="margin-bottom: 25px;">
-                    <div class="card-header">
-                        Time: <span>T<span id="time">{{ time }}</span> - <span id="stage">{{ stage }}</span></span> (pending)
-                    </div>
-                    <div class="card-body">
-                        <button id="advance-button" type="button" class="btn btn-sm btn-secondary">Advance</button>
-                        <button id="start-button" type="button" class="btn btn-sm btn-success">Start</button>
-                        <button id="pause-button" type="button" class="btn btn-sm btn-warning" style="display: none;">Pause</button>
-                    </div>
-                </div>
                 <div class="card" style="margin-bottom: 25px;">
                     <div class="card-header">
                         Inputs and Observations

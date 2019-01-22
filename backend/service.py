@@ -26,6 +26,43 @@ agent = Agent(ontology=Ontology.init_default())
 agent.logger().enable()
 
 
+thread = None
+
+
+import threading
+
+
+class StoppableThread(threading.Thread):
+    """Thread class with a stop() method. The thread itself has to check
+    regularly for the stopped() condition."""
+
+    def __init__(self):
+        super(StoppableThread, self).__init__()
+        self._stop_event = threading.Event()
+
+    def stop(self):
+        self._stop_event.set()
+
+    def stopped(self):
+        return self._stop_event.is_set()
+
+
+class AgentAdvanceThread(StoppableThread):
+
+    def __init__(self, host, port):
+        self.endpoint = "http://" + str(host) + ":" + str(port) + "/iidea/advance"
+        super().__init__()
+
+    def run(self):
+        while not self.stopped():
+
+            import time
+            time.sleep(0.25)
+
+            import urllib.request
+            contents = urllib.request.urlopen(self.endpoint).read()
+
+
 def graph_to_json(graph):
     frames = []
 
@@ -97,12 +134,7 @@ def grammar():
 
 @app.route("/reset", methods=["DELETE"])
 def reset():
-    # global n
-    # global ontology
     global agent
-
-    # n = Network()
-    # ontology = n.register(Ontology.init_default())
     agent = Agent(Ontology.init_default())
 
     return "OK"
@@ -320,6 +352,27 @@ class IIDEAConverter(object):
         return []
 
 
+
+@app.route("/iidea/start", methods=["GET"])
+def start():
+    global thread
+
+    if thread.is_alive():
+        abort(400)
+
+    thread = AgentAdvanceThread(host, port)
+    thread.start()
+
+    return "OK"
+
+
+@app.route("/iidea/stop", methods=["GET"])
+def stop():
+    thread.stop()
+
+    return "OK"
+
+
 @app.route("/iidea", methods=["GET"])
 def iidea():
     time = agent.IDEA.time()
@@ -332,6 +385,21 @@ def iidea():
     decisions = IIDEAConverter.decisions()
 
     return render_template("iidea.html", time=time, stage=stage, inputs=inputs, agenda=agenda, aj=json.dumps(agenda), effectors=effectors, ej=json.dumps(effectors), tj=json.dumps(triggers), lj=json.dumps(logs), dj=json.dumps(decisions))
+
+
+@app.route("/iidea/data", methods=["GET"])
+def iidea_data():
+    return json.dumps({
+        "time": agent.IDEA.time(),
+        "stage": agent.IDEA.stage(),
+        "inputs": IIDEAConverter.inputs(),
+        "agenda": IIDEAConverter.agenda(),
+        "effectors": IIDEAConverter.effectors(),
+        "triggers": IIDEAConverter.triggers(),
+        "logs": IIDEAConverter.logs(),
+        "decisions": IIDEAConverter.decisions(),
+        "running": thread.is_alive()
+    })
 
 
 @app.route("/iidea/advance", methods=["GET"])
@@ -552,6 +620,8 @@ def bootstrap():
 if __name__ == '__main__':
     host = "127.0.0.1"
     port = 5002
+
+    thread = AgentAdvanceThread(host, port)
 
     import sys
 
