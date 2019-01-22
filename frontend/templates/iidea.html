@@ -101,7 +101,6 @@
                 render_agenda(output["agenda"]);
                 render_effectors(output["effectors"]);
                 render_triggers(output["triggers"]);
-                render_logs(output["logs"]);
                 render_decisions(output["decisions"]);
                 if (callback != null) {
                     callback();
@@ -182,7 +181,6 @@
                 render_agenda(output["agenda"]);
                 render_effectors(output["effectors"]);
                 render_triggers(output["triggers"]);
-                render_logs(output["logs"]);
                 render_decisions(output["decisions"]);
             }).fail(function(error) {
                 console.log(error);
@@ -322,19 +320,6 @@
             });
         }
 
-        function render_logs(logs) {
-            $("#logList").empty();
-
-            for (var i in logs) {
-                var log = logs[i];
-
-                var template = document.getElementById('log-template').innerHTML;
-                Mustache.parse(template, ["{|", "|}"]);
-                var rendered = Mustache.render(template, {"log": log});
-                $($(document).find("#logList")[0]).prepend($(rendered));
-            }
-        }
-
         function render_decisions(decisions) {
             $("#decisions").empty();
 
@@ -447,9 +432,6 @@
 
             var triggers = JSON.parse('{{ tj|safe }}');
             render_triggers(triggers);
-
-            var logs = JSON.parse({{lj|tojson}});
-            render_logs(logs);
 
             var decisions = JSON.parse({{dj|tojson}});
             render_decisions(decisions);
@@ -609,12 +591,6 @@
         </div>
     </script>
 
-    <script id="log-template" type="x-tmpl-mustache">
-        <div class="log">
-            {| log |}
-        </div>
-    </script>
-
 </head>
 <body>
 
@@ -749,14 +725,6 @@
                     </div>
                     <div class="card-body">
                         <div id="triggerList"></div>
-                    </div>
-                </div>
-                <div class="card" style="margin-bottom: 25px;">
-                    <div class="card-header">
-                        Logs
-                    </div>
-                    <div class="card-body">
-                        <div id="logList"></div>
                     </div>
                 </div>
             </div>
