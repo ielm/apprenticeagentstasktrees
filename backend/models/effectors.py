@@ -177,7 +177,11 @@ class Callback(object):
     def status(self) -> 'Callback.Status':
         if "STATUS" not in self.frame:
             return Callback.Status.WAITING
-        return self.frame["STATUS"].singleton()
+        status = self.frame["STATUS"].singleton()
+        if isinstance(status, str):
+            status = Callback.Status[status]
+
+        return status
 
     def received(self):
         self.frame["STATUS"] = Callback.Status.RECEIVED

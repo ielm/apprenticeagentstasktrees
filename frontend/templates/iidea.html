@@ -44,6 +44,8 @@
             padding-right: 4px;
             padding-top: 0px;
             padding-bottom: 0px;
+            font-size: .7rem;
+            margin-bottom: 3px;
         }
         .steps {
             color: grey;
@@ -526,20 +528,28 @@
                     <td></td>
                     <td>
                         {| #capabilities |}
-                            {| #selected |}
-                                <i class="fas fa-check-circle" style="color: green"></i>
-                            {| /selected |}
+                            <div>
+                                {| #not_selected |}
+                                    <i class="fas fa-times-circle" style="color: darkgray"></i>
+                                {| /not_selected |}
+                                {| #selected_elsewhere |}
+                                    <i class="fas fa-check-circle" style="color: goldenrod"></i>
+                                {| /selected_elsewhere |}
+                                {| #selected_here |}
+                                    <i class="fas fa-check-circle" style="color: green"></i>
+                                {| /selected_here |}
 
-                            {| name |}
+                                {| name |}
 
-                            {| #callbacks |}
-                                {| #waiting |}
-                                    <button type="button" class="btn btn-primary btn-sm callback-button" data-callback="{| name |}"><i class="fas fa-undo-alt" style="font-size: smaller"></i></button>
-                                {| /waiting |}
-                                {| ^waiting |}
-                                    <button disabled type="button" class="btn btn-secondary btn-sm callback-button" data-callback="{| name |}"><i class="fas fa-undo-alt" style="font-size: smaller"></i></button>
-                                {| /waiting |}
-                            {| /callbacks |}
+                                {| #callbacks |}
+                                    {| #waiting |}
+                                        <button type="button" class="btn btn-primary btn-sm callback-button" data-callback="{| name |}"><i class="fas fa-undo-alt" style="font-size: x-small"></i></button>
+                                    {| /waiting |}
+                                    {| ^waiting |}
+                                        <button disabled type="button" class="btn btn-secondary btn-sm callback-button" data-callback="{| name |}"><i class="fas fa-undo-alt" style="font-size: smaller"></i></button>
+                                    {| /waiting |}
+                                {| /callbacks |}
+                            </div>
                         {| /capabilities |}
                     </td>
                 </tr>

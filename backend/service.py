@@ -5,7 +5,7 @@ from flask_cors import CORS
 
 
 from backend.agent import Agent
-from backend.models.effectors import Callback
+from backend.models.effectors import Callback, Capability, Effector
 from backend.models.bootstrap import Bootstrap
 from backend.contexts.LCTContext import LCTContext
 from backend.models.agenda import Decision, Expectation, Goal, Plan
@@ -274,20 +274,29 @@ class IIDEAConverter(object):
         }
 
     @classmethod
-    def convert_capability(cls, capability, wrt_effector):
-        selected = False
+    def convert_capability(cls, capability: Capability, wrt_effector: Effector):
+
+        selected = "not"
+
         for d in agent.decisions():
             if d.status() == Decision.Status.EXECUTING:
                 if capability in list(map(lambda output: output.capability(), d.outputs())):
-                    selected = True
+                    selected = "elsewhere"
+
+        if wrt_effector.on_capability() == capability:
+            selected = "here"
 
         callbacks = []
-        if wrt_effector.on_decision() is not None:
-            callbacks = list(map(lambda cb: {"name": cb.frame.name(), "waiting": cb.status() == Callback.Status.WAITING}, wrt_effector.on_decision().callbacks()))
+        if wrt_effector.on_capability() == capability and wrt_effector.on_decision() is not None:
+            callbacks = wrt_effector.on_decision().callbacks()
+            callbacks = list(filter(lambda callback: callback.effector() == wrt_effector, callbacks))
+            callbacks = list(map(lambda cb: {"name": cb.frame.name(), "waiting": cb.status() == Callback.Status.WAITING}, callbacks))
 
         return {
             "name": capability.frame.name(),
-            "selected": selected,
+            "not_selected": selected == "not",
+            "selected_elsewhere": selected == "elsewhere",
+            "selected_here": selected == "here",
             "callbacks": callbacks
         }
 
