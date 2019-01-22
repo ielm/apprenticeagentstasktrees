@@ -68,6 +68,25 @@
             color: grey;
             font-size: small;
         }
+        .decision > .card-header {
+            padding: 2px;
+            padding-left: 5px;
+            padding-right: 5px;
+            font-size: smaller;
+        }
+        .decision > .card-header > .badge {
+            vertical-align: text-bottom;
+            margin-right: 2px;
+        }
+        .decision > .card-body {
+            padding: 10px;
+        }
+        .decision > .card-footer {
+            padding: 0px;
+            padding-left: 5px;
+            padding-right: 5px;
+            font-size: smaller;
+        }
     </style>
 
     <script>
@@ -483,23 +502,50 @@
             </div>
             <div class="card-body">
                 <div><strong>Priority:</strong> {| priority |}, <strong>Cost:</strong> {| cost |}</div>
-                <div><strong>Outputs:</strong>
-                    {|#outputs|}
-                        <a href="#" class="output-link badge badge-secondary" data-graph="{| graph |}">{| graph |}</a>
-                        <span class="output-details">({| frame |})</span>
-                    {|/outputs|}
-                </div>
-                <div><strong>Requires:</strong> {| requires |}</div>
-                <div><strong>Effectors:</strong> {| effectors |}</div>
-                <div><strong>Callbacks:</strong> {| callbacks |}</div>
-                <div><strong>Impasses:</strong> {| impasses |}</div>
-                <div><strong>Expectations:</strong>
-                    {|#expectations|}
-                        <span class="badge badge-pill {| style |}">{| status |}</span>
-                        <span class="expectation-details">({| frame |})</span>
-                        {| condition |}
-                    {|/expectations|}
-                </div>
+
+                {| #outputs.length |}
+                    <div><strong>Outputs:</strong>
+                        {|#outputs|}
+                            <a href="#" class="output-link badge badge-secondary" data-graph="{| graph |}">{| graph |}</a>
+                            <span class="output-details">({| frame |})</span>
+                        {|/outputs|}
+                    </div>
+                {| /outputs.length |}
+
+                {| #requires.length |}
+                    <div><strong>Requires:</strong> {| requires |}</div>
+                {| /requires.length |}
+
+                {| #effectors.length |}
+                    <div><strong>Effectors:</strong> {| effectors |}</div>
+                {| /effectors.length |}
+
+                {| #callbacks.length |}
+                    <div><strong>Callbacks:</strong> {| callbacks |}</div>
+                {| /callbacks.length |}
+
+                {| #impasses.length |}
+                    <div><strong>Impasses:</strong> {| impasses |}</div>
+                {| /impasses.length |}
+
+                {| #expectations.length |}
+                    <div><strong>Expectations:</strong>
+                        {|#expectations|}
+                            <span class="badge badge-pill {| style |}">{| status |}</span>
+                            <span class="expectation-details">({| frame |})</span>
+                            {| condition |}
+                        {|/expectations|}
+                    </div>
+                {| /expectations.length |}
+            </div>
+            <div class="card-footer">
+                <strong>{| id |}</strong>
+                {| ^outputs.length |} • No outputs {| /outputs.length |}
+                {| ^requires.length |} • No required capabilities {| /requires.length |}
+                {| ^effectors.length |} • No effectors {| /effectors.length |}
+                {| ^callbacks.length |} • No callbacks {| /callbacks.length |}
+                {| ^impasses.length |} • No impasses {| /impasses.length |}
+                {| ^expectations.length |} • No expectations {| /expectations.length |}
             </div>
         </div>
     </script>

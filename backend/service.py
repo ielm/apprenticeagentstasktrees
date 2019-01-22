@@ -213,6 +213,7 @@ class IIDEAConverter(object):
     @classmethod
     def convert_decision(cls, decision: Decision):
         return {
+            "id": decision.frame.name(),
             "goal": decision.goal().name(),
             "plan": decision.plan().name(),
             "step": "Step " + str(decision.step().index()),
