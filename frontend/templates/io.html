@@ -47,6 +47,41 @@
     </style>
 
     <script>
+        function updateIIDEAData(data) {
+            render_io(data["io"]);
+        }
+
+        function render_io(data) {
+            $("#io-container").empty();
+
+            for (var i in data) {
+                var xmr = data[i];
+                xmr["is_self"] = xmr["source"] == "SELF.ROBOT.1";
+                xmr["icon"] = {
+                    "ACTION": "fa-walking",
+                    "LANGUAGE": "fa-comment",
+                    "MENTAL": "fa-brain",
+                    "VISUAL": "fa-eye",
+                }[xmr["type"]];
+
+                if (xmr["type"] == "LANGUAGE") {
+                    xmr["rendered"] = '"' + xmr["rendered"] + '"';
+                }
+
+                xmr["render_style"] = "";
+                if (xmr["type"] != "LANGUAGE") {
+                    xmr["render_style"] = "non-language";
+                }
+
+                var template = document.getElementById('io-template').innerHTML;
+                Mustache.parse(template, ["{|", "|}"]);
+                var rendered = Mustache.render(template, xmr);
+                $($(document).find("#io-container")[0]).append($(rendered));
+            }
+        }
+    </script>
+
+    <script>
         $(document).ready(function() {
             $(document).on("click", ".graph-link", function(e) {
                 var graph = $(e.currentTarget).data("graph");
@@ -57,8 +92,36 @@
             $('#modalGraph').on('shown.bs.modal', function (e) {
                 _network.fit();
             });
-        });
 
+            var io = JSON.parse({{ ioj|tojson }});
+            render_io(io);
+        });
+    </script>
+
+    <script id="io-template" type="x-tmpl-mustache">
+
+        <div class="card io {| ^is_self |} input {| /is_self |}">
+            <div class="card-body">
+                {| #is_self |}
+                    <div class="io-icon-container">
+                        <i class="fas {| icon |} fa-2x"></i>
+                    </div>
+                {| /is_self |}
+
+                <span class="rendered {| render_style |}">
+                    {| rendered |}
+                </span>
+
+                {| ^is_self |}
+                    <div class="io-icon-container">
+                        <i class="fas {| icon |} fa-2x"></i>
+                    </div>
+                {| /is_self |}
+            </div>
+            <div class="card-footer">
+                <strong>{| source |}</strong> • {| timestamp |} • {| id |} • <a href="#" class="graph-link badge badge-secondary" data-graph="{| graph |}">{| graph |}</a>
+            </div>
+        </div>
     </script>
 
 </head>
@@ -74,54 +137,7 @@
     <div class="container">
         <div class="row" style="margin-top: 25px;">
             <div class="col-sm-2"></div>
-            <div class="col-sm-8">
-
-                {% for xmr in io %}
-
-                    <div class="card io {% if xmr.source != 'SELF.ROBOT.1' %} input {% endif %}">
-                        <div class="card-body">
-                            {% if xmr.source == "SELF.ROBOT.1" %}
-                                <div class="io-icon-container">
-                                    {% if xmr.type == "ACTION" %}
-                                        <i class="fas fa-walking fa-2x"></i>
-                                    {% elif xmr.type == "LANGUAGE" %}
-                                        <i class="fas fa-comment fa-2x"></i>
-                                    {% elif xmr.type == "MENTAL" %}
-                                        <i class="fas fa-brain fa-2x"></i>
-                                    {% elif xmr.type == "VISUAL" %}
-                                        <i class="fas fa-eye fa-2x"></i>
-                                    {% endif %}
-                                </div>
-                            {% endif %}
-
-                            <span class="rendered {% if xmr.type != 'LANGUAGE' %} non-language {% endif %}">
-                                {% if xmr.type == "LANGUAGE" %} " {% endif %}
-                                {{ xmr.rendered }}
-                                {% if xmr.type == "LANGUAGE" %} " {% endif %}
-                            </span>
-
-                            {% if xmr.source != "SELF.ROBOT.1" %}
-                                <div class="io-icon-container">
-                                    {% if xmr.type == "ACTION" %}
-                                        <i class="fas fa-walking fa-2x"></i>
-                                    {% elif xmr.type == "LANGUAGE" %}
-                                        <i class="fas fa-comment fa-2x"></i>
-                                    {% elif xmr.type == "MENTAL" %}
-                                        <i class="fas fa-brain fa-2x"></i>
-                                    {% elif xmr.type == "VISUAL" %}
-                                        <i class="fas fa-eye fa-2x"></i>
-                                    {% endif %}
-                                </div>
-                            {% endif %}
-                        </div>
-                        <div class="card-footer">
-                            <strong>{{ xmr.source }}</strong> • {{ xmr.timestamp }} • {{ xmr.id }} • <a href="#" class="graph-link badge badge-secondary" data-graph="{{ xmr.graph }}">{{ xmr.graph }}</a>
-                        </div>
-                    </div>
-
-                {% endfor %}
-
-            </div>
+            <div id="io-container" class="col-sm-8"></div>
             <div class="col-sm-2"></div>
         </div>
     </div>

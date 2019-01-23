@@ -5,7 +5,7 @@ from flask_cors import CORS
 
 
 from backend.agent import Agent
-from backend.models.effectors import Callback
+from backend.models.effectors import Callback, Capability, Effector
 from backend.models.bootstrap import Bootstrap
 from backend.contexts.LCTContext import LCTContext
 from backend.models.agenda import Decision, Expectation, Goal, Plan
@@ -24,6 +24,43 @@ CORS(app)
 
 agent = Agent(ontology=Ontology.init_default())
 agent.logger().enable()
+
+
+thread = None
+
+
+import threading
+
+
+class StoppableThread(threading.Thread):
+    """Thread class with a stop() method. The thread itself has to check
+    regularly for the stopped() condition."""
+
+    def __init__(self):
+        super(StoppableThread, self).__init__()
+        self._stop_event = threading.Event()
+
+    def stop(self):
+        self._stop_event.set()
+
+    def stopped(self):
+        return self._stop_event.is_set()
+
+
+class AgentAdvanceThread(StoppableThread):
+
+    def __init__(self, host, port):
+        self.endpoint = "http://" + str(host) + ":" + str(port) + "/iidea/advance"
+        super().__init__()
+
+    def run(self):
+        while not self.stopped():
+
+            import time
+            time.sleep(0.25)
+
+            import urllib.request
+            contents = urllib.request.urlopen(self.endpoint).read()
 
 
 def graph_to_json(graph):
@@ -97,12 +134,7 @@ def grammar():
 
 @app.route("/reset", methods=["DELETE"])
 def reset():
-    # global n
-    # global ontology
     global agent
-
-    # n = Network()
-    # ontology = n.register(Ontology.init_default())
     agent = Agent(Ontology.init_default())
 
     return "OK"
@@ -132,6 +164,41 @@ def graph():
 
 
 class IIDEAConverter(object):
+
+    @classmethod
+    def io(cls):
+        from datetime import datetime
+
+        payload = []
+
+        # 1) Gather all of the inputs and outputs
+        payload.extend(agent["INPUTS"].values())
+        payload.extend(agent["OUTPUTS"].values())
+
+        # 2) Map them to the correct XMR objects
+        payload = list(map(lambda frame: XMR.from_instance(frame), payload))
+
+        # 3) Sort by timestamp
+        payload = sorted(payload, key=lambda xmr: xmr.timestamp())
+
+        # 4) Map them to simple dictionaries
+        def source(xmr: XMR) -> str:
+            if xmr.source() is not None:
+                return xmr.source().name()
+            if xmr.signal() == XMR.Signal.INPUT:
+                return "ONT.HUMAN"
+            return "SELF.ROBOT.1"
+
+        payload = list(map(lambda xmr: {
+            "type": xmr.type().value,
+            "timestamp": datetime.utcfromtimestamp(xmr.timestamp()).strftime('%H:%M:%S'),
+            "source": source(xmr),
+            "rendered": xmr.render(),
+            "id": xmr.frame.name(),
+            "graph": xmr.graph(agent)._namespace
+        }, payload))
+
+        return payload
 
     @classmethod
     def inputs(cls):
@@ -213,6 +280,7 @@ class IIDEAConverter(object):
     @classmethod
     def convert_decision(cls, decision: Decision):
         return {
+            "id": decision.frame.name(),
             "goal": decision.goal().name(),
             "plan": decision.plan().name(),
             "step": "Step " + str(decision.step().index()),
@@ -274,20 +342,29 @@ class IIDEAConverter(object):
         }
 
     @classmethod
-    def convert_capability(cls, capability, wrt_effector):
-        selected = False
+    def convert_capability(cls, capability: Capability, wrt_effector: Effector):
+
+        selected = "not"
+
         for d in agent.decisions():
             if d.status() == Decision.Status.EXECUTING:
                 if capability in list(map(lambda output: output.capability(), d.outputs())):
-                    selected = True
+                    selected = "elsewhere"
+
+        if wrt_effector.on_capability() == capability:
+            selected = "here"
 
         callbacks = []
-        if wrt_effector.on_decision() is not None:
-            callbacks = list(map(lambda cb: {"name": cb.frame.name(), "waiting": cb.status() == Callback.Status.WAITING}, wrt_effector.on_decision().callbacks()))
+        if wrt_effector.on_capability() == capability and wrt_effector.on_decision() is not None:
+            callbacks = wrt_effector.on_decision().callbacks()
+            callbacks = list(filter(lambda callback: callback.effector() == wrt_effector, callbacks))
+            callbacks = list(map(lambda cb: {"name": cb.frame.name(), "waiting": cb.status() == Callback.Status.WAITING}, callbacks))
 
         return {
             "name": capability.frame.name(),
-            "selected": selected,
+            "not_selected": selected == "not",
+            "selected_elsewhere": selected == "elsewhere",
+            "selected_here": selected == "here",
             "callbacks": callbacks
         }
 
@@ -310,6 +387,27 @@ class IIDEAConverter(object):
         return []
 
 
+
+@app.route("/iidea/start", methods=["GET"])
+def start():
+    global thread
+
+    if thread.is_alive():
+        abort(400)
+
+    thread = AgentAdvanceThread(host, port)
+    thread.start()
+
+    return "OK"
+
+
+@app.route("/iidea/stop", methods=["GET"])
+def stop():
+    thread.stop()
+
+    return "OK"
+
+
 @app.route("/iidea", methods=["GET"])
 def iidea():
     time = agent.IDEA.time()
@@ -322,6 +420,22 @@ def iidea():
     decisions = IIDEAConverter.decisions()
 
     return render_template("iidea.html", time=time, stage=stage, inputs=inputs, agenda=agenda, aj=json.dumps(agenda), effectors=effectors, ej=json.dumps(effectors), tj=json.dumps(triggers), lj=json.dumps(logs), dj=json.dumps(decisions))
+
+
+@app.route("/iidea/data", methods=["GET"])
+def iidea_data():
+    return json.dumps({
+        "time": agent.IDEA.time(),
+        "stage": agent.IDEA.stage(),
+        "inputs": IIDEAConverter.inputs(),
+        "agenda": IIDEAConverter.agenda(),
+        "effectors": IIDEAConverter.effectors(),
+        "triggers": IIDEAConverter.triggers(),
+        "logs": IIDEAConverter.logs(),
+        "decisions": IIDEAConverter.decisions(),
+        "running": thread.is_alive(),
+        "io": IIDEAConverter.io()
+    })
 
 
 @app.route("/iidea/advance", methods=["GET"])
@@ -474,38 +588,7 @@ def components_graph():
 
 @app.route("/io", methods=["GET"])
 def io():
-    from datetime import datetime
-
-    payload = []
-
-    # 1) Gather all of the inputs and outputs
-    payload.extend(agent["INPUTS"].values())
-    payload.extend(agent["OUTPUTS"].values())
-
-    # 2) Map them to the correct XMR objects
-    payload = list(map(lambda frame: XMR.from_instance(frame), payload))
-
-    # 3) Sort by timestamp
-    payload = sorted(payload, key=lambda xmr: xmr.timestamp())
-
-    # 4) Map them to simple dictionaries
-    def source(xmr: XMR) -> str:
-        if xmr.source() is not None:
-            return xmr.source().name()
-        if xmr.signal() == XMR.Signal.INPUT:
-            return "ONT.HUMAN"
-        return "SELF.ROBOT.1"
-
-    payload = list(map(lambda xmr: {
-        "type": xmr.type().value,
-        "timestamp": datetime.utcfromtimestamp(xmr.timestamp()).strftime('%H:%M:%S'),
-        "source": source(xmr),
-        "rendered": xmr.render(),
-        "id": xmr.frame.name(),
-        "graph": xmr.graph(agent)._namespace
-    }, payload))
-
-    return render_template("io.html", io=payload)
+    return render_template("io.html", ioj=json.dumps(IIDEAConverter.io()))
 
 
 @app.route("/htn", methods=["GET"])
@@ -544,6 +627,8 @@ def bootstrap():
 if __name__ == '__main__':
     host = "127.0.0.1"
     port = 5002
+
+    thread = AgentAdvanceThread(host, port)
 
     import sys
 
