@@ -44,6 +44,8 @@
             padding-right: 4px;
             padding-top: 0px;
             padding-bottom: 0px;
+            font-size: .7rem;
+            margin-bottom: 3px;
         }
         .steps {
             color: grey;
@@ -66,30 +68,28 @@
             color: grey;
             font-size: small;
         }
+        .decision > .card-header {
+            padding: 2px;
+            padding-left: 5px;
+            padding-right: 5px;
+            font-size: smaller;
+        }
+        .decision > .card-header > .badge {
+            vertical-align: text-bottom;
+            margin-right: 2px;
+        }
+        .decision > .card-body {
+            padding: 10px;
+        }
+        .decision > .card-footer {
+            padding: 0px;
+            padding-left: 5px;
+            padding-right: 5px;
+            font-size: smaller;
+        }
     </style>
 
     <script>
-        function advance(callback) {
-            $.ajax({
-                url: "/iidea/advance",
-                method: "GET",
-            }).done(function(data) {
-                var output = JSON.parse(data);
-                render_time(output);
-                render_inputs(output["inputs"]);
-                render_agenda(output["agenda"]);
-                render_effectors(output["effectors"]);
-                render_triggers(output["triggers"]);
-                render_logs(output["logs"]);
-                render_decisions(output["decisions"]);
-                if (callback != null) {
-                    callback();
-                }
-            }).fail(function(error) {
-                console.log(error);
-            });
-        }
-
         function input() {
             var source = null;
             if ($("#custom-source-radio").is(':checked')) {
@@ -161,45 +161,21 @@
                 render_agenda(output["agenda"]);
                 render_effectors(output["effectors"]);
                 render_triggers(output["triggers"]);
-                render_logs(output["logs"]);
                 render_decisions(output["decisions"]);
             }).fail(function(error) {
                 console.log(error);
             });
         }
-
-        function start() {
-            $("#start-button").hide();
-            $("#pause-button").show();
-            $("#advance-button").prop("disabled", true);
-
-            running = true;
-            run();
-        }
-
-        function pause() {
-            $("#start-button").show();
-            $("#pause-button").hide();
-            $("#advance-button").prop("disabled", false);
-
-            running = false;
-        }
-
     </script>
 
     <script>
-        var running = false;
-
-        function run() {
-            advance(keepRunning);
-        }
-
-        function keepRunning() {
-            setTimeout(function() {
-                if (running) {
-                    run();
-                }
-            }, 1000);
+        function updateIIDEAData(data) {
+            render_time(data);
+            render_inputs(data["inputs"]);
+            render_agenda(data["agenda"]);
+            render_effectors(data["effectors"]);
+            render_triggers(data["triggers"]);
+            render_decisions(data["decisions"]);
         }
     </script>
 
@@ -301,19 +277,6 @@
             });
         }
 
-        function render_logs(logs) {
-            $("#logList").empty();
-
-            for (var i in logs) {
-                var log = logs[i];
-
-                var template = document.getElementById('log-template').innerHTML;
-                Mustache.parse(template, ["{|", "|}"]);
-                var rendered = Mustache.render(template, {"log": log});
-                $($(document).find("#logList")[0]).prepend($(rendered));
-            }
-        }
-
         function render_decisions(decisions) {
             $("#decisions").empty();
 
@@ -360,20 +323,11 @@
 
     <script>
         $(document).ready(function() {
-            $("#advance-button").on("click", function() {
-                advance();
-            });
             $("#inputTextButton").on("click", function() {
                 input();
             });
             $("#observationButton").on("click", function() {
                 observe();
-            });
-            $("#start-button").on("click", function() {
-                start();
-            });
-            $("#pause-button").on("click", function() {
-                pause();
             });
             $("#custom-source-input").on("keyup", function() {
                 $("#custom-source-radio").prop("checked", true);
@@ -427,9 +381,6 @@
             var triggers = JSON.parse('{{ tj|safe }}');
             render_triggers(triggers);
 
-            var logs = JSON.parse({{lj|tojson}});
-            render_logs(logs);
-
             var decisions = JSON.parse({{dj|tojson}});
             render_decisions(decisions);
         });
@@ -481,23 +432,50 @@
             </div>
             <div class="card-body">
                 <div><strong>Priority:</strong> {| priority |}, <strong>Cost:</strong> {| cost |}</div>
-                <div><strong>Outputs:</strong>
-                    {|#outputs|}
-                        <a href="#" class="output-link badge badge-secondary" data-graph="{| graph |}">{| graph |}</a>
-                        <span class="output-details">({| frame |})</span>
-                    {|/outputs|}
-                </div>
-                <div><strong>Requires:</strong> {| requires |}</div>
-                <div><strong>Effectors:</strong> {| effectors |}</div>
-                <div><strong>Callbacks:</strong> {| callbacks |}</div>
-                <div><strong>Impasses:</strong> {| impasses |}</div>
-                <div><strong>Expectations:</strong>
-                    {|#expectations|}
-                        <span class="badge badge-pill {| style |}">{| status |}</span>
-                        <span class="expectation-details">({| frame |})</span>
-                        {| condition |}
-                    {|/expectations|}
-                </div>
+
+                {| #outputs.length |}
+                    <div><strong>Outputs:</strong>
+                        {|#outputs|}
+                            <a href="#" class="output-link badge badge-secondary" data-graph="{| graph |}">{| graph |}</a>
+                            <span class="output-details">({| frame |})</span>
+                        {|/outputs|}
+                    </div>
+                {| /outputs.length |}
+
+                {| #requires.length |}
+                    <div><strong>Requires:</strong> {| requires |}</div>
+                {| /requires.length |}
+
+                {| #effectors.length |}
+                    <div><strong>Effectors:</strong> {| effectors |}</div>
+                {| /effectors.length |}
+
+                {| #callbacks.length |}
+                    <div><strong>Callbacks:</strong> {| callbacks |}</div>
+                {| /callbacks.length |}
+
+                {| #impasses.length |}
+                    <div><strong>Impasses:</strong> {| impasses |}</div>
+                {| /impasses.length |}
+
+                {| #expectations.length |}
+                    <div><strong>Expectations:</strong>
+                        {|#expectations|}
+                            <span class="badge badge-pill {| style |}">{| status |}</span>
+                            <span class="expectation-details">({| frame |})</span>
+                            {| condition |}
+                        {|/expectations|}
+                    </div>
+                {| /expectations.length |}
+            </div>
+            <div class="card-footer">
+                <strong>{| id |}</strong>
+                {| ^outputs.length |} • No outputs {| /outputs.length |}
+                {| ^requires.length |} • No required capabilities {| /requires.length |}
+                {| ^effectors.length |} • No effectors {| /effectors.length |}
+                {| ^callbacks.length |} • No callbacks {| /callbacks.length |}
+                {| ^impasses.length |} • No impasses {| /impasses.length |}
+                {| ^expectations.length |} • No expectations {| /expectations.length |}
             </div>
         </div>
     </script>
@@ -526,20 +504,28 @@
                     <td></td>
                     <td>
                         {| #capabilities |}
-                            {| #selected |}
-                                <i class="fas fa-check-circle" style="color: green"></i>
-                            {| /selected |}
+                            <div>
+                                {| #not_selected |}
+                                    <i class="fas fa-times-circle" style="color: darkgray"></i>
+                                {| /not_selected |}
+                                {| #selected_elsewhere |}
+                                    <i class="fas fa-check-circle" style="color: goldenrod"></i>
+                                {| /selected_elsewhere |}
+                                {| #selected_here |}
+                                    <i class="fas fa-check-circle" style="color: green"></i>
+                                {| /selected_here |}
 
-                            {| name |}
+                                {| name |}
 
-                            {| #callbacks |}
-                                {| #waiting |}
-                                    <button type="button" class="btn btn-primary btn-sm callback-button" data-callback="{| name |}"><i class="fas fa-undo-alt" style="font-size: smaller"></i></button>
-                                {| /waiting |}
-                                {| ^waiting |}
-                                    <button disabled type="button" class="btn btn-secondary btn-sm callback-button" data-callback="{| name |}"><i class="fas fa-undo-alt" style="font-size: smaller"></i></button>
-                                {| /waiting |}
-                            {| /callbacks |}
+                                {| #callbacks |}
+                                    {| #waiting |}
+                                        <button type="button" class="btn btn-primary btn-sm callback-button" data-callback="{| name |}"><i class="fas fa-undo-alt" style="font-size: x-small"></i></button>
+                                    {| /waiting |}
+                                    {| ^waiting |}
+                                        <button disabled type="button" class="btn btn-secondary btn-sm callback-button" data-callback="{| name |}"><i class="fas fa-undo-alt" style="font-size: smaller"></i></button>
+                                    {| /waiting |}
+                                {| /callbacks |}
+                            </div>
                         {| /capabilities |}
                     </td>
                 </tr>
@@ -550,12 +536,6 @@
     <script id="trigger-template" type="x-tmpl-mustache">
         <div class="trigger">
             <i class="fas fa-eye" data-toggle="tooltip" data-placement="top" title="{| triggered-on |}"></i> Trigger {| goal |} when {| query |}
-        </div>
-    </script>
-
-    <script id="log-template" type="x-tmpl-mustache">
-        <div class="log">
-            {| log |}
         </div>
     </script>
 
@@ -574,7 +554,7 @@
             <div class="col-sm-8">
                 <div class="card" style="margin-bottom: 25px;">
                     <div class="card-header">
-                        Agenda
+                        Agenda • <span>T<span id="time">{{ time }}</span> - <span id="stage">{{ stage }}</span></span> (pending)
                         <div class="form-check float-right">
                             <input class="form-check-input" type="checkbox" value="" id="hideSatisfiedCheckBox">
                             <label class="form-check-label" for="hideSatisfiedCheckBox">
@@ -602,16 +582,6 @@
                 </div>
             </div>
             <div class="col-sm-4">
-                <div class="card" style="margin-bottom: 25px;">
-                    <div class="card-header">
-                        Time: <span>T<span id="time">{{ time }}</span> - <span id="stage">{{ stage }}</span></span> (pending)
-                    </div>
-                    <div class="card-body">
-                        <button id="advance-button" type="button" class="btn btn-sm btn-secondary">Advance</button>
-                        <button id="start-button" type="button" class="btn btn-sm btn-success">Start</button>
-                        <button id="pause-button" type="button" class="btn btn-sm btn-warning" style="display: none;">Pause</button>
-                    </div>
-                </div>
                 <div class="card" style="margin-bottom: 25px;">
                     <div class="card-header">
                         Inputs and Observations
@@ -693,14 +663,6 @@
                     </div>
                     <div class="card-body">
                         <div id="triggerList"></div>
-                    </div>
-                </div>
-                <div class="card" style="margin-bottom: 25px;">
-                    <div class="card-header">
-                        Logs
-                    </div>
-                    <div class="card-body">
-                        <div id="logList"></div>
                     </div>
                 </div>
             </div>

@@ -710,7 +710,11 @@ class Decision(object):
     def status(self) -> 'Decision.Status':
         if "STATUS" not in self.frame:
             return Decision.Status.PENDING
-        return self.frame["STATUS"].singleton()
+        status = self.frame["STATUS"].singleton()
+        if isinstance(status, str):
+            status = Decision.Status[status]
+
+        return status
 
     def effectors(self) -> List['Effector']:
         from backend.models.effectors import Effector
