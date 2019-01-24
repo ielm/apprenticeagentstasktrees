@@ -15,35 +15,78 @@ class YaleUtilsTestCase(ApprenticeAgentsTestCase):
     def test_bootstrap(self):
 
         input = {
-            "1": "dowel",               # DOWEL
-            "2": "front-bracket",       # BRACKET; SIDE-FB: FRONT
-            "3": "foot-bracket",        # BRACKET; SIDE-TB: BOTTOM
-            "4": "back-bracket",        # BRACKET; SIDE-FB: BACK
-            "5": "seat",                # SEAT
-            "6": "top-bracket",         # BRACKET; SIDE-TB: TOP
-            "7": "back",                # BACK-OF-OBJECT
-            "faces": ["jake", "bob"]
+            "locations": [
+                {
+                    "id": "workspace-1",
+                    "type": "WORKSPACE",
+                    "objects": [
+                        {
+                            "id": 1,
+                            "type": "dowel"             # DOWEL
+                        }
+                    ],
+                    "faces": ["jake", "bob"]
+                }, {
+                    "id": "storage-1",
+                    "type": "STORAGE",
+                    "objects": [
+                        {
+                            "id": 2,
+                            "type": "front-bracket"     # BRACKET; SIDE-FB: FRONT
+                        }, {
+                            "id": 3,
+                            "type": "foot-bracket"      # BRACKET; SIDE-TB: BOTTOM
+                        }, {
+                            "id": 4,
+                            "type": "back-bracket"      # BRACKET; SIDE-FB: BACK
+                        }
+                    ],
+                    "faces": []
+                }, {
+                    "id": "storage-2",
+                    "type": "STORAGE",
+                    "objects": [
+                        {
+                            "id": 5,
+                            "type": "seat"              # SEAT
+                        }, {
+                            "id": 6,
+                            "type": "top-bracket"       # BRACKET; SIDE-TB: TOP
+                        }, {
+                            "id": 7,
+                            "type": "back"              # BACK-OF-OBJECT
+                        }
+                    ],
+                    "faces": []
+                }
+            ]
         }
 
-        graph = Graph("TEST")
+        graph = Graph("ENV")
+        graph.register("EPOCH")
 
         bootstrap(input, graph)
 
-        self.assertIn("TEST.DOWEL.1", graph)
-        self.assertIn("TEST.BRACKET.1", graph)
-        self.assertIn("TEST.BRACKET.2", graph)
-        self.assertIn("TEST.BRACKET.3", graph)
-        self.assertIn("TEST.BRACKET.4", graph)
-        self.assertIn("TEST.SEAT.1", graph)
-        self.assertIn("TEST.BACK-OF-OBJECT.1", graph)
-        self.assertIn("TEST.HUMAN.1", graph)
-        self.assertIn("TEST.HUMAN.2", graph)
+        self.assertIn("ENV.WORKSPACE.1", graph)
+        self.assertIn("ENV.STORAGE.1", graph)
+        self.assertIn("ENV.STORAGE.2", graph)
 
-        self.assertTrue(graph["TEST.DOWEL.1"]["visual-object-id"] == 1)
-        self.assertTrue(graph["TEST.SEAT.1"]["visual-object-id"] == 5)
-        self.assertTrue(graph["TEST.BACK-OF-OBJECT.1"]["visual-object-id"] == 7)
+        self.assertIn("ENV.DOWEL.1", graph)
+        self.assertIn("ENV.BRACKET.1", graph)
+        self.assertIn("ENV.BRACKET.2", graph)
+        self.assertIn("ENV.BRACKET.3", graph)
+        self.assertIn("ENV.BRACKET.4", graph)
+        self.assertIn("ENV.SEAT.1", graph)
+        self.assertIn("ENV.BACK-OF-OBJECT.1", graph)
 
-        for bracket in [graph["TEST.BRACKET.1"], graph["TEST.BRACKET.2"], graph["TEST.BRACKET.3"], graph["TEST.BRACKET.4"]]:
+        self.assertIn("ENV.HUMAN.1", graph)
+        self.assertIn("ENV.HUMAN.2", graph)
+
+        self.assertTrue(graph["ENV.DOWEL.1"]["visual-object-id"] == 1)
+        self.assertTrue(graph["ENV.SEAT.1"]["visual-object-id"] == 5)
+        self.assertTrue(graph["ENV.BACK-OF-OBJECT.1"]["visual-object-id"] == 7)
+
+        for bracket in [graph["ENV.BRACKET.1"], graph["ENV.BRACKET.2"], graph["ENV.BRACKET.3"], graph["ENV.BRACKET.4"]]:
             if bracket["SIDE-FB"] == "FRONT":
                 self.assertTrue(bracket["visual-object-id"] == 2)
             if bracket["SIDE-TB"] == "BOTTOM":
@@ -53,10 +96,23 @@ class YaleUtilsTestCase(ApprenticeAgentsTestCase):
             if bracket["SIDE-TB"] == "TOP":
                 self.assertTrue(bracket["visual-object-id"] == 6)
 
-        humans = list(map(lambda human: human["HAS-NAME"].singleton(), [graph["TEST.HUMAN.1"], graph["TEST.HUMAN.2"]]))
+        humans = list(map(lambda human: human["HAS-NAME"].singleton(), [graph["ENV.HUMAN.1"], graph["ENV.HUMAN.2"]]))
         self.assertIn("jake", humans)
         self.assertIn("bob", humans)
         self.assertEqual(2, len(humans))
+
+        from backend.models.environment import Environment
+        env = Environment(graph)
+
+        self.assertEqual(graph["ENV.WORKSPACE.1"], env.location("ENV.DOWEL.1"))
+        self.assertEqual(graph["ENV.WORKSPACE.1"], env.location("ENV.HUMAN.1"))
+        self.assertEqual(graph["ENV.WORKSPACE.1"], env.location("ENV.HUMAN.2"))
+        self.assertEqual(graph["ENV.STORAGE.1"], env.location("ENV.BRACKET.1"))
+        self.assertEqual(graph["ENV.STORAGE.1"], env.location("ENV.BRACKET.2"))
+        self.assertEqual(graph["ENV.STORAGE.1"], env.location("ENV.BRACKET.3"))
+        self.assertEqual(graph["ENV.STORAGE.2"], env.location("ENV.SEAT.1"))
+        self.assertEqual(graph["ENV.STORAGE.2"], env.location("ENV.BRACKET.4"))
+        self.assertEqual(graph["ENV.STORAGE.2"], env.location("ENV.BACK-OF-OBJECT.1"))
 
     def test_visual_input(self):
         network = Network()
