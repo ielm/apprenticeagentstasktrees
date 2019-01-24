@@ -34,7 +34,7 @@ class Bootstrap(object):
     @classmethod
     def list_resources(cls, package: str):
         from pkg_resources import resource_listdir
-        return list(map(lambda f: (package, f), filter(lambda f: f.endswith(".knowledge") or f.endswith(".aa") or f.endswith(".mps"), resource_listdir(package, ''))))
+        return list(map(lambda f: (package, f), filter(lambda f: f.endswith(".knowledge") or f.endswith(".environment"), resource_listdir(package, ''))))
 
 
 class BootstrapTriple(object):
