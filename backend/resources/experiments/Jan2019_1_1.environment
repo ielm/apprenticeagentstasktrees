@@ -39,7 +39,8 @@
     visual-object-id "Jake";
 };
 
-@ENV.EPOCH.1 = {
+@ENV.EPOCH.? = {
+    INSTANCE-OF @ENV.EPOCH;
     TIME 0;
     CONTAINS @ENV.HUMAN.1;
     CONTAINS @ENV.SCREWDRIVER.1;
