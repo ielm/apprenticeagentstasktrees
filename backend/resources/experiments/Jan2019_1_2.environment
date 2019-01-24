@@ -1,0 +1,72 @@
+@ENV.WORKSPACE.1 = {
+    ISA @ONT.LOCATION;
+};
+
+@ENV.STORAGE.1 = {
+    ISA @ONT.LOCATION;
+};
+
+@ENV.STORAGE.2 = {
+    ISA @ONT.LOCATION;
+};
+
+@ENV.SCREWDRIVER.1 = {
+    ISA @ONT.SCREWDRIVER;
+    visual-object-id 1;
+};
+
+@ENV.BRACKET.1 = {
+    ISA @ONT.BRACKET;
+    SIDE-TB "BOTTOM";
+    visual-object-id 2;
+};
+
+@ENV.BRACKET.2 = {
+    ISA @ONT.BRACKET;
+    SIDE-FB "FRONT";
+    visual-object-id 3;
+};
+
+@ENV.DOWEL.1 = {
+    ISA @ONT.DOWEL;
+    visual-object-id 3;
+};
+
+@ENV.HUMAN.1 = {
+    ISA @ONT.HUMAN;
+    RESOLVED-TO @LT.HUMAN.1;
+    HAS-NAME "Jake";
+    visual-object-id "Jake";
+};
+
+@ENV.EPOCH.1 = {
+    TIME 0;
+    CONTAINS @ENV.HUMAN.1;
+    CONTAINS @ENV.SCREWDRIVER.1;
+    CONTAINS @ENV.BRACKET.1;
+    CONTAINS @ENV.DOWEL.1;
+    LOCATION @ENV.LOCATION.1;
+    LOCATION @ENV.LOCATION.2;
+    LOCATION @ENV.LOCATION.3;
+    LOCATION @ENV.LOCATION.4;
+};
+
+@ENV.LOCATION.1 = {
+    DOMAIN @ENV.SCREWDRIVER.1;
+    RANGE @ENV.STORAGE.1;
+};
+
+@ENV.LOCATION.2 = {
+    DOMAIN @ENV.BRACKET.1;
+    RANGE @ENV.STORAGE.1;
+};
+
+@ENV.LOCATION.3 = {
+    DOMAIN @ENV.DOWEL.1;
+    RANGE @ENV.STORAGE.2;
+};
+
+@ENV.LOCATION.3 = {
+    DOMAIN @ENV.HUMAN.1;
+    RANGE @ENV.WORKSPACE.1;
+};

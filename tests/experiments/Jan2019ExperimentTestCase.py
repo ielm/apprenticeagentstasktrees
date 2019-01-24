@@ -31,6 +31,7 @@ class Jan2019Experiment(ExperimentTestCase):
         Bootstrap.bootstrap_resource(agent, "backend.resources.experiments", "chair.knowledge")
 
         # Pb) There is an instance of "Jake", who is known, present, and taught the robot the chair instructions
+        Bootstrap.bootstrap_resource(agent, "backend.resources.experiments", "Jan2019_1_1.environment")
         Bootstrap.bootstrap_resource(agent, "backend.resources.experiments", "Jan2019_1_1.knowledge")
 
         #######
@@ -224,6 +225,7 @@ class Jan2019Experiment(ExperimentTestCase):
         Bootstrap.bootstrap_resource(agent, "backend.resources.experiments", "chair.knowledge")
 
         # Pb) There is an instance of "Jake", who is known, present, and taught the robot the chair instructions
+        Bootstrap.bootstrap_resource(agent, "backend.resources.experiments", "Jan2019_1_2.environment")
         Bootstrap.bootstrap_resource(agent, "backend.resources.experiments", "Jan2019_1_2.knowledge")
 
         #######
