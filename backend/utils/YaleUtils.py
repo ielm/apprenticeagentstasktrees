@@ -66,18 +66,31 @@ def bootstrap(input: dict, graph: Graph):
         "top-bracket": {"IS-A": "BRACKET", "SIDE-TB": Literal("TOP")},
     }
 
-    for key in input.keys():
-        if key == "faces":
-            for name in input[key]:
-                human = graph.register("HUMAN", isa="ONT.HUMAN", generate_index=True)
-                human["HAS-NAME"] = Literal(name)
-        else:
-            type = types[input[key]]
-            frame = graph.register(type["IS-A"], isa="ONT." + type["IS-A"], generate_index=True)
-            frame["visual-object-id"] = int(key)
+    from backend.models.environment import Environment
+    env = Environment(graph)
+    env.advance()
+
+    for location in input["locations"]:
+        loc_frame = graph.register(location["type"], isa="ONT.LOCATION", generate_index=True)
+
+        for object in location["objects"]:
+            type = types[object["type"]]
+            visual_id = object["id"]
+
+            object_frame = graph.register(type["IS-A"], isa="ONT." + type["IS-A"], generate_index=True)
+            object_frame["visual-object-id"] = int(visual_id)
             for slot in type.keys():
                 if slot != "IS-A":
-                    frame[slot] += type[slot]
+                    object_frame[slot] += type[slot]
+
+            env.enter(object_frame, loc_frame)
+
+        for human in location["faces"]:
+            human_frame = graph.register("HUMAN", isa="ONT.HUMAN", generate_index=True)
+            human_frame["HAS-NAME"] = Literal(human)
+            human_frame["visual-object-id"] = Literal(human)
+
+            env.enter(human_frame, loc_frame)
 
 
 def visual_input(input: dict, graph: Graph) -> dict:
