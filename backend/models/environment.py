@@ -30,7 +30,7 @@ class Environment(object):
         return epoch
 
     def history(self) -> List[Frame]:
-        epochs = list(filter(lambda f: f ^ "ENV.EPOCH" and f != self.graph["ENV.EPOCH"], self.graph.values()))
+        epochs = list(filter(lambda f: "ENV.EPOCH" in f.__str__() and f != self.graph["ENV.EPOCH"], self.graph.values()))
         epochs = sorted(epochs, key=lambda e: e["TIME"].singleton())
 
         return epochs
