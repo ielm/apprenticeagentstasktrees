@@ -82,8 +82,6 @@ def visual_input(input: dict, graph: Graph) -> dict:
     return results
 
 
-
-
 def format_learned_event_yale(event: FRInstance, ontology: Ontology) -> dict:
 
     curr_id = 0

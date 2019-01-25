@@ -424,6 +424,33 @@ def htn():
     return json.dumps(format_learned_event_yale(instance, agent.ontology), indent=4)
 
 
+@app.route("/environment", methods=["GET"])
+def environment():
+    return render_template("environment.html")
+
+    # from backend.models.fr import FRInstance
+    # instance: FRInstance = agent.search(Frame.q(agent).id(instance))[0]
+
+    # If requesting environment objects:
+    #     return list of dicts containing objects and their locations (i.e. Workspace, Storage, etc.)
+
+
+@app.route("/environment/get", methods=["GET"])
+def get_environment():
+    # TODO - populate agent.env() with agent["ENV"]
+    #     set env to agent.env()
+    # print(agent["ENV"])
+    # env = agent.env().view(-1)
+    env = agent.env()
+    print(env)
+
+    g = dict()
+
+    for val in env.graph.values():
+        g[val] = env.graph[val]
+    return json.dumps(g)
+
+
 @app.route("/bootstrap", methods=["GET", "POST"])
 def bootstrap():
     if request.method == "POST":
