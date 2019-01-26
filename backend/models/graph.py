@@ -445,6 +445,9 @@ class Slot(object):
 
         raise Exception("Unknown type in slot '" + self._name + "': " + filler)
 
+    def name(self):
+        return self._name
+
     def __add__(self, other):
         if not isinstance(other, Slot):
             return self + other

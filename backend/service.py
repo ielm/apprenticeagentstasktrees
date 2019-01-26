@@ -435,6 +435,24 @@ def environment():
     #     return list of dicts containing objects and their locations (i.e. Workspace, Storage, etc.)
 
 
+def format_environment(env):
+    env_dict = dict()
+    epoch = env.view(-1)
+
+    for val in epoch:
+        if env.location(val.name()) is None:  # Catch None location first
+            if None not in env_dict.keys():
+                env_dict["UNKNOWN"] = [val.name()]
+            else:
+                env_dict["UNKNOWN"].append(val.name())
+        elif env.location(val.name()).name() not in env_dict.keys():  # if location is not in env_dict keys
+            env_dict[env.location(val.name()).name()] = [val.name()]  # add list of object to env_dict[location]
+        elif env.location(val.name()).name() in env_dict.keys():  # if location is in env_dict keys
+            env_dict[env.location(val.name()).name()].append(val.name())  # append object to list
+
+    return env_dict
+
+
 @app.route("/environment/get", methods=["GET"])
 def get_environment():
     # TODO - populate agent.env() with agent["ENV"]
@@ -442,12 +460,9 @@ def get_environment():
     # print(agent["ENV"])
     # env = agent.env().view(-1)
     env = agent.env()
-    print(env)
 
-    g = dict()
+    g = format_environment(env)
 
-    for val in env.graph.values():
-        g[val] = env.graph[val]
     return json.dumps(g)
 
 

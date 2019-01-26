@@ -113,4 +113,5 @@ class Environment(object):
                 location = d.resolve()["RANGE"].singleton()
                 if location is not None:
                     return location
-        raise Exception("Location unknown.")
+        # Commenting this out so Env Renderer can use Location=None as hint for unknown location
+        # raise Exception("Location unknown.")
