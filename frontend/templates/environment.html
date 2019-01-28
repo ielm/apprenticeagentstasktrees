@@ -29,17 +29,62 @@
 {#    </script>#}
 
     <script>
-        function load(){
+        function load() {
             $.ajax({
                 url: "/environment/get",
                 method: "GET",
-            }).done(function(data){
+            }).done(function(data) {
                 var output = JSON.parse(data);
 
                 $("#raw_env").JSONView(output, { collapsed: false });
+
+                var docFrag = document.createDocumentFragment();
+                for (const key in output){
+                    if (output.hasOwnProperty(key)) {
+                        console.log(key + " -> " + output[key]);
+                        var tempNode = document.querySelector("div[data-type='template']").cloneNode(true);
+                        tempNode.querySelector("#location-title").innerHTML = key;
+                        {#tempNode.querySelector("#objects").textContent = output[key];#}
+                        var i;
+                        for (i=0; i < output[key].length; i++) {
+                            var badge = document.createElement("a");
+                            var text = document.createTextNode(output[key][i]);
+                            badge.href = "#";
+                            badge.classList.add("object-link");
+                            badge.classList.add("badge");
+                            badge.classList.add("badge-dark");
+                            badge.title = output[key][i];
+                            {#badge.style.display = "list-item";#}
+                            badge.appendChild(text);
+                            tempNode.querySelector("#objects").appendChild(badge)
+                        }
+                        tempNode.style.display = "block";
+                        docFrag.appendChild(tempNode);
+                        {#var locations = $("#locations");#}
+                    }
+                }
+                document.querySelector("#locations").appendChild(docFrag);
+                {#delete docFrag;#}
             })
         }
     </script>
+
+{#    <script>#}
+{#        function get_object(){#}
+{#            var = identifier =#}
+{#            $.ajax({#}
+{#                url: "/environment/get"#}
+{#            })#}
+{#        }#}
+{#    </script>#}
+
+    <div style="display: none; margin-bottom: 25px;" data-type="template" id="location-template" class="card">
+        <div id="location-title" class="card-header"></div>
+        <div class="card-body">
+            <div id="objects" class="col-sm-3"></div>
+            <div id="graph" class="col-sm-5"></div>
+        </div>
+    </div>
 
 </head>
 <body onload="load()"> {# TODO - Insert onload fuction #}
@@ -51,15 +96,14 @@
         });
     </script>
 
+
     <div class="container">
         <div class="row" style="margin-top: 25px;">
-{#            <div class="col-sm-8">#}
+            <div id="locations" class="col-sm-8">
 {#                <div class="card" style="margin-bottom: 25px;">#}
 {#                    <div class="card-header">#}
-{#                       Workspace#}
 {#                    </div>#}
 {#                    <div class="card-body">#}
-{##}
 {#                    </div>#}
 {#                </div>#}
 {#                <div class="card" style="margin-bottom: 25px;">#}
@@ -78,8 +122,8 @@
 {##}
 {#                    </div>#}
 {#                </div>#}
-{#            </div>#}
-            <div class="col-sm-8">
+            </div>
+            <div class="col-sm-4">
                 <div class="card" style="margin-bottom: 25px;" >
                     <div class="card-header">
                         Object Log
