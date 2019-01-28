@@ -28,9 +28,21 @@
 {#        }#}
 {#    </script>#}
 
+    <script>
+        function load(){
+            $.ajax({
+                url: "/environment/get",
+                method: "GET",
+            }).done(function(data){
+                var output = JSON.parse(data);
+
+                $("#raw_env").JSONView(output, { collapsed: false });
+            })
+        }
+    </script>
 
 </head>
-<body> {# TODO - Insert onload fuction #}
+<body onload="load()"> {# TODO - Insert onload fuction #}
 
     {% include 'nav.html' %}
     <script>
@@ -73,7 +85,7 @@
                         Object Log
                     </div>
                     <div class="card-body">
-
+                        <div id="raw_env"></div>
                     </div>
                 </div>
             </div>
