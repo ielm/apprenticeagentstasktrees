@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+
     <meta charset="UTF-8">
     <title>Environment</title>
 
@@ -16,75 +17,192 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mustache.js/2.3.0/mustache.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-jsonview/1.2.3/jquery.jsonview.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-treeview/1.2.0/bootstrap-treeview.min.js"></script>
-{##}
+
 {#    <script>#}
-{#        function load(load="true") {#}
+{#        /**#}
+{#         * Loads Environment objects and enumerates them into respective locations#}
+{#         * Each object in the location cards can be clicked on, rendering a JSONView#}
+{#         *     of the objects properties#}
+{#         */#}
+{#        function load() {#}
 {#            $.ajax({#}
-{#                url: "/environment?load=" + load,#}
+{#                url: "/environment/get",#}
 {#                method: "GET",#}
-{#            }).done(function(data) {#}
+{#            }).done(function (data) {#}
+{#                var output = JSON.parse(data);#}
 {##}
-{#            })#}
+{#                $("#raw_env").JSONView(output, {collapsed: false});#}
+{##}
+{#                var docFrag = document.createDocumentFragment();#}
+{#                for (const key in output) {#}
+{#                    if (output.hasOwnProperty(key)) {#}
+{#                        console.log(key + " -> " + output[key]);#}
+{#                        var tempNode = document.querySelector("div[data-type='template']").cloneNode(true);#}
+{#                        tempNode.querySelector("#location-title").innerHTML = key;#}
+                        {#tempNode.querySelector("#objects").textContent = output[key];#}
+{#                        var i;#}
+{#                        for (i = 0; i < output[key].length; i++) {#}
+{#                            var obj = document.createElement("a");#}
+{#                            var text = document.createTextNode(output[key][i]);#}
+{#                            obj.href = "#";#}
+{#                            obj.classList.add("object-link");#}
+{#                            obj.classList.add("list-group-item");#}
+{#                            obj.classList.add("list-group-item-action");#}
+{#                            obj.appendChild(text);#}
+{#                            tempNode.querySelector("#objects").appendChild(obj)#}
+{#                        }#}
+{#                        tempNode.style.display = "block";#}
+{#                        docFrag.appendChild(tempNode);#}
+{#                    }#}
+{#                }#}
+{#                document.querySelector("#locations").appendChild(docFrag);#}
+{#            });#}
 {#        }#}
 {#    </script>#}
 
     <script>
+        /**
+         * Loads Environment objects and enumerates them into respective locations
+         * Each object in the location cards can be clicked on, rendering a JSONView
+         *     of the objects properties
+         */
         function load() {
             $.ajax({
                 url: "/environment/get",
                 method: "GET",
-            }).done(function(data) {
+            }).then(function (data) {
                 var output = JSON.parse(data);
 
-                $("#raw_env").JSONView(output, { collapsed: false });
+                $("#raw_env").JSONView(output, {collapsed: false});
 
                 var docFrag = document.createDocumentFragment();
-                for (const key in output){
+                var tempNode = document.querySelector("div[data-type='loc-nav-template']").cloneNode(true);
+
+                var activeLocation ;
+                /**
+                 * Create nav list of locations
+                 */
+                var i = 0
+                for (const key in output) {
                     if (output.hasOwnProperty(key)) {
-                        console.log(key + " -> " + output[key]);
-                        var tempNode = document.querySelector("div[data-type='template']").cloneNode(true);
-                        tempNode.querySelector("#location-title").innerHTML = key;
-                        {#tempNode.querySelector("#objects").textContent = output[key];#}
-                        var i;
-                        for (i=0; i < output[key].length; i++) {
-                            var badge = document.createElement("a");
-                            var text = document.createTextNode(output[key][i]);
-                            badge.href = "#";
-                            badge.classList.add("object-link");
-                            badge.classList.add("badge");
-                            badge.classList.add("badge-dark");
-                            badge.title = output[key][i];
-                            {#badge.style.display = "list-item";#}
-                            badge.appendChild(text);
-                            tempNode.querySelector("#objects").appendChild(badge)
+                        var locLi = document.createElement("li");
+                        locLi.classList.add("nav-item");
+                        var locTitle = document.createElement("a");
+                        locTitle.href = "#";
+                        locTitle.classList.add("nav-link");
+                        locTitle.id = key;
+
+                        if (i===0) {
+                            locTitle.classList.add("active");
+                            activeLocation = key;
                         }
-                        tempNode.style.display = "block";
-                        docFrag.appendChild(tempNode);
-                        {#var locations = $("#locations");#}
+
+                        var locTitleText = document.createTextNode(key);
+
+                        locTitle.appendChild(locTitleText);
+                        locLi.appendChild(locTitle);
+
+                        tempNode.querySelector("#location-titles").appendChild(locLi);
                     }
+                    i += 1
                 }
+
+                {#for (const key in output) {#}
+                {#    if (output.hasOwnProperty(key)) {#}
+                {#        for (var x = 0; x < output[key].length; x+=1) {#}
+                {#            console.log(output[key][x]);#}
+                {#        }#}
+                {#    }#}
+                {#/}#}
+
+                {#var activeLocation = tempNode.querySelector("a[class='active']");#}
+
+                for (var x=0; x<output[activeLocation].length; x+=1) {
+                    {#console.log(output[activeLocation][x]);#}
+                    get_object(output[activeLocation][x]);
+                }
+
+
+
+                tempNode.style.display = "block";
+                docFrag.appendChild(tempNode);
                 document.querySelector("#locations").appendChild(docFrag);
-                {#delete docFrag;#}
+            });
+        }
+    </script>
+
+    <script>
+        function get_object(identifier) {
+            $.ajax({
+                url: "/environment/get?instance=" + identifier,
+                method: "GET",
             })
         }
     </script>
 
-{#    <script>#}
-{#        function get_object(){#}
-{#            var = identifier =#}
-{#            $.ajax({#}
-{#                url: "/environment/get"#}
-{#            })#}
-{#        }#}
-{#    </script>#}
+    <script>
+        $(document).ready(function () {
+            $(".object-link").on("click", function (e) {
 
-    <div style="display: none; margin-bottom: 25px;" data-type="template" id="location-template" class="card">
-        <div id="location-title" class="card-header"></div>
+            })
+        });
+    </script>
+
+    <div style="display: none; margin-bottom: 25px;" data-type="loc-nav-template" id="location-template" class="card">
+        <div class="card-header">
+            <ul id="location-titles" class="nav nav-tabs card-header-tabs"></ul>
+        </div>
         <div class="card-body">
-            <div id="objects" class="col-sm-3"></div>
-            <div id="graph" class="col-sm-5"></div>
+            <div id="object-cards" class="card-deck"></div>
         </div>
     </div>
+
+    <div style="display: none; margin-bottom: 25px;" data-type="obj-card-template" id="object-template" class="card">
+        <div class="card-body">
+            <h4 class="card-title"></h4>
+        </div>
+    </div>
+
+{#    <div style="display: none; margin-bottom: 25px;" data-type="template" id="location-template" class="card">#}
+{#        <div id="location-title" class="card-header"></div>#}
+{#        <div class="card-body">#}
+{#            <div id="objects"></div>#}
+{#            <div id="graph">#}
+{#                <div class="card">#}
+{#                    <div class="card-body"></div>#}
+{#                </div>#}
+{#            </div>#}
+{#        </div>#}
+{#    </div>#}
+
+{#    <div style="display: none; margin-bottom: 25px;" data-type="template" id="location-template" class="card">#}
+{#        <div id="location-title" class="card-header"></div>#}
+{#        <div class="card-body">#}
+{#            <div class="card-group">#}
+{#                <div class="card" style="width: 10rem">#}
+{#                    <ul id="objects" class="list-group list-group-flush"></ul>#}
+{#                </div>#}
+{#                <div class="card" >#}
+{#                    <div id="graph" class="card-body"></div>#}
+{#                </div>#}
+{#            </div>#}
+{#        </div>#}
+{#    </div>#}
+
+{#        <div style="display: none; margin-bottom: 25px;" data-type="template" id="location-template" class="card">#}
+{#        <div id="location-title" class="card-header"></div>#}
+{#        <div class="card-body">#}
+{#            <div class="card-group">#}
+{#                <div class="card">#}
+{#                    <ul id="objects" class="list-group list-group-flush"></ul>#}
+{#                </div>#}
+{#                <div class="card" >#}
+{#                    <div id="graph" class="card-body"></div>#}
+{#                </div>#}
+{#            </div>#}
+{#        </div>#}
+{#    </div>#}
+
 
 </head>
 <body onload="load()"> {# TODO - Insert onload fuction #}
@@ -96,34 +214,18 @@
         });
     </script>
 
-
     <div class="container">
         <div class="row" style="margin-top: 25px;">
-            <div id="locations" class="col-sm-8">
-{#                <div class="card" style="margin-bottom: 25px;">#}
-{#                    <div class="card-header">#}
-{#                    </div>#}
-{#                    <div class="card-body">#}
-{#                    </div>#}
-{#                </div>#}
-{#                <div class="card" style="margin-bottom: 25px;">#}
-{#                    <div class="card-header">#}
-{#                        Storage 1#}
-{#                    </div>#}
-{#                    <div class="card-body">#}
-{##}
-{#                    </div>#}
-{#                </div>#}
-{#                <div class="card" style="margin-bottom: 25px;">#}
-{#                    <div class="card-header">#}
-{#                        Storage 2#}
-{#                    </div>#}
-{#                    <div class="card-body">#}
-{##}
-{#                    </div>#}
-{#                </div>#}
-            </div>
+            <div id="locations" class="col-sm-8"></div>
             <div class="col-sm-4">
+{#                <div class="card" style="margin-bottom: 25px;">#}
+{#                    <div class="card-header">#}
+{#                        Objects#}
+{#                    </div>#}
+{#                    <div class="card-body">#}
+{#                        <div id="location-objects"></div>#}
+{#                    </div>#}
+{#                </div>#}
                 <div class="card" style="margin-bottom: 25px;" >
                     <div class="card-header">
                         Object Log

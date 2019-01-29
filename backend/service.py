@@ -459,11 +459,13 @@ def get_environment():
     #     set env to agent.env()
     # print(agent["ENV"])
     # env = agent.env().view(-1)
-    env = agent.env()
-
-    g = format_environment(env)
-
-    return json.dumps(g)
+    if "instance" not in request.args:
+        g = format_environment(agent.env())
+        return json.dumps(g)
+    else:
+        instance = request.args["instance"]
+        print(instance)
+        return ""
 
 
 @app.route("/bootstrap", methods=["GET", "POST"])
