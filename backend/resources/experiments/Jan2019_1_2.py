@@ -54,7 +54,27 @@ class HoldObjectCapability(OutputMethod):
 
 class SpeakCapability(OutputMethod):
     def run(self):
-        print("TODO: convert tmr to language, speak it")
+        try:
+            sentence = ""
+            if self.output.root()["THEME"].singleton()._identifier.name == "GREET":
+                target = self.output.root()["THEME"].singleton()["THEME"].singleton()
+                if "HAS-NAME" in target:
+                    sentence = "Hi " + target["HAS-NAME"].singleton() + "."
+                else:
+                    sentence = "Hi."
+
+            elif self.output.root()["THEME"].singleton()._identifier.name == "REQUEST-ACTION":
+                target = self.output.root()["THEME"].singleton()["THEME"].singleton()["BENEFICIARY"].singleton()
+                if "HAS-NAME" in target:
+                    sentence = target["HAS-NAME"].singleton() + ", come here, you need to attach the bracket to the dowel with the screwdriver."
+                else:
+                    sentence = "Come here, you need to attach the bracket to the dowel with the screwdriver."
+
+            from backend.models.graph import Literal
+            self.output.frame["SENTENCE"] = Literal(sentence)
+
+            print("TODO: issue command to robot to speak " + str(sentence))
+        except: pass
 
 
 class ShouldAcknowledgeVisualInput(AgentMethod):

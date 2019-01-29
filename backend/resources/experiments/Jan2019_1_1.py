@@ -47,7 +47,28 @@ class FetchObjectCapability(OutputMethod):
 
 class SpeakCapability(OutputMethod):
     def run(self):
-        print("TODO: convert tmr to language, speak it")
+        try:
+            sentence = ""
+            if self.output.root()["THEME"].singleton()._identifier.name == "GREET":
+                target = self.output.root()["THEME"].singleton()["THEME"].singleton()
+                if "HAS-NAME" in target:
+                    sentence = "Hi " + target["HAS-NAME"].singleton() + "."
+                else:
+                    sentence = "Hi."
+
+            elif self.output.root()["THEME"].singleton()._identifier.name == "DESCRIBE":
+                target = self.output.root()["THEME"].singleton()["THEME"].singleton()
+                target = target._identifier.graph
+                for output in self.agent["OUTPUTS"]:
+                    output = XMR.from_instance(self.agent["OUTPUTS"][output])
+                    if output.graph(self.agent)._namespace == target:
+                        sentence = output.render()
+
+            from backend.models.graph import Literal
+            self.output.frame["SENTENCE"] = Literal(sentence)
+
+            print("TODO: issue command to robot to speak " + str(sentence))
+        except: pass
 
 
 class ShouldAcknowledgeVisualInput(AgentMethod):
