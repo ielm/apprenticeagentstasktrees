@@ -453,6 +453,20 @@ def format_environment(env):
     return env_dict
 
 
+def format_environment_object(instance):
+    obj = agent.search(Frame.q(agent).id(instance))[0]
+
+    attributes = dict()
+
+    for a in obj._storage.values():
+        attributes[a.name()] = list(map(lambda o: str(o), a._storage))
+
+    return {
+        "identifier": obj.name(),
+        "attributes": attributes
+    }
+
+
 @app.route("/environment/get", methods=["GET"])
 def get_environment():
     # TODO - populate agent.env() with agent["ENV"]
@@ -465,7 +479,7 @@ def get_environment():
     else:
         instance = request.args["instance"]
         print(instance)
-        return ""
+        return json.dumps(format_environment_object(instance))
 
 
 @app.route("/bootstrap", methods=["GET", "POST"])
