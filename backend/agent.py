@@ -280,8 +280,5 @@ class Agent(Network):
     def _bootstrap(self):
         from backend.models.bootstrap import Bootstrap
         Bootstrap.bootstrap_resource(self, "backend.resources", "exe.knowledge")
-        # --------------------------------------- #
-        Bootstrap.bootstrap_resource(self, "backend.resources.experiments", "chair.knowledge")
-        Bootstrap.bootstrap_resource(self, "backend.resources.experiments", "Jan2019_1_1_Environment.knowledge")
 
 
