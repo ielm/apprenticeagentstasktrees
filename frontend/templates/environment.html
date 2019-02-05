@@ -60,149 +60,260 @@
 {#        }#}
 {#    </script>#}
 
+{#    <script>#}
+{#        /**#}
+{#         * Loads Environment objects and enumerates them in respective locations#}
+{#         */#}
+{#        function load() {#}
+{#            $.ajax({#}
+{#                url: "/environment/get",#}
+{#                method: "GET",#}
+{#            }).then(function (data) {#}
+{#                var output = JSON.parse(data);#}
+{##}
+{#                $("#raw_env").JSONView(output, {collapsed: false});#}
+{##}
+{#                var docFrag = document.createDocumentFragment();#}
+{#                var tempNode = document.querySelector("div[data-type='loc-nav-template']").cloneNode(true);#}
+{##}
+{#                var activeLocation ;#}
+{#                /**#}
+{#                 * Create nav list of locations for object rendering#}
+{#                 *#}
+{#                 * https://getbootstrap.com/docs/4.0/components/navs/#javascript-behavior#}
+{#                 * https://getbootstrap.com/docs/4.0/components/card/#card-styles#}
+{#                 */#}
+{#                let count = 0;#}
+                {# For each location #}
+{#                for (const key in output) {#}
+{#                    if (output.hasOwnProperty(key)) {#}
+                        {# Creates location navigation tabs #}
+{#                        var locLi = document.createElement("li");#}
+{#                        locLi.classList.add("nav-item");#}
+{#                        var locTitle = document.createElement("a");#}
+{#                        locTitle.href = "#";#}
+{#                        locTitle.classList.add("nav-location");#}
+{#                        locTitle.classList.add("nav-link");#}
+{#                        locTitle.id = key.toLowerCase() + "-tab";#}
+{#                        locTitle.setAttribute("data-toggle", "tab");#}
+{##}
+                        {# Sets first location to active tab #}
+{#                        if (count===0) {#}
+{#                            locTitle.classList.add("active");#}
+{#                            activeLocation = key;#}
+{#                        }#}
+{##}
+                        {# Sets tab titles #}
+{#                        var locTitleText = document.createTextNode(key);#}
+{##}
+{#                        locTitle.appendChild(locTitleText);#}
+{#                        locLi.appendChild(locTitle);#}
+{##}
+                        {# Appends location tabs to location navigation #}
+{#                        tempNode.querySelector("#location-titles").appendChild(locLi);#}
+{##}
+                        {#  Creates temporary Tab Content  #}
+{#                        var tempTab = document.querySelector("div[data-type='loc-tab-template']").cloneNode(true);#}
+{##}
+{#                        tempTab.setAttribute("id", key.toLowerCase());#}
+{#                        tempTab.setAttribute("aria-labelledby", key.toLowerCase() + "-tab");#}
+{#                        tempTab.style.display = "block";#}
+{##}
+                        {#
+{#                        if (count===0) {#}
+{#                            tempTab.classList.add("active");#}
+{#                        }#}
+{#                        #}
+{##}
+                        {#  Populate Tab Content with Object Card Tempalates  #}
+{#                        const objects = output[key];#}
+{#                        for (var i = 0; i < objects.length; i++) {#}
+{#                            if (output[key].hasOwnProperty(i)) {#}
+{#                                var tempObjCard = document.querySelector("div[data-type='obj-card-template']").cloneNode(true);#}
+{##}
+{#                                /**#}
+{#                                 * Gets object data#}
+{#                                 */#}
+{#                                $.ajax({#}
+{#                                    url: "/environment/get?instance=" + objects[i],#}
+{#                                    method: "GET",#}
+{#                                }).then(function (data) {#}
+{#                                    let obj = JSON.parse(data);#}
+{#                                    let cardTitle = document.createElement("h4");#}
+{##}
+{#                                    cardTitle.classList.add("card-title");#}
+{#                                    cardTitle.textContent = obj["identifier"];#}
+{##}
+{#                                    tempObjCard.querySelector(".card-body").appendChild(cardTitle);#}
+{##}
+{#                                    for (const attrs in obj["attributes"]) {#}
+{#                                        for (const attr in obj["attributes"][attrs]) {#}
+{#                                            let attribute = document.createElement("p");#}
+{#                                            attribute.classList.add("card-text");#}
+{#                                            attribute.textContent = attrs + ": " + obj["attributes"][attrs][attr];#}
+{##}
+{#                                            tempObjCard.querySelector(".card-body").appendChild(attribute);#}
+{#                                        }#}
+{#                                    }#}
+{#                                    tempObjCard.style.display = "flex";#}
+{#                                    tempObjCard.setAttribute("id", obj["identifier"] + "card");#}
+{#                                });#}
+{#                                tempTab.querySelector(".card-deck").appendChild(tempObjCard);#}
+{##}
+{#                            }#}
+{#                        }#}
+{#                        tempNode.querySelector("#locationTabContent").append(tempTab);#}
+{#                    }#}
+{#                    count += 1#}
+{#                }#}
+{#                tempNode.style.display = "block";#}
+{#                docFrag.appendChild(tempNode);#}
+{#                document.querySelector("#locations").appendChild(docFrag);#}
+{#            });#}
+{#        }#}
+{#    </script>#}
+
+
     <script>
-        /**
-         * Loads Environment objects and enumerates them into respective locations
-         * Each object in the location cards can be clicked on, rendering a JSONView
-         *     of the objects properties
-         */
         function load() {
             $.ajax({
                 url: "/environment/get",
                 method: "GET",
-            }).then(function (data) {
+                success: buildEnvViewer,
+                error: viewerError
+            });
+
+            /**
+             * Builds Environment Viewer
+             * @param data
+             * @param status
+             */
+            function buildEnvViewer(data, status) {
                 var output = JSON.parse(data);
 
                 $("#raw_env").JSONView(output, {collapsed: false});
 
-                var docFrag = document.createDocumentFragment();
-                var tempNode = document.querySelector("div[data-type='loc-nav-template']").cloneNode(true);
+                document.querySelector("#locations").appendChild(buildEnvNavigation(data));
 
-                var activeLocation ;
-                /**
-                 * Create nav list of locations
-                 */
-                var i = 0
-                for (const key in output) {
-                    if (output.hasOwnProperty(key)) {
-                        var locLi = document.createElement("li");
+
+
+            }
+
+            /**
+             * Build Environment Viewer Navigation
+             * @param env
+             */
+            function buildEnvNavigation(env){
+                let tempNode = document.querySelector("div[data-type='loc-nav-template']").cloneNode(true);
+
+                let first = true;
+
+                let environment = JSON.parse(env);
+
+                for (const key in environment) {
+                    if (environment.hasOwnProperty(key)) {
+                        {# Creates location navigation tabs #}
+                        let locLi = document.createElement("li");
+
                         locLi.classList.add("nav-item");
-                        var locTitle = document.createElement("a");
-                        locTitle.href = "#";
-                        locTitle.classList.add("nav-link");
-                        locTitle.id = key;
 
-                        if (i===0) {
+                        let locTitle = document.createElement("a");
+
+                        locTitle.href = "#";
+                        locTitle.classList.add("nav-location");
+                        locTitle.classList.add("nav-link");
+                        locTitle.id = key.toLowerCase() + "-tab";
+                        locTitle.setAttribute("data-toggle", "tab");
+
+                        {# Sets first location to active tab #}
+                        if (first===true) {
                             locTitle.classList.add("active");
-                            activeLocation = key;
+                            first = false;
                         }
 
-                        var locTitleText = document.createTextNode(key);
+                        {# Sets tab titles #}
+                        let locTitleText = document.createTextNode(key);
 
+                        {# Append respective navigation titles #}
                         locTitle.appendChild(locTitleText);
                         locLi.appendChild(locTitle);
-
                         tempNode.querySelector("#location-titles").appendChild(locLi);
                     }
-                    i += 1
                 }
 
-                {#for (const key in output) {#}
-                {#    if (output.hasOwnProperty(key)) {#}
-                {#        for (var x = 0; x < output[key].length; x+=1) {#}
-                {#            console.log(output[key][x]);#}
-                {#        }#}
-                {#    }#}
-                {#/}#}
-
-                {#var activeLocation = tempNode.querySelector("a[class='active']");#}
-
-                for (var x=0; x<output[activeLocation].length; x+=1) {
-                    {#console.log(output[activeLocation][x]);#}
-                    get_object(output[activeLocation][x]);
-                }
-
-
-
+                {# Edit/remove template attributes for document #}
                 tempNode.style.display = "block";
-                docFrag.appendChild(tempNode);
-                document.querySelector("#locations").appendChild(docFrag);
-            });
+                tempNode.setAttribute("id", "location-navigation");
+                tempNode.removeAttribute("data-type");
+
+                return tempNode;
+            }
+
+            function buildLocationPanels(env) {
+                let environment = JSON.parse(env);
+
+                for (const object in environment) {
+                    if (environment.hasOwnProperty(object)) {
+
+                    }
+                }
+
+            }
+            function viewerError() {
+                alert("Could not load environment");
+            }
         }
     </script>
 
-    <script>
-        function get_object(identifier) {
-            $.ajax({
-                url: "/environment/get?instance=" + identifier,
-                method: "GET",
-            })
-        }
-    </script>
-
-    <script>
-        $(document).ready(function () {
-            $(".object-link").on("click", function (e) {
-
-            })
-        });
-    </script>
-
-    <div style="display: none; margin-bottom: 25px;" data-type="loc-nav-template" id="location-template" class="card">
+    {#  Location Navigation Tempalte  #}
+    <div style="display: none; margin-bottom: 25px;" data-type="loc-nav-template" id="location-nav-template" class="card">
         <div class="card-header">
             <ul id="location-titles" class="nav nav-tabs card-header-tabs"></ul>
         </div>
-        <div class="card-body">
-            <div id="object-cards" class="card-deck"></div>
+        <div class="card-body tab-content" id="locationTabContent">
+{#            <div class="tab-content" id="locationTabContent">#}
+{#                <div class="tab-pane fade show active" id="home" role="tabpanel" aria-labelledby="home-tab">#}
+{#                    <div id="object-cards" class="card-deck">#}
+{#                        <div class="card">#}
+{#                            <div class="card-body">#}
+{#                                <h5 class="card-title">ENV.HUMAN.1</h5>#}
+{#                                <p class="card-text"></p>#}
+{#                            </div>#}
+{#                        </div>#}
+{#                        <div class="card">#}
+{#                            <div class="card-body">#}
+{#                                <h5 class="card-title">Special title treatment</h5>#}
+{#                                <p class="card-text">With supporting text below as a natural lead-in to additional content.#}
+{##}
+{#                                More supporting text below some other shit</p>#}
+{#                                <p class="card-text">More shit and shit </p>#}
+{#                            </div>#}
+{#                        </div>#}
+{#                    </div>#}
+{#                </div>#}
+{#            </div>#}
         </div>
     </div>
 
+    {#  Location Tab Template  #}
+{#    <div style="display: none; margin-bottom: 25px;" data-type="loc-tab-template" id="location-tab-template" class="tab-content">#}
+{#        <div class="tab-pane fade show active" id="home" role="tabpanel" aria-labelledby="home-tab">#}
+{#            <div class="card-deck" id="object-cards"></div>#}
+{#        </div>#}
+{##}
+{#    </div>#}
+
+    {#  Location Tab Template  #}
+    <div style="display: none; margin-bottom: 25px;" data-type="loc-tab-template" id="location-tab-template" class="tab-pane fade show" role="tabpanel" aria-labelledby="location-tab">
+        <div class="card-deck" id="object-cards"></div>
+    </div>
+
+    {#  Object Card Template  #}
+        {#  Each card must have at least a title.  #}
+        {#  Each attribute will get it's own <p> element  #}
     <div style="display: none; margin-bottom: 25px;" data-type="obj-card-template" id="object-template" class="card">
-        <div class="card-body">
-            <h4 class="card-title"></h4>
-        </div>
+        <div class="card-body"></div>
     </div>
-
-{#    <div style="display: none; margin-bottom: 25px;" data-type="template" id="location-template" class="card">#}
-{#        <div id="location-title" class="card-header"></div>#}
-{#        <div class="card-body">#}
-{#            <div id="objects"></div>#}
-{#            <div id="graph">#}
-{#                <div class="card">#}
-{#                    <div class="card-body"></div>#}
-{#                </div>#}
-{#            </div>#}
-{#        </div>#}
-{#    </div>#}
-
-{#    <div style="display: none; margin-bottom: 25px;" data-type="template" id="location-template" class="card">#}
-{#        <div id="location-title" class="card-header"></div>#}
-{#        <div class="card-body">#}
-{#            <div class="card-group">#}
-{#                <div class="card" style="width: 10rem">#}
-{#                    <ul id="objects" class="list-group list-group-flush"></ul>#}
-{#                </div>#}
-{#                <div class="card" >#}
-{#                    <div id="graph" class="card-body"></div>#}
-{#                </div>#}
-{#            </div>#}
-{#        </div>#}
-{#    </div>#}
-
-{#        <div style="display: none; margin-bottom: 25px;" data-type="template" id="location-template" class="card">#}
-{#        <div id="location-title" class="card-header"></div>#}
-{#        <div class="card-body">#}
-{#            <div class="card-group">#}
-{#                <div class="card">#}
-{#                    <ul id="objects" class="list-group list-group-flush"></ul>#}
-{#                </div>#}
-{#                <div class="card" >#}
-{#                    <div id="graph" class="card-body"></div>#}
-{#                </div>#}
-{#            </div>#}
-{#        </div>#}
-{#    </div>#}
-
 
 </head>
 <body onload="load()"> {# TODO - Insert onload fuction #}
@@ -218,14 +329,6 @@
         <div class="row" style="margin-top: 25px;">
             <div id="locations" class="col-sm-8"></div>
             <div class="col-sm-4">
-{#                <div class="card" style="margin-bottom: 25px;">#}
-{#                    <div class="card-header">#}
-{#                        Objects#}
-{#                    </div>#}
-{#                    <div class="card-body">#}
-{#                        <div id="location-objects"></div>#}
-{#                    </div>#}
-{#                </div>#}
                 <div class="card" style="margin-bottom: 25px;" >
                     <div class="card-header">
                         Object Log

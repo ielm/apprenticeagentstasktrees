@@ -477,9 +477,7 @@ def get_environment():
         g = format_environment(agent.env())
         return json.dumps(g)
     else:
-        instance = request.args["instance"]
-        print(instance)
-        return json.dumps(format_environment_object(instance))
+        return json.dumps(format_environment_object(request.args["instance"]))
 
 
 @app.route("/bootstrap", methods=["GET", "POST"])
