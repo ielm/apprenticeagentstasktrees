@@ -108,7 +108,7 @@
                 {# Create tab panel for each location in the environment #}
                 for (const location in environment) {
                     if (environment.hasOwnProperty(location)) {
-                        let tempPanel = document.querySelector("div[data-type='loc-panel-template']").cloneNode(true)
+                        let tempPanel = document.querySelector("div[data-type='loc-panel-template']").cloneNode(true);
 
                         tempPanel.setAttribute("id", location.toLowerCase());
                         tempPanel.setAttribute("aria-labelledby", location.toLowerCase()+"-tab");
