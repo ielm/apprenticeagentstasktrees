@@ -86,7 +86,7 @@ class FR(Graph):
                     ids = set(map(lambda filler: filler._uuid, ambiguous_fillers))
                     for f in ambiguous_fillers: f._metadata = {"ambiguities": ids}
 
-    def _resolve_log_wrapper(self, heuristic, instance, results, tmr=None):
+    def _resolve_log_wrapper(self, heuristic, instance, results, tmr: TMR=None):
         input_results = copy.deepcopy(results)
         heuristic(self).resolve(instance, results, tmr=tmr)
 
@@ -118,7 +118,14 @@ class FR(Graph):
         filtered_graph = {k: other_fr[k] for k in filter(lambda k: status[k], other_fr.keys())}
         filtered_graph = {Identifier.parse(k).render(): filtered_graph[k] for k in filtered_graph}
 
-        resolves = self.resolve_tmr(filtered_graph)
+        class FilteredTMR(object):
+            def __init__(self, filtered_graph: dict):
+                self.filtered_graph = filtered_graph
+
+            def graph(self, network):
+                return self.filtered_graph
+
+        resolves = self.resolve_tmr(FilteredTMR(filtered_graph))
         self.heuristics = backup_heuristics
 
         for k in filtered_graph:
@@ -140,7 +147,7 @@ class FR(Graph):
     # instances to existing FR Instances.  It can use an existing set of resolves to assist, as well as an optional
     # input TMR (presumably containing the input Instance).  It can find no matches (None), or any number of matches
     # where more than one implies ambiguity.
-    def resolve_instance(self, frame, resolves, tmr=None):
+    def resolve_instance(self, frame, resolves, tmr: TMR=None):
         # TODO: currently this resolves everything to None unless found in the input resolves object
         results = dict()
         results[frame._identifier.render()] = None
@@ -165,13 +172,15 @@ class FR(Graph):
 
         return results
 
-    def resolve_tmr(self, tmr):
+    def resolve_tmr(self, tmr_frame: TMR):
+        tmr = tmr_frame.graph(self._network)
+
         resolves = {}
 
         def _merge_resolves():
             for instance in tmr:
                 # Resolve the instance given the current information
-                iresolves = self.resolve_instance(tmr[instance], resolves, tmr=tmr)
+                iresolves = self.resolve_instance(tmr[instance], resolves, tmr=tmr_frame)
 
                 # Integrate the results into the current resolves (declaring ambiguities if needed)
                 for id in iresolves:
@@ -191,8 +200,10 @@ class FR(Graph):
         return resolves
 
     # All instances in the TMR will be resolved if possible, and then either added or updated into the FR.
-    def learn_tmr(self, tmr):
-        resolves = self.resolve_tmr(tmr)
+    def learn_tmr(self, tmr_frame: TMR):
+        tmr = tmr_frame.graph(self._network)
+
+        resolves = self.resolve_tmr(tmr_frame)
 
         for id in resolves:
             if resolves[id] is None and id in tmr:
@@ -235,6 +246,7 @@ class FRInstance(Frame):
 
         for tmr_instance in self[FRInstance.ATTRIBUTED_TO]:
             tmr_instance = tmr_instance.resolve()
-            lemma = " ".join(map(lambda ti: tmr_instance._graph.syntax.index[str(ti)]["lemma"], tmr_instance.token_index))
+            tmr: TMR = tmr_instance.tmr()
+            lemma = " ".join(map(lambda ti: tmr.syntax().index[str(ti)]["lemma"], tmr_instance.token_index))
             lemmas.append(lemma)
         return lemmas

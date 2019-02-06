@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>I/O</title>
+
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis.min.css">
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.3.1/css/all.css" integrity="sha384-mzrmE5qonljUremFsqc01SB46JvROS7bZs3IO2EmfFsd15uHvIt+Y8vEf7N7fWAU" crossorigin="anonymous">
+
+    <script src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mustache.js/2.3.0/mustache.min.js"></script>
+
+    <style>
+        .io {
+            margin-bottom: 20px;
+        }
+        .io > .card-body {
+            padding: 5px;
+        }
+        .io > .card-footer {
+            padding: 0px;
+            padding-left: 5px;
+            padding-right: 5px;
+            font-size: smaller;
+        }
+        .io-icon-container {
+            display: inline-block;
+            width: 36px;
+            text-align: center;
+        }
+        .input {
+            text-align: right;
+        }
+        .rendered {
+            vertical-align: top;
+            font-size: large;
+            padding-left: 10px;
+            padding-right: 10px;
+        }
+        .non-language {
+            font-style: italic;
+        }
+    </style>
+
+    <script>
+        function updateIIDEAData(data) {
+            render_io(data["io"]);
+        }
+
+        function render_io(data) {
+            $("#io-container").empty();
+
+            for (var i in data) {
+                var xmr = data[i];
+                xmr["is_self"] = xmr["source"] == "SELF.ROBOT.1";
+                xmr["icon"] = {
+                    "ACTION": "fa-walking",
+                    "LANGUAGE": "fa-comment",
+                    "MENTAL": "fa-brain",
+                    "VISUAL": "fa-eye",
+                }[xmr["type"]];
+
+                if (xmr["type"] == "LANGUAGE") {
+                    xmr["rendered"] = '"' + xmr["rendered"] + '"';
+                }
+
+                xmr["render_style"] = "";
+                if (xmr["type"] != "LANGUAGE") {
+                    xmr["render_style"] = "non-language";
+                }
+
+                var template = document.getElementById('io-template').innerHTML;
+                Mustache.parse(template, ["{|", "|}"]);
+                var rendered = Mustache.render(template, xmr);
+                $($(document).find("#io-container")[0]).append($(rendered));
+            }
+        }
+    </script>
+
+    <script>
+        $(document).ready(function() {
+            $(document).on("click", ".graph-link", function(e) {
+                var graph = $(e.currentTarget).data("graph");
+                $("#modalGraphBody").load("/components/graph?include_sources=false&namespace=" + escape(graph), function(){
+                    $("#modalGraph").modal({show:true});
+                });
+            });
+            $('#modalGraph').on('shown.bs.modal', function (e) {
+                _network.fit();
+            });
+
+            var io = JSON.parse({{ ioj|tojson }});
+            render_io(io);
+        });
+    </script>
+
+    <script id="io-template" type="x-tmpl-mustache">
+
+        <div class="card io {| ^is_self |} input {| /is_self |}">
+            <div class="card-body">
+                {| #is_self |}
+                    <div class="io-icon-container">
+                        <i class="fas {| icon |} fa-2x"></i>
+                    </div>
+                {| /is_self |}
+
+                <span class="rendered {| render_style |}">
+                    {| rendered |}
+                </span>
+
+                {| ^is_self |}
+                    <div class="io-icon-container">
+                        <i class="fas {| icon |} fa-2x"></i>
+                    </div>
+                {| /is_self |}
+            </div>
+            <div class="card-footer">
+                <strong>{| source |}</strong> • {| timestamp |} • {| id |} • <a href="#" class="graph-link badge badge-secondary" data-graph="{| graph |}">{| graph |}</a>
+            </div>
+        </div>
+    </script>
+
+</head>
+<body>
+
+    {% include 'nav.html' %}
+    <script>
+        $(document).ready(function() {
+            $("#nav-io").addClass("active");
+        });
+    </script>
+
+    <div class="container">
+        <div class="row" style="margin-top: 25px;">
+            <div class="col-sm-2"></div>
+            <div id="io-container" class="col-sm-8"></div>
+            <div class="col-sm-2"></div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="modalGraph" role="dialog">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div id="modalGraphBody" class="modal-body"></div>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>

@@ -129,9 +129,13 @@ class GrammarTransformer(Transformer):
         return BootstrapDefineOutputXMRTemplate(self.network, name, type, capability, params, root, include)
 
     def output_xmr_template_type(self, matches):
-        from backend.models.output import OutputXMRTemplate
+        from backend.models.xmr import XMR
 
-        return OutputXMRTemplate.Type[matches[1]]
+        return {
+            "PHYSICAL": XMR.Type.ACTION,
+            "MENTAL": XMR.Type.MENTAL,
+            "VERBAL": XMR.Type.LANGUAGE
+        }[matches[1]]
 
     def output_xmr_template_requires(self, matches):
         return matches[1]
@@ -160,7 +164,7 @@ class GrammarTransformer(Transformer):
         return matches[1]
 
     def goal(self, matches):
-        from backend.models.agenda import Condition, Goal, Plan
+        from backend.models.agenda import Condition, Effect, Goal, Plan
         from backend.models.bootstrap import BoostrapGoal
 
         name = str(matches[0])
@@ -171,13 +175,14 @@ class GrammarTransformer(Transformer):
         resources = matches[7]
         plan = list(filter(lambda match: isinstance(match, Plan), matches))
         conditions = list(filter(lambda match: isinstance(match, Condition), matches))
+        effects = list(filter(lambda match: isinstance(match, Effect), matches))
 
         condition_order = 1
         for c in conditions:
             c.frame["ORDER"] = condition_order
             condition_order += 1
 
-        return BoostrapGoal(Goal.define(self.agent[graph], name, priority, resources, plan, conditions, variables))
+        return BoostrapGoal(Goal.define(self.agent[graph], name, priority, resources, plan, conditions, variables, effects))
 
     def priority(self, matches):
         from backend.models.statement import Statement
@@ -213,23 +218,29 @@ class GrammarTransformer(Transformer):
     def plan(self, matches):
         from backend.models.agenda import Plan
         name = matches[1]
-        select = matches[2]
+        select, negate = matches[2]
         steps = matches[3:]
 
         for i, v in enumerate(steps):
             v.frame["INDEX"] = i + 1
 
-        return Plan.build(self.agent.exe, name, select, steps)
+        return Plan.build(self.agent.exe, name, select, steps, negate=negate)
 
     def plan_selection(self, matches):
         from backend.models.agenda import Plan
         select = matches[1]
+        negate = False
+
         if str(select) == "DEFAULT":
             select = Plan.DEFAULT
         elif str(select) == "IF":
-            select = matches[2]
+            if matches[2] == "NOT":
+                select = matches[3]
+                negate = True
+            else:
+                select = matches[2]
 
-        return select
+        return select, negate
 
     def plan_step(self, matches):
         from backend.models.agenda import Step
@@ -310,6 +321,13 @@ class GrammarTransformer(Transformer):
 
         return AddFillerStatement.instance(self.agent.exe, domain, slot, filler)
 
+    def assert_statement(self, matches):
+        from backend.models.statement import AssertStatement
+        assertion = matches[1]
+        resolutions = matches[5]
+
+        return AssertStatement.instance(self.agent.exe, assertion, resolutions)
+
     def assign_filler_statement(self, matches):
         from backend.models.statement import AssignFillerStatement
         domain = matches[0]
@@ -329,6 +347,11 @@ class GrammarTransformer(Transformer):
         from backend.models.statement import ExistsStatement
 
         return ExistsStatement.instance(self.agent.exe, matches[1])
+
+    def expectation_statement(self, matches):
+        from backend.models.statement import ExpectationStatement
+
+        return ExpectationStatement.instance(self.agent.exe, matches[1])
 
     def foreach_statement(self, matches):
         from backend.models.statement import ForEachStatement
@@ -354,7 +377,7 @@ class GrammarTransformer(Transformer):
         if isinstance(matches[0], Identifier):
             if matches[0].render() == "SELF":
                 return self.agent.identity
-            return matches[0].resolve(None, network=self.network)
+            return matches[0]
         if str(matches[0]) == "SELF":
             return self.agent.identity
 
@@ -377,6 +400,25 @@ class GrammarTransformer(Transformer):
 
         return OutputXMRStatement.instance(self.agent.exe, template, params, agent)
 
+    def transient_statement(self, matches):
+        from backend.models.bootstrap import BootstrapTriple
+        from backend.models.statement import TransientFrameStatement
+
+        properties = list(filter(lambda m: isinstance(m, BootstrapTriple), matches))
+
+        return TransientFrameStatement.instance(self.agent.exe, properties)
+
+    def assertion(self, matches):
+        return matches[0]
+
+    def impasses(self, matches):
+        from backend.models.statement import MakeInstanceStatement
+
+        return list(filter(lambda m: isinstance(m, MakeInstanceStatement), matches))
+
+    def impasse(self, matches):
+        return matches[0]
+
     def arguments(self, matches):
         return matches
 
@@ -385,7 +427,7 @@ class GrammarTransformer(Transformer):
 
     def output_arguments(self, matches):
         from backend.models.graph import Frame
-        return list(map(lambda match: Literal(match) if not isinstance(match, Frame) else match, matches))
+        return list(map(lambda match: Literal(match) if not isinstance(match, Frame) and not isinstance(match, Identifier) else match, matches))
 
     def output_argument(self, matches):
         return matches[0]
@@ -400,6 +442,12 @@ class GrammarTransformer(Transformer):
             "WM": self.agent.wo_memory._namespace,
             "LT": self.agent.lt_memory._namespace
         }[name]
+
+    def list(self, matches):
+        return [matches]
+
+    def list_element(self, matches):
+        return matches[0]
 
     # Views and querying
 

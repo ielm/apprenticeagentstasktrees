@@ -2,7 +2,8 @@ from backend.models.bootstrap import Bootstrap
 from backend.models.graph import Frame, Graph, Identifier, Literal, Network
 from backend.models.mps import AgentMethod, MPRegistry
 from backend.models.query import Query
-from backend.models.statement import Statement, StatementScope, Variable, VariableMap
+from backend.models.statement import TransientFrame, Statement, StatementScope, Variable, VariableMap
+from backend.models.xmr import XMR
 
 import unittest
 
@@ -113,17 +114,6 @@ class VariableMapTestCase(unittest.TestCase):
         self.assertEqual(f["_WITH"], v3)
         self.assertEqual(f["_WITH"], v4)
 
-    def test_assign_requires_unique_names(self):
-        g = Graph("TEST")
-        f = g.register("VARMAP.1")
-        v = g.register("VARIABLE")
-
-        vm = VariableMap(f)
-        vm.assign("VAR1", v)
-
-        with self.assertRaises(Exception):
-            vm.assign("VAR1", v)
-
     def test_resolve(self):
         g = Graph("TEST")
         f = g.register("VARMAP.1")
@@ -166,6 +156,22 @@ class VariableMapTestCase(unittest.TestCase):
         f["WITH"] += Literal("$var2")
 
         self.assertEqual(["$var1", "$var2"], VariableMap(f).variables())
+
+
+class TransientFrameTestCase(unittest.TestCase):
+
+    def setUp(self):
+        self.n = Network()
+        self.g = self.n.register("EXE")
+
+    def test_is_in_scope(self):
+        f = TransientFrame(self.g.register("FRAME"))
+
+        self.assertTrue(f.is_in_scope())
+
+        f.update_scope(lambda: False)
+
+        self.assertFalse(f.is_in_scope())
 
 
 class StatementTestCase(unittest.TestCase):
@@ -272,6 +278,79 @@ class AddFillerStatementTestCase(unittest.TestCase):
 
         Statement.from_instance(addfiller).run(StatementScope(), None)
         self.assertTrue(target["X"] == 123)
+
+
+class AssertStatementTestCase(unittest.TestCase):
+
+    def setUp(self):
+        self.n = Network()
+        self.g = self.n.register("EXE")
+        Bootstrap.bootstrap_resource(self.n, "backend.resources", "exe.knowledge")
+
+    def test_assertion(self):
+        from backend.models.statement import AssertStatement, ExistsStatement
+
+        assertion = ExistsStatement.instance(self.g, Frame.q(self.n).has("TEST"))
+
+        stmt = self.g.register("ASSERT-STATEMENT", generate_index=True)
+        stmt["ASSERTION"] = assertion.frame
+
+        self.assertEqual(assertion, AssertStatement(stmt).assertion())
+
+    def test_resolutions(self):
+        from backend.models.statement import AssertStatement, MakeInstanceStatement
+
+        mi1 = MakeInstanceStatement.instance(self.g, self.g._namespace, "EXE.TEST-GOAL-A", [])
+        mi2 = MakeInstanceStatement.instance(self.g, self.g._namespace, "EXE.TEST-GOAL-B", [])
+
+        stmt = self.g.register("ASSERT-STATEMENT", generate_index=True)
+        stmt["RESOLUTION"] = [mi1.frame, mi2.frame]
+
+        self.assertEqual([mi1, mi2], AssertStatement(stmt).resolutions())
+
+    def test_instance(self):
+        from backend.models.statement import AssertStatement, ExistsStatement, MakeInstanceStatement
+
+        assertion = ExistsStatement.instance(self.g, Frame.q(self.n).has("TEST"))
+        mi1 = MakeInstanceStatement.instance(self.g, self.g._namespace, "EXE.TEST-GOAL-A", [])
+        mi2 = MakeInstanceStatement.instance(self.g, self.g._namespace, "EXE.TEST-GOAL-B", [])
+
+        stmt = AssertStatement.instance(self.g, assertion, [mi1, mi2])
+        self.assertEqual(assertion, stmt.assertion())
+        self.assertEqual([mi1, mi2], stmt.resolutions())
+
+    def test_from_instance(self):
+        from backend.models.statement import AssertStatement
+
+        stmt = self.g.register("TEST", isa="EXE.ASSERT-STATEMENT")
+        stmt = Statement.from_instance(stmt)
+        self.assertIsInstance(stmt, AssertStatement)
+
+    def test_run_query_passes(self):
+        from backend.models.statement import AssertStatement, ExistsStatement
+
+        target = self.g.register("TARGET")
+        target["TEST"] = 123
+
+        assertion = ExistsStatement.instance(self.g, Frame.q(self.n).has("TEST"))
+        stmt = AssertStatement.instance(self.g, assertion, [])
+
+        stmt.run(StatementScope(), VariableMap(self.g.register("VARMAP")))
+
+    def test_run_query_fails(self):
+        from backend.models.statement import AssertStatement, ExistsStatement, MakeInstanceStatement
+
+        self.g.register("TARGET")
+
+        assertion = ExistsStatement.instance(self.g, Frame.q(self.n).has("TEST"))
+        mi = MakeInstanceStatement.instance(self.g, self.g._namespace, "EXE.TEST-GOAL", [])
+        stmt = AssertStatement.instance(self.g, assertion, [mi])
+
+        try:
+            stmt.run(StatementScope(), VariableMap(self.g.register("VARMAP")))
+            self.fail()
+        except AssertStatement.ImpasseException as e:
+            self.assertEqual([mi], e.resolutions)
 
 
 class AssignFillerStatementTestCase(unittest.TestCase):
@@ -425,6 +504,52 @@ class ExistsStatementTestCase(unittest.TestCase):
 
         stmt["FIND"] = Query.parse(self.g._network, "WHERE abc=123")
         self.assertFalse(Statement.from_instance(stmt).run(StatementScope(), None))
+
+
+class ExpectationStatementTestCase(unittest.TestCase):
+
+    def setUp(self):
+        self.n = Network()
+        self.g = self.n.register("EXE")
+        Bootstrap.bootstrap_resource(self.n, "backend.resources", "exe.knowledge")
+
+    def test_condition(self):
+        from backend.models.statement import ExistsStatement, ExpectationStatement
+
+        stmt = self.g.register("STATEMENT")
+        stmt["CONDITION"] = ExistsStatement.instance(self.g, Frame.q(self.n).id("TEST.FRAME.1")).frame
+
+        self.assertEqual(ExistsStatement.instance(self.g, Frame.q(self.n).id("TEST.FRAME.1")), ExpectationStatement(stmt).condition())
+
+    def test_instance(self):
+        from backend.models.statement import ExistsStatement, ExpectationStatement
+
+        stmt = ExpectationStatement.instance(self.g, ExistsStatement.instance(self.g, Frame.q(self.n).id("TEST.FRAME.1")))
+
+        self.assertEqual(ExistsStatement.instance(self.g, Frame.q(self.n).id("TEST.FRAME.1")), stmt.condition())
+
+    def test_from_instance(self):
+        from backend.models.statement import ExpectationStatement
+
+        stmt = self.g.register("TEST", isa="EXE.EXPECTATION-STATEMENT")
+        stmt = Statement.from_instance(stmt)
+
+        self.assertIsInstance(stmt, ExpectationStatement)
+
+    def test_run(self):
+        from backend.models.statement import ExistsStatement, ExpectationStatement
+
+        condition = ExistsStatement.instance(self.g, Frame.q(self.n).id("TEST.FRAME.1"))
+        stmt = ExpectationStatement.instance(self.g, condition)
+
+        scope = StatementScope()
+        self.assertEqual([], scope.expectations)
+
+        stmt.run(scope, None)
+        self.assertEqual([condition], scope.expectations)
+
+        stmt.run(scope, None)
+        self.assertEqual([condition, condition], scope.expectations)
 
 
 class ForEachStatementTestCase(unittest.TestCase):
@@ -630,13 +755,14 @@ class OutputXMRStatementTestCase(unittest.TestCase):
     def setUp(self):
         self.n = Network()
         self.g = self.n.register("EXE")
+        self.n.register("OUTPUTS")
         Bootstrap.bootstrap_resource(self.n, "backend.resources", "exe.knowledge")
 
     def test_template(self):
         from backend.models.output import OutputXMRTemplate
         from backend.models.statement import OutputXMRStatement
 
-        template = OutputXMRTemplate.build(self.n, "test-template", OutputXMRTemplate.Type.PHYSICAL, "EXE.CAPABILITY", [])
+        template = OutputXMRTemplate.build(self.n, "test-template", XMR.Type.ACTION, "EXE.CAPABILITY", [])
 
         frame = self.g.register("TEST", isa="EXE.OUTPUTXMR-STATEMENT")
         frame["TEMPLATE"] = Literal("test-template")
@@ -668,7 +794,7 @@ class OutputXMRStatementTestCase(unittest.TestCase):
         from backend.models.output import OutputXMRTemplate
         from backend.models.statement import OutputXMRStatement
 
-        template = OutputXMRTemplate.build(self.n, "test-template", OutputXMRTemplate.Type.PHYSICAL, "EXE.CAPABILITY", [])
+        template = OutputXMRTemplate.build(self.n, "test-template", XMR.Type.ACTION, "EXE.CAPABILITY", [])
         params = [1, 2, Literal("$var1"), Literal("$var2")]
         agent = self.g.register("AGENT")
 
@@ -679,12 +805,12 @@ class OutputXMRStatementTestCase(unittest.TestCase):
         self.assertEqual(agent, stmt.agent())
 
     def test_run(self):
-        from backend.models.output import OutputXMR, OutputXMRTemplate
+        from backend.models.output import OutputXMRTemplate
         from backend.models.statement import OutputXMRStatement
 
         self.g.register("CAPABILITY")
 
-        template = OutputXMRTemplate.build(self.n, "test-template", OutputXMRTemplate.Type.PHYSICAL, "EXE.CAPABILITY", [])
+        template = OutputXMRTemplate.build(self.n, "test-template", XMR.Type.ACTION, "EXE.CAPABILITY", [])
         agent = self.g.register("AGENT")
 
         stmt = OutputXMRStatement.instance(self.g, template, [], agent)
@@ -696,16 +822,16 @@ class OutputXMRStatementTestCase(unittest.TestCase):
         output = stmt.run(StatementScope(), varmap)
 
         self.assertIn("XMR#1", self.n)
-        self.assertIsInstance(output, OutputXMR)
-        self.assertIn(output.frame.name(), agent._graph)
+        self.assertIsInstance(output, XMR)
+        self.assertIn(output.frame.name(), self.n["OUTPUTS"])
 
     def test_run_affects_scope(self):
-        from backend.models.output import OutputXMR, OutputXMRTemplate
+        from backend.models.output import OutputXMRTemplate
         from backend.models.statement import OutputXMRStatement
 
         self.g.register("CAPABILITY")
 
-        template = OutputXMRTemplate.build(self.n, "test-template", OutputXMRTemplate.Type.PHYSICAL, "EXE.CAPABILITY",
+        template = OutputXMRTemplate.build(self.n, "test-template", XMR.Type.ACTION, "EXE.CAPABILITY",
                                            [])
         agent = self.g.register("AGENT")
         test1 = self.g.register("TEST1")
@@ -723,12 +849,12 @@ class OutputXMRStatementTestCase(unittest.TestCase):
         self.assertIn(output.frame, scope.outputs)
 
     def test_run_with_variables(self):
-        from backend.models.output import OutputXMR, OutputXMRTemplate
+        from backend.models.output import OutputXMRTemplate
         from backend.models.statement import OutputXMRStatement
 
         self.g.register("CAPABILITY")
 
-        template = OutputXMRTemplate.build(self.n, "test-template", OutputXMRTemplate.Type.PHYSICAL, "EXE.CAPABILITY", ["$var1", "$var2"])
+        template = OutputXMRTemplate.build(self.n, "test-template", XMR.Type.ACTION, "EXE.CAPABILITY", ["$var1", "$var2"])
         f = template.graph.register("FRAME", generate_index=True)
         f["PROP1"] = Literal("$var1")
         f["PROP2"] = Literal("$var1")
@@ -747,3 +873,73 @@ class OutputXMRStatementTestCase(unittest.TestCase):
         self.assertEqual(123, fi["PROP1"])
         self.assertEqual(123, fi["PROP2"])
         self.assertEqual("abc", fi["PROP3"])
+
+
+class TransientFrameStatementTestCase(unittest.TestCase):
+
+    def setUp(self):
+        self.n = Network()
+        self.g = self.n.register("EXE")
+        Bootstrap.bootstrap_resource(self.n, "backend.resources", "exe.knowledge")
+
+    def test_properties(self):
+        from backend.models.bootstrap import BootstrapTriple
+        from backend.models.statement import TransientFrameStatement
+
+        triple1 = BootstrapTriple("TEST", Literal(123))
+        triple2 = BootstrapTriple("TEST", Literal(456))
+        triple3 = BootstrapTriple("XYZ", Identifier.parse("TEST.FRAME.1"))
+
+        statement = self.g.register("STATEMENT")
+        statement["HAS-PROPERTY"] += triple1
+        statement["HAS-PROPERTY"] += triple2
+        statement["HAS-PROPERTY"] += triple3
+
+        self.assertEqual([triple1, triple2, triple3], TransientFrameStatement(statement).properties())
+
+    def test_instance(self):
+        from backend.models.bootstrap import BootstrapTriple
+        from backend.models.statement import TransientFrameStatement
+
+        triple1 = BootstrapTriple("TEST", Literal(123))
+        triple2 = BootstrapTriple("TEST", Literal(456))
+        triple3 = BootstrapTriple("XYZ", Identifier.parse("TEST.FRAME.1"))
+
+        statement = TransientFrameStatement.instance(self.g, [triple1, triple2, triple3])
+
+        self.assertEqual([triple1, triple2, triple3], statement.properties())
+
+    def test_from_instance(self):
+        from backend.models.statement import TransientFrameStatement
+
+        frame = self.g.register("STATEMENT", isa="EXE.TRANSIENTFRAME-STATEMENT")
+        statement = Statement.from_instance(frame)
+
+        self.assertIsInstance(statement, TransientFrameStatement)
+
+    def test_run(self):
+        from backend.models.bootstrap import BootstrapTriple
+        from backend.models.statement import TransientFrameStatement
+
+        triple1 = BootstrapTriple("TEST", Literal(123))
+        triple2 = BootstrapTriple("TEST", Literal(456))
+        triple3 = BootstrapTriple("XYZ", Identifier.parse("TEST.FRAME.1"))
+        triple4 = BootstrapTriple("ABC", Literal("$var1"))
+        triple5 = BootstrapTriple("DEF", Literal("test"))
+
+        statement = TransientFrameStatement.instance(self.g, [triple1, triple2, triple3, triple4, triple5])
+
+        varmap = VariableMap(self.g.register("VARMAP"))
+        Variable.instance(self.g, "$var1", 789, varmap)
+
+        scope = StatementScope()
+        frame = statement.run(scope, varmap)
+
+        self.assertEqual("EXE.TRANSIENT-FRAME.1", frame.name())
+        self.assertEqual(self.g, frame._graph)
+        self.assertIn(frame.name(), self.g)
+        self.assertEqual([123, 456], frame["TEST"])
+        self.assertEqual("TEST.FRAME.1", frame["XYZ"])
+        self.assertEqual(789, frame["ABC"])
+        self.assertEqual("test", frame["DEF"])
+        self.assertIn(frame, scope.transients)

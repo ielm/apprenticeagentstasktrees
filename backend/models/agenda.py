@@ -1,16 +1,18 @@
 from backend.models.grammar import Grammar
 from backend.models.graph import Frame, Graph, Identifier, Literal
 from backend.models.query import Query
-from backend.models.statement import Statement, StatementScope, VariableMap
+from backend.models.statement import AssertStatement, MakeInstanceStatement, Statement, StatementScope, VariableMap
 from enum import Enum
 from functools import reduce
 from typing import Any, Dict, List, Tuple, Union
+
+import time
 
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from backend.agent import Agent
     from backend.models.effectors import Callback, Capability, Effector
-    from backend.models.output import OutputXMR
+    from backend.models.output import XMR
 
 
 class Agenda(object):
@@ -83,7 +85,7 @@ class Goal(VariableMap):
         SATISFIED = 4
 
     @classmethod
-    def define(cls, graph: Graph, name: str, priority: Union[Statement, float], resources: Union[Statement, float], plan: List['Plan'], conditions: List['Condition'], variables: List[str]):
+    def define(cls, graph: Graph, name: str, priority: Union[Statement, float], resources: Union[Statement, float], plan: List['Plan'], conditions: List['Condition'], variables: List[str], effects: List['Effect']):
         frame = graph.register(name, generate_index=False)
         frame["NAME"] = Literal(name)
         frame["PRIORITY"] = priority
@@ -91,6 +93,7 @@ class Goal(VariableMap):
         frame["PLAN"] = list(map(lambda p: p.frame, plan))
         frame["WHEN"] = list(map(lambda c: c.frame, conditions))
         frame["WITH"] = list(map(lambda var: Literal(var), variables))
+        frame["HAS-EFFECT"] = list(map(lambda e: e.frame, effects))
 
         return Goal(frame)
 
@@ -112,6 +115,7 @@ class Goal(VariableMap):
         frame["STATUS"] = Goal.Status.PENDING
         frame["PLAN"] = list(map(lambda plan: Plan.instance_of(graph, plan.resolve()).frame, definition["PLAN"]))
         frame["WHEN"] = definition["WHEN"]
+        frame["HAS-EFFECT"] = definition["HAS-EFFECT"]
 
         super().instance_of(graph, definition, params, existing=frame)
 
@@ -160,13 +164,25 @@ class Goal(VariableMap):
         for condition in conditions:
             if condition.assess(self):
                 self.status(condition.status())
-                return
+                break
+
+        if self.is_abandoned() or self.is_satisfied():
+            for subgoal in self.subgoals():
+                if not subgoal.is_satisfied():
+                    subgoal.frame["STATUS"] = Goal.Status.ABANDONED
+
+        if self.is_satisfied():
+            for effect in self.effects():
+                effect.apply(self)
 
     def conditions(self) -> List['Condition']:
         return list(map(lambda condition: Condition(condition.resolve()), self.frame["WHEN"]))
 
     def subgoals(self) -> List['Goal']:
         return list(map(lambda goal: Goal(goal.resolve()), self.frame["HAS-GOAL"]))
+
+    def effects(self) -> List['Effect']:
+        return list(map(lambda effect: Effect(effect.resolve()), self.frame["HAS-EFFECT"]))
 
     def priority(self):
         try:
@@ -273,7 +289,7 @@ class Plan(object):
     DEFAULT = "DEFAULT"
 
     @classmethod
-    def build(cls, graph: Graph, name: str, select: Union[Statement, str], steps: Union['Step', Frame, List[Union['Step', Frame]]]):
+    def build(cls, graph: Graph, name: str, select: Union[Statement, str], steps: Union['Step', Frame, List[Union['Step', Frame]]], negate: bool=False):
 
         if isinstance(select, Statement):
             select = select.frame
@@ -284,6 +300,7 @@ class Plan(object):
 
         frame = graph.register("PLAN", generate_index=True)
         frame["NAME"] = Literal(name)
+        frame["NEGATE"] = negate
         frame["SELECT"] = Literal(Plan.DEFAULT) if select == Plan.DEFAULT else select
         frame["HAS-STEP"] = steps
 
@@ -295,7 +312,7 @@ class Plan(object):
         if isinstance(plan, Frame):
             plan = Plan(plan)
 
-        return Plan.build(graph, plan.name(), plan.frame["SELECT"].singleton(), list(map(lambda step: Step.instance_of(graph, step).frame, plan.steps())))
+        return Plan.build(graph, plan.name(), plan.frame["SELECT"].singleton(), list(map(lambda step: Step.instance_of(graph, step).frame, plan.steps())), negate=plan.is_negated())
 
     def __init__(self, frame: Frame):
         self.frame = frame
@@ -304,14 +321,22 @@ class Plan(object):
         if "NAME" in self.frame:
             return self.frame["NAME"].singleton()
 
+    def is_negated(self) -> bool:
+        if "NEGATE" in self.frame:
+            return self.frame["NEGATE"].singleton()
+        return False
+
     def select(self, varmap: VariableMap) -> bool:
         if self.is_default():
             return True
 
         if "SELECT" in self.frame:
             select = self.frame["SELECT"].singleton()
-            if isinstance(select, Frame) and select ^ "EXE.BOOLEAN-STATEMENT":
-                return Statement.from_instance(select).run(StatementScope(), varmap)
+            if isinstance(select, Frame) and (select ^ "EXE.BOOLEAN-STATEMENT" or select ^ "EXE.MP-STATEMENT"):
+                result = Statement.from_instance(select).run(StatementScope(), varmap)
+                if self.is_negated():
+                    result = not result
+                return result
         return False
 
     def is_default(self):
@@ -336,6 +361,7 @@ class Plan(object):
         if isinstance(other, Plan):
             return (self.frame == other.frame) or (
                 self.frame["NAME"] == other.frame["NAME"] and
+                self.frame["NEGATE"] == other.frame["NEGATE"] and
                 self.__eqSELECT(other) and
                 self.__eqSTEPS(other)
             )
@@ -411,18 +437,19 @@ class Step(object):
     def is_finished(self) -> bool:
         return self.frame["STATUS"].singleton() == Step.Status.FINISHED
 
-    def perform(self, varmap: VariableMap) -> List['OutputXMR']:
-        outputs = []
+    def perform(self, varmap: VariableMap) -> StatementScope:
+        scope = StatementScope()
         for statement in self.frame["PERFORM"]:
             statement = statement.resolve()
             if statement == Step.IDLE:
                 pass
             if isinstance(statement, Frame) and statement ^ "EXE.STATEMENT":
-                scope = StatementScope()
                 Statement.from_instance(statement).run(scope, varmap)
-                outputs.extend(scope.outputs)
 
-        return outputs
+        for transient in scope.transients:
+            transient.update_scope(lambda: self.is_pending())
+
+        return scope
 
     def __eq__(self, other):
         if isinstance(other, Step):
@@ -608,6 +635,7 @@ class Decision(object):
         PENDING = "PENDING"
         SELECTED = "SELECTED"
         DECLINED = "DECLINED"
+        BLOCKED = "BLOCKED"
         EXECUTING = "EXECUTING"
         FINISHED = "FINISHED"
 
@@ -621,7 +649,7 @@ class Decision(object):
       HAS-PRIORITY? Literal(dbl);
       HAS-COST?     Literal(dbl);
       REQUIRES*     ^EXE.CAPABILITY;
-      STATUS        Literal(str[PENDING | SELECTED | DECLINED | EXECUTING | FINISHED]);
+      STATUS        Literal(str[PENDING | SELECTED | DECLINED | BLOCKED | EXECUTING | FINISHED]);
       HAS-EFFECTOR* ^EXE.EFFECTOR;
       HAS-CALLBACK* ^EXE.CALLBACK;
     }
@@ -656,9 +684,15 @@ class Decision(object):
     def step(self) -> Step:
         return Step(self.frame["ON-STEP"].singleton())
 
-    def outputs(self) -> List['OutputXMR']:
-        from backend.models.output import OutputXMR
-        return list(map(lambda output: OutputXMR(output.resolve()), self.frame["HAS-OUTPUT"]))
+    def impasses(self) -> List[Goal]:
+        return list(map(lambda i: Goal(i.resolve()), self.frame["HAS-IMPASSE"]))
+
+    def outputs(self) -> List['XMR']:
+        from backend.models.output import XMR
+        return list(map(lambda output: XMR(output.resolve()), self.frame["HAS-OUTPUT"]))
+
+    def expectations(self) -> List['Expectation']:
+        return list(map(lambda expectation: Expectation(expectation.resolve()), self.frame["HAS-EXPECTATION"]))
 
     def priority(self) -> Union[float, None]:
         if "HAS-PRIORITY" not in self.frame:
@@ -671,13 +705,16 @@ class Decision(object):
         return self.frame["HAS-COST"].singleton()
 
     def requires(self) -> List['Capability']:
-        from backend.models.effectors import Capability
-        return list(map(lambda output: Capability(output.capability()), self.outputs()))
+        return list(map(lambda output: output.capability(), self.outputs()))
 
     def status(self) -> 'Decision.Status':
         if "STATUS" not in self.frame:
             return Decision.Status.PENDING
-        return self.frame["STATUS"].singleton()
+        status = self.frame["STATUS"].singleton()
+        if isinstance(status, str):
+            status = Decision.Status[status]
+
+        return status
 
     def effectors(self) -> List['Effector']:
         from backend.models.effectors import Effector
@@ -699,7 +736,16 @@ class Decision(object):
         self._calculate_cost()
 
     def _generate_outputs(self):
-        self.frame["HAS-OUTPUT"] = list(map(lambda output: output.frame, self.step().perform(self.goal())))
+        try:
+            scope = self.step().perform(self.goal())
+            self.frame["HAS-OUTPUT"] = list(map(lambda output: output.frame, scope.outputs))
+            self.frame["HAS-EXPECTATION"] = list(map(lambda expectation: Expectation.build(self.goal().frame._graph, Expectation.Status.PENDING, expectation).frame, scope.expectations))
+        except AssertStatement.ImpasseException as e:
+            for r in e.resolutions:
+                impasse: Frame = r.run(StatementScope(), self.goal())
+                self.frame["HAS-IMPASSE"] += impasse
+                self.goal().frame["HAS-GOAL"] += impasse
+            self.frame["STATUS"] = Decision.Status.BLOCKED
 
     def _calculate_priority(self):
         self.frame["HAS-PRIORITY"] = self.goal().priority()
@@ -720,13 +766,94 @@ class Decision(object):
             self.frame["HAS-CALLBACK"] += callback.frame
 
             effector.on_capability().run(agent, effector.on_output(), callback)
+            effector.on_output().frame["TIMESTAMP"] = time.time()
 
     def callback_received(self, callback: 'Callback'):
         self.frame["HAS-EFFECTOR"] -= callback.effector().frame
         self.frame["HAS-CALLBACK"] -= callback.frame
 
+    def assess_impasses(self):
+        self.frame["HAS-IMPASSE"] = list(map(lambda i: i.frame, filter(lambda i: not i.is_satisfied(), self.impasses())))
+
     def __eq__(self, other):
         if isinstance(other, Decision):
+            return self.frame == other.frame
+        if isinstance(other, Frame):
+            return self.frame == other
+        return super().__eq__(other)
+
+
+class Expectation(object):
+
+    class Status(Enum):
+        PENDING = "PENDING"
+        EXPECTING = "EXPECTING"
+        SATISFIED = "SATISFIED"
+
+    @classmethod
+    def build(cls, graph: Graph, status: 'Expectation.Status', condition: Union[str, Identifier, Frame, Statement]):
+        if isinstance(condition, Statement):
+            condition = condition.frame
+
+        frame = graph.register("EXPECTATION", generate_index=True)
+
+        frame["STATUS"] = status
+        frame["CONDITION"] = condition
+
+        return Expectation(frame)
+
+    def __init__(self, frame: Frame):
+        self.frame = frame
+
+    def status(self) -> 'Expectation.Status':
+        return self.frame["STATUS"].singleton()
+
+    def condition(self) -> Statement:
+        return Statement.from_instance(self.frame["CONDITION"].singleton())
+
+    def assess(self, varmap: VariableMap):
+        if self.condition().run(StatementScope(), varmap):
+            self.frame["STATUS"] = Expectation.Status.SATISFIED
+        else:
+            self.frame["STATUS"] = Expectation.Status.PENDING
+
+    def __eq__(self, other):
+        if isinstance(other, Expectation):
+            return self.frame == other.frame
+        if isinstance(other, Frame):
+            return self.frame == other
+        return super().__eq__(other)
+
+
+class Effect(object):
+
+    @classmethod
+    def build(cls, graph: Graph, statements: List[Union[str, Identifier, Frame, Statement]]) -> 'Effect':
+        statements = list(map(lambda s: Identifier.parse(s) if isinstance(s, str) else s, statements))
+        statements = list(map(lambda s: s.frame if isinstance(s, Statement) else s, statements))
+        statements = list(map(lambda s: s._identifier if isinstance(s, Frame) else s, statements))
+
+        effect = graph.register("EFFECT", isa="EXE.EFFECT", generate_index=True)
+
+        for statement in statements:
+            effect["HAS-STATEMENT"] += statement
+
+        return Effect(effect)
+
+    def __init__(self, frame: Frame):
+        self.frame = frame
+
+    def statements(self) -> List[Statement]:
+        return list(map(lambda s: Statement.from_instance(s.resolve()), self.frame["HAS-STATEMENT"]))
+
+    def apply(self, varmap: VariableMap):
+        scope = StatementScope()
+
+        for statement in self.statements():
+            statement.run(scope, varmap)
+
+    def __eq__(self, other):
+        if isinstance(other, Effect):
             return self.frame == other.frame
         if isinstance(other, Frame):
             return self.frame == other

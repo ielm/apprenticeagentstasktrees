@@ -1,14 +1,15 @@
 from backend.agent import Agent
 from backend.models.bootstrap import Bootstrap
-from backend.models.agenda import Condition, Goal, Plan, Step
+from backend.models.agenda import Condition, Effect, Goal, Plan, Step
 from backend.models.grammar import Grammar
-from backend.models.graph import Identifier, Literal, Network
+from backend.models.graph import Frame, Identifier, Literal, Network
 from backend.models.mps import AgentMethod
 from backend.models.output import OutputXMRTemplate
 from backend.models.path import Path
 from backend.models.query import AndQuery, ExactQuery, FillerQuery, FrameQuery, IdentifierQuery, LiteralQuery, NameQuery, NotQuery, OrQuery, SlotQuery
-from backend.models.statement import AddFillerStatement, AssignFillerStatement, AssignVariableStatement, ExistsStatement, ForEachStatement, IsStatement, MakeInstanceStatement, MeaningProcedureStatement, OutputXMRStatement
+from backend.models.statement import AddFillerStatement, AssertStatement, AssignFillerStatement, AssignVariableStatement, ExistsStatement, ExpectationStatement, ForEachStatement, IsStatement, MakeInstanceStatement, MeaningProcedureStatement, OutputXMRStatement, TransientFrameStatement
 from backend.models.view import View
+from backend.models.xmr import XMR
 
 import unittest
 
@@ -248,6 +249,30 @@ class AgendaGrammarTestCase(unittest.TestCase):
         parsed = Grammar.parse(self.agent, "@SELF.FRAME[SLOT] += 123", start="add_filler_statement", agent=self.agent)
         self.assertEqual(statement, parsed)
 
+    def test_assert_statement(self):
+        Bootstrap.bootstrap_resource(self.agent, "backend.resources", "exe.knowledge")
+
+        f = self.g.register("FRAME")
+
+        resolution1 = MakeInstanceStatement.instance(self.g, "TEST", "TEST.MYGOAL", [])
+        resolution2 = MakeInstanceStatement.instance(self.g, "TEST", "TEST.MYGOAL", ["$var1", "$var2"])
+
+        statement = AssertStatement.instance(self.g, ExistsStatement.instance(self.g, SlotQuery(self.agent, NameQuery(self.agent, "XYZ"))), [resolution1])
+        parsed = Grammar.parse(self.agent, "ASSERT EXISTS HAS XYZ ELSE IMPASSE WITH @TEST:@TEST.MYGOAL()", start="assert_statement", agent=self.agent)
+        self.assertEqual(statement, parsed)
+
+        statement = AssertStatement.instance(self.g, IsStatement.instance(self.g, f, "SLOT", 123), [resolution1])
+        parsed = Grammar.parse(self.agent, "ASSERT @SELF.FRAME[SLOT] == 123 ELSE IMPASSE WITH @TEST:@TEST.MYGOAL()", start="assert_statement", agent=self.agent)
+        self.assertEqual(statement, parsed)
+
+        statement = AssertStatement.instance(self.g, MeaningProcedureStatement.instance(self.g, "some_mp", ["$var1"]), [resolution1])
+        parsed = Grammar.parse(self.agent, "ASSERT SELF.some_mp($var1) ELSE IMPASSE WITH @TEST:@TEST.MYGOAL()", start="assert_statement", agent=self.agent)
+        self.assertEqual(statement, parsed)
+
+        statement = AssertStatement.instance(self.g, ExistsStatement.instance(self.g, SlotQuery(self.agent, NameQuery(self.agent, "XYZ"))), [resolution1, resolution2])
+        parsed = Grammar.parse(self.agent, "ASSERT EXISTS HAS XYZ ELSE IMPASSE WITH @TEST:@TEST.MYGOAL() OR @TEST:@TEST.MYGOAL($var1, $var2)", start="assert_statement", agent=self.agent)
+        self.assertEqual(statement, parsed)
+
     def test_assign_filler_statement(self):
         f = self.g.register("FRAME")
 
@@ -264,6 +289,8 @@ class AgendaGrammarTestCase(unittest.TestCase):
         self.assertEqual(statement, parsed)
 
     def test_assign_variable_statement(self):
+        from backend.models.bootstrap import BootstrapTriple
+
         f = self.g.register("FRAME")
 
         statement = AssignVariableStatement.instance(self.g, "$var1", 123)
@@ -290,9 +317,38 @@ class AgendaGrammarTestCase(unittest.TestCase):
         parsed = Grammar.parse(self.agent, "$var1 = EXISTS @ = @EXE.TEST.1", start="assign_variable_statement", agent=self.agent)
         self.assertEqual(statement, parsed)
 
+        statement = AssignVariableStatement.instance(self.g, "$var1", Literal([123, Literal("test"), Literal("$var2"), MeaningProcedureStatement.instance(self.g, "TestMP", [])]))
+        parsed = Grammar.parse(self.agent, "$var1 = [123, \"test\", $var2, SELF.TestMP()]", start="assign_variable_statement", agent=self.agent)
+        self.assertIsInstance(parsed.frame._storage["ASSIGN"]._storage[0]._value.value, list)
+        self.assertEqual(statement, parsed)
+
+        statement = AssignVariableStatement.instance(self.g, "$var1", Literal([]))
+        parsed = Grammar.parse(self.agent, "$var1 = []", start="assign_variable_statement", agent=self.agent)
+        self.assertIsInstance(parsed.frame._storage["ASSIGN"]._storage[0]._value.value, list)
+        self.assertEqual(statement, parsed)
+
+        statement = AssignVariableStatement.instance(self.g, "$var1", TransientFrameStatement.instance(self.g, [BootstrapTriple("SLOT", Literal(123))]))
+        parsed = Grammar.parse(self.agent, "$var1 = {SLOT 123;}", start="assign_variable_statement", agent=self.agent)
+        self.assertEqual(statement, parsed)
+
     def test_exists_statement(self):
         statement = ExistsStatement.instance(self.g, SlotQuery(self.agent, AndQuery(self.agent, [NameQuery(self.agent, "THEME"), FillerQuery(self.agent, LiteralQuery(self.agent, 123))])))
         parsed = Grammar.parse(self.agent, "EXISTS THEME = 123", start="exists_statement", agent=self.agent)
+        self.assertEqual(statement, parsed)
+
+    def test_expectation_statement(self):
+        Bootstrap.bootstrap_resource(self.agent, "backend.resources", "exe.knowledge")
+
+        statement = ExpectationStatement.instance(self.g, ExistsStatement.instance(self.g, SlotQuery(self.agent, NameQuery(self.agent, "XYZ"))))
+        parsed = Grammar.parse(self.agent, "EXPECT EXISTS HAS XYZ", start="expectation_statement", agent=self.agent)
+        self.assertEqual(statement, parsed)
+
+        statement = ExpectationStatement.instance(self.g, MeaningProcedureStatement.instance(self.g, "test_mp", ["$var1"]))
+        parsed = Grammar.parse(self.agent, "EXPECT SELF.test_mp($var1)", start="expectation_statement", agent=self.agent)
+        self.assertEqual(statement, parsed)
+
+        statement = ExpectationStatement.instance(self.g, IsStatement.instance(self.g, Identifier.parse("SELF.FRAME.1"), "SLOT", 123))
+        parsed = Grammar.parse(self.agent, "EXPECT @SELF.FRAME.1[SLOT] == 123", start="expectation_statement", agent=self.agent)
         self.assertEqual(statement, parsed)
 
     def test_foreach_statement(self):
@@ -327,10 +383,31 @@ class AgendaGrammarTestCase(unittest.TestCase):
         self.agent.exe.register("TEST")
         self.agent.exe.register("TEST-CAPABILITY")
 
-        template = OutputXMRTemplate.build(self.agent, "test-xmr", OutputXMRTemplate.Type.PHYSICAL, "SELF.TEST-CAPABILITY", ["$var1", "$var2", "$var3", "$var4"])
+        template = OutputXMRTemplate.build(self.agent, "test-xmr", XMR.Type.ACTION, "SELF.TEST-CAPABILITY", ["$var1", "$var2", "$var3", "$var4"])
 
         statement = OutputXMRStatement.instance(self.agent.exe, template, [1, Literal("abc"), Literal("$var1"), Identifier.parse("SELF.TEST")], self.agent.identity)
         parsed = Grammar.parse(self.agent, "OUTPUT test-xmr(1, \"abc\", $var1, @SELF.TEST) BY SELF", start="output_statement", agent=self.agent)
+        self.assertEqual(statement, parsed)
+
+    def test_transientframe_statement(self):
+        from backend.models.bootstrap import BootstrapTriple
+
+        property1 = BootstrapTriple("SLOTA", Literal(123))
+        property2 = BootstrapTriple("SLOTA", Literal(456))
+        property3 = BootstrapTriple("SLOTB", Literal("abc"))
+        property4 = BootstrapTriple("SLOTC", Literal("$var1"))
+        property5 = BootstrapTriple("SLOTD", Identifier.parse("TEST.FRAME.1"))
+
+        statement = TransientFrameStatement.instance(self.agent.exe, [property1])
+        parsed = Grammar.parse(self.agent, "{SLOTA 123;}", start="transient_statement", agent=self.agent)
+        self.assertEqual(statement, parsed)
+
+        statement = TransientFrameStatement.instance(self.agent.exe, [property1, property2])
+        parsed = Grammar.parse(self.agent, "{SLOTA 123; SLOTA 456;}", start="transient_statement", agent=self.agent)
+        self.assertEqual(statement, parsed)
+
+        statement = TransientFrameStatement.instance(self.agent.exe, [property3, property4, property5])
+        parsed = Grammar.parse(self.agent, "{SLOTB \"abc\"; SLOTC $var1; SLOTD @TEST.FRAME.1;}", start="transient_statement", agent=self.agent)
         self.assertEqual(statement, parsed)
 
     def test_plan(self):
@@ -343,6 +420,16 @@ class AgendaGrammarTestCase(unittest.TestCase):
         query = SlotQuery(self.agent, AndQuery(self.agent, [NameQuery(self.agent, "THEME"), FillerQuery(self.agent, LiteralQuery(self.agent, 123))]))
         plan = Plan.build(self.g, "testplan", ExistsStatement.instance(self.g, query), Step.build(self.g, 1, Step.IDLE))
         parsed = Grammar.parse(self.agent, "PLAN (testplan) SELECT IF EXISTS THEME = 123 STEP DO IDLE", start="plan", agent=self.agent)
+        self.assertEqual(plan, parsed)
+
+        statement = MeaningProcedureStatement.instance(self.g, "mp1", ["$var1"])
+        plan = Plan.build(self.g, "testplan", statement, Step.build(self.g, 1, Step.IDLE))
+        parsed = Grammar.parse(self.agent, "PLAN (testplan) SELECT IF SELF.mp1($var1) STEP DO IDLE", start="plan", agent=self.agent)
+        self.assertEqual(plan, parsed)
+
+        statement = MeaningProcedureStatement.instance(self.g, "mp1", ["$var1"])
+        plan = Plan.build(self.g, "testplan", statement, Step.build(self.g, 1, Step.IDLE), negate=True)
+        parsed = Grammar.parse(self.agent, "PLAN (testplan) SELECT IF NOT SELF.mp1($var1) STEP DO IDLE", start="plan", agent=self.agent)
         self.assertEqual(plan, parsed)
 
         statement = MeaningProcedureStatement.instance(self.g, "mp1", [])
@@ -392,34 +479,34 @@ class AgendaGrammarTestCase(unittest.TestCase):
         self.assertEqual(2, len(self.g)) # One is the agent, the other is the overwritten goal
 
         # A goal can have parameters
-        goal: Goal = Goal.define(self.g, "XYZ", 0.5, 0.5, [], [], ["$var1", "$var2"])
+        goal: Goal = Goal.define(self.g, "XYZ", 0.5, 0.5, [], [], ["$var1", "$var2"], [])
         parsed: Goal = Grammar.parse(self.agent, "DEFINE XYZ($var1, $var2) AS GOAL IN SELF", start="define", agent=self.agent).goal
         self.assertEqual(goal, parsed)
 
         # A goal can have a numeric priority
-        goal: Goal = Goal.define(self.g, "XYZ", 0.9, 0.5, [], [], [])
+        goal: Goal = Goal.define(self.g, "XYZ", 0.9, 0.5, [], [], [], [])
         parsed: Goal = Grammar.parse(self.agent, "DEFINE XYZ() AS GOAL IN SELF PRIORITY 0.9", start="define", agent=self.agent).goal
         self.assertEqual(goal, parsed)
 
         # A goal can have a statement priority
-        goal: Goal = Goal.define(self.g, "XYZ", MeaningProcedureStatement.instance(self.g, "mp1", []).frame, 0.5, [], [], [])
+        goal: Goal = Goal.define(self.g, "XYZ", MeaningProcedureStatement.instance(self.g, "mp1", []).frame, 0.5, [], [], [], [])
         parsed: Goal = Grammar.parse(self.agent, "DEFINE XYZ() AS GOAL IN SELF PRIORITY SELF.mp1()", start="define", agent=self.agent).goal
         self.assertEqual(goal.frame["PRIORITY"].singleton()["CALLS"].singleton(), parsed.frame["PRIORITY"].singleton()["CALLS"].singleton())
 
         # A goal can have a numeric resources
-        goal: Goal = Goal.define(self.g, "XYZ", 0.5, 0.9, [], [], [])
+        goal: Goal = Goal.define(self.g, "XYZ", 0.5, 0.9, [], [], [], [])
         parsed: Goal = Grammar.parse(self.agent, "DEFINE XYZ() AS GOAL IN SELF RESOURCES 0.9", start="define", agent=self.agent).goal
         self.assertEqual(goal, parsed)
 
         # A goal can have a statement resources
-        goal: Goal = Goal.define(self.g, "XYZ", 0.5, MeaningProcedureStatement.instance(self.g, "mp1", []).frame, [], [], [])
+        goal: Goal = Goal.define(self.g, "XYZ", 0.5, MeaningProcedureStatement.instance(self.g, "mp1", []).frame, [], [], [], [])
         parsed: Goal = Grammar.parse(self.agent, "DEFINE XYZ() AS GOAL IN SELF RESOURCES SELF.mp1()", start="define", agent=self.agent).goal
         self.assertEqual(goal.frame["RESOURCES"].singleton()["CALLS"].singleton(), parsed.frame["RESOURCES"].singleton()["CALLS"].singleton())
 
         # A goal can have plans (plans)
         a1: Plan = Plan.build(self.g, "plan_a", Plan.DEFAULT, Step.build(self.g, 1, Step.IDLE))
         a2: Plan = Plan.build(self.g, "plan_b", Plan.DEFAULT, Step.build(self.g, 1, Step.IDLE))
-        goal: Goal = Goal.define(self.g, "XYZ", 0.5, 0.5, [a1, a2], [], [])
+        goal: Goal = Goal.define(self.g, "XYZ", 0.5, 0.5, [a1, a2], [], [], [])
         parsed: Goal = Grammar.parse(self.agent, "DEFINE XYZ() AS GOAL IN SELF PLAN (plan_a) SELECT DEFAULT STEP DO IDLE PLAN (plan_b) SELECT DEFAULT STEP DO IDLE", start="define", agent=self.agent).goal
         self.assertEqual(goal, parsed)
 
@@ -428,8 +515,15 @@ class AgendaGrammarTestCase(unittest.TestCase):
         q2 = SlotQuery(self.agent, AndQuery(self.agent, [NameQuery(self.agent, "THEME"), FillerQuery(self.agent, LiteralQuery(self.agent, 456))]))
         c1: Condition = Condition.build(self.g, [ExistsStatement.instance(self.g, q1)], Goal.Status.SATISFIED, Condition.Logic.AND, 1)
         c2: Condition = Condition.build(self.g, [ExistsStatement.instance(self.g, q2)], Goal.Status.ABANDONED, Condition.Logic.AND, 2)
-        goal: Goal = Goal.define(self.g, "XYZ", 0.5, 0.5, [], [c1, c2], [])
+        goal: Goal = Goal.define(self.g, "XYZ", 0.5, 0.5, [], [c1, c2], [], [])
         parsed: Goal = Grammar.parse(self.agent, "DEFINE XYZ() AS GOAL IN SELF WHEN EXISTS THEME = 123 THEN satisfied WHEN EXISTS THEME = 456 THEN abandoned", start="define", agent=self.agent).goal
+        self.assertEqual(goal, parsed)
+
+        # A goal can have effects
+        e1: Effect = Effect.build(self.g, [AddFillerStatement.instance(self.g, "TEST.FRAME.1", "SLOT", 123)])
+        e2: Effect = Effect.build(self.g, [AddFillerStatement.instance(self.g, "TEST.FRAME.1", "SLOT", 456)])
+        goal: Goal = Goal.define(self.g, "XYZ", 0.5, 0.5, [], [], [], [e1, e2])
+        parsed: Goal = Grammar.parse(self.agent, "DEFINE XYZ() AS GOAL IN SELF EFFECT DO @TEST.FRAME.1[SLOT] = 123 DO @TEST.FRAME.1[SLOT] = $var1", start="define", agent=self.agent).goal
         self.assertEqual(goal, parsed)
 
     def test_find_something_to_do(self):
@@ -452,7 +546,7 @@ class AgendaGrammarTestCase(unittest.TestCase):
                                         ])
                          )),
             Plan.build(graph, "idle", Plan.DEFAULT, [Step.build(graph, 1, Step.IDLE), Step.build(graph, 2, Step.IDLE)])
-        ], [], [])
+        ], [], [], [])
 
         script = '''
         DEFINE FIND-SOMETHING-TO-DO()
@@ -599,15 +693,15 @@ class OutputXMRTemplateGrammarTestCase(unittest.TestCase):
         self.n = self.agent
 
     def test_parse_type(self):
-        type = OutputXMRTemplate.Type.PHYSICAL
+        type = XMR.Type.ACTION
         parsed = Grammar.parse(self.n, "TYPE PHYSICAL", start="output_xmr_template_type")
         self.assertEqual(type, parsed)
 
-        type = OutputXMRTemplate.Type.MENTAL
+        type = XMR.Type.MENTAL
         parsed = Grammar.parse(self.n, "TYPE MENTAL", start="output_xmr_template_type")
         self.assertEqual(type, parsed)
 
-        type = OutputXMRTemplate.Type.VERBAL
+        type = XMR.Type.LANGUAGE
         parsed = Grammar.parse(self.n, "TYPE VERBAL", start="output_xmr_template_type")
         self.assertEqual(type, parsed)
 
@@ -669,7 +763,7 @@ class OutputXMRTemplateGrammarTestCase(unittest.TestCase):
         '''
 
         name = "get-item-template"
-        type = OutputXMRTemplate.Type.PHYSICAL
+        type = XMR.Type.ACTION
         capability = "EXE.GET-CAPABILITY"
         params = ["$var1", "$var2"]
         root = "OUT.POSSESSION-EVENT.1"

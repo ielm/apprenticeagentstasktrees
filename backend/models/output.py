@@ -1,70 +1,13 @@
 from backend.models.effectors import Capability
 from backend.models.graph import Frame, Graph, Identifier, Literal, Network
-from enum import Enum
+from backend.models.xmr import XMR
 from typing import Any, List, Tuple, Union
-
-
-class OutputXMR(object):
-
-    class Status(Enum):
-        PENDING = "PENDING"
-        ISSUED = "ISSUED"
-        FINISHED = "FINISHED"
-
-    @classmethod
-    def build(cls, graph: Graph, type: 'OutputXMRTemplate.Type', capability: Union[str, Identifier, Frame, Capability], refers_to: str, root: Union[str, Identifier, Frame]=None) -> 'OutputXMR':
-        xmr = graph.register("XMR", generate_index=True)
-
-        if isinstance(capability, Capability):
-            capability = capability.frame
-
-        xmr["TYPE"] = type
-        xmr["REQUIRES"] = capability
-        xmr["REFERS-TO-GRAPH"] = Literal(refers_to)
-        xmr["STATUS"] = OutputXMR.Status.PENDING
-
-        if root is not None:
-            xmr["ROOT"] = root
-
-        return OutputXMR(xmr)
-
-    def __init__(self, frame: Frame):
-        self.frame = frame
-
-    def type(self) -> 'OutputXMRTemplate.Type':
-        return self.frame["TYPE"].singleton()
-
-    def capability(self) -> Identifier:
-        return self.frame["REQUIRES"].singleton()
-
-    def status(self) -> 'OutputXMR.Status':
-        return self.frame["STATUS"].singleton()
-
-    def graph(self, network: Network) -> Graph:
-        return network[self.frame["REFERS-TO-GRAPH"].singleton()]
-
-    def root(self) -> Union[Frame, None]:
-        if "ROOT" not in self.frame:
-            return None
-        return self.frame["ROOT"].singleton()
-
-    def __eq__(self, other):
-        if isinstance(other, OutputXMR):
-            return self.frame == other.frame
-        if isinstance(other, Frame):
-            return self.frame == other
-        return super().__eq__(other)
 
 
 class OutputXMRTemplate(object):
 
-    class Type(Enum):
-        PHYSICAL = "PHYSICAL"
-        MENTAL = "MENTAL"
-        VERBAL = "VERBAL"
-
     @classmethod
-    def build(cls, network: Network, name: str, type: 'OutputXMRTemplate.Type', capability: Union[str, Identifier, Frame, Capability], params: List[str]) -> 'OutputXMRTemplate':
+    def build(cls, network: Network, name: str, type: XMR.Type, capability: Union[str, Identifier, Frame, Capability], params: List[str]) -> 'OutputXMRTemplate':
         template_id = "XMR-TEMPLATE#" + str(len(list(filter(lambda graph: graph.startswith("XMR-TEMPLATE#"), network._storage.keys()))) + 1)
 
         graph = network.register(template_id)
@@ -118,7 +61,7 @@ class OutputXMRTemplate(object):
         anchor = self.anchor()
         return anchor["NAME"].singleton()
 
-    def type(self) -> 'OutputXMRTemplate.Type':
+    def type(self) -> XMR.Type:
         anchor = self.anchor()
         return anchor["TYPE"].singleton()
 
@@ -142,14 +85,36 @@ class OutputXMRTemplate(object):
         anchor = self.anchor()
         anchor["ROOT"] = root
 
-    def create(self, network: Network, graph: Graph, params: List[Any]) -> OutputXMR:
+    def create(self, network: Network, graph: Graph, params: List[Any]) -> XMR:
         graph_id = "XMR#" + str(len(list(filter(lambda graph: graph.startswith("XMR#"), network._storage.keys()))) + 1)
 
         xmr_graph = network.register(graph_id)
         root = None
         if self.root() is not None:
             root = Identifier(graph_id, self.root()._identifier.name, self.root()._identifier.instance)
-        anchor = OutputXMR.build(graph, self.type(), self.capability(), graph_id, root)
+        anchor = XMR.instance(graph, xmr_graph, XMR.Signal.OUTPUT, self.type(), XMR.OutputStatus.PENDING, "SELF.ROBOT.1", root, self.capability())
+
+        def materialize_transient_frame(param: Any):
+            if isinstance(param, Identifier):
+                param = param.resolve(None, network)
+            if not isinstance(param, Frame):
+                return param
+            if not param ^ "EXE.TRANSIENT-FRAME":
+                return param
+
+            transient_frame: Frame = param
+            parent = transient_frame["INSTANCE-OF"].singleton()
+
+            materialized_id = Identifier(graph_id, parent._identifier.name)
+            materialized_frame = xmr_graph.register(str(materialized_id), generate_index=True)
+
+            for slot in transient_frame:
+                for filler in transient_frame[slot]:
+                    materialized_frame[slot] += filler
+
+            return materialized_frame
+
+        params = list(map(lambda param: materialize_transient_frame(param), params))
 
         for frame in self.graph.values():
             if frame == self.anchor():

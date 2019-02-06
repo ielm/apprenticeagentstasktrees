@@ -35,3 +35,9 @@ class FetchObjectCapability(OutputMethod):
         target = self.output.root()["THEME"].singleton()
 
         print("TODO: issue command to robot to fetch " + str(target))
+
+
+class ExampleCapability(OutputMethod):
+    def run(self):
+        target = self.output.root()["THEME"].singleton()
+        print("Issuing example capability with target " + str(target))

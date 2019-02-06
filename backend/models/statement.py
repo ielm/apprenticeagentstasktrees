@@ -2,10 +2,11 @@ from backend.models.graph import Filler, Frame, Graph, Identifier, Literal
 from backend.models.mps import MPRegistry
 from backend.models.query import Query
 from pydoc import locate
-from typing import Any, List, Union
+from typing import Any, Callable, List, Union
 
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
+    from backend.models.bootstrap import BootstrapTriple
     from backend.models.output import OutputXMR, OutputXMRTemplate
 
 
@@ -13,6 +14,9 @@ class Variable(object):
 
     @classmethod
     def instance(cls, graph: Graph, name: str, value: Any, varmap: 'VariableMap', assign: bool=True):
+        if value == []:
+            value = [[]]
+
         frame = graph.register("VARIABLE", generate_index=True)
         frame["NAME"] = Literal(name)
         frame["VALUE"] = value
@@ -89,11 +93,6 @@ class VariableMap(object):
         if isinstance(variable, Variable):
             variable = variable.frame._identifier
 
-        for var in self.frame["_WITH"]:
-            var = var.resolve()
-            if Variable(var).name() == name:
-                raise Exception("Variable '" + name + "' is already mapped.")
-
         self.frame["_WITH"] += variable
 
     def resolve(self, name: str) -> Any:
@@ -117,11 +116,38 @@ class VariableMap(object):
         return super().__eq__(other)
 
 
+class TransientFrame(object):
+
+    def __init__(self, frame: Frame):
+        self.frame = frame
+
+    def is_in_scope(self) -> bool:
+        if "__IN_SCOPE__" in self.frame:
+            return self.frame["__IN_SCOPE__"].singleton()()
+        return True
+
+    def update_scope(self, condition: Callable):
+        self.frame["__IN_SCOPE__"] = condition
+
+    def __eq__(self, other):
+        if isinstance(other, TransientFrame):
+            return self.frame == other.frame
+        elif isinstance(other, Frame):
+            return self.frame == other
+
+        return super().__eq__(other)
+
+
 class StatementScope(object):
 
     def __init__(self):
-        from backend.models.output import OutputXMR
-        self.outputs: List[OutputXMR] = []
+        from backend.models.agenda import Expectation
+        from backend.models.output import XMR
+
+        self.outputs: List[XMR] = []
+        self.expectations: List[Expectation] = []
+        self.transients: List[TransientFrame] = []
+        self.variables = {}
 
 
 class Statement(object):
@@ -235,6 +261,42 @@ class AddFillerStatement(Statement):
         return False
 
 
+class AssertStatement(Statement):
+
+    class ImpasseException(Exception):
+
+        def __init__(self, resolutions: List['MakeInstanceStatement']):
+            self.resolutions = resolutions
+
+    @classmethod
+    def instance(cls, graph: Graph, assertion: Union[str, Identifier, Frame, Statement], resolutions: List[Union[str, Identifier, Frame, 'MakeInstanceStatement']]):
+        if isinstance(assertion, Statement):
+            assertion = assertion.frame
+        resolutions = list(map(lambda r: r.frame if isinstance(r, MakeInstanceStatement) else r, resolutions))
+
+        stmt = graph.register("ASSERT-STATEMENT", isa="EXE.ASSERT-STATEMENT", generate_index=True)
+        stmt["ASSERTION"] = assertion
+        stmt["RESOLUTION"] = resolutions
+
+        return AssertStatement(stmt)
+
+    def assertion(self) -> Statement:
+        return Statement.from_instance(self.frame["ASSERTION"].singleton())
+
+    def resolutions(self) -> List['MakeInstanceStatement']:
+        return list(map(lambda s: MakeInstanceStatement(s.resolve()), self.frame["RESOLUTION"]))
+
+    def run(self, scope: StatementScope, varmap: VariableMap):
+        if not self.assertion().run(scope, varmap):
+            raise AssertStatement.ImpasseException(self.resolutions())
+
+    def __eq__(self, other):
+        if isinstance(other, AssertStatement):
+            return self.assertion() == other.assertion() and \
+                   self.resolutions() == other.resolutions()
+        return super().__eq__(other)
+
+
 class AssignFillerStatement(Statement):
 
     @classmethod
@@ -296,19 +358,24 @@ class AssignVariableStatement(Statement):
     def run(self, scope: StatementScope, varmap: VariableMap):
         variable = self.frame["TO"].singleton()
         value = self.frame["ASSIGN"].singleton()
-
-        if isinstance(value, str):
-            try:
-                value = varmap.resolve(value)
-            except: pass
-
-        if isinstance(value, Statement) and value.frame ^ "EXE.RETURNING-STATEMENT":
-            value = value.run(StatementScope(), varmap)
-
-        if isinstance(value, Frame) and value ^ "EXE.RETURNING-STATEMENT":
-            value = Statement.from_instance(value).run(StatementScope(), varmap)
+        value = self._resolve(value, scope, varmap)
 
         Variable.instance(self.frame._graph, variable, value, varmap)
+
+    def _resolve(self, value, scope: StatementScope, varmap: VariableMap):
+        if isinstance(value, list):
+            return list(map(lambda v: self._resolve(v, scope, varmap), value))
+        if isinstance(value, str):
+            try:
+                return varmap.resolve(value)
+            except:
+                pass
+        if isinstance(value, Statement) and value.frame ^ "EXE.RETURNING-STATEMENT":
+            return value.run(StatementScope(), varmap)
+        if isinstance(value, Frame) and value ^ "EXE.RETURNING-STATEMENT":
+            return Statement.from_instance(value).run(StatementScope(), varmap)
+
+        return value
 
     def __eq__(self, other):
         if isinstance(other, AssignVariableStatement):
@@ -333,6 +400,31 @@ class ExistsStatement(Statement):
     def __eq__(self, other):
         if isinstance(other, ExistsStatement):
             return other.frame["FIND"] == self.frame["FIND"]
+
+        return super().__eq__(other)
+
+
+class ExpectationStatement(Statement):
+
+    @classmethod
+    def instance(cls, graph: Graph, condition: Union[str, Identifier, Frame, Statement]):
+        if isinstance(condition, Statement):
+            condition = condition.frame
+
+        frame = graph.register("EXPECTATION-STATEMENT", isa="EXE.EXPECTATION-STATEMENT", generate_index=True)
+        frame["CONDITION"] = condition
+
+        return ExpectationStatement(frame)
+
+    def condition(self) -> Statement:
+        return Statement.from_instance(self.frame["CONDITION"].singleton())
+
+    def run(self, scope: StatementScope, varmap: VariableMap):
+        scope.expectations.append(self.condition())
+
+    def __eq__(self, other):
+        if isinstance(other, ExpectationStatement):
+            return self.condition() == other.condition()
 
         return super().__eq__(other)
 
@@ -515,7 +607,7 @@ class OutputXMRStatement(Statement):
     def run(self, scope: StatementScope, varmap: VariableMap) -> 'OutputXMR':
         agent = self.agent()
         network = self.frame._graph._network
-        graph = agent._graph
+        graph = network["OUTPUTS"]
 
         params = self.params()
         params = list(map(lambda param: self._resolve_param(param, varmap), params))
@@ -530,6 +622,45 @@ class OutputXMRStatement(Statement):
             return self.template() == other.template() and \
                 self.params() == other.params() and \
                 self.agent() == other.agent()
+        elif isinstance(other, Frame):
+            return self.frame == other
+
+        return super().__eq__(other)
+
+
+class TransientFrameStatement(Statement):
+
+    @classmethod
+    def instance(cls, graph: Graph, properties: List['BootstrapTriple']):
+        frame = graph.register("TRANSIENTFRAME-STATEMENT", isa="EXE.TRANSIENTFRAME-STATEMENT", generate_index=True)
+
+        for property in properties:
+            frame["HAS-PROPERTY"] += property
+
+        return TransientFrameStatement(frame)
+
+    def properties(self) -> List['BootstrapTriple']:
+        return list(map(lambda p: p.resolve().value, self.frame["HAS-PROPERTY"]))
+
+    def run(self, scope: StatementScope, varmap: VariableMap):
+        frame = self.frame._network["EXE"].register("TRANSIENT-FRAME", isa="EXE.TRANSIENT-FRAME", generate_index=True)
+
+        for property in self.properties():
+            filler = property.filler
+            if isinstance(filler, Literal) and isinstance(filler.value, str):
+                try:
+                    filler = varmap.resolve(filler.value)
+                except: pass
+
+            frame[property.slot] += filler
+
+        scope.transients.append(TransientFrame(frame))
+
+        return frame
+
+    def __eq__(self, other):
+        if isinstance(other, TransientFrameStatement):
+            return self.properties() == other.properties()
         elif isinstance(other, Frame):
             return self.frame == other
 

@@ -51,13 +51,13 @@ VERBAL: "verbal"i
 // Statements and executables
 
 define: DEFINE goal
-goal: NAME arguments AS GOAL IN GRAPH priority resources (plan)* (condition)*
+goal: NAME arguments AS GOAL IN GRAPH priority resources (plan)* (condition)* (effect)*
 priority: (PRIORITY (double | mp_statement))?
 resources: (RESOURCES (double | mp_statement))?
 goal_status: (PENDING | ACTIVE | ABANDONED | SATISFIED)
 
 plan: PLAN "(" PLAN_NAME ")" plan_selection plan_step+
-plan_selection: SELECT (DEFAULT | IF boolean_statement)
+plan_selection: SELECT (DEFAULT | IF NOT? (boolean_statement | mp_statement))
 plan_step: STEP plan_do+
 plan_do: DO (statement | IDLE)
 
@@ -69,18 +69,28 @@ condition_nor: boolean_statement (NOR boolean_statement)+
 condition_not: boolean_statement (NOT boolean_statement)+
 condition_on: (EXECUTED)
 
-statement: (add_filler_statement | assign_filler_statement | assign_variable_statement | exists_statement | foreach_statement | is_statement | make_instance_statement | mp_statement | output_statement)
+effect: EFFECT effect_do+
+effect_do: DO statement
+
+statement: (add_filler_statement | assert_statement | assign_filler_statement | assign_variable_statement | exists_statement | expectation_statement |foreach_statement | is_statement | make_instance_statement | mp_statement | output_statement | transient_statement)
 boolean_statement: (exists_statement | is_statement)
 
 add_filler_statement: statement_instance "[" NAME "]" "+=" (statement_instance | literal)
+assert_statement: ASSERT assertion ELSE IMPASSE WITH impasses
 assign_filler_statement: statement_instance "[" NAME "]" "=" (statement_instance | literal)
-assign_variable_statement: ARGUMENT "=" (literal | identifier | ARGUMENT | statement)
+assign_variable_statement: ARGUMENT "=" (literal | identifier | ARGUMENT | statement | list)
 exists_statement: EXISTS logical_slot_query
+expectation_statement: EXPECT (boolean_statement | mp_statement)
 foreach_statement: FOR EACH ARGUMENT IN logical_slot_query ("|" statement)*
 is_statement: statement_instance "[" NAME "]" EQUALS EQUALS literal
 make_instance_statement: "@" (graph | special_agent_graph) ":" identifier arguments
 mp_statement: SELF "." MP output_arguments
 output_statement: OUTPUT NAME output_arguments BY statement_instance
+transient_statement: "{" (declare_property_knowledge (BOOTSTRAPDELIMITER declare_property_knowledge)*)? (BOOTSTRAPDELIMITER)? "}"
+
+assertion: (exists_statement | is_statement | mp_statement)
+impasses: impasse (OR impasse)*
+impasse: make_instance_statement
 
 statement_instance: (SELF | identifier | make_instance_statement | argument)
 special_agent_graph: "AGENT." (INTERNAL | EXE | ONTOLOGY | WM | LT) "!"
@@ -89,22 +99,30 @@ argument: ARGUMENT
 output_arguments: "(" (output_argument ("," output_argument)*)? ")"
 output_argument: (argument | literal | statement_instance)
 
+list: ("[]" | "[" list_element ("," list_element)* "]")
+list_element: (literal | identifier | ARGUMENT | statement | list)
+
 ABANDONED: "abandoned"i
 ACTIVE: "active"i
 AS: "as"i
+ASSERT: "assert"i
 BY: "by"i
 CAPABILITY: "capability"i
 DEFAULT: "default"i
 DEFINE: "define"i
 DO: "DO"i
 EACH: "each"i
+EFFECT: "effect"i
+ELSE: "else"i
 EXE: "exe"i
 EXECUTED: "executed"i
 EXISTS: "exists"i
+EXPECT: "expect"i
 FOR: "for"i
 GOAL: "goal"i
 IDLE: "idle"i
 IF: "if"i
+IMPASSE: "impasse"i
 IN: "in"i
 INTERNAL: "internal"i
 LT: "lt"i
@@ -121,6 +139,7 @@ SELECT: "select"i
 SELF: "self"i
 STEP: "step"i
 WHEN: "when"i
+WITH: "with"i
 WM: "wm"i
 
 ARGUMENT: /\$[a-zA-Z0-9]+/

@@ -1,13 +1,11 @@
 from backend.contexts.LCTContext import LCTContext
-from backend.models.agenda import Agenda, Decision, Goal, Step
+from backend.models.agenda import Agenda, Decision, Expectation, Goal, Step
 from backend.models.effectors import Callback, Effector
 from backend.models.environment import Environment
 from backend.models.fr import FR
 from backend.models.graph import Frame, Graph, Identifier, Network
-from backend.models.mps import AgentMethod
 from backend.models.ontology import Ontology
-from backend.models.output import OutputXMR
-from backend.models.statement import Statement
+from backend.models.statement import TransientFrame
 from backend.models.tmr import TMR
 from backend.models.vmr import VMR
 from backend.models.xmr import XMR
@@ -39,8 +37,10 @@ class Agent(Network):
         self.lt_memory = self.register(FR("LT", self.ontology))
         self.environment = self.register(FR("ENV", self.ontology))
 
+        self.inputs = self.register(FR("INPUTS", self.ontology))
+        self.outputs = self.register(FR("OUTPUTS", self.ontology))
+
         self.identity = self.internal.register("ROBOT", isa="ONT.ROBOT")
-        self.exe.register("INPUT-TMR", generate_index=False)
         self._bootstrap()
 
         self.input_memory = []
@@ -57,10 +57,10 @@ class Agent(Network):
         return self._logger
 
     def input(self, input):
-        tmr = self.register(TMR(input, ontology=self.ontology))
+        tmr = TMR.from_json(self, self.ontology, input)
         self.input_memory.append(tmr)
 
-        self._logger.log("Input: " + tmr.sentence)
+        self._logger.log("Input: " + tmr.render())
 
         agenda = self.context.default_understanding()
         agenda.logger(self._logger)
@@ -133,33 +133,24 @@ class Agent(Network):
         print("T" + str(Agent.IDEA.time()) + " " + Agent.IDEA.stage())
         print(self.internal)
 
-    def _input(self, input: Union[dict, TMR, VMR]=None, source: Union[str, Identifier, Frame]=None, type: str=None):
+    def _input(self, input: dict=None, source: Union[str, Identifier, Frame]=None, type: str=None):
         if input is None:
             return
 
         # If input is visual input, create VMR, else create tmr and continue
         if type == "VISUAL":
-            input = VMR(input, ontology=self.ontology)
-        elif isinstance(input, dict):
-            input = TMR(input, ontology=self.ontology)
+            xmr = VMR.from_json(self, self.ontology, input, source=source)
+            xmr.update_environment(self.env())
+            xmr.update_memory(self.wo_memory)
+        else:
+            xmr = TMR.from_json(self, self.ontology, input, source=source)
 
         # Takes graph obj and writes it to the network
-        registered_xMR = self.register(input)
+        # registered_xMR = self.register(input)
 
-        kwargs = {}
-        if source is not None:
-            kwargs["source"] = source
-        if type is not None:
-            kwargs["type"] = type
-
-        xmr = XMR.instance(self.internal, registered_xMR, status=XMR.Status.RECEIVED, **kwargs)
         self.identity["HAS-INPUT"] += xmr.frame
 
-        if type == "VISUAL":
-            input.update_environment(self.env())
-            self._logger.log("Input: <<VMR INSTANCE HERE>>")
-        else:
-            self._logger.log("Input: " + registered_xMR.sentence)
+        self._logger.log("Input: " + xmr.render())
 
     def _decide(self):
         agenda = self.agenda()
@@ -189,6 +180,8 @@ class Agent(Network):
         for decision in decisions:
             decision.inspect()
 
+        decisions = list(filter(lambda decision: decision.status() != Decision.Status.BLOCKED, decisions))
+
         decisions = sorted(decisions, key=lambda d: (d.priority() * priority_weight) - (d.cost() * resources_weight), reverse=True)
         effectors = self.effectors()
 
@@ -208,13 +201,16 @@ class Agent(Network):
                 selected_goals.append(decision.goal().frame.name())
                 decision.select()
                 for output in effector_map.keys():
-                    output = OutputXMR(self.lookup(output))
+                    output = XMR(self.lookup(output))
                     effector = effector_map[output.frame.name()]
                     effector.reserve(decision, output, output.capability())
             else:
                 decision.decline()
         for goal in selected_goals:
             Goal(self.lookup(goal)).status(Goal.Status.ACTIVE)
+        for decision in self.decisions():
+            if decision.status() == Decision.Status.BLOCKED and decision.goal().is_pending():
+                decision.goal().status(Goal.Status.ACTIVE)
 
     def _execute(self):
         for decision in list(filter(lambda decision: decision.status() == Decision.Status.SELECTED, self.decisions())):
@@ -222,17 +218,28 @@ class Agent(Network):
             decision.execute(self, effectors)
 
     def _assess(self):
+        reassess = False
+
         for decision in self.decisions():
             for callback in decision.callbacks():
                 if callback.status() == Callback.Status.RECEIVED:
                     callback.process()
 
+        for decision in self.decisions():
+            for expectation in decision.expectations():
+                expectation.assess(decision.goal())
+
+        for decision in self.decisions():
+            for impasse in decision.impasses():
+                if impasse.frame.name() not in list(map(lambda g: g.frame.name(), self.agenda().goals(pending=True, active=True, abandoned=True, satisfied=True))):
+                    self.agenda().add_goal(impasse)
+
         for decision in list(filter(lambda decision: decision.status() == Decision.Status.EXECUTING, self.decisions())):
-            if len(decision.callbacks()) == 0:
+            if len(decision.callbacks()) == 0 and len(list(filter(lambda e: e.status() != Expectation.Status.SATISFIED, decision.expectations()))) == 0:
                 decision.frame["STATUS"] = Decision.Status.FINISHED
                 decision.step().frame["STATUS"] = Step.Status.FINISHED
 
-        for decision in list(filter(lambda decision: decision.status() != Decision.Status.EXECUTING and decision.status() != Decision.Status.FINISHED, self.decisions())):
+        for decision in list(filter(lambda decision: decision.status() != Decision.Status.BLOCKED and decision.status() != Decision.Status.EXECUTING and decision.status() != Decision.Status.FINISHED, self.decisions())):
             self.identity["HAS-DECISION"] -= decision.frame
             del decision.frame._graph[decision.frame.name()]
 
@@ -240,8 +247,26 @@ class Agent(Network):
                 del output.frame._graph[output.frame.name()]
                 del self[output.graph(self)._namespace]
 
-        for active in self.agenda().goals(pending=True, active=True):
+        for decision in self.decisions():
+            decision.assess_impasses()
+            if len(decision.impasses()) == 0 and decision.status() == Decision.Status.BLOCKED:
+                decision.frame["STATUS"] = Decision.Status.PENDING
+
+        for active in self.agenda().goals(pending=True, active=True, abandoned=True, satisfied=True):
+            status = active.frame["STATUS"].singleton()
             active.assess()
+            if status != active.frame["STATUS"].singleton():
+                reassess = True
+
+        if reassess:
+            self._assess()
+
+        for transient_frame in self.exe.search(Frame.q(self).isa("EXE.TRANSIENT-FRAME")):
+            if transient_frame.name() == "EXE.TRANSIENT-FRAME":
+                continue
+            if TransientFrame(transient_frame).is_in_scope():
+                continue
+            del self.exe[transient_frame.name()]
 
     def agenda(self):
         return Agenda(self.identity)
@@ -257,7 +282,7 @@ class Agent(Network):
 
     def pending_inputs(self) -> List[Graph]:
         inputs = map(lambda input: XMR(input.resolve()), self.identity["HAS-INPUT"])
-        inputs = filter(lambda input: input.status() == XMR.Status.RECEIVED, inputs)
+        inputs = filter(lambda input: input.status() == XMR.InputStatus.RECEIVED, inputs)
         inputs = map(lambda input: input.graph(self), inputs)
 
         return list(inputs)

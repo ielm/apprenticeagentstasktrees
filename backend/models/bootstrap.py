@@ -7,6 +7,7 @@ from backend.models.mps import AgentMethod, MPRegistry, OutputMethod
 from backend.models.ontology import Ontology, OntologyFrame, OntologyFiller
 from backend.models.output import OutputXMRTemplate
 from backend.models.query import Query
+from backend.models.xmr import XMR
 from pkgutil import get_data
 from typing import Callable, List, Type, Union
 
@@ -33,7 +34,7 @@ class Bootstrap(object):
     @classmethod
     def list_resources(cls, package: str):
         from pkg_resources import resource_listdir
-        return list(map(lambda f: (package, f), filter(lambda f: f.endswith(".knowledge") or f.endswith(".aa") or f.endswith(".mps"), resource_listdir(package, ''))))
+        return list(map(lambda f: (package, f), filter(lambda f: f.endswith(".knowledge") or f.endswith(".environment"), resource_listdir(package, ''))))
 
 
 class BootstrapTriple(object):
@@ -183,7 +184,7 @@ class BootstrapAddTrigger(Bootstrap):
 
 class BootstrapDefineOutputXMRTemplate(Bootstrap):
 
-    def __init__(self, network: Network, name: str, type: OutputXMRTemplate.Type, capability: Union[str, Identifier, Frame, Capability], params: List[str], root: Union[str, Identifier, Frame, None], frames: List[BootstrapDeclareKnowledge]):
+    def __init__(self, network: Network, name: str, type: XMR.Type, capability: Union[str, Identifier, Frame, Capability], params: List[str], root: Union[str, Identifier, Frame, None], frames: List[BootstrapDeclareKnowledge]):
         self.network = network
         self.name = name
         self.type = type

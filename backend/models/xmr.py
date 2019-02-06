@@ -1,7 +1,10 @@
+from backend.models.effectors import Capability
 from backend.models.graph import Frame, Graph, Identifier, Literal, Network
 
 from enum import Enum
 from typing import Union
+
+import time
 
 
 # XMR is a Frame wrapper object for holding a node as a reference to a particular meaning representation, and resolving
@@ -10,51 +13,99 @@ from typing import Union
 
 class XMR(object):
 
-    class Status(Enum):
+    class Signal(Enum):
+        INPUT = "INPUT"
+        OUTPUT = "OUTPUT"
+
+    class InputStatus(Enum):
         RECEIVED = "RECEIVED"
         ACKNOWLEDGED = "ACKNOWLEDGED"
         UNDERSTOOD = "UNDERSTOOD"
         IGNORED = "IGNORED"
 
+    class OutputStatus(Enum):
+        PENDING = "PENDING"
+        ISSUED = "ISSUED"
+        FINISHED = "FINISHED"
+
     class Type(Enum):
+        ACTION = "ACTION"
+        MENTAL = "MENTAL"
         LANGUAGE = "LANGUAGE"
         VISUAL = "VISUAL"
 
     @classmethod
-    def instance(cls, graph: Graph, refers_to: Union[str, Graph], isa: str="EXE.INPUT-TMR", status: Union[str, Status]=Status.RECEIVED, type: Union[str, Type]=Type.LANGUAGE, source: Union[str, Identifier, Frame]=None) -> 'XMR':
+    def from_instance(cls, frame: Frame) -> 'XMR':
+        from backend.models.tmr import TMR
+        from backend.models.vmr import VMR
+
+        clazz = {
+            "ACTION": AMR,
+            "MENTAL": MMR,
+            "LANGUAGE": TMR,
+            "VISUAL": VMR,
+        }[XMR(frame).type().name]
+
+        return clazz(frame)
+
+    @classmethod
+    def instance(g, graph: Graph, refers_to: Union[str, Graph], signal: Signal, type: Type, status: Union[InputStatus, OutputStatus], source: Union[str, Identifier, Frame], root: [str, Identifier, Frame], capability: [str, Identifier, Frame, Capability]=None) -> 'XMR':
 
         if isinstance(refers_to, Graph):
             refers_to = refers_to._namespace
 
-        if isinstance(status, XMR.Status):
-            status = status.value
+        if isinstance(capability, Capability):
+            capability = capability.frame
 
-        if isinstance(type, XMR.Type):
-            type = type.value
-
-        if source is not None:
-            if isinstance(source, str):
-                source = Identifier.parse(source)
-            if isinstance(source, Frame):
-                source = source._identifier
+        isa = {
+            "ACTION": "EXE.AMR",
+            "MENTAL": "EXE.MMR",
+            "LANGUAGE": "EXE.TMR",
+            "VISUAL": "EXE.VMR",
+        }[type.name]
 
         frame = graph.register("XMR", isa=isa, generate_index=True)
         frame["REFERS-TO-GRAPH"] = Literal(refers_to)
-        frame["STATUS"] = Literal(status)
+        frame["SIGNAL"] = Literal(signal)
         frame["TYPE"] = Literal(type)
+        frame["STATUS"] = Literal(status)
+        frame["SOURCE"] = source
+        frame["ROOT"] = root
+        frame["TIMESTAMP"] = time.time()
 
-        if source is not None:
-            frame["SOURCE"] = source
+        if capability is not None:
+            frame["REQUIRES"] = capability
 
-        return XMR(frame)
+        return XMR.from_instance(frame)
+
+    def __eq__(self, other):
+        if isinstance(other, XMR):
+            return self.frame == other.frame
+        if isinstance(other, Frame):
+            return self.frame == other
+
+        return super().__eq__(other)
 
     def __init__(self, frame: Frame):
         self.frame = frame
 
-    def status(self) -> Status:
+    def signal(self) -> Signal:
+        return self.frame["SIGNAL"].singleton()
+
+    def is_input(self) -> bool:
+        return self.signal() == XMR.Signal.INPUT
+
+    def is_output(self) -> bool:
+        return self.signal() == XMR.Signal.OUTPUT
+
+    def status(self) -> Union[InputStatus, OutputStatus]:
         status = self.frame["STATUS"].singleton()
         if isinstance(status, str):
-            status = XMR.Status[status]
+            if status in [item.value for item in XMR.InputStatus]:
+                status = XMR.InputStatus[status]
+            if status in [item.value for item in XMR.OutputStatus]:
+                status = XMR.OutputStatus[status]
+
         return status
 
     def type(self) -> Type:
@@ -68,3 +119,53 @@ class XMR(object):
 
     def graph(self, network: Network) -> Graph:
         return network[self.frame["REFERS-TO-GRAPH"].singleton()]
+
+    def timestamp(self) -> float:
+        return self.frame["TIMESTAMP"].singleton()
+
+    def root(self) -> Frame:
+        return self.frame["ROOT"].singleton()
+
+    def capability(self) -> Capability:
+        return Capability(self.frame["REQUIRES"].singleton())
+
+    def set_status(self, status: Union[InputStatus, OutputStatus]):
+        self.frame["STATUS"] = status
+
+    def render(self) -> str:
+        return self.frame.name()
+
+
+class AMR(XMR):
+
+    def render(self):
+        try:
+            if self.source().name() != "SELF.ROBOT.1":
+                return super().render()
+
+            action = self.root()._identifier.name.upper()
+            theme = self.root()["THEME"].singleton().name()
+
+            return "I am taking the " + action + "(" + theme + ") action."
+
+        except: return super().render()
+
+
+class MMR(XMR):
+
+    def render(self):
+        try:
+            if self.root()._identifier.name != "INIT-GOAL":
+                return super().render()
+
+            if self.source().name() != "SELF.ROBOT.1":
+                return super().render()
+
+            from backend.models.agenda import Goal
+
+            goal = self.root()["THEME"].singleton()
+            goal = Goal(goal).name()
+
+            return "I am adding the " + goal + " goal."
+
+        except: return super().render()

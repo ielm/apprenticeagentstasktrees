@@ -1,7 +1,10 @@
 @EXE.DECISION = {};
+@EXE.EFFECT = {};
 @EXE.EFFECTOR = {};
 @EXE.CAPABILITY = {};
 @EXE.CALLBACK = {};
+@EXE.INPUT-TMR = {};
+@EXE.TRANSIENT-FRAME = {};
 
 @EXE.PHYSICAL-EFFECTOR = {
     ISA @EXE.EFFECTOR
@@ -30,6 +33,11 @@
     CLASSMAP "backend.models.statement.AddFillerStatement";
 };
 
+@EXE.ASSERT-STATEMENT = {
+    ISA @EXE.STATEMENT;
+    CLASSMAP "backend.models.statement.AssertStatement";
+};
+
 @EXE.ASSIGNFILLER-STATEMENT = {
     ISA @EXE.STATEMENT;
     CLASSMAP "backend.models.statement.AssignFillerStatement";
@@ -43,6 +51,11 @@
 @EXE.EXISTS-STATEMENT = {
     ISA @EXE.BOOLEAN-STATEMENT;
     CLASSMAP "backend.models.statement.ExistsStatement";
+};
+
+@EXE.EXPECTATION-STATEMENT = {
+    ISA @EXE.STATEMENT;
+    CLASSMAP "backend.models.statement.ExpectationStatement";
 };
 
 @EXE.FOREACH-STATEMENT = {
@@ -68,4 +81,27 @@
 @EXE.OUTPUTXMR-STATEMENT = {
     ISA @EXE.RETURNING-STATEMENT;
     CLASSMAP "backend.models.statement.OutputXMRStatement";
+};
+
+@EXE.TRANSIENTFRAME-STATEMENT = {
+    ISA @EXE.RETURNING-STATEMENT;
+    CLASSMAP "backend.models.statement.TransientFrameStatement";
+};
+
+@EXE.XMR = {};
+
+@EXE.AMR = {
+    ISA @EXE.XMR;
+};
+
+@EXE.MMR = {
+    ISA @EXE.XMR;
+};
+
+@EXE.TMR = {
+    ISA @EXE.XMR;
+};
+
+@EXE.VMR = {
+    ISA @EXE.XMR;
 };

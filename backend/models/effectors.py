@@ -7,7 +7,7 @@ from typing import Callable, List, Union
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from backend.agent import Agent
-    from backend.models.output import OutputXMR
+    from backend.models.xmr import XMR
 
 
 class Effector(object):
@@ -69,24 +69,24 @@ class Effector(object):
             return None
         return Decision(self.frame["ON-DECISION"].singleton())
 
-    def on_output(self) -> Union['OutputXMR', None]:
-        from backend.models.output import OutputXMR
+    def on_output(self) -> Union['XMR', None]:
+        from backend.models.output import XMR
         if "ON-OUTPUT" not in self.frame:
             return None
-        return OutputXMR(self.frame["ON-OUTPUT"].singleton())
+        return XMR(self.frame["ON-OUTPUT"].singleton())
 
     def on_capability(self) -> Union['Capability', None]:
         if "ON-CAPABILITY" not in self.frame:
             return None
         return Capability(self.frame["ON-CAPABILITY"].singleton())
 
-    def reserve(self, decision: Union[str, Identifier, Frame, Decision], output: Union[str, Identifier, Frame, 'OutputXMR'], capability: Union[str, Identifier, Frame, 'Capability']):
-        from backend.models.output import OutputXMR
+    def reserve(self, decision: Union[str, Identifier, Frame, Decision], output: Union[str, Identifier, Frame, 'XMR'], capability: Union[str, Identifier, Frame, 'Capability']):
+        from backend.models.output import XMR
 
         if isinstance(decision, Decision):
             decision = decision.frame
 
-        if isinstance(output, OutputXMR):
+        if isinstance(output, XMR):
             output = output.frame
 
         if isinstance(capability, Capability):
@@ -177,7 +177,11 @@ class Callback(object):
     def status(self) -> 'Callback.Status':
         if "STATUS" not in self.frame:
             return Callback.Status.WAITING
-        return self.frame["STATUS"].singleton()
+        status = self.frame["STATUS"].singleton()
+        if isinstance(status, str):
+            status = Callback.Status[status]
+
+        return status
 
     def received(self):
         self.frame["STATUS"] = Callback.Status.RECEIVED

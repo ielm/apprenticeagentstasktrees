@@ -1,7 +1,8 @@
-from backend.models.agenda import Agenda, Condition, Decision, Goal, Plan, Step, Trigger
+from backend.models.agenda import Agenda, Condition, Decision, Effect, Expectation, Goal, Plan, Step, Trigger
 from backend.models.bootstrap import Bootstrap
 from backend.models.graph import Frame, Graph, Literal, Network
 from backend.models.statement import Statement, StatementScope, VariableMap
+from backend.models.xmr import XMR
 
 import unittest
 
@@ -358,6 +359,58 @@ class GoalTestCase(unittest.TestCase):
         Goal(goal).assess()
         self.assertTrue(Goal(goal).is_satisfied())
 
+    def test_assess_abandons_subgoals_if_goal_satisfied(self):
+        network = Network()
+        graph = network.register("EXE")
+
+        subgoal1 = graph.register("SUBGOAL.1")
+        subgoal1["STATUS"] = Goal.Status.ACTIVE
+
+        subgoal2 = graph.register("SUBGOAL.2")
+        subgoal2["STATUS"] = Goal.Status.SATISFIED
+
+        goal = graph.register("GOAL.1")
+        goal["STATUS"] = Goal.Status.ACTIVE
+        goal["HAS-GOAL"] += subgoal1
+        goal["HAS-GOAL"] += subgoal2
+
+        self.assertEqual([subgoal1, subgoal2], Goal(goal).subgoals())
+        self.assertTrue(Goal(subgoal1).is_active())
+        self.assertTrue(Goal(subgoal2).is_satisfied())
+
+        goal["STATUS"] = Goal.Status.SATISFIED
+        Goal(goal).assess()
+
+        self.assertEqual([subgoal1, subgoal2], Goal(goal).subgoals())
+        self.assertTrue(Goal(subgoal1).is_abandoned())
+        self.assertTrue(Goal(subgoal2).is_satisfied())
+
+    def test_assess_abandons_subgoals_if_goal_abandoned(self):
+        network = Network()
+        graph = network.register("EXE")
+
+        subgoal1 = graph.register("SUBGOAL.1")
+        subgoal1["STATUS"] = Goal.Status.ACTIVE
+
+        subgoal2 = graph.register("SUBGOAL.2")
+        subgoal2["STATUS"] = Goal.Status.SATISFIED
+
+        goal = graph.register("GOAL.1")
+        goal["STATUS"] = Goal.Status.ACTIVE
+        goal["HAS-GOAL"] += subgoal1
+        goal["HAS-GOAL"] += subgoal2
+
+        self.assertEqual([subgoal1, subgoal2], Goal(goal).subgoals())
+        self.assertTrue(Goal(subgoal1).is_active())
+        self.assertTrue(Goal(subgoal2).is_satisfied())
+
+        goal["STATUS"] = Goal.Status.ABANDONED
+        Goal(goal).assess()
+
+        self.assertEqual([subgoal1, subgoal2], Goal(goal).subgoals())
+        self.assertTrue(Goal(subgoal1).is_abandoned())
+        self.assertTrue(Goal(subgoal2).is_satisfied())
+
     def test_instance_of(self):
         graph = Graph("TEST")
         definition = graph.register("GOAL-DEF")
@@ -386,6 +439,55 @@ class GoalTestCase(unittest.TestCase):
         self.assertEqual(var["NAME"], "VAR_X")
         self.assertEqual(var["FROM"], goal.frame)
         self.assertEqual(var["VALUE"], 123)
+
+    def test_effects(self):
+        graph = Graph("TEST")
+        goal = graph.register("GOAL.1")
+
+        from backend.models.statement import AddFillerStatement
+
+        statement1 = AddFillerStatement.instance(graph, "TEST.FRAME.1", "SLOT", 123)
+        statement2 = AddFillerStatement.instance(graph, "TEST.FRAME.1", "SLOT", Literal("$var1"))
+
+        effect1 = Effect.build(graph, [statement1])
+        effect2 = Effect.build(graph, [statement2])
+
+        goal["HAS-EFFECT"] += effect1.frame
+        goal["HAS-EFFECT"] += effect2.frame
+
+        self.assertEqual([effect1, effect2], Goal(goal).effects())
+
+    def test_effects_applied_in_assess_if_goal_satisfied(self):
+        n = Network()
+        graph = n.register("TEST")
+
+        n.register("EXE")
+        Bootstrap.bootstrap_resource(n, "backend.resources", "exe.knowledge")
+
+        goal = graph.register("GOAL.1")
+
+        from backend.models.statement import AddFillerStatement, Variable
+
+        frame = graph.register("FRAME", generate_index=True)
+
+        statement1 = AddFillerStatement.instance(graph, "TEST.FRAME.1", "SLOT", 123)
+        statement2 = AddFillerStatement.instance(graph, "TEST.FRAME.1", "SLOT", Literal("$var1"))
+
+        effect1 = Effect.build(graph, [statement1])
+        effect2 = Effect.build(graph, [statement2])
+
+        goal["HAS-EFFECT"] += effect1.frame
+        goal["HAS-EFFECT"] += effect2.frame
+
+        Variable.instance(graph, "$var1", 456, Goal(goal))
+
+        goal["STATUS"] = Goal.Status.ACTIVE
+        Goal(goal).assess()
+        self.assertEqual([], frame["SLOT"])
+
+        goal["STATUS"] = Goal.Status.SATISFIED
+        Goal(goal).assess()
+        self.assertEqual([123, 456], frame["SLOT"])
 
 
 class TriggerTestCase(unittest.TestCase):
@@ -763,6 +865,15 @@ class PlanTestCase(unittest.TestCase):
 
         self.assertEqual(Plan(plan).name(), "Test Plan")
 
+    def test_is_negated(self):
+        plan = self.g.register("PLAN.1")
+
+        plan["NEGATE"] = False
+        self.assertFalse(Plan(plan).is_negated())
+
+        plan["NEGATE"] = True
+        self.assertTrue(Plan(plan).is_negated())
+
     def test_select(self):
         Bootstrap.bootstrap_resource(self.n, "backend.resources", "exe.knowledge")
 
@@ -784,6 +895,22 @@ class PlanTestCase(unittest.TestCase):
 
         self.assertFalse(Plan(plan).select(None))
 
+    def test_select_negated(self):
+        Bootstrap.bootstrap_resource(self.n, "backend.resources", "exe.knowledge")
+
+        class TestStatement(Statement):
+            def run(self, varmap: VariableMap, *args, **kwargs):
+                return True
+
+        self.g["BOOLEAN-STATEMENT"]["CLASSMAP"] = Literal(TestStatement)
+        statement = self.g.register("BOOLEAN-STATEMENT.1", isa="EXE.BOOLEAN-STATEMENT")
+
+        plan = Plan.build(self.g, "test", statement, [])
+        self.assertTrue(plan.select(None))
+
+        plan = Plan.build(self.g, "test", statement, [], negate=True)
+        self.assertFalse(plan.select(None))
+
     def test_select_with_variable(self):
         Bootstrap.bootstrap_resource(self.n, "backend.resources", "exe.knowledge")
 
@@ -803,6 +930,32 @@ class PlanTestCase(unittest.TestCase):
         self.g["BOOLEAN-STATEMENT"]["CLASSMAP"] = Literal(TestStatement)
 
         self.assertTrue(Plan(plan).select(VariableMap(varmap)))
+
+    def test_select_with_mp(self):
+        from backend.models.mps import AgentMethod
+        from backend.models.statement import MeaningProcedureStatement, MPRegistry
+
+        Bootstrap.bootstrap_resource(self.n, "backend.resources", "exe.knowledge")
+
+        class TestMP(AgentMethod):
+            def run(self, var1):
+                return var1
+
+        MPRegistry.register(TestMP)
+
+        mp_statement = MeaningProcedureStatement.instance(self.g, TestMP.__name__, ["$var1"])
+        plan = Plan.build(self.g, "X", mp_statement, [])
+
+        varmap = self.g.register("VARMAP.1")
+        variable = self.g.register("VARIABLE.1")
+        varmap["_WITH"] = variable
+        variable["NAME"] = Literal("$var1")
+
+        variable["VALUE"] = True
+        self.assertTrue(plan.select(VariableMap(varmap)))
+
+        variable["VALUE"] = False
+        self.assertFalse(plan.select(VariableMap(varmap)))
 
     def test_select_when_default(self):
         plan = self.g.register("PLAN.1")
@@ -902,7 +1055,7 @@ class StepTestCase(unittest.TestCase):
 
         self.assertEqual(out, ["X", "Y"])
 
-    def test_perform_returns_outputs(self):
+    def test_perform_returns_scope_with_outputs(self):
         Bootstrap.bootstrap_resource(self.n, "backend.resources", "exe.knowledge")
 
         class TestStatement(Statement):
@@ -918,8 +1071,57 @@ class StepTestCase(unittest.TestCase):
         self.g["STATEMENT"]["CLASSMAP"] = Literal(TestStatement)
         step["PERFORM"] = [statement]
 
-        outputs = Step(step).perform(VariableMap(self.g.register("VARMAP")))
-        self.assertEqual([123], outputs)
+        scope = Step(step).perform(VariableMap(self.g.register("VARMAP")))
+        self.assertEqual([123], scope.outputs)
+
+    def test_perform_returns_scope_with_expectations(self):
+        Bootstrap.bootstrap_resource(self.n, "backend.resources", "exe.knowledge")
+
+        class TestStatement(Statement):
+            def run(self, scope: StatementScope(), varmap: VariableMap):
+                scope.expectations.append(123)
+
+        agent = self.g.register("AGENT")
+        goal = self.g.register("GOAL")
+        plan = self.g.register("PLAN")
+        step = self.g.register("STEP")
+
+        statement = self.g.register("STATEMENT", generate_index=True, isa="EXE.STATEMENT")
+        self.g["STATEMENT"]["CLASSMAP"] = Literal(TestStatement)
+        step["PERFORM"] = [statement]
+
+        scope = Step(step).perform(VariableMap(self.g.register("VARMAP")))
+        self.assertEqual([123], scope.expectations)
+
+    def test_perform_with_transients_overrides_scope_detection(self):
+        from backend.models.statement import TransientFrame
+
+        Bootstrap.bootstrap_resource(self.n, "backend.resources", "exe.knowledge")
+
+        transient: Frame = None
+
+        class TestStatement(Statement):
+            def run(self, scope: StatementScope(), varmap: VariableMap):
+                nonlocal transient
+                transient = self.frame._graph.register("TRANSIENT")
+                scope.transients.append(TransientFrame(transient))
+
+        agent = self.g.register("AGENT")
+        goal = self.g.register("GOAL")
+        plan = self.g.register("PLAN")
+        step = self.g.register("STEP")
+
+        statement = self.g.register("STATEMENT", generate_index=True, isa="EXE.STATEMENT")
+        self.g["STATEMENT"]["CLASSMAP"] = Literal(TestStatement)
+        step["PERFORM"] = [statement]
+
+        Step(step).perform(VariableMap(self.g.register("VARMAP")))
+
+        step["STATUS"] = Step.Status.PENDING
+        self.assertTrue(TransientFrame(transient).is_in_scope())
+
+        step["STATUS"] = Step.Status.FINISHED
+        self.assertFalse(TransientFrame(transient).is_in_scope())
 
     def test_perform_with_variables(self):
         Bootstrap.bootstrap_resource(self.n, "backend.resources", "exe.knowledge")
@@ -954,12 +1156,28 @@ class StepTestCase(unittest.TestCase):
 
         Step(step).perform(VariableMap(self.g.register("VARMAP")))
 
+    def test_perform_raises_impasse_exceptions(self):
+        Bootstrap.bootstrap_resource(self.n, "backend.resources", "exe.knowledge")
+
+        from backend.models.statement import AssertStatement, ExistsStatement
+
+        perform = [AssertStatement.instance(self.g, ExistsStatement.instance(self.g, Frame.q(self.n).id("EXE.DNE")), [])]
+
+        step = Step.build(self.g, 1, perform)
+
+        with self.assertRaises(AssertStatement.ImpasseException):
+            step.perform(VariableMap(self.g.register("VARMAP")))
+
+        self.g.register("DNE")
+        step.perform(VariableMap(self.g.register("VARMAP")))
+
 
 class DecisionTestCase(unittest.TestCase):
 
     def setUp(self):
         self.n = Network()
         self.g = self.n.register("TEST")
+        self.n.register("OUTPUTS")
 
     def test_goal(self):
         goal = self.g.register("GOAL")
@@ -985,6 +1203,21 @@ class DecisionTestCase(unittest.TestCase):
 
         self.assertEqual(step, Decision(decision).step())
 
+    def test_impasses(self):
+        decision = self.g.register("DECISION")
+
+        self.assertEqual([], Decision(decision).impasses())
+
+        impasse1 = self.g.register("GOAL", generate_index=True)
+        impasse2 = self.g.register("GOAL", generate_index=True)
+
+        decision["HAS-IMPASSE"] += impasse1
+        decision["HAS-IMPASSE"] += impasse2
+
+        self.assertEqual([impasse1, impasse2], Decision(decision).impasses())
+        self.assertIsInstance(Decision(decision).impasses()[0], Goal)
+        self.assertIsInstance(Decision(decision).impasses()[1], Goal)
+
     def test_outputs(self):
         decision = self.g.register("DECISION")
 
@@ -997,6 +1230,19 @@ class DecisionTestCase(unittest.TestCase):
         decision["HAS-OUTPUT"] += output2
 
         self.assertEqual([output1, output2], Decision(decision).outputs())
+
+    def test_expectations(self):
+        decision = self.g.register("DECISION")
+
+        self.assertEqual([], Decision(decision).expectations())
+
+        expectation1 = self.g.register("EXPECTATION", generate_index=True)
+        expectation2 = self.g.register("EXPECTATION", generate_index=True)
+
+        decision["HAS-EXPECTATION"] += expectation1
+        decision["HAS-EXPECTATION"] += expectation2
+
+        self.assertEqual([expectation1, expectation2], Decision(decision).expectations())
 
     def test_priority(self):
         decision = self.g.register("DECISION")
@@ -1087,7 +1333,7 @@ class DecisionTestCase(unittest.TestCase):
         self.assertEqual(Decision.Status.PENDING, decision.status())
         self.assertEqual([], decision.callbacks())
 
-    def test_generate_outputs(self):
+    def test_generate_outputs_populates_outputs(self):
         from backend.models.output import OutputXMRTemplate
         from backend.models.statement import OutputXMRStatement
 
@@ -1097,7 +1343,7 @@ class DecisionTestCase(unittest.TestCase):
         agent = self.g.register("AGENT")
         capability = self.g.register("CAPABILITY")
 
-        template = OutputXMRTemplate.build(self.n, "test-template", OutputXMRTemplate.Type.PHYSICAL, capability, [])
+        template = OutputXMRTemplate.build(self.n, "test-template", XMR.Type.ACTION, capability, [])
         statement = OutputXMRStatement.instance(self.g, template, [], agent)
         goal = Goal(self.g.register("GOAL"))
         step = Step.build(self.g, 1, statement)
@@ -1108,10 +1354,67 @@ class DecisionTestCase(unittest.TestCase):
 
         decision._generate_outputs()
 
-        self.assertEqual([self.n.lookup("TEST.XMR.1")], decision.outputs())
+        self.assertEqual([self.n.lookup("OUTPUTS.XMR.1")], decision.outputs())
+
+    def test_generate_outputs_populates_expectations(self):
+        from backend.models.statement import ExpectationStatement, IsStatement
+
+        self.n.register("EXE")
+        Bootstrap.bootstrap_resource(self.n, "backend.resources", "exe.knowledge")
+
+        target = self.g.register("TARGET")
+
+        statement = ExpectationStatement.instance(self.g, IsStatement.instance(self.g, target, "SLOT", 123))
+        goal = Goal(self.g.register("GOAL"))
+        step = Step.build(self.g, 1, statement)
+
+        decision = Decision.build(self.g, goal, "TEST-PLAN", step)
+
+        self.assertEqual([], decision.expectations())
+
+        decision._generate_outputs()
+
+        self.assertEqual([self.n.lookup("TEST.EXPECTATION.1")], decision.expectations())
+
+    def test_generate_outputs_halts_and_registers_impasses(self):
+        from backend.models.output import OutputXMRTemplate
+        from backend.models.statement import AssertStatement, ExistsStatement, MakeInstanceStatement, OutputXMRStatement, Variable
+
+        self.n.register("EXE")
+        Bootstrap.bootstrap_resource(self.n, "backend.resources", "exe.knowledge")
+
+        Goal.define(self.g, "IMPASSE-GOAL", 0.5, 0.5, [], [], ["$var1"], [])
+
+        resolution = MakeInstanceStatement.instance(self.g, self.g._namespace, "TEST.IMPASSE-GOAL", ["$var1"])
+        statement1 = AssertStatement.instance(self.g, ExistsStatement.instance(self.g, Frame.q(self.n).id("EXE.DNE")), [resolution])
+
+        template = OutputXMRTemplate.build(self.n, "test-template", XMR.Type.ACTION, None, [])
+        statement2 = OutputXMRStatement.instance(self.g, template, [], None)
+
+        goal = Goal(self.g.register("GOAL"))
+        Variable.instance(self.g, "$var1", 123, goal)
+        step = Step.build(self.g, 1, [statement1, statement2])
+        decision = Decision.build(self.g, goal, "TEST-PLAN", step)
+
+        self.assertEqual([], decision.impasses())
+        self.assertEqual([], decision.outputs())
+        self.assertEqual([], goal.subgoals())
+
+        decision._generate_outputs()
+
+        self.assertEqual(1, len(decision.impasses()))
+        self.assertEqual("IMPASSE-GOAL", decision.impasses()[0].name())
+        self.assertEqual("TEST.IMPASSE-GOAL.1", decision.impasses()[0].frame.name())
+        self.assertEqual(123, decision.impasses()[0].resolve("$var1"))
+
+        self.assertEqual("TEST.IMPASSE-GOAL.1", goal.subgoals()[0].frame.name())
+
+        self.assertEqual(Decision.Status.BLOCKED, decision.status())
+
+        self.assertEqual([], decision.outputs())
 
     def test_calculate_priority(self):
-        definition = Goal.define(self.g, "TEST-GOAL", 1.0, 0.0, [], [], [])
+        definition = Goal.define(self.g, "TEST-GOAL", 1.0, 0.0, [], [], [], [])
         goal = Goal.instance_of(self.g, definition, [])
 
         decision = Decision.build(self.g, goal, "TEST.PLAN", "TEST.STEP")
@@ -1123,7 +1426,7 @@ class DecisionTestCase(unittest.TestCase):
         self.assertEqual(1.0, decision.priority())
 
     def test_calculate_cost(self):
-        definition = Goal.define(self.g, "TEST-GOAL", 0.0, 1.0, [], [], [])
+        definition = Goal.define(self.g, "TEST-GOAL", 0.0, 1.0, [], [], [], [])
         goal = Goal.instance_of(self.g, definition, [])
 
         decision = Decision.build(self.g, goal, "TEST.PLAN", "TEST.STEP")
@@ -1164,7 +1467,6 @@ class DecisionTestCase(unittest.TestCase):
     def test_execute(self):
         from backend.models.effectors import Capability, Effector
         from backend.models.mps import MPRegistry, OutputMethod
-        from backend.models.output import OutputXMR, OutputXMRTemplate
 
         out = False
 
@@ -1175,7 +1477,7 @@ class DecisionTestCase(unittest.TestCase):
 
         MPRegistry.register(TestMP)
         capability = Capability.instance(self.g, "CAPABILITY", "TestMP", ["ONT.EVENT"])
-        output = OutputXMR.build(self.g, OutputXMRTemplate.Type.PHYSICAL, capability, "OUTPUT-XMR")
+        output = XMR.instance(self.g, "OUTPUT-XMR", XMR.Signal.OUTPUT, XMR.Type.ACTION, XMR.OutputStatus.PENDING, "", "", capability=capability)
 
         decision = Decision.build(self.g, "GOAL", "PLAN", "STEP")
         decision.frame["HAS-OUTPUT"] += output.frame
@@ -1192,14 +1494,13 @@ class DecisionTestCase(unittest.TestCase):
     def test_creates_callback(self):
         from backend.models.effectors import Callback, Capability, Effector
         from backend.models.mps import MPRegistry, OutputMethod
-        from backend.models.output import OutputXMR, OutputXMRTemplate
 
         class TestMP(OutputMethod):
             def run(self): pass
 
         MPRegistry.register(TestMP)
         capability = Capability.instance(self.g, "CAPABILITY", "TestMP", ["ONT.EVENT"])
-        output = OutputXMR.build(self.g, OutputXMRTemplate.Type.PHYSICAL, capability, "OUTPUT-XMR")
+        output = XMR.instance(self.g, "OUTPUT-XMR", XMR.Signal.OUTPUT, XMR.Type.ACTION, XMR.OutputStatus.PENDING, "", "", capability=capability)
 
         decision = Decision.build(self.g, "GOAL", "PLAN", "STEP")
         decision.frame["HAS-OUTPUT"] += output.frame
@@ -1217,14 +1518,13 @@ class DecisionTestCase(unittest.TestCase):
     def test_callback_received(self):
         from backend.models.effectors import Callback, Capability, Effector
         from backend.models.mps import MPRegistry, OutputMethod
-        from backend.models.output import OutputXMR, OutputXMRTemplate
 
         class TestMP(OutputMethod):
             def run(self): pass
 
         MPRegistry.register(TestMP)
         capability = Capability.instance(self.g, "CAPABILITY", "TestMP", ["ONT.EVENT"])
-        output = OutputXMR.build(self.g, OutputXMRTemplate.Type.PHYSICAL, capability, "OUTPUT-XMR")
+        output = XMR.instance(self.g, "OUTPUT-XMR", XMR.Signal.OUTPUT, XMR.Type.ACTION, XMR.OutputStatus.PENDING, "", "", capability=capability)
 
         decision = Decision.build(self.g, "GOAL", "PLAN", "STEP")
         decision.frame["HAS-OUTPUT"] += output.frame
@@ -1240,3 +1540,123 @@ class DecisionTestCase(unittest.TestCase):
         decision.callback_received(callback)
         self.assertNotIn(effector, decision.effectors())
         self.assertNotIn(callback, decision.callbacks())
+
+    def test_assess_impasses(self):
+
+        subgoal1 = self.g.register("GOAL", generate_index=True)
+        subgoal1["STATUS"] = Goal.Status.ACTIVE
+
+        subgoal2 = self.g.register("GOAL", generate_index=True)
+        subgoal2["STATUS"] = Goal.Status.SATISFIED
+
+        decision = self.g.register("DECISION")
+        decision["HAS-IMPASSE"] += subgoal1
+        decision["HAS-IMPASSE"] += subgoal2
+
+        self.assertEqual([subgoal1, subgoal2], Decision(decision).impasses())
+
+        Decision(decision).assess_impasses()
+
+        self.assertEqual([subgoal1], Decision(decision).impasses())
+
+
+class ExpectationTestCase(unittest.TestCase):
+
+    def setUp(self):
+        self.n = Network()
+        self.g = self.n.register("TEST")
+
+        self.n.register("EXE")
+        Bootstrap.bootstrap_resource(self.n, "backend.resources", "exe.knowledge")
+
+    def test_status(self):
+        e = self.g.register("EXPECTATION")
+        e["STATUS"] = Expectation.Status.EXPECTING
+
+        self.assertEqual(Expectation.Status.EXPECTING, Expectation(e).status())
+
+    def test_condition(self):
+        from backend.models.statement import ExistsStatement
+
+        e = self.g.register("EXPECTATION")
+        e["CONDITION"] = ExistsStatement.instance(self.g, Frame.q(self.n).id("TEST.FRAME.1")).frame
+
+        self.assertEqual(ExistsStatement.instance(self.g, Frame.q(self.n).id("TEST.FRAME.1")), Expectation(e).condition())
+
+    def test_build(self):
+        from backend.models.statement import ExistsStatement
+
+        e = Expectation.build(self.g, Expectation.Status.EXPECTING, ExistsStatement.instance(self.g, Frame.q(self.n).id("TEST.FRAME.1")))
+
+        self.assertEqual(Expectation.Status.EXPECTING, e.status())
+        self.assertEqual(ExistsStatement.instance(self.g, Frame.q(self.n).id("TEST.FRAME.1")), e.condition())
+
+    def test_assess(self):
+        from backend.models.statement import IsStatement
+
+        target = self.g.register("TARGET")
+        varmap = VariableMap(self.g.register("VARMAP"))
+
+        e = Expectation.build(self.g, Expectation.Status.PENDING, IsStatement.instance(self.g, target, "SLOT", 123))
+        self.assertEqual(Expectation.Status.PENDING, e.status())
+
+        e.assess(varmap)
+        self.assertEqual(Expectation.Status.PENDING, e.status())
+
+        target["SLOT"] = 123
+        e.assess(varmap)
+        self.assertEqual(Expectation.Status.SATISFIED, e.status())
+
+        target["SLOT"] = 456
+        e.assess(varmap)
+        self.assertEqual(Expectation.Status.PENDING, e.status())
+
+
+class EffectTestCase(unittest.TestCase):
+
+    def setUp(self):
+        self.n = Network()
+        self.g = self.n.register("TEST")
+
+        self.n.register("EXE")
+        Bootstrap.bootstrap_resource(self.n, "backend.resources", "exe.knowledge")
+
+    def test_statements(self):
+        from backend.models.statement import AddFillerStatement
+
+        statement1 = AddFillerStatement.instance(self.g, "TEST.FRAME.1", "SLOT", 123)
+        statement2 = AddFillerStatement.instance(self.g, "TEST.FRAME.1", "SLOT", 123)
+
+        frame = self.g.register("EFFECT")
+        frame["HAS-STATEMENT"] += statement1.frame
+        frame["HAS-STATEMENT"] += statement2.frame
+
+        self.assertEqual([statement1, statement2], Effect(frame).statements())
+
+    def test_build(self):
+        from backend.models.statement import AddFillerStatement
+
+        statement1 = AddFillerStatement.instance(self.g, "TEST.FRAME.1", "SLOT", 123)
+        statement2 = AddFillerStatement.instance(self.g, "TEST.FRAME.1", "SLOT", 123)
+
+        effect = Effect.build(self.g, [statement1, statement2])
+
+        self.assertEqual([statement1, statement2], effect.statements())
+
+    def test_apply(self):
+        from backend.models.statement import AddFillerStatement, Variable
+
+        statement1 = AddFillerStatement.instance(self.g, "TEST.FRAME.1", "SLOT", 123)
+        statement2 = AddFillerStatement.instance(self.g, "TEST.FRAME.1", "SLOT", Literal("$var1"))
+
+        effect = Effect.build(self.g, [statement1, statement2])
+
+        frame = self.g.register("FRAME", generate_index=True)
+
+        self.assertEqual([], frame["SLOT"])
+
+        varmap = VariableMap(self.g.register("VARMAP"))
+        Variable.instance(self.g, "$var1", 456, varmap)
+        effect.apply(varmap)
+
+        self.assertEqual([123, 456], frame["SLOT"])

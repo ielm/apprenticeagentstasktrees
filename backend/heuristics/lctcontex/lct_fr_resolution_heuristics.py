@@ -1,5 +1,6 @@
 from backend.contexts.context import ContextBasedFRResolutionHeuristic
 from backend.models.graph import Frame
+from backend.models.tmr import TMR
 
 
 # ------ FR Resolution Heuristics -------
@@ -20,15 +21,15 @@ from backend.models.graph import Frame
 #      memory only.
 class FRResolveUndeterminedThemesOfLearning(ContextBasedFRResolutionHeuristic):
 
-    def resolve(self, instance, resolves, tmr=None):
+    def resolve(self, instance, resolves, tmr: TMR=None):
         if not instance ^ self.fr.ontology["OBJECT"]:
             return
 
         if tmr is None:
             return
 
-        dependencies = tmr.syntax.find_dependencies(types=["ART"], governors=instance.token_index)
-        articles = list(map(lambda dependency: tmr.syntax.index[str(dependency[2])], dependencies))
+        dependencies = tmr.syntax().find_dependencies(types=["ART"], governors=instance.token_index)
+        articles = list(map(lambda dependency: tmr.syntax().index[str(dependency[2])], dependencies))
         tokens = list(map(lambda article: article["lemma"], articles))
 
         if "A" not in tokens:
@@ -62,7 +63,7 @@ class FRResolveUndeterminedThemesOfLearning(ContextBasedFRResolutionHeuristic):
 #   6) For each THEME of the matching FR EVENT, any that are the same concept as the instance are resolved matches
 class FRResolveUnderterminedThemesOfLearningInPostfix(ContextBasedFRResolutionHeuristic):
 
-    def resolve(self, instance, resolves, tmr=None):
+    def resolve(self, instance, resolves, tmr: TMR=None):
         if not instance ^ self.fr.ontology["OBJECT"]:
             return
 
@@ -72,8 +73,8 @@ class FRResolveUnderterminedThemesOfLearningInPostfix(ContextBasedFRResolutionHe
         if tmr.is_prefix():
             return
 
-        dependencies = tmr.syntax.find_dependencies(types=["ART"], governors=instance.token_index)
-        articles = list(map(lambda dependency: tmr.syntax.index[str(dependency[2])], dependencies))
+        dependencies = tmr.syntax().find_dependencies(types=["ART"], governors=instance.token_index)
+        articles = list(map(lambda dependency: tmr.syntax().index[str(dependency[2])], dependencies))
         tokens = list(map(lambda article: article["lemma"], articles))
 
         if "A" not in tokens:
@@ -111,7 +112,7 @@ class FRResolveUnderterminedThemesOfLearningInPostfix(ContextBasedFRResolutionHe
 #      instance, that filler must a) be resolved, and b) be equal to one of the AGENT fillers in the candidate.
 class FRResolveLearningEvents(ContextBasedFRResolutionHeuristic):
 
-    def resolve(self, instance, resolves, tmr=None):
+    def resolve(self, instance, resolves, tmr: TMR=None):
         if not instance ^ self.fr.ontology["EVENT"]:
             return
 
