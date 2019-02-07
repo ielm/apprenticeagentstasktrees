@@ -17,7 +17,7 @@ services:
     command:
       - "python3.6"
       - "-m"
-      - "backend.service"
+      - "backend.service.service"
       - "host=0.0.0.0"
       - "port=5002"
     environment:

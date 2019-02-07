@@ -102,10 +102,7 @@
                 contentType: "application/json",
             }).done(function(data) {
                 var output = JSON.parse(data);
-                render_time(output);
-                render_inputs(output["inputs"]);
-                render_agenda(output["agenda"]);
-                render_decisions(output["decisions"]);
+                updateIIDEAData(output);
                 $("#inputText").attr("placeholder", "Input Text");
                 $("#inputTextButton").prop("disabled", false);
             }).fail(function(error) {
@@ -128,10 +125,7 @@
                 contentType: "application/json",
             }).done(function(data) {
                 var output = JSON.parse(data);
-                render_time(output);
-                render_inputs(output["inputs"]);
-                render_agenda(output["agenda"]);
-                render_decisions(output["decisions"]);
+                updateIIDEAData(output);
             }).fail(function(error) {
                 console.log(error);
             });
@@ -149,12 +143,7 @@
                 contentType: "application/json",
             }).done(function(data) {
                 var output = JSON.parse(data);
-                render_time(output);
-                render_inputs(output["inputs"]);
-                render_agenda(output["agenda"]);
-                render_effectors(output["effectors"]);
-                render_triggers(output["triggers"]);
-                render_decisions(output["decisions"]);
+                updateIIDEAData(output);
             }).fail(function(error) {
                 console.log(error);
             });
@@ -362,20 +351,8 @@
                 $('[data-toggle="tooltip"]').tooltip();
             });
 
-
-
-
-            var agenda = JSON.parse('{{ aj|safe }}');
-            render_agenda(agenda);
-
-            var effectors = JSON.parse('{{ ej|safe }}');
-            render_effectors(effectors);
-
-            var triggers = JSON.parse('{{ tj|safe }}');
-            render_triggers(triggers);
-
-            var decisions = JSON.parse({{dj|tojson}});
-            render_decisions(decisions);
+            var payload = JSON.parse({{payload|tojson}});
+            updateIIDEAData(payload);
         });
     </script>
 

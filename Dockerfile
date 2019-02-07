@@ -17,6 +17,5 @@ EXPOSE 5002
 # Define environment variable
 # ENV NAME World
 
-# Run corenlp_server.py when the container launches
-#CMD ["python3.6", "backend/main.py", "host=0.0.0.0", "port=5002"]
-CMD ["python3.6", "-m", "backend.main", "host=0.0.0.0", "port=5002"]
+# Run service.py when the container launches
+CMD ["python3.6", "-m", "backend.service.service", "host=0.0.0.0", "port=5002"]
