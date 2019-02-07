@@ -2,6 +2,7 @@ import json
 import traceback
 from flask import Flask, redirect, request, abort, render_template, send_from_directory
 from flask_cors import CORS
+from flask_socketio import SocketIO
 
 
 from backend.agent import Agent
@@ -20,6 +21,7 @@ from pkgutil import get_data
 
 app = Flask(__name__, template_folder="../frontend/templates/")
 CORS(app)
+socketio = SocketIO(app)
 
 
 agent = Agent(ontology=Ontology.init_default())
@@ -120,6 +122,11 @@ def server_error(error):
 @app.route('/assets/<path:filename>', methods=['GET'])
 def servefile(filename):
   return send_from_directory("../frontend/assets/", filename)
+
+
+@app.route('/favicon.ico')
+def favicon():
+    return send_from_directory("../frontend/assets/", "favicon.ico", mimetype='image/vnd.microsoft.icon')
 
 
 @app.route("/", methods=["GET"])
@@ -387,6 +394,20 @@ class IIDEAConverter(object):
         return []
 
 
+def build_payload():
+    return {
+        "time": agent.IDEA.time(),
+        "stage": agent.IDEA.stage(),
+        "inputs": IIDEAConverter.inputs(),
+        "agenda": IIDEAConverter.agenda(),
+        "effectors": IIDEAConverter.effectors(),
+        "triggers": IIDEAConverter.triggers(),
+        "logs": IIDEAConverter.logs(),
+        "decisions": IIDEAConverter.decisions(),
+        "running": not thread.stopped() and thread.is_alive(),
+        "io": IIDEAConverter.io()
+    }
+
 
 @app.route("/iidea/start", methods=["GET"])
 def start():
@@ -441,16 +462,12 @@ def iidea_data():
 @app.route("/iidea/advance", methods=["GET"])
 def iidea_advance():
     agent.iidea()
-    return json.dumps({
-        "time": agent.IDEA.time(),
-        "stage": agent.IDEA.stage(),
-        "inputs": IIDEAConverter.inputs(),
-        "agenda": IIDEAConverter.agenda(),
-        "effectors": IIDEAConverter.effectors(),
-        "triggers": IIDEAConverter.triggers(),
-        "logs": IIDEAConverter.logs(),
-        "decisions": IIDEAConverter.decisions()
-    })
+
+    payload = build_payload()
+
+    socketio.emit("iidea updated", payload)
+
+    return json.dumps(payload)
 
 
 @app.route("/iidea/input", methods=["POST"])
@@ -640,7 +657,7 @@ if __name__ == '__main__':
             if k == "port":
                 port = int(v)
 
-    app.run(host=host, port=port, debug=False)
+    socketio.run(app, host=host, port=port, debug=False)
 
 
 '''
