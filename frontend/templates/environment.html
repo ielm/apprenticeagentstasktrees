@@ -18,6 +18,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-jsonview/1.2.3/jquery.jsonview.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-treeview/1.2.0/bootstrap-treeview.min.js"></script>
 
+    <link rel="stylesheet" href="../assets/css/customRange.css">
+
     <script>
         function load() {
             $.ajax({
@@ -195,7 +197,18 @@
             }
 
             function viewerError() {
-                alert("Could not load environment");
+                let tempNode = document.querySelector("div[data-type='loc-nav-template']").cloneNode(true);
+
+                tempNode.querySelector(".card-header").textContent = "Empty Environment";
+                tempNode.style.display = "block";
+                tempNode.setAttribute("id", "nav-tab");
+                tempNode.removeAttribute("data-type");
+
+                let emptyBody = document.createElement("div");
+                emptyBody.classList.add("card-body");
+
+                tempNode.appendChild(emptyBody);
+                document.querySelector("#locations").appendChild(tempNode);
             }
         }
     </script>
@@ -205,6 +218,7 @@
         <div class="card-header">
             <ul id="location-titles" class="nav nav-tabs card-header-tabs"></ul>
         </div>
+{#        <div class="card-body"></div>#}
     </div>
 
     {#  Location Panel Template  #}
@@ -228,9 +242,28 @@
         });
     </script>
 
+    <script>
+        {#$("#customRange1").val()#}
+        $(document).on('input', '#timelineSlider', function() {
+            console.log($(this).val() );
+            $("#timelineLabel").html("Current Epoch: " + $(this).val() );
+        });
+    </script>
+
+
     <div class="container">
         <div class="row" style="margin-top: 25px;">
-            <div id="locations" class="col-sm-8"></div>
+            <div id="left-panel" class="col-sm-8">
+                <div id="timeline">
+                    <div style="margin-bottom: 25px;" class="card">
+                        <label id="timelineLabel" for="timelineSlider" class="card-header">Current Epoch: 5</label>
+                        <div class="card-body">
+                            <input type="range" class="custom-range" min="0" max="5" value="5" id="timelineSlider">
+                        </div>
+                    </div>
+                </div>
+                <div id="locations"></div>
+            </div>
             <div class="col-sm-4">
                 <div class="card" style="margin-bottom: 25px;" >
                     <div class="card-header">
