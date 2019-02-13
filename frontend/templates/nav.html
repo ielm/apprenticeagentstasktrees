@@ -86,26 +86,7 @@
             url: "/iidea/advance",
             method: "GET",
         }).done(function(data) {
-            data = JSON.parse(data);
-            updateRunningCondition(data);
-            if (typeof updateIIDEAData === "function") {
-                updateIIDEAData(data);
-            }
-        }).fail(function(error) {
-            console.log(error);
-        });
-    }
-
-    function refresh() {
-        $.ajax({
-            url: "/iidea/data",
-            method: "GET",
-        }).done(function(data) {
-            data = JSON.parse(data);
-            updateRunningCondition(data);
-            if (typeof updateIIDEAData === "function") {
-                updateIIDEAData(data);
-            }
+            console.log(data);
         }).fail(function(error) {
             console.log(error);
         });
@@ -119,15 +100,6 @@
             $("#start-stop-button").html('<i class="fas fa-play fa-2x"></i>');
             $("#advance-button").show();
         }
-    }
-
-    function keepRefreshing() {
-        setTimeout(function() {
-            if (document.hasFocus()) {
-                refresh();
-            }
-            keepRefreshing();
-        }, 1000);
     }
 </script>
 
@@ -146,8 +118,14 @@
         $("#advance-button").on("click", function(e) {
             advance();
         });
+    });
 
-        keepRefreshing();
+    var socket = io.connect('http://' + document.domain + ':' + location.port);
+    socket.on("iidea updated", function(msg) {
+        updateRunningCondition(msg);
+        if (typeof updateIIDEAData === "function") {
+            updateIIDEAData(msg);
+        }
     });
 </script>
 
