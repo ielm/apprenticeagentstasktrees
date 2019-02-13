@@ -1,7 +1,7 @@
 import json
 
 from backend.models.tmr import TMR
-from backend.service import agent, app, graph_to_json
+from backend.service.service import agent, app, graph_to_json
 
 import unittest
 

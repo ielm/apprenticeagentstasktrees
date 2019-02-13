@@ -130,9 +130,6 @@ class Agent(Network):
         Agent.IDEA.get_method()(self)
         Agent.IDEA.advance()
 
-        print("T" + str(Agent.IDEA.time()) + " " + Agent.IDEA.stage())
-        print(self.internal)
-
     def _input(self, input: dict=None, source: Union[str, Identifier, Frame]=None, type: str=None):
         if input is None:
             return

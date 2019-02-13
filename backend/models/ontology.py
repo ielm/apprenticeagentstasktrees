@@ -140,7 +140,7 @@ class OntologyFiller(Filler):
 class OntologyServiceWrapper(object):
 
     def __init__(self, host: str=None, port: int=None, database: str=None, collection: str=None):
-        from backend.services.environment import ONTOLOGY_HOST, MONGO_PORT, ONTOLOGY_DATABASE, ONTOLOGY_COLLECTION
+        from backend.utils.LEIAEnvironment import ONTOLOGY_HOST, MONGO_PORT, ONTOLOGY_DATABASE, ONTOLOGY_COLLECTION
 
         host = host if host is not None else ONTOLOGY_HOST
         port = port if port is not None else MONGO_PORT

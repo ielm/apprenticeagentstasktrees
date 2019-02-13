@@ -8,7 +8,7 @@ services:
       - SMALLSEM_RESOURCES_LOCATION=SmallSem/data/nn_static_resources_robot.json
 
   agents:
-    image: leia/agents:latest.yale
+    image: agents:latest
     container_name: agents
     ports:
       - 5002:5002
@@ -17,7 +17,7 @@ services:
     command:
       - "python3.6"
       - "-m"
-      - "backend.main"
+      - "backend.service.service"
       - "host=0.0.0.0"
       - "port=5002"
     environment:
