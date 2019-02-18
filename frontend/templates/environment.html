@@ -243,7 +243,6 @@
     </script>
 
     <script>
-        {#$("#customRange1").val()#}
         $(document).on('input', '#timelineSlider', function() {
             console.log($(this).val() );
             $("#timelineLabel").html("Current Epoch: " + $(this).val() );
@@ -265,6 +264,14 @@
                 <div id="locations"></div>
             </div>
             <div class="col-sm-4">
+                <div class="card" style="margin-bottom: 25px;">
+                    <div class="card-header">
+                        Control Panel
+                    </div>
+                    <div class="card-body">
+                        <div></div>
+                    </div>
+                </div>
                 <div class="card" style="margin-bottom: 25px;" >
                     <div class="card-header">
                         Object Log
