@@ -1,7 +1,9 @@
 from backend.models.agenda import Decision
-from backend.models.graph import Frame, Graph, Identifier, Literal, Network
 from backend.models.mps import MPRegistry
 from enum import Enum
+from ontograph.Frame import Frame
+from ontograph.Index import Identifier
+from ontograph.Space import Space
 from typing import Callable, List, Union
 
 from typing import TYPE_CHECKING
@@ -22,7 +24,7 @@ class Effector(object):
         OPERATING = 2
 
     @classmethod
-    def instance(cls, graph: Graph, type: Union[str, Type], capabilities: List[Union["Capability", Frame]]):
+    def instance(cls, space: Space, type: Union[str, Type], capabilities: List[Union["Capability", Frame]]):
         if isinstance(type, str):
             type = Effector.Type[type]
 
@@ -34,7 +36,7 @@ class Effector(object):
         if type == Effector.Type.MENTAL:
             parent = "MENTAL-EFFECTOR"
 
-        frame = graph.register(parent, isa="EXE." + parent, generate_index=True)
+        frame = Frame("@" + space.name + "." + parent + ".?").add_parent(Frame("@EXE." + parent))
 
         for capability in capabilities:
             if isinstance(capability, Capability):
@@ -49,11 +51,11 @@ class Effector(object):
         self.frame = frame
 
     def type(self) -> Type:
-        if self.frame ^ "EXE.PHYSICAL-EFFECTOR":
+        if self.frame ^ "@EXE.PHYSICAL-EFFECTOR":
             return Effector.Type.PHYSICAL
-        if self.frame ^ "EXE.VERBAL-EFFECTOR":
+        if self.frame ^ "@EXE.VERBAL-EFFECTOR":
             return Effector.Type.VERBAL
-        if self.frame ^ "EXE.MENTAL-EFFECTOR":
+        if self.frame ^ "@EXE.MENTAL-EFFECTOR":
             return Effector.Type.MENTAL
         raise Exception("Unknown type for effector.")
 
@@ -62,7 +64,7 @@ class Effector(object):
         return status == Effector.Status.FREE or status == Effector.Status.FREE.name
 
     def capabilities(self) -> List["Capability"]:
-        return list(map(lambda c: Capability(c.resolve()), self.frame["HAS-CAPABILITY"]))
+        return list(map(lambda c: Capability(c), self.frame["HAS-CAPABILITY"]))
 
     def on_decision(self) -> Union[Decision, None]:
         if "ON-DECISION" not in self.frame:
@@ -114,12 +116,12 @@ class Effector(object):
 class Capability(object):
 
     @classmethod
-    def instance(cls, graph: Graph, name: str, mp: Union[str, Callable], covers: List[Union[str, Identifier, Frame]]):
-        frame = graph.register(name, isa="EXE.CAPABILITY")
+    def instance(cls, space: Space, name: str, mp: Union[str, Callable], covers: List[Union[str, Identifier, Frame]]):
+        frame = Frame("@" + space.name + "." + name + ".?").add_parent(Frame("@EXE.CAPABILITY"))
         if not isinstance(mp, str):
             mp = mp.__name__
 
-        frame["MP"] = Literal(mp)
+        frame["MP"] = mp
         frame["COVERS-EVENT"] = covers
 
         return Capability(frame)
@@ -134,7 +136,7 @@ class Capability(object):
         return self.frame["MP"].singleton()
 
     def events(self) -> List[Frame]:
-        return list(map(lambda e: e.resolve(), self.frame["COVERS-EVENT"]))
+        return list(self.frame["COVERS-EVENT"])
 
     def __eq__(self, other):
         if isinstance(other, Capability):
@@ -151,14 +153,14 @@ class Callback(object):
         RECEIVED = "RECEIVED"
 
     @classmethod
-    def build(cls, graph: Graph, decision: Union[str, Identifier, Frame, Decision], effector: Union[str, Identifier, Frame, Effector]) -> 'Callback':
+    def build(cls, space: Space, decision: Union[str, Identifier, Frame, Decision], effector: Union[str, Identifier, Frame, Effector]) -> 'Callback':
         if isinstance(decision, Decision):
             decision = decision.frame
 
         if isinstance(effector, Effector):
             effector = effector.frame
 
-        callback = graph.register("CALLBACK", isa="EXE.CALLBACK", generate_index=True)
+        callback = Frame("@" + space.name + ".CALLBACK.?")
         callback["FOR-DECISION"] = decision
         callback["FOR-EFFECTOR"] = effector
         callback["STATUS"] = Callback.Status.WAITING
@@ -189,7 +191,7 @@ class Callback(object):
     def process(self):
         self.effector().release()
         self.decision().callback_received(self)
-        del self.frame._graph[str(self.frame._identifier)]
+        self.frame.delete()
 
     def __eq__(self, other):
         if isinstance(other, Callback):
