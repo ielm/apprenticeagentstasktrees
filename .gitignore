@@ -1,4 +1,5 @@
 .idea*
+.virtualenvs*
 *~
 *.pyc
 .DS_Store
