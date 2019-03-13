@@ -1,14 +1,20 @@
+# from backend.agent import Agent
 from backend.models.grammar import Grammar
-from backend.models.graph import Filler, Frame, Identifier, Literal, Network, Slot
+# from backend.models.graph import Filler, Frame, Identifier, Literal, Network, Slot
 from enum import Enum
 from functools import reduce
+from ontograph import graph
+from ontograph.Frame import Frame, Slot
+from ontograph.Index import Identifier
 from typing import Any, List, Union
 
 
-class Query(object):
+class Filler(object): pass
+class Literal(object): pass
+class Network(object): pass
 
-    def __init__(self, network: Network):
-        self.network = network
+
+class Query(object):
 
     def compare(self, other) -> bool:
         return False
@@ -26,11 +32,17 @@ class Query(object):
     def parsef(cls, network: Network, input: str, **kwargs):
         return Query.parse(network, input.format(**kwargs))
 
+    def search(self) -> List[Frame]:
+        results = []
+        for space in graph:
+            for frame in space:
+                if self.compare(frame):
+                    results.append(frame)
+        return results
 
 class AndQuery(Query):
 
-    def __init__(self, network: Network, queries: List[Query]):
-        super().__init__(network)
+    def __init__(self, queries: List[Query]):
         self.queries = queries
 
     def compare(self, other) -> bool:
@@ -45,13 +57,12 @@ class AndQuery(Query):
     def __eq__(self, other):
         if not isinstance(other, AndQuery):
             return super().__eq__(other)
-        return self.network == other.network and self.queries == other.queries
+        return self.queries == other.queries
 
 
 class OrQuery(Query):
 
-    def __init__(self, network: Network, queries: List[Query]):
-        super().__init__(network)
+    def __init__(self, queries: List[Query]):
         self.queries = queries
 
     def compare(self, other) -> bool:
@@ -66,13 +77,12 @@ class OrQuery(Query):
     def __eq__(self, other):
         if not isinstance(other, OrQuery):
             return super().__eq__(other)
-        return self.network == other.network and self.queries == other.queries
+        return self.queries == other.queries
 
 
 class ExactQuery(Query):
 
-    def __init__(self, network: Network, queries: List[Query]):
-        super().__init__(network)
+    def __init__(self, queries: List[Query]):
         self.queries = queries
 
     def compare(self, other: List[Any]) -> bool:
@@ -85,7 +95,7 @@ class ExactQuery(Query):
             return False
 
         if isinstance(other, Frame):
-            other = other._storage.values()
+            other = list(other)
 
         return self._equals(other, self.queries)
 
@@ -108,13 +118,12 @@ class ExactQuery(Query):
     def __eq__(self, other):
         if not isinstance(other, ExactQuery):
             return super().__eq__(other)
-        return self.network == other.network and self.queries == other.queries
+        return self.queries == other.queries
 
 
 class NotQuery(Query):
 
-    def __init__(self, network: Network, query: Query):
-        super().__init__(network)
+    def __init__(self, query: Query):
         self.query = query
 
     def compare(self, other) -> bool:
@@ -126,13 +135,12 @@ class NotQuery(Query):
     def __eq__(self, other):
         if not isinstance(other, NotQuery):
             return super().__eq__(other)
-        return self.network == other.network and self.query == other.query
+        return self.query == other.query
 
 
 class FrameQuery(Query):
 
-    def __init__(self, network: Network, subquery: Union[AndQuery, OrQuery, NotQuery, ExactQuery, 'IdentifierQuery', 'SlotQuery']):
-        super().__init__(network)
+    def __init__(self, subquery: Union[AndQuery, OrQuery, NotQuery, ExactQuery, 'IdentifierQuery', 'SlotQuery']):
         self.subquery = subquery
 
     def compare(self, other: Frame) -> bool:
@@ -144,7 +152,7 @@ class FrameQuery(Query):
     def __eq__(self, other):
         if not isinstance(other, FrameQuery):
             return super().__eq__(other)
-        return self.network == other.network and self.subquery == other.subquery
+        return self.subquery == other.subquery
 
 
 class SimpleFrameQuery(FrameQuery):
@@ -235,13 +243,12 @@ class SimpleFrameQuery(FrameQuery):
 
 class SlotQuery(Query):
 
-    def __init__(self, network: Network, subquery: Union[AndQuery, OrQuery, ExactQuery, NotQuery, 'NameQuery', 'FillerQuery']):
-        super().__init__(network)
+    def __init__(self, subquery: Union[AndQuery, OrQuery, ExactQuery, NotQuery, 'NameQuery', 'FillerQuery']):
         self.subquery = subquery
 
     def compare(self, other: Union[Frame, Slot]) -> bool:
         if isinstance(other, Frame):
-            for slot in other._storage.values():
+            for slot in other:
                 if self.subquery.compare(slot):
                     return True
             return False
@@ -282,17 +289,16 @@ class SlotQuery(Query):
     def __eq__(self, other):
         if not isinstance(other, SlotQuery):
             return super().__eq__(other)
-        return self.network == other.network and self.subquery == other.subquery
+        return self.subquery == other.subquery
 
 
 class NameQuery(Query):
 
-    def __init__(self, network: Network, name: str):
-        super().__init__(network)
+    def __init__(self, name: str):
         self.name = name
 
     def compare(self, other: Slot) -> bool:
-        return other._name == self.name
+        return other.property == self.name
 
     def __str__(self):
         return "*slot is " + self.name
@@ -300,23 +306,22 @@ class NameQuery(Query):
     def __eq__(self, other):
         if not isinstance(other, NameQuery):
             return super().__eq__(other)
-        return self.network == other.network and self.name == other.name
+        return self.name == other.name
 
 
 class FillerQuery(Query):
 
-    def __init__(self, network: Network, query: Union['LiteralQuery', 'IdentifierQuery']):
-        super().__init__(network)
+    def __init__(self, query: Union['LiteralQuery', 'IdentifierQuery']):
         self.query = query
 
-    def compare(self, other: Union[Slot, Filler]) -> bool:
+    def compare(self, other: Union[Slot, Any]) -> bool:
         if isinstance(other, Slot):
             for filler in other:
                 if self.query.compare(filler):
                     return True
             return False
 
-        return self.query.compare(other._value)
+        return self.query.compare(other)
 
     def __str__(self):
         return str(self.query)
@@ -324,19 +329,15 @@ class FillerQuery(Query):
     def __eq__(self, other):
         if not isinstance(other, FillerQuery):
             return super().__eq__(other)
-        return self.network == other.network and self.query == other.query
+        return self.query == other.query
 
 
 class LiteralQuery(Query):
 
-    def __init__(self, network: Network, value):
-        super().__init__(network)
+    def __init__(self, value):
         self.value = value
 
     def compare(self, other) -> bool:
-        if isinstance(other, Filler) and isinstance(other._value, Literal) and isinstance(other._value.value, Enum):
-            other = other._value.value.value
-
         return self.value == other
 
     def __str__(self):
@@ -345,7 +346,7 @@ class LiteralQuery(Query):
     def __eq__(self, other):
         if not isinstance(other, LiteralQuery):
             return super().__eq__(other)
-        return self.network == other.network and self.value == other.value
+        return self.value == other.value
 
 
 class IdentifierQuery(Query):
@@ -356,37 +357,32 @@ class IdentifierQuery(Query):
         ISPARENT = 3    # Is self.identifier the immediate parent of the input
         SUBCLASSES = 4  # Is self.identifier a child of the input
 
-    def __init__(self, network: Network, identifier: Union[Identifier, Frame, str], comparator: Comparator, set: bool=True, from_concept: bool=False):
-        super().__init__(network)
-
+    def __init__(self, identifier: Union[Identifier, Frame, str], comparator: Comparator, set: bool=True, from_concept: bool=False):
         if isinstance(identifier, Frame):
-            identifier = identifier._identifier
-        if isinstance(identifier, str):
-            identifier = Identifier.parse(identifier)
+            identifier = identifier.id
+        if isinstance(identifier, Identifier):
+            identifier = identifier.id
 
         self.identifier = identifier
         self.comparator = comparator
         self.set = set
         self.from_concept = from_concept
 
-    def compare(self, other: Union[Frame, Identifier, Filler, str]) -> bool:
-        if isinstance(other, Filler):
-            other = other._value
-
-        if isinstance(other, str):
-            other = Identifier.parse(other)
+    def compare(self, other: Union[Frame, Identifier, str]) -> bool:
+        if isinstance(other, Identifier):
+            other = other.id
 
         if isinstance(other, Frame):
-            other = other._identifier
+            other = other.id
 
-        if not isinstance(other, Identifier):
+        if not isinstance(other, str):
             return False
 
         if self.from_concept:
-            other = Identifier.parse(other.resolve(None, self.network).concept(full_path=True))
+            other = Frame(other).parents()[0].id if len(Frame(other).parents()) > 0 else "@ONT.ALL"
 
         if self.set:
-            frame = other.resolve(None, self.network)
+            frame = Frame(other)
             for filler in frame["ELEMENTS"]:
                 if self.compare(filler):
                     return True
@@ -395,14 +391,14 @@ class IdentifierQuery(Query):
             return self.identifier == other
 
         if self.comparator == self.Comparator.ISA:
-            return other.resolve(None, self.network) ^ self.identifier.resolve(None, self.network)
+            return Frame(other) ^ Frame(self.identifier)
 
         if self.comparator == self.Comparator.ISPARENT:
-            other = other.resolve(None, self.network)
-            return other[other._ISA_type()] == self.identifier
+            other = Frame(other)
+            return self.identifier in other.parents()
 
         if self.comparator == self.Comparator.SUBCLASSES:
-            return self.identifier.resolve(None, self.network) ^ other.resolve(None, self.network)
+            return Frame(self.identifier) ^ Frame(other)
 
         return False
 
@@ -429,4 +425,4 @@ class IdentifierQuery(Query):
         if not isinstance(other, IdentifierQuery):
             return super().__eq__(other)
 
-        return self.network == other.network and self.identifier == other.identifier and self.comparator == other.comparator and self.set == other.set and self.from_concept == other.from_concept
+        return self.identifier == other.identifier and self.comparator == other.comparator and self.set == other.set and self.from_concept == other.from_concept
