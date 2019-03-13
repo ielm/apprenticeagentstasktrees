@@ -1,9 +1,15 @@
 from backend.models.agenda import Agenda
 from backend.models.bootstrap import BootstrapAddTrigger, BootstrapAppendKnowledge, BootstrapDeclareKnowledge, BootstrapDefineOutputXMRTemplate, BootstrapRegisterMP, BootstrapTriple
-from backend.models.graph import Frame, Identifier, Literal, Network
+# from backend.models.graph import Frame, Identifier, Literal, Network
 from backend.models.mps import AgentMethod, MPRegistry
 from backend.models.output import OutputXMRTemplate
 from backend.models.xmr import XMR
+
+from ontograph import graph
+from ontograph.Frame import Frame
+from ontograph.Index import Identifier
+from ontograph.Query import IdComparator, Query
+from ontograph.Space import Space
 
 import unittest
 
@@ -11,64 +17,58 @@ import unittest
 class BootstrapDeclareKnowledgeTestCase(unittest.TestCase):
 
     def setUp(self):
-        self.n = Network()
-        self.g = self.n.register("TEST")
+        graph.reset()
 
     def test_call_makes_instance(self):
-        boot = BootstrapDeclareKnowledge(self.n, "TEST", "MYFRAME")
+        boot = BootstrapDeclareKnowledge("TEST", "MYFRAME")
         boot()
 
-        self.assertIn("TEST.MYFRAME", self.g)
+        self.assertIn("@TEST.MYFRAME", graph)
 
     def test_call_makes_instance_with_specified_index(self):
-        boot = BootstrapDeclareKnowledge(self.n, "TEST", "MYFRAME", index=1)
+        boot = BootstrapDeclareKnowledge("TEST", "MYFRAME", index=1)
         boot()
 
-        self.assertIn("TEST.MYFRAME.1", self.g)
+        self.assertIn("@TEST.MYFRAME.1", graph)
 
     def test_call_makes_instance_with_generated_index(self):
-        boot = BootstrapDeclareKnowledge(self.n, "TEST", "MYFRAME", index=True)
+        boot = BootstrapDeclareKnowledge("TEST", "MYFRAME", index=True)
         boot()
 
-        self.assertIn("TEST.MYFRAME.1", self.g)
+        self.assertIn("@TEST.MYFRAME.1", graph)
 
     def test_call_makes_instances_with_parent(self):
-        self.g.register("PARENT")
-
-        boot = BootstrapDeclareKnowledge(self.n, "TEST", "MYFRAME", isa="TEST.PARENT")
+        boot = BootstrapDeclareKnowledge("TEST", "MYFRAME", isa="@TEST.PARENT")
         boot()
 
-        frame = self.g["MYFRAME"]
-        self.assertTrue(frame ^ "TEST.PARENT")
+        frame = Frame("@TEST.MYFRAME")
+        self.assertTrue(frame ^ "@TEST.PARENT")
 
     def test_call_makes_instances_with_parents(self):
-        self.g.register("PARENT1")
-        self.g.register("PARENT2")
-
-        boot = BootstrapDeclareKnowledge(self.n, "TEST", "MYFRAME", isa=["TEST.PARENT1", "TEST.PARENT2"])
+        boot = BootstrapDeclareKnowledge("TEST", "MYFRAME", isa=["@TEST.PARENT1", "@TEST.PARENT2"])
         boot()
 
-        frame = self.g["MYFRAME"]
-        self.assertTrue(frame ^ "TEST.PARENT1")
-        self.assertTrue(frame ^ "TEST.PARENT2")
+        frame = Frame("@TEST.MYFRAME")
+        self.assertTrue(frame ^ "@TEST.PARENT1")
+        self.assertTrue(frame ^ "@TEST.PARENT2")
 
     def test_call_adds_property(self):
-        prop = BootstrapTriple("MYSLOT", Identifier.parse("ONT.ALL"))
+        prop = BootstrapTriple("MYSLOT", Identifier("@ONT.ALL"))
 
-        boot = BootstrapDeclareKnowledge(self.n, "TEST", "MYFRAME", properties=[prop])
+        boot = BootstrapDeclareKnowledge("TEST", "MYFRAME", properties=[prop])
         boot()
 
-        frame = self.g["MYFRAME"]
-        self.assertTrue(frame["MYSLOT"] == Identifier.parse("ONT.ALL"))
+        frame = Frame("@TEST.MYFRAME")
+        self.assertTrue(frame["MYSLOT"] == Frame("@ONT.ALL"))
 
     def test_call_adds_multiple_properties(self):
-        prop1 = BootstrapTriple("MYSLOT", Literal("ONT.ALL"))
-        prop2 = BootstrapTriple("MYSLOT", Literal(123))
+        prop1 = BootstrapTriple("MYSLOT", "ONT.ALL")
+        prop2 = BootstrapTriple("MYSLOT", 123)
 
-        boot = BootstrapDeclareKnowledge(self.n, "TEST", "MYFRAME", properties=[prop1, prop2])
+        boot = BootstrapDeclareKnowledge("TEST", "MYFRAME", properties=[prop1, prop2])
         boot()
 
-        frame = self.g["MYFRAME"]
+        frame = Frame("@TEST.MYFRAME")
         self.assertTrue(frame["MYSLOT"] == "ONT.ALL")
         self.assertTrue(frame["MYSLOT"] == 123)
 
@@ -86,6 +86,7 @@ class BootstrapDeclareKnowledgeTestCase(unittest.TestCase):
         self.assertEqual("SEM", frame["MYSLOT"][0]._facet)
 
     def test_call_ignores_facets_in_non_ontology_graphs(self):
+        fail()
         prop = BootstrapTriple("MYSLOT", Identifier.parse("ONT.ALL"), facet="does-not-matter")
 
         boot = BootstrapDeclareKnowledge(self.n, "TEST", "MYFRAME", properties=[prop])
@@ -98,42 +99,41 @@ class BootstrapDeclareKnowledgeTestCase(unittest.TestCase):
 class BootstrapAppendKnowledgeTestCase(unittest.TestCase):
 
     def setUp(self):
-        self.n = Network()
-        self.g = self.n.register("TEST")
+        graph.reset()
 
     def test_call_adds_property(self):
-        frame = self.g.register("MYFRAME")
+        frame = Frame("@TEST.MYFRAME")
 
-        prop = BootstrapTriple("MYSLOT", Identifier.parse("ONT.ALL"))
+        prop = BootstrapTriple("MYSLOT", Identifier("@ONT.ALL"))
 
-        boot = BootstrapAppendKnowledge(self.n, "TEST.MYFRAME", properties=[prop])
+        boot = BootstrapAppendKnowledge("@TEST.MYFRAME", properties=[prop])
         boot()
 
-        self.assertTrue(frame["MYSLOT"] == Identifier.parse("ONT.ALL"))
+        self.assertTrue(frame["MYSLOT"] == Frame("@ONT.ALL"))
 
     def test_call_adds_multiple_properties(self):
-        frame = self.g.register("MYFRAME")
+        frame = Frame("@TEST.MYFRAME")
 
-        prop1 = BootstrapTriple("MYSLOT", Literal("ONT.ALL"))
-        prop2 = BootstrapTriple("MYSLOT", Literal(123))
+        prop1 = BootstrapTriple("MYSLOT", "ONT.ALL")
+        prop2 = BootstrapTriple("MYSLOT", 123)
 
-        boot = BootstrapAppendKnowledge(self.n, "TEST.MYFRAME", properties=[prop1, prop2])
+        boot = BootstrapAppendKnowledge("@TEST.MYFRAME", properties=[prop1, prop2])
         boot()
 
         self.assertTrue(frame["MYSLOT"] == "ONT.ALL")
         self.assertTrue(frame["MYSLOT"] == 123)
 
     def test_call_adds_filler_to_existing_property(self):
-        frame = self.g.register("MYFRAME")
-        frame["MYSLOT"] = Identifier.parse("ONT.FIRST")
+        frame = Frame("@TEST.MYFRAME")
+        frame["MYSLOT"] = Frame("@ONT.FIRST")
 
-        prop = BootstrapTriple("MYSLOT", Identifier.parse("ONT.SECOND"))
+        prop = BootstrapTriple("MYSLOT", Identifier("@ONT.SECOND"))
 
-        boot = BootstrapAppendKnowledge(self.n, "TEST.MYFRAME", properties=[prop])
+        boot = BootstrapAppendKnowledge("@TEST.MYFRAME", properties=[prop])
         boot()
 
-        self.assertTrue(frame["MYSLOT"] == Identifier.parse("ONT.FIRST"))
-        self.assertTrue(frame["MYSLOT"] == Identifier.parse("ONT.SECOND"))
+        self.assertTrue(frame["MYSLOT"] == Frame("@ONT.FIRST"))
+        self.assertTrue(frame["MYSLOT"] == Frame("@ONT.SECOND"))
 
     def test_call_respects_facets_in_ontology(self):
         from backend.models.ontology import Ontology
@@ -150,6 +150,7 @@ class BootstrapAppendKnowledgeTestCase(unittest.TestCase):
         self.assertEqual("SEM", frame["MYSLOT"][0]._facet)
 
     def test_call_ignores_facets_in_non_ontology_graphs(self):
+        fail()
         frame = self.g.register("MYFRAME")
 
         prop = BootstrapTriple("MYSLOT", Identifier.parse("ONT.ALL"), facet="does-not-matter")
@@ -163,8 +164,7 @@ class BootstrapAppendKnowledgeTestCase(unittest.TestCase):
 class BootstrapRegisterMPTestCase(unittest.TestCase):
 
     def setUp(self):
-        self.n = Network()
-        self.g = self.n.register("TEST")
+        graph.reset()
         MPRegistry.clear()
 
         class MP(AgentMethod):
@@ -191,15 +191,14 @@ class BootstrapRegisterMPTestCase(unittest.TestCase):
 class BootstrapAddTriggerTestCase(unittest.TestCase):
 
     def setUp(self):
-        self.n = Network()
-        self.g = self.n.register("TEST")
+        graph.reset()
 
     def test_call(self):
-        agenda = self.g.register("AGENDA")
-        definition = self.g.register("DEFINITION")
-        query = Frame.q(self.n).id("TEST.SOMETHING.123")
+        agenda = Frame("@TEST.AGENDA")
+        definition = Frame("@TEST.DEFINITION")
+        query = Query().search(IdComparator("@TEST.SOMETHING.123"))
 
-        boot = BootstrapAddTrigger(self.n, agenda, definition, query)
+        boot = BootstrapAddTrigger(agenda, definition, query)
         boot()
 
         self.assertEqual(1, len(Agenda(agenda).triggers()))
@@ -210,32 +209,31 @@ class BootstrapAddTriggerTestCase(unittest.TestCase):
 class BootstrapDefineOutputXMRTemplateTestCase(unittest.TestCase):
 
     def setUp(self):
-        self.n = Network()
-        self.g = self.n.register("TEST")
-        self.capability = self.g.register("CAPABILITY")
+        graph.reset()
+        self.capability = Frame("@TEST.CAPABILITY")
 
     def test_call(self):
         name = "Test Name"
         type = XMR.Type.ACTION
         capability = self.capability
         params = ["$var1", "$var2"]
-        root = "OUT.EVENT.1"
+        root = "@OUT.EVENT.1"
         frames = [
-            BootstrapDeclareKnowledge(self.n, "OUT", "EVENT", index=1, properties=[BootstrapTriple("THEME", Identifier.parse("OUT.OBJECT.1"))]),
-            BootstrapDeclareKnowledge(self.n, "OUT", "OBJECT", index=1, properties=[BootstrapTriple("PROP", Literal("$var1"))])
+            BootstrapDeclareKnowledge("OUT", "EVENT", index=1, properties=[BootstrapTriple("THEME", Identifier("@OUT.OBJECT.1"))]),
+            BootstrapDeclareKnowledge( "OUT", "OBJECT", index=1, properties=[BootstrapTriple("PROP", "$var1")])
         ]
 
-        boot = BootstrapDefineOutputXMRTemplate(self.n, name, type, capability, params, root, frames)
+        boot = BootstrapDefineOutputXMRTemplate(name, type, capability, params, root, frames)
         boot()
 
-        template = self.n["XMR-TEMPLATE#1"]
-        event = template["XMR-TEMPLATE#1.EVENT.1"]
-        object = template["XMR-TEMPLATE#1.OBJECT.1"]
+        template = Space("XMR-TEMPLATE#1")
+        event = Frame("@XMR-TEMPLATE#1.EVENT.1")
+        object = Frame("@XMR-TEMPLATE#1.OBJECT.1")
 
         self.assertEqual(object, event["THEME"])
         self.assertEqual("$var1", object["PROP"])
 
         self.assertEqual("Test Name", OutputXMRTemplate(template).name())
         self.assertEqual(XMR.Type.ACTION, OutputXMRTemplate(template).type())
-        self.assertEqual("TEST.CAPABILITY", OutputXMRTemplate(template).capability().name())
+        self.assertEqual(Frame("@TEST.CAPABILITY"), OutputXMRTemplate(template).capability().frame)
         self.assertEqual(["$var1", "$var2"], OutputXMRTemplate(template).params())

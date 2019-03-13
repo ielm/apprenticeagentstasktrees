@@ -1,15 +1,24 @@
-from backend.agent import Agent
+# from backend.agent import Agent
 from backend.models.agenda import Agenda, Goal, Trigger
 from backend.models.effectors import Capability
 from backend.models.grammar import Grammar
-from backend.models.graph import Filler, Frame, Graph, Identifier, Literal, Network
+# from backend.models.graph import Filler, Frame, Graph, Identifier, Literal, Network
 from backend.models.mps import AgentMethod, MPRegistry, OutputMethod
-from backend.models.ontology import Ontology, OntologyFrame, OntologyFiller
+# from backend.models.ontology import Ontology, OntologyFrame, OntologyFiller
 from backend.models.output import OutputXMRTemplate
 from backend.models.query import Query
 from backend.models.xmr import XMR
+from ontograph.Frame import Frame
+from ontograph.Index import Identifier
+from ontograph.Space import Space
 from pkgutil import get_data
-from typing import Callable, List, Type, Union
+from typing import Any, List, Type, Union
+
+
+class Agent(object): pass
+class Literal(object): pass
+class Network(object): pass
+class Graph(object): pass
 
 
 class Bootstrap(object):
@@ -39,7 +48,7 @@ class Bootstrap(object):
 
 class BootstrapTriple(object):
 
-    def __init__(self, slot: str, filler: Union[Identifier, Literal], facet: str=None):
+    def __init__(self, slot: str, filler: Union[Identifier, Any], facet: str=None):
         self.slot = slot
         self.facet = facet
         self.filler = filler
@@ -52,9 +61,8 @@ class BootstrapTriple(object):
 
 class BootstrapDeclareKnowledge(Bootstrap):
 
-    def __init__(self, network: Network, graph: Union[str, Graph], name: str, index: Union[int, bool]=False, isa: Union[str, Identifier, List[Union[str, Identifier]]]=None, properties: Union[BootstrapTriple, List[BootstrapTriple]]=None):
-        self.network = network
-        self.graph = graph
+    def __init__(self, space: Union[str, Space], name: str, index: Union[int, bool]=False, isa: Union[str, Identifier, List[Union[str, Identifier]]]=None, properties: Union[BootstrapTriple, List[BootstrapTriple]]=None):
+        self.space = space
         self.name = name
         self.index = index
         self.isa = isa
@@ -71,21 +79,26 @@ class BootstrapDeclareKnowledge(Bootstrap):
             self.properties = [self.properties]
 
     def __call__(self, *args, **kwargs):
-        if isinstance(self.graph, str):
-            self.graph = self.network[self.graph]
+        if isinstance(self.space, Space):
+            self.space = self.space.name
 
-        id = self.name
+        id = ""
         if not isinstance(self.index, bool):
-            id = id + "." + str(self.index)
+            id = "." + str(self.index)
+        elif self.index:
+            id = ".?"
 
-        generate_index = self.index if isinstance(self.index, bool) else False
+        frame = Frame("@" + self.space + "." + self.name + id)
 
-        frame = self.graph.register(id, isa=self.isa, generate_index=generate_index)
+        for parent in self.isa:
+            frame.add_parent(parent)
+
         for property in self.properties:
-            if isinstance(self.graph, Ontology):
-                frame[property.slot] += OntologyFiller(property.filler, property.facet)
-            else:
-                frame[property.slot] += property.filler
+            frame[property.slot][property.facet] += property.filler
+            # if isinstance(self.graph, Ontology):
+            #     frame[property.slot] += OntologyFiller(property.filler, property.facet)
+            # else:
+            #     frame[property.slot] += property.filler
 
     def __eq__(self, other):
         if isinstance(other, BootstrapDeclareKnowledge):
@@ -100,8 +113,7 @@ class BootstrapDeclareKnowledge(Bootstrap):
 
 class BootstrapAppendKnowledge(Bootstrap):
 
-    def __init__(self, network: Network, frame: Union[Frame, Identifier, str], properties: Union[BootstrapTriple, List[BootstrapTriple]]):
-        self.network = network
+    def __init__(self, frame: Union[Frame, Identifier, str], properties: Union[BootstrapTriple, List[BootstrapTriple]]):
         self.frame = frame
         self.properties = properties
 
@@ -110,15 +122,16 @@ class BootstrapAppendKnowledge(Bootstrap):
 
     def __call__(self, *args, **kwargs):
         if isinstance(self.frame, str):
-            self.frame = self.network.lookup(self.frame)
+            self.frame = Frame(self.frame)
         if isinstance(self.frame, Identifier):
-            self.frame = self.network.lookup(self.frame)
+            self.frame = Frame(self.frame.id)
 
         for property in self.properties:
-            if isinstance(self.frame, OntologyFrame):
-                self.frame[property.slot] += OntologyFiller(property.filler, property.facet)
-            else:
-                self.frame[property.slot] += property.filler
+            self.frame[property.slot][property.facet] += property.filler
+            # if isinstance(self.frame, OntologyFrame):
+            #     self.frame[property.slot] += OntologyFiller(property.filler, property.facet)
+            # else:
+            #     self.frame[property.slot] += property.filler
 
     def __eq__(self, other):
         if isinstance(other, BootstrapAppendKnowledge):
@@ -155,8 +168,7 @@ class BoostrapGoal(Bootstrap):
 
 class BootstrapAddTrigger(Bootstrap):
 
-    def __init__(self, network: Network, agenda: Union[str, Identifier, Frame, Agenda], definition: Union[str, Identifier, Frame, Goal], query: Query):
-        self.network = network
+    def __init__(self, agenda: Union[str, Identifier, Frame, Agenda], definition: Union[str, Identifier, Frame, Goal], query: Query):
         self.agenda = agenda
         self.definition = definition
         self.query = query
@@ -164,13 +176,13 @@ class BootstrapAddTrigger(Bootstrap):
     def __call__(self, *args, **kwargs):
         agenda = self.agenda
         if isinstance(agenda, str):
-            agenda = self.network.lookup(agenda)
+            agenda = Frame(agenda)
         if isinstance(agenda, Identifier):
-            agenda = self.network.lookup(agenda)
+            agenda = Frame(agenda.id)
         if isinstance(agenda, Agenda):
             agenda = agenda.frame
 
-        trigger = Trigger.build(agenda._graph, self.query, self.definition)
+        trigger = Trigger.build(agenda.space(), self.query, self.definition)
         Agenda(agenda).add_trigger(trigger)
 
     def __eq__(self, other):
@@ -184,8 +196,7 @@ class BootstrapAddTrigger(Bootstrap):
 
 class BootstrapDefineOutputXMRTemplate(Bootstrap):
 
-    def __init__(self, network: Network, name: str, type: XMR.Type, capability: Union[str, Identifier, Frame, Capability], params: List[str], root: Union[str, Identifier, Frame, None], frames: List[BootstrapDeclareKnowledge]):
-        self.network = network
+    def __init__(self, name: str, type: XMR.Type, capability: Union[str, Identifier, Frame, Capability], params: List[str], root: Union[str, Identifier, Frame, None], frames: List[BootstrapDeclareKnowledge]):
         self.name = name
         self.type = type
         self.capability = capability
@@ -194,23 +205,36 @@ class BootstrapDefineOutputXMRTemplate(Bootstrap):
         self.frames = frames
 
     def __call__(self, *args, **kwargs):
-        template = OutputXMRTemplate.build(self.network, self.name, self.type, self.capability, self.params)
+        template = OutputXMRTemplate.build(self.name, self.type, self.capability, self.params)
         if self.root is not None:
             r = self.root
-            if isinstance(r, str):
-                r = Identifier.parse(r)
             if isinstance(r, Frame):
-                r = r._identifier
-            if r.graph == "OUT":
-                r.graph = template.graph._namespace
+                r = r.id
+            if isinstance(r, Identifier):
+                r = r.id
+
+            r = r.replace("@OUT", "@" + template.space.name)
+
+            r = Frame(r)
             template.set_root(r)
 
+
+
+            # if isinstance(r, str):
+            #     r = Frame(r)
+            # if isinstance(r, Identifier):
+            #     r = Frame(r.id)
+            # if r.space().name == "OUT":
+            #     r.graph = template.graph._namespace
+            # template.set_root(r)
+
         for frame in self.frames:
-            frame.graph = template.graph._namespace
+            frame.space = template.space
             for triple in frame.properties:
                 if isinstance(triple.filler, Identifier):
-                    if triple.filler.graph == "OUT":
-                        triple.filler.graph = template.graph._namespace
+                    triple.filler.id = triple.filler.id.replace("@OUT", "@" + template.space.name)
+                    # if triple.filler.graph == "OUT":
+                    #     triple.filler.graph = template.graph._namespace
 
         for frame in self.frames:
             frame()
