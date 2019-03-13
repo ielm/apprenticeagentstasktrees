@@ -1,10 +1,17 @@
-from backend.models.grammar import Grammar
-from backend.models.graph import Frame, Graph, Identifier, Literal
-from backend.models.query import Query
+# from backend.models.grammar import Grammar
+# from backend.models.graph import Frame, Graph, Identifier, Literal
+# from backend.models.query import Query
 from backend.models.statement import AssertStatement, MakeInstanceStatement, Statement, StatementScope, VariableMap
 from enum import Enum
 from functools import reduce
 from typing import Any, Dict, List, Tuple, Union
+
+from ontograph import graph
+from ontograph.Frame import Frame, Role
+from ontograph.Graph import Graph
+from ontograph.Index import Identifier
+from ontograph.Query import Query
+from ontograph.Space import Space
 
 import time
 
@@ -21,7 +28,7 @@ class Agenda(object):
         self.frame = frame
 
     def goals(self, pending=False, active=True, abandoned=False, satisfied=False):
-        results = map(lambda g: Goal(g.resolve()), self.frame["HAS-GOAL"])
+        results = map(lambda g: Goal(g), self.frame["HAS-GOAL"])
 
         if not pending:
             results = filter(lambda g: not g.is_pending(), results)
@@ -56,20 +63,20 @@ class Agenda(object):
         if "PLAN-TO-TAKE" not in self.frame:
             return []
 
-        return list(map(lambda a: Plan(a.resolve()), self.frame["PLAN-TO-TAKE"]))
+        return list(map(lambda a: Plan(a), self.frame["PLAN-TO-TAKE"]))
 
     def add_trigger(self, trigger: [str, Identifier, Frame, 'Trigger']):
         if isinstance(trigger, str):
-            trigger = Identifier.parse(trigger)
+            trigger = Frame(trigger)
         if isinstance(trigger, Trigger):
             trigger = trigger.frame
-        if isinstance(trigger, Frame):
-            trigger = trigger._identifier
+        if isinstance(trigger, Identifier):
+            trigger = Frame(trigger.id)
 
         self.frame["TRIGGER"] += trigger
 
     def triggers(self) -> List['Trigger']:
-        return list(map(lambda t: Trigger(t.resolve()), self.frame["TRIGGER"]))
+        return list(map(lambda t: Trigger(t), self.frame["TRIGGER"]))
 
     def fire_triggers(self):
         for trigger in self.triggers():
@@ -85,39 +92,41 @@ class Goal(VariableMap):
         SATISFIED = 4
 
     @classmethod
-    def define(cls, graph: Graph, name: str, priority: Union[Statement, float], resources: Union[Statement, float], plan: List['Plan'], conditions: List['Condition'], variables: List[str], effects: List['Effect']):
-        frame = graph.register(name, generate_index=False)
-        frame["NAME"] = Literal(name)
+    def define(cls, space: Space, name: str, priority: Union[Statement, float], resources: Union[Statement, float], plan: List['Plan'], conditions: List['Condition'], variables: List[str], effects: List['Effect']):
+        frame = Frame("@" + space.name + "." + name)
+        frame["NAME"] = name
         frame["PRIORITY"] = priority
         frame["RESOURCES"] = resources
         frame["PLAN"] = list(map(lambda p: p.frame, plan))
         frame["WHEN"] = list(map(lambda c: c.frame, conditions))
-        frame["WITH"] = list(map(lambda var: Literal(var), variables))
+        frame["WITH"] = variables
         frame["HAS-EFFECT"] = list(map(lambda e: e.frame, effects))
 
         return Goal(frame)
 
     @classmethod
-    def instance_of(cls, graph: Graph, definition: Union[Frame, 'Goal'], params: List[Any], existing: Union[str, Identifier, Frame]=None):
+    def instance_of(cls, space: Space, definition: Union[Frame, 'Goal'], params: List[Any], existing: Union[str, Identifier, Frame]=None):
         if isinstance(definition, Goal):
             definition = definition.frame
 
         if existing is not None:
             if isinstance(existing, str):
-                existing = Identifier.parse(existing)
+                existing = Frame(existing)
             if isinstance(existing, Identifier):
-                existing = existing.resolve(graph)
+                existing = Frame(existing.id)
 
-        frame = existing if existing is not None else graph.register("GOAL", isa=definition._identifier, generate_index=True)
-        frame["NAME"] = definition["NAME"]
-        frame["PRIORITY"] = definition["PRIORITY"]
-        frame["RESOURCES"] = definition["RESOURCES"]
+        frame = existing
+        if frame is None:
+            frame = Frame("@" + space.name + ".GOAL.?").add_parent(definition)
+        frame["NAME"] = list(definition["NAME"])
+        frame["PRIORITY"] = list(definition["PRIORITY"])
+        frame["RESOURCES"] = list(definition["RESOURCES"])
         frame["STATUS"] = Goal.Status.PENDING
-        frame["PLAN"] = list(map(lambda plan: Plan.instance_of(graph, plan.resolve()).frame, definition["PLAN"]))
-        frame["WHEN"] = definition["WHEN"]
-        frame["HAS-EFFECT"] = definition["HAS-EFFECT"]
+        frame["PLAN"] = list(map(lambda plan: Plan.instance_of(space, plan).frame, definition["PLAN"]))
+        frame["WHEN"] = list(definition["WHEN"])
+        frame["HAS-EFFECT"] = list(definition["HAS-EFFECT"])
 
-        super().instance_of(graph, definition, params, existing=frame)
+        super().instance_of(space, definition, params, existing=frame)
 
         return Goal(frame)
 
@@ -134,8 +143,11 @@ class Goal(VariableMap):
         super().__init__(frame)
 
     def name(self) -> str:
-        if "NAME" in self.frame:
-            return self.frame["NAME"].singleton()
+        slot = self.frame["NAME", Role.LOC]
+        if len(slot) == 1:
+            return slot.singleton()
+        # if "NAME" in self.frame:
+        #     return self.frame["NAME"].singleton()
         return "Unknown Goal"
 
     def is_pending(self) -> bool:
@@ -179,14 +191,14 @@ class Goal(VariableMap):
         return list(map(lambda condition: Condition(condition.resolve()), self.frame["WHEN"]))
 
     def subgoals(self) -> List['Goal']:
-        return list(map(lambda goal: Goal(goal.resolve()), self.frame["HAS-GOAL"]))
+        return list(map(lambda goal: Goal(goal), self.frame["HAS-GOAL"]))
 
     def effects(self) -> List['Effect']:
-        return list(map(lambda effect: Effect(effect.resolve()), self.frame["HAS-EFFECT"]))
+        return list(map(lambda effect: Effect(effect), self.frame["HAS-EFFECT"]))
 
     def priority(self):
         try:
-            stmt: Statement = Statement.from_instance(self.frame["PRIORITY"].singleton())
+            stmt: Statement = Statement.from_instance(self.frame["PRIORITY", Role.LOC].singleton())
             priority = stmt.run(StatementScope(), self)
 
             self.frame["_PRIORITY"] = priority
@@ -194,7 +206,7 @@ class Goal(VariableMap):
         except: pass # Not a Statement
 
         try:
-            priority = self.frame["PRIORITY"].singleton()
+            priority = self.frame["PRIORITY", Role.LOC].singleton()
 
             self.frame["_PRIORITY"] = priority
             return priority
@@ -243,14 +255,14 @@ class Goal(VariableMap):
         return 0.0
 
     def plan(self) -> 'Plan':
-        for plan in self.frame["PLAN"]:
-            plan = Plan(plan.resolve())
+        for plan in self.frame["PLAN", Role.LOC]:
+            plan = Plan(plan)
             if plan.select(self):
                 return plan
         raise Exception("No plan was selected.")
 
     def plans(self) -> List['Plan']:
-        return list(map(lambda plan: Plan(plan.resolve()), self.frame["PLAN"]))
+        return list(map(lambda plan: Plan(plan), self.frame["PLAN", Role.LOC]))
 
     def __eq__(self, other):
         if isinstance(other, Goal):
@@ -266,11 +278,11 @@ class Goal(VariableMap):
         return super().__eq__(other)
 
     def __eqPLAN(self, other: 'Goal'):
-        if self.frame["PLAN"] == other.frame["PLAN"]:
+        if self.frame["PLAN", Role.LOC] == other.frame["PLAN", Role.LOC]:
             return True
 
-        s1 = list(map(lambda frame: Plan(frame.resolve()), self.frame["PLAN"]))
-        s2 = list(map(lambda frame: Plan(frame.resolve()), other.frame["PLAN"]))
+        s1 = list(map(lambda frame: Plan(frame.resolve()), self.frame["PLAN", Role.LOC]))
+        s2 = list(map(lambda frame: Plan(frame.resolve()), other.frame["PLAN", Role.LOC]))
 
         return s1 == s2
 
@@ -289,7 +301,7 @@ class Plan(object):
     DEFAULT = "DEFAULT"
 
     @classmethod
-    def build(cls, graph: Graph, name: str, select: Union[Statement, str], steps: Union['Step', Frame, List[Union['Step', Frame]]], negate: bool=False):
+    def build(cls, space: Space, name: str, select: Union[Statement, str], steps: Union['Step', Frame, List[Union['Step', Frame]]], negate: bool=False):
 
         if isinstance(select, Statement):
             select = select.frame
@@ -298,21 +310,21 @@ class Plan(object):
             steps = [steps]
         steps = list(map(lambda s: s.frame if isinstance(s, Step) else s, steps))
 
-        frame = graph.register("PLAN", generate_index=True)
-        frame["NAME"] = Literal(name)
+        frame = Frame("@" + space.name + ".PLAN.?")
+        frame["NAME"] = name
         frame["NEGATE"] = negate
-        frame["SELECT"] = Literal(Plan.DEFAULT) if select == Plan.DEFAULT else select
+        frame["SELECT"] = select
         frame["HAS-STEP"] = steps
 
         return Plan(frame)
 
     @classmethod
-    def instance_of(cls, graph: Graph, plan: Union[Frame, 'Plan']) -> 'Plan':
+    def instance_of(cls, space: Space, plan: Union[Frame, 'Plan']) -> 'Plan':
 
         if isinstance(plan, Frame):
             plan = Plan(plan)
 
-        return Plan.build(graph, plan.name(), plan.frame["SELECT"].singleton(), list(map(lambda step: Step.instance_of(graph, step).frame, plan.steps())), negate=plan.is_negated())
+        return Plan.build(space, plan.name(), plan.frame["SELECT"].singleton(), list(map(lambda step: Step.instance_of(graph, step).frame, plan.steps())), negate=plan.is_negated())
 
     def __init__(self, frame: Frame):
         self.frame = frame
@@ -347,7 +359,7 @@ class Plan(object):
         return False
 
     def steps(self) -> List['Step']:
-        results = list(map(lambda s: Step(s.resolve()), self.frame["HAS-STEP"]))
+        results = list(map(lambda s: Step(s), self.frame["HAS-STEP"]))
         results = sorted(results, key=lambda s: s.index())
         return results
 
@@ -397,13 +409,12 @@ class Step(object):
     IDLE = "IDLE"
 
     @classmethod
-    def build(cls, graph: Graph, index: int, perform: Union[Statement, Frame, str, List[Union[Statement, Frame, str]]]) -> 'Step':
+    def build(cls, space: Space, index: int, perform: Union[Statement, Frame, str, List[Union[Statement, Frame, str]]]) -> 'Step':
         if not isinstance(perform, list):
             perform = [perform]
-        perform = list(map(lambda p: Literal(p) if isinstance(p, str) else p, perform))
         perform = list(map(lambda p: p.frame if isinstance(p, Statement) else p, perform))
 
-        frame = graph.register("STEP", generate_index=True)
+        frame = Frame("@" + space.name + ".STEP.?")
         frame["INDEX"] = index
         frame["PERFORM"] = perform
         frame["STATUS"] = Step.Status.PENDING
@@ -477,15 +488,15 @@ class Step(object):
 class Trigger(object):
 
     @classmethod
-    def build(cls, graph: Graph, query: Query, definition: Union[str, Identifier, Frame, Goal]) -> 'Trigger':
+    def build(cls, space: Space, query: Query, definition: Union[str, Identifier, Frame, Goal]) -> 'Trigger':
         if isinstance(definition, str):
-            definition = Identifier.parse(definition)
+            definition = Frame(definition)
         if isinstance(definition, Goal):
             definition = definition.frame
-        if isinstance(definition, Frame):
-            definition = definition._identifier
+        if isinstance(definition, Identifier):
+            definition = Frame(definition.id)
 
-        frame = graph.register("TRIGGER", generate_index=True)
+        frame = Frame("@" + space.name + ".TRIGGER.?")
         frame["QUERY"] = query
         frame["DEFINITION"] = definition
 
@@ -500,18 +511,18 @@ class Trigger(object):
     def definition(self) -> Goal:
         return Goal(self.frame["DEFINITION"].singleton())
 
-    def triggered_on(self) -> List[Identifier]:
-        return list(map(lambda to: to._value, self.frame["TRIGGERED-ON"]))
+    def triggered_on(self) -> List[Frame]:
+        return list(self.frame["TRIGGERED-ON"])
 
     def fire(self, agenda: [Frame, Agenda]):
         if isinstance(agenda, Frame):
             agenda = Agenda(agenda)
 
-        results = self.frame._graph._network.search(self.query())
+        results = self.query().start(graph)
         results = filter(lambda r: r not in self.frame["TRIGGERED-ON"], results)
 
         for r in results:
-            agenda.add_goal(Goal.instance_of(self.frame._graph, self.definition(), [r]))
+            agenda.add_goal(Goal.instance_of(self.frame.space(), self.definition(), [r]))
             self.frame["TRIGGERED-ON"] += r
 
     def __eq__(self, other):
@@ -656,7 +667,8 @@ class Decision(object):
     '''
 
     @classmethod
-    def build(cls, graph: Graph, goal: Union[str, Identifier, Frame, Goal], plan: Union[str, Identifier, Frame, Plan], step: Union[str, Identifier, Frame, Step]) -> 'Decision':
+    # def build(cls, graph: Graph, goal: Union[str, Identifier, Frame, Goal], plan: Union[str, Identifier, Frame, Plan], step: Union[str, Identifier, Frame, Step]) -> 'Decision':
+    def build(cls, space: Space, goal: Union[str, Identifier, Frame, Goal], plan: Union[str, Identifier, Frame, Plan], step: Union[str, Identifier, Frame, Step]) -> 'Decision':
         if isinstance(goal, Goal):
             goal = goal.frame
         if isinstance(plan, Plan):
@@ -664,11 +676,13 @@ class Decision(object):
         if isinstance(step, Step):
             step = step.frame
 
-        decision = graph.register("DECISION", isa="EXE.DECISION", generate_index=True)
+        # decision = graph.register("DECISION", isa="EXE.DECISION", generate_index=True)
+        decision = Frame("@" + space.name + ".DECISION.?")
+        decision["IS-A"] = Frame("@EXE.DECISION")
         decision["ON-GOAL"] = goal
         decision["ON-PLAN"] = plan
         decision["ON-STEP"] = step
-        decision["STATUS"] = Decision.Status.PENDING
+        decision["STATUS"] = Decision.Status.PENDING.name
 
         return Decision(decision)
 
@@ -685,14 +699,14 @@ class Decision(object):
         return Step(self.frame["ON-STEP"].singleton())
 
     def impasses(self) -> List[Goal]:
-        return list(map(lambda i: Goal(i.resolve()), self.frame["HAS-IMPASSE"]))
+        return list(map(lambda i: Goal(i), self.frame["HAS-IMPASSE"]))
 
     def outputs(self) -> List['XMR']:
         from backend.models.output import XMR
-        return list(map(lambda output: XMR(output.resolve()), self.frame["HAS-OUTPUT"]))
+        return list(map(lambda output: XMR(output), self.frame["HAS-OUTPUT"]))
 
     def expectations(self) -> List['Expectation']:
-        return list(map(lambda expectation: Expectation(expectation.resolve()), self.frame["HAS-EXPECTATION"]))
+        return list(map(lambda expectation: Expectation(expectation), self.frame["HAS-EXPECTATION"]))
 
     def priority(self) -> Union[float, None]:
         if "HAS-PRIORITY" not in self.frame:
@@ -718,11 +732,11 @@ class Decision(object):
 
     def effectors(self) -> List['Effector']:
         from backend.models.effectors import Effector
-        return list(map(lambda effector: Effector(effector.resolve()), self.frame["HAS-EFFECTOR"]))
+        return list(self.frame["HAS-EFFECTOR"])
 
     def callbacks(self) -> List['Callback']:
         from backend.models.effectors import Callback
-        return list(map(lambda callback: Callback(callback.resolve()), self.frame["HAS-CALLBACK"]))
+        return list(self.frame["HAS-CALLBACK"])
 
     def select(self):
         self.frame["STATUS"] = Decision.Status.SELECTED
@@ -762,7 +776,7 @@ class Decision(object):
             self.frame["HAS-EFFECTOR"] += effector.frame
 
         for effector in effectors:
-            callback = Callback.build(self.frame._graph, self, effector)
+            callback = Callback.build(self.frame.space(), self, effector)
             self.frame["HAS-CALLBACK"] += callback.frame
 
             effector.on_capability().run(agent, effector.on_output(), callback)
@@ -828,12 +842,12 @@ class Expectation(object):
 class Effect(object):
 
     @classmethod
-    def build(cls, graph: Graph, statements: List[Union[str, Identifier, Frame, Statement]]) -> 'Effect':
-        statements = list(map(lambda s: Identifier.parse(s) if isinstance(s, str) else s, statements))
+    def build(cls, space: Space, statements: List[Union[str, Identifier, Frame, Statement]]) -> 'Effect':
+        statements = list(map(lambda s: Frame(s) if isinstance(s, str) else s, statements))
         statements = list(map(lambda s: s.frame if isinstance(s, Statement) else s, statements))
-        statements = list(map(lambda s: s._identifier if isinstance(s, Frame) else s, statements))
+        statements = list(map(lambda s: Frame(s.id) if isinstance(s, Identifier) else s, statements))
 
-        effect = graph.register("EFFECT", isa="EXE.EFFECT", generate_index=True)
+        effect = Frame("@" + space.name + ".EFFECT.?").add_parent("@EXE.EFFECT")
 
         for statement in statements:
             effect["HAS-STATEMENT"] += statement

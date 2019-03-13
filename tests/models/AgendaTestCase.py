@@ -1,21 +1,27 @@
 from backend.models.agenda import Agenda, Condition, Decision, Effect, Expectation, Goal, Plan, Step, Trigger
-from backend.models.bootstrap import Bootstrap
-from backend.models.graph import Frame, Graph, Literal, Network
+# from backend.models.bootstrap import Bootstrap
+# from backend.models.graph import Frame, Graph, Literal, Network
 from backend.models.statement import Statement, StatementScope, VariableMap
 from backend.models.xmr import XMR
+from ontograph import graph
+from ontograph.Frame import Frame
+from ontograph.Query import ExistsComparator, IdComparator, IsAComparator, Query
+from ontograph.Space import Space
 
 import unittest
 
 
 class AgendaTestCase(unittest.TestCase):
 
+    def setUp(self):
+        graph.reset()
+
     def test_goals(self):
-        graph = Graph("TEST")
-        f1 = graph.register("AGENDA.1")  # Typically the agent identity frame (so, e.g., ROBOT.1) is used, as there is no "AGENDA".
-        g1 = graph.register("GOAL.1")
-        g2 = graph.register("GOAL.2")
-        g3 = graph.register("GOAL.3")
-        g4 = graph.register("GOAL.4")
+        f1 = Frame("@TEST.AGENDA.1")  # Typically the agent identity frame (so, e.g., ROBOT.1) is used, as there is no "AGENDA".
+        g1 = Frame("@TEST.GOAL.1")
+        g2 = Frame("@TEST.GOAL.2")
+        g3 = Frame("@TEST.GOAL.3")
+        g4 = Frame("@TEST.GOAL.4")
 
         f1["HAS-GOAL"] = [g1, g2, g3, g4]
 
@@ -32,10 +38,9 @@ class AgendaTestCase(unittest.TestCase):
         self.assertEqual(agenda.goals(satisfied=True, active=False), [Goal(g4)])
 
     def test_add_goal(self):
-        graph = Graph("TEST")
-        f1 = graph.register("AGENDA.1")
-        g1 = graph.register("GOAL.1")
-        g2 = graph.register("GOAL.2")
+        f1 = Frame("@TEST.AGENDA.1")
+        g1 = Frame("@TEST.GOAL.1")
+        g2 = Frame("@TEST.GOAL.2")
 
         agenda = Agenda(f1)
         agenda.add_goal(g1)
@@ -44,26 +49,24 @@ class AgendaTestCase(unittest.TestCase):
         self.assertEqual(agenda.goals(pending=True), [Goal(g1), Goal(g2)])
 
     def test_prepare_plan(self):
-        graph = Graph("TEST")
-        f1 = graph.register("AGENDA.1")
-        a1 = graph.register("PLAN.1")
-        a2 = graph.register("PLAN.2")
+        f1 = Frame("@TEST.AGENDA.1")
+        a1 = Frame("@TEST.PLAN.1")
+        a2 = Frame("@TEST.PLAN.2")
 
         agenda = Agenda(f1)
 
         agenda.prepare_plan(a1)
         self.assertEqual(len(f1["PLAN-TO-TAKE"]), 1)
-        self.assertEqual(f1["PLAN-TO-TAKE"][0].resolve(), a1)
+        self.assertEqual(f1["PLAN-TO-TAKE"][0], a1)
 
         agenda.prepare_plan(Plan(a2))
         self.assertEqual(len(f1["PLAN-TO-TAKE"]), 2)
-        self.assertEqual(f1["PLAN-TO-TAKE"][0].resolve(), a1)
-        self.assertEqual(f1["PLAN-TO-TAKE"][1].resolve(), a2)
+        self.assertEqual(f1["PLAN-TO-TAKE"][0], a1)
+        self.assertEqual(f1["PLAN-TO-TAKE"][1], a2)
 
     def test_plan(self):
-        graph = Graph("TEST")
-        f1 = graph.register("AGENDA.1")
-        a1 = graph.register("PLAN.1")
+        f1 = Frame("@TEST.AGENDA.1")
+        a1 = Frame("@TEST.PLAN.1")
 
         f1["PLAN-TO-TAKE"] = a1
 
@@ -71,16 +74,16 @@ class AgendaTestCase(unittest.TestCase):
         self.assertEqual([a1], agenda.plan())
 
     def test_triggers(self):
-        n = Network()
-        graph = n.register(Graph("TEST"))
-        agenda = graph.register("AGENDA")
-        definition = graph.register("MYGOAL")
+        space = Space("TEST")
 
-        query1 = Frame.q(n).isa("TEST1")
-        query2 = Frame.q(n).isa("TEST2")
+        agenda = Frame("@TEST.AGENDA")
+        definition = Frame("@TEST.MYGOAL")
 
-        trigger1 = Trigger.build(graph, query1, definition)
-        trigger2 = Trigger.build(graph, query2, definition)
+        query1 = Query().search(IsAComparator("@TEST.TEST.?"))
+        query2 = Query().search(IsAComparator("@TEST.TEST.?"))
+
+        trigger1 = Trigger.build(space, query1, definition)
+        trigger2 = Trigger.build(space, query2, definition)
 
         agenda["TRIGGER"] += trigger1.frame
         agenda["TRIGGER"] += trigger2.frame
@@ -88,57 +91,60 @@ class AgendaTestCase(unittest.TestCase):
         self.assertEqual([trigger1, trigger2], Agenda(agenda).triggers())
 
     def test_add_trigger(self):
-        n = Network()
-        graph = n.register(Graph("TEST"))
-        agenda = graph.register("AGENDA")
-        definition = graph.register("MYGOAL")
+        agenda = Frame("@TEST.AGENDA")
+        definition = Frame("@TEST.MYGOAL")
 
-        query = Frame.q(n).isa("TEST1")
+        query = Query().search(IsAComparator("@TEST.TEST.?"))
 
-        trigger = Trigger.build(graph, query, definition)
+        trigger = Trigger.build(Space("TEST"), query, definition)
 
         Agenda(agenda).add_trigger(trigger)
 
         self.assertEqual([trigger], Agenda(agenda).triggers())
 
     def test_fire_triggers(self):
-        n = Network()
-        graph = n.register(Graph("TEST"))
-        agenda = Agenda(graph.register("AGENDA"))
+        space = Space("TEST")
 
-        definition = graph.register("MYGOAL")
-        definition["WITH"] = Literal("$var1")
+        agenda = Agenda(Frame("@TEST.AGENDA"))
 
-        trigger1 = Trigger.build(graph, Frame.q(n).id("TEST.TARGET.1"), definition)
+        definition = Frame("@TEST.MYGOAL")
+        definition["WITH"] = "$var1"
+
+        query = Query().search(IdComparator("@TEST.TARGET.1"))
+
+        trigger1 = Trigger.build(space, query, definition)
         agenda.add_trigger(trigger1)
 
-        trigger2 = Trigger.build(graph, Frame.q(n).id("TEST.TARGET.1"), definition)
+        trigger2 = Trigger.build(space, query, definition)
         agenda.add_trigger(trigger2)
 
-        target = graph.register("TARGET", generate_index=True)
+        target = Frame("@TEST.TARGET.1")
 
         self.assertEqual(0, len(agenda.goals(pending=True, active=True)))
 
         agenda.fire_triggers()
 
-        self.assertIn(graph["GOAL.1"], agenda.goals(pending=True, active=True))
-        self.assertEqual(target, Goal(graph["GOAL.1"]).resolve("$var1"))
+        self.assertIn(Frame("@TEST.GOAL.1"), agenda.goals(pending=True, active=True))
+        self.assertEqual(target, Goal(Frame("@TEST.GOAL.1")).resolve("$var1"))
 
-        self.assertIn(graph["GOAL.2"], agenda.goals(pending=True, active=True))
-        self.assertEqual(target, Goal(graph["GOAL.2"]).resolve("$var1"))
+        self.assertIn(Frame("@TEST.GOAL.2"), agenda.goals(pending=True, active=True))
+        self.assertEqual(target, Goal(Frame("@TEST.GOAL.2")).resolve("$var1"))
 
 
 class GoalTestCase(unittest.TestCase):
 
+    def setUp(self):
+        graph.reset()
+
     def test_name(self):
-        f = Frame("TEST.1")
-        f["NAME"] = Literal("Test Name")
+        f = Frame("@TEST.TEST.1")
+        f["NAME"] = "Test Name"
 
         goal = Goal(f)
         self.assertEqual(goal.name(), "Test Name")
 
     def test_status_from_frame(self):
-        f = Frame("TEST.1")
+        f = Frame("@TEST.TEST.1")
         goal = Goal(f)
 
         f["STATUS"] = "pending"
@@ -166,7 +172,7 @@ class GoalTestCase(unittest.TestCase):
         self.assertTrue(goal.is_satisfied())
 
     def test_status_to_frame(self):
-        f = Frame("TEST.1")
+        f = Frame("@TEST.TEST.1")
         goal = Goal(f)
 
         goal.status(Goal.Status.PENDING)
@@ -194,15 +200,15 @@ class GoalTestCase(unittest.TestCase):
         self.assertTrue(Goal.Status.SATISFIED in f["STATUS"])
 
     def test_executed_is_true_if_any_plan_is_complete(self):
-        g = Graph("TEST")
+        s = Space("TEST")
 
-        step1 = Step.build(g, 1, [])
-        step2 = Step.build(g, 1, [])
+        step1 = Step.build(s, 1, [])
+        step2 = Step.build(s, 1, [])
 
-        plan1 = Plan.build(g, "test-plan-1", Plan.DEFAULT, [step1])
-        plan2 = Plan.build(g, "test-plan-2", Plan.DEFAULT, [step2])
+        plan1 = Plan.build(s, "test-plan-1", Plan.DEFAULT, [step1])
+        plan2 = Plan.build(s, "test-plan-2", Plan.DEFAULT, [step2])
 
-        goal = g.register("GOAL.1")
+        goal = Frame("@TEST.GOAL.1")
         goal["PLAN"] = [plan1.frame, plan2.frame]
 
         self.assertFalse(Goal(goal).executed())
@@ -213,8 +219,7 @@ class GoalTestCase(unittest.TestCase):
 
     def test_priority_numeric(self):
 
-        graph = Graph("TEST")
-        f = graph.register("GOAL.1")
+        f = Frame("@TEST.GOAL.1")
         f["PRIORITY"] = 0.5
 
         goal = Goal(f)
@@ -241,16 +246,14 @@ class GoalTestCase(unittest.TestCase):
         self.assertTrue(f["_PRIORITY"] == 0.5)
 
     def test_priority(self):
-        graph = Graph("TEST")
-        f = graph.register("GOAL.1")
+        f = Frame("@TEST.GOAL.1")
 
         goal = Goal(f)
         self.assertEqual(0.0, goal.priority())
         self.assertTrue(f["_PRIORITY"] == 0.0)
 
     def test_cached_priority(self):
-        graph = Graph("TEST")
-        f = graph.register("GOAL.1")
+        f = Frame("@TEST.GOAL.1")
 
         goal = Goal(f)
         self.assertEqual(0.0, goal._cached_priority())
@@ -259,8 +262,7 @@ class GoalTestCase(unittest.TestCase):
 
     def test_resources_numeric(self):
 
-        graph = Graph("TEST")
-        f = graph.register("GOAL.1")
+        f = Frame("@TEST.GOAL.1")
         f["RESOURCES"] = 0.5
 
         goal = Goal(f)
@@ -287,16 +289,14 @@ class GoalTestCase(unittest.TestCase):
         self.assertTrue(f["_RESOURCES"] == 0.5)
 
     def test_resources(self):
-        graph = Graph("TEST")
-        f = graph.register("GOAL.1")
+        f = Frame("@TEST.GOAL.1")
 
         goal = Goal(f)
         self.assertEqual(1.0, goal.resources())
         self.assertTrue(f["_RESOURCES"] == 1.0)
 
     def test_cached_resources(self):
-        graph = Graph("TEST")
-        f = graph.register("GOAL.1")
+        f = Frame("@TEST.GOAL.1")
 
         goal = Goal(f)
         self.assertEqual(1.0, goal._cached_resources())
@@ -304,15 +304,13 @@ class GoalTestCase(unittest.TestCase):
         self.assertEqual(1.0, goal._cached_resources())
 
     def test_assign_decision(self):
-        graph = Graph("TEST")
-        f = graph.register("GOAL.1")
+        f = Frame("@TEST.GOAL.1")
         goal = Goal(f)
         goal.decision(decide=0.5)
         self.assertTrue(0.5 in f["_DECISION"])
 
     def test_cached_decision(self):
-        graph = Graph("TEST")
-        f = graph.register("GOAL.1")
+        f = Frame("@TEST.GOAL.1")
 
         goal = Goal(f)
         self.assertEqual(0.0, goal.decision())
@@ -321,13 +319,12 @@ class GoalTestCase(unittest.TestCase):
         self.assertEqual(0.5, goal.decision())
 
     def test_plan(self):
-        graph = Graph("TEST")
-        goal = graph.register("GOAL.1")
-        plan1 = graph.register("PLAN.1")
-        plan2 = graph.register("PLAN.2")
+        goal = Frame("@TEST.GOAL.1")
+        plan1 = Frame("@TEST.PLAN.1")
+        plan2 = Frame("@TEST.PLAN.2")
 
         goal["PLAN"] = [plan1, plan2]
-        plan2["SELECT"] = Literal(Plan.DEFAULT)
+        plan2["SELECT"] = Plan.DEFAULT
 
         self.assertEqual(Goal(goal).plan(), plan2)
         self.assertIsInstance(Goal(goal).plan(), Plan)
@@ -360,16 +357,13 @@ class GoalTestCase(unittest.TestCase):
         self.assertTrue(Goal(goal).is_satisfied())
 
     def test_assess_abandons_subgoals_if_goal_satisfied(self):
-        network = Network()
-        graph = network.register("EXE")
-
-        subgoal1 = graph.register("SUBGOAL.1")
+        subgoal1 = Frame("@TEST.SUBGOAL.1")
         subgoal1["STATUS"] = Goal.Status.ACTIVE
 
-        subgoal2 = graph.register("SUBGOAL.2")
+        subgoal2 = Frame("@TEST.SUBGOAL.2")
         subgoal2["STATUS"] = Goal.Status.SATISFIED
 
-        goal = graph.register("GOAL.1")
+        goal = Frame("@TEST.GOAL.1")
         goal["STATUS"] = Goal.Status.ACTIVE
         goal["HAS-GOAL"] += subgoal1
         goal["HAS-GOAL"] += subgoal2
@@ -386,16 +380,13 @@ class GoalTestCase(unittest.TestCase):
         self.assertTrue(Goal(subgoal2).is_satisfied())
 
     def test_assess_abandons_subgoals_if_goal_abandoned(self):
-        network = Network()
-        graph = network.register("EXE")
-
-        subgoal1 = graph.register("SUBGOAL.1")
+        subgoal1 = Frame("@TEST.SUBGOAL.1")
         subgoal1["STATUS"] = Goal.Status.ACTIVE
 
-        subgoal2 = graph.register("SUBGOAL.2")
+        subgoal2 = Frame("@TEST.SUBGOAL.2")
         subgoal2["STATUS"] = Goal.Status.SATISFIED
 
-        goal = graph.register("GOAL.1")
+        goal = Frame("@TEST.GOAL.1")
         goal["STATUS"] = Goal.Status.ACTIVE
         goal["HAS-GOAL"] += subgoal1
         goal["HAS-GOAL"] += subgoal2
@@ -412,21 +403,20 @@ class GoalTestCase(unittest.TestCase):
         self.assertTrue(Goal(subgoal2).is_satisfied())
 
     def test_instance_of(self):
-        graph = Graph("TEST")
-        definition = graph.register("GOAL-DEF")
-        plan = graph.register("PLAN.1")
-        condition = graph.register("CONDITION.1")
+        definition = Frame("@TEST.GOAL-DEF")
+        plan = Frame("@TEST.PLAN.1")
+        condition = Frame("@TEST.CONDITION.1")
 
-        plan["SELECT"] = Literal(Plan.DEFAULT)
+        plan["SELECT"] = Plan.DEFAULT
 
-        definition["NAME"] = Literal("Test Goal")
+        definition["NAME"] = "Test Goal"
         definition["PRIORITY"] = 0.5
         definition["PLAN"] = plan
         definition["WHEN"] = condition
-        definition["WITH"] = Literal("VAR_X")
+        definition["WITH"] = "VAR_X"
 
         params = [123]
-        goal = Goal.instance_of(graph, definition, params)
+        goal = Goal.instance_of(Space("TEST"), definition, params)
 
         self.assertEqual(goal.name(), "Test Goal")
         self.assertTrue(goal.frame["PRIORITY"] == 0.5)
@@ -435,22 +425,21 @@ class GoalTestCase(unittest.TestCase):
         self.assertTrue(goal.frame["WITH"] == "VAR_X")
         self.assertEqual(1, len(goal.frame["_WITH"]))
 
-        var = goal.frame["_WITH"][0].resolve()
+        var = goal.frame["_WITH"][0]
         self.assertEqual(var["NAME"], "VAR_X")
         self.assertEqual(var["FROM"], goal.frame)
         self.assertEqual(var["VALUE"], 123)
 
     def test_effects(self):
-        graph = Graph("TEST")
-        goal = graph.register("GOAL.1")
+        goal = Frame("@TEST.GOAL.1")
 
         from backend.models.statement import AddFillerStatement
 
-        statement1 = AddFillerStatement.instance(graph, "TEST.FRAME.1", "SLOT", 123)
-        statement2 = AddFillerStatement.instance(graph, "TEST.FRAME.1", "SLOT", Literal("$var1"))
+        statement1 = AddFillerStatement.instance(Space("TEST"), "@TEST.FRAME.1", "SLOT", 123)
+        statement2 = AddFillerStatement.instance(Space("TEST"), "@TEST.FRAME.1", "SLOT", "$var1")
 
-        effect1 = Effect.build(graph, [statement1])
-        effect2 = Effect.build(graph, [statement2])
+        effect1 = Effect.build(Space("TEST"), [statement1])
+        effect2 = Effect.build(Space("TEST"), [statement2])
 
         goal["HAS-EFFECT"] += effect1.frame
         goal["HAS-EFFECT"] += effect2.frame
@@ -492,111 +481,102 @@ class GoalTestCase(unittest.TestCase):
 
 class TriggerTestCase(unittest.TestCase):
 
+    def setUp(self):
+        graph.reset()
+
     def test_query(self):
-        n = Network()
 
-        query = Frame.q(n).id("TEST.FRAME.123")
+        query = Query().search(IdComparator("@TEST.FRAME.123"))
 
-        graph = n.register(Graph("TEST"))
-        trigger = graph.register("TRIGGER")
+        trigger = Frame("@TEST.TRIGGER")
         trigger["QUERY"] = query
 
         self.assertEqual(query, Trigger(trigger).query())
 
     def test_definition(self):
-        n = Network()
-        graph = n.register(Graph("TEST"))
-        goal = graph.register("MYGOAL")
-        trigger = graph.register("TRIGGER")
+        goal = Frame("@TEST.MYGOAL")
+        trigger = Frame("@TEST.TRIGGER")
         trigger["DEFINITION"] = goal
 
         self.assertEqual(goal, Trigger(trigger).definition())
 
     def test_triggered_on(self):
-        n = Network()
-        graph = n.register(Graph("TEST"))
-        o1 = graph.register("OBJECT.1")
-        o2 = graph.register("OBJECT.2")
+        o1 = Frame("@TEST.OBJECT.1")
+        o2 = Frame("@TEST.OBJECT.2")
 
-        trigger = graph.register("TRIGGER")
+        trigger = Frame("@TEST.TRIGGER")
 
-        trigger["TRIGGERED-ON"] += "TEST.OBJECT.1"
-        trigger["TRIGGERED-ON"] += "TEST.OBJECT.2"
+        trigger["TRIGGERED-ON"] += o1
+        trigger["TRIGGERED-ON"] += o2
 
         self.assertEqual([o1, o2], Trigger(trigger).triggered_on())
 
     def test_fire_creates_goal_instance(self):
-        n = Network()
-        graph = n.register(Graph("TEST"))
-        agenda = Agenda(graph.register("AGENDA"))
+        agenda = Agenda(Frame("@TEST.AGENDA"))
 
-        definition = graph.register("MYGOAL")
-        definition["WITH"] = Literal("$var1")
+        definition = Frame("@TEST.MYGOAL")
+        definition["WITH"] = "$var1"
 
-        trigger = Trigger.build(graph, Frame.q(n).id("TEST.TARGET.1"), definition)
+        trigger = Trigger.build(Space("TEST"), Query().search(IdComparator("@TEST.TARGET.1")), definition)
         agenda.add_trigger(trigger)
 
-        target = graph.register("TARGET", generate_index=True)
+        target = Frame("@TEST.TARGET.?")
 
         self.assertEqual(0, len(agenda.goals(pending=True, active=True)))
 
         trigger.fire(agenda)
 
-        self.assertIn(graph["GOAL.1"], agenda.goals(pending=True, active=True))
-        self.assertEqual(target, Goal(graph["GOAL.1"]).resolve("$var1"))
+        self.assertIn(Frame("@TEST.GOAL.1"), agenda.goals(pending=True, active=True))
+        self.assertEqual(target, Goal(Frame("@TEST.GOAL.1")).resolve("$var1"))
 
     def test_fire_creates_multiple_goal_instances(self):
-        n = Network()
-        graph = n.register(Graph("TEST"))
-        agenda = Agenda(graph.register("AGENDA"))
+        agenda = Agenda(Frame("@TEST.AGENDA"))
 
-        definition = graph.register("MYGOAL")
-        definition["WITH"] = Literal("$var1")
+        definition = Frame("@TEST.MYGOAL")
+        definition["WITH"] = "$var1"
 
-        trigger = Trigger.build(graph, Frame.q(n).has("MYSLOT"), definition)
+        trigger = Trigger.build(Space("TEST"), Query().search(ExistsComparator(slot="MYSLOT")), definition)
 
-        target1 = graph.register("TARGET", generate_index=True)
+        target1 = Frame("@TEST.TARGET.?")
         target1["MYSLOT"] = 123
 
-        target2 = graph.register("TARGET", generate_index=True)
+        target2 = Frame("@TEST.TARGET.?")
         target2["MYSLOT"] = 123
 
         self.assertEqual(0, len(agenda.goals(pending=True, active=True)))
 
         trigger.fire(agenda)
 
-        self.assertIn(graph["GOAL.1"], agenda.goals(pending=True, active=True))
-        self.assertIn(graph["GOAL.2"], agenda.goals(pending=True, active=True))
-        self.assertEqual(target1, Goal(graph["GOAL.1"]).resolve("$var1"))
-        self.assertEqual(target2, Goal(graph["GOAL.2"]).resolve("$var1"))
+        self.assertIn(Frame("@TEST.GOAL.1"), agenda.goals(pending=True, active=True))
+        self.assertIn(Frame("@TEST.GOAL.2"), agenda.goals(pending=True, active=True))
+        self.assertEqual(target1, Goal(Frame("@TEST.GOAL.1")).resolve("$var1"))
+        self.assertEqual(target2, Goal(Frame("@TEST.GOAL.2")).resolve("$var1"))
 
     def test_fire_filters_existing_triggered_instances(self):
-        n = Network()
-        graph = n.register(Graph("TEST"))
-        agenda = Agenda(graph.register("AGENDA"))
+        agenda = Agenda(Frame("@TEST.AGENDA"))
 
-        definition = graph.register("MYGOAL")
-        definition["WITH"] = Literal("$var1")
+        definition = Frame("@TEST.MYGOAL")
+        definition["WITH"] = "$var1"
 
-        trigger = Trigger.build(graph, Frame.q(n).has("MYSLOT"), definition)
+        trigger = Trigger.build(Space("TEST"), Query().search(ExistsComparator(slot="MYSLOT")), definition)
 
-        target1 = graph.register("TARGET", generate_index=True)
+        target1 = Frame("@TEST.TARGET.?")
         target1["MYSLOT"] = 123
 
         self.assertEqual(0, len(agenda.goals(pending=True, active=True)))
 
         trigger.fire(agenda)
 
-        self.assertIn(graph["GOAL.1"], agenda.goals(pending=True, active=True))
-        self.assertEqual(target1, Goal(graph["GOAL.1"]).resolve("$var1"))
+        self.assertIn(Frame("@TEST.GOAL.1"), agenda.goals(pending=True, active=True))
+        self.assertEqual(target1, Goal(Frame("@TEST.GOAL.1")).resolve("$var1"))
 
-        target2 = graph.register("TARGET", generate_index=True)
+        target2 = Frame("@TEST.TARGET.?")
         target2["MYSLOT"] = 123
 
         trigger.fire(agenda)
 
-        self.assertIn(graph["GOAL.2"], agenda.goals(pending=True, active=True))
-        self.assertEqual(target2, Goal(graph["GOAL.2"]).resolve("$var1"))
+        self.assertIn(Frame("@TEST.GOAL.2"), agenda.goals(pending=True, active=True))
+        self.assertEqual(target2, Goal(Frame("@TEST.GOAL.2")).resolve("$var1"))
 
         self.assertEqual(2, len(agenda.goals(pending=True, active=True)))
 
@@ -604,8 +584,7 @@ class TriggerTestCase(unittest.TestCase):
 class ConditionTestCase(unittest.TestCase):
 
     def setUp(self):
-        self.n = Network()
-        self.g = self.n.register("EXE")
+        graph.reset()
         Bootstrap.bootstrap_resource(self.n, "backend.resources", "exe.knowledge")
 
     def test_order(self):
@@ -856,17 +835,16 @@ class ConditionTestCase(unittest.TestCase):
 class PlanTestCase(unittest.TestCase):
 
     def setUp(self):
-        self.n = Network()
-        self.g = self.n.register("EXE")
+        graph.reset()
 
     def test_name(self):
-        plan = self.g.register("PLAN.1")
-        plan["NAME"] = Literal("Test Plan")
+        plan = Frame("@TEST.PLAN.1")
+        plan["NAME"] = "Test Plan"
 
         self.assertEqual(Plan(plan).name(), "Test Plan")
 
     def test_is_negated(self):
-        plan = self.g.register("PLAN.1")
+        plan = Frame("@TEST.PLAN.1")
 
         plan["NEGATE"] = False
         self.assertFalse(Plan(plan).is_negated())
@@ -958,25 +936,25 @@ class PlanTestCase(unittest.TestCase):
         self.assertFalse(plan.select(VariableMap(varmap)))
 
     def test_select_when_default(self):
-        plan = self.g.register("PLAN.1")
-        plan["SELECT"] = Literal(Plan.DEFAULT)
+        plan = Frame("@TEST.PLAN.1")
+        plan["SELECT"] = Plan.DEFAULT
 
         self.assertTrue(Plan(plan).select(None))
 
     def test_is_default(self):
-        plan = self.g.register("PLAN.1")
+        plan = Frame("@TEST.PLAN.1")
 
         self.assertFalse(Plan(plan).is_default())
 
-        plan["SELECT"] = Literal(Plan.DEFAULT)
+        plan["SELECT"] = Plan.DEFAULT
 
         self.assertTrue(Plan(plan).is_default())
 
     def test_steps(self):
-        plan = self.g.register("PLAN.1")
+        plan = Frame("@TEST.PLAN.1")
 
-        step1 = self.g.register("STEP", generate_index=True)
-        step2 = self.g.register("STEP", generate_index=True)
+        step1 = Frame("@TEST.STEP.?")
+        step2 = Frame("@TEST.STEP.?")
 
         step1["INDEX"] = 1
         step2["INDEX"] = 2
@@ -989,12 +967,12 @@ class PlanTestCase(unittest.TestCase):
         self.assertEqual([Step(step1), Step(step2)], Plan(plan).steps())
 
     def test_executed(self):
-        g = Graph("TEST")
+        s = Space("TEST")
 
-        step1 = Step.build(g, 1, [])
-        step2 = Step.build(g, 2, [])
+        step1 = Step.build(s, 1, [])
+        step2 = Step.build(s, 2, [])
 
-        plan = Plan.build(g, "test-plan", Plan.DEFAULT, [step1, step2])
+        plan = Plan.build(s, "test-plan", Plan.DEFAULT, [step1, step2])
 
         self.assertFalse(plan.executed())
 
@@ -1010,17 +988,16 @@ class PlanTestCase(unittest.TestCase):
 class StepTestCase(unittest.TestCase):
 
     def setUp(self):
-        self.n = Network()
-        self.g = self.n.register("EXE")
+        graph.reset()
 
     def test_index(self):
-        step = self.g.register("STEP")
+        step = Frame("@TEST.STEP")
         step["INDEX"] = 1
 
         self.assertEqual(1, Step(step).index())
 
     def test_status(self):
-        step = self.g.register("STEP")
+        step = Frame("@TEST.STEP")
 
         step["STATUS"] = Step.Status.PENDING
         self.assertEqual(Step.Status.PENDING, Step(step).status())
@@ -1175,41 +1152,39 @@ class StepTestCase(unittest.TestCase):
 class DecisionTestCase(unittest.TestCase):
 
     def setUp(self):
-        self.n = Network()
-        self.g = self.n.register("TEST")
-        self.n.register("OUTPUTS")
+        graph.reset()
 
     def test_goal(self):
-        goal = self.g.register("GOAL")
+        goal = Frame("@TEST.GOAL")
 
-        decision = self.g.register("DECISION")
+        decision = Frame("@TEST.DECISION")
         decision["ON-GOAL"] = goal
 
         self.assertEqual(goal, Decision(decision).goal())
 
     def test_plan(self):
-        plan = self.g.register("PLAN")
+        plan = Frame("@TEST.PLAN")
 
-        decision = self.g.register("DECISION")
+        decision = Frame("@TEST.DECISION")
         decision["ON-PLAN"] = plan
 
         self.assertEqual(plan, Decision(decision).plan())
 
     def test_step(self):
-        step = self.g.register("STEP")
+        step = Frame("@TEST.STEP")
 
-        decision = self.g.register("DECISION")
+        decision = Frame("@TEST.DECISION")
         decision["ON-STEP"] = step
 
         self.assertEqual(step, Decision(decision).step())
 
     def test_impasses(self):
-        decision = self.g.register("DECISION")
+        decision = Frame("@TEST.DECISION")
 
         self.assertEqual([], Decision(decision).impasses())
 
-        impasse1 = self.g.register("GOAL", generate_index=True)
-        impasse2 = self.g.register("GOAL", generate_index=True)
+        impasse1 = Frame("@TEST.GOAL.?")
+        impasse2 = Frame("@TEST.GOAL.?")
 
         decision["HAS-IMPASSE"] += impasse1
         decision["HAS-IMPASSE"] += impasse2
@@ -1219,12 +1194,12 @@ class DecisionTestCase(unittest.TestCase):
         self.assertIsInstance(Decision(decision).impasses()[1], Goal)
 
     def test_outputs(self):
-        decision = self.g.register("DECISION")
+        decision = Frame("@TEST.DECISION")
 
         self.assertEqual([], Decision(decision).outputs())
 
-        output1 = self.g.register("XMR", generate_index=True)
-        output2 = self.g.register("XMR", generate_index=True)
+        output1 = Frame("@TEST.XMR.?")
+        output2 = Frame("@TEST.XMR.?")
 
         decision["HAS-OUTPUT"] += output1
         decision["HAS-OUTPUT"] += output2
@@ -1232,12 +1207,12 @@ class DecisionTestCase(unittest.TestCase):
         self.assertEqual([output1, output2], Decision(decision).outputs())
 
     def test_expectations(self):
-        decision = self.g.register("DECISION")
+        decision = Frame("@TEST.DECISION")
 
         self.assertEqual([], Decision(decision).expectations())
 
-        expectation1 = self.g.register("EXPECTATION", generate_index=True)
-        expectation2 = self.g.register("EXPECTATION", generate_index=True)
+        expectation1 = Frame("@TEST.EXPECTATION.?")
+        expectation2 = Frame("@TEST.EXPECTATION.?")
 
         decision["HAS-EXPECTATION"] += expectation1
         decision["HAS-EXPECTATION"] += expectation2
@@ -1245,7 +1220,7 @@ class DecisionTestCase(unittest.TestCase):
         self.assertEqual([expectation1, expectation2], Decision(decision).expectations())
 
     def test_priority(self):
-        decision = self.g.register("DECISION")
+        decision = Frame("@TEST.DECISION")
 
         self.assertEqual(None, Decision(decision).priority())
 
@@ -1254,7 +1229,7 @@ class DecisionTestCase(unittest.TestCase):
         self.assertEqual(0.5, Decision(decision).priority())
 
     def test_cost(self):
-        decision = self.g.register("DECISION")
+        decision = Frame("@TEST.DECISION")
 
         self.assertEqual(None, Decision(decision).cost())
 
@@ -1263,15 +1238,15 @@ class DecisionTestCase(unittest.TestCase):
         self.assertEqual(0.5, Decision(decision).cost())
 
     def test_requires(self):
-        decision = self.g.register("DECISION")
+        decision = Frame("@TEST.DECISION")
 
         self.assertEqual([], Decision(decision).requires())
 
-        capability1 = self.g.register("CAPABILITY", generate_index=True)
-        capability2 = self.g.register("CAPABILITY", generate_index=True)
+        capability1 = Frame("@TEST.CAPABILITY.?")
+        capability2 = Frame("@TEST.CAPABILITY.?")
 
-        output1 = self.g.register("OUTPUT-XMR", generate_index=True)
-        output2 = self.g.register("OUTPUT-XMR", generate_index=True)
+        output1 = Frame("@TEST.OUTPUT-XMR.?")
+        output2 = Frame("@TEST.OUTPUT-XMR.?")
 
         output1["REQUIRES"] = capability1
         output2["REQUIRES"] = capability2
@@ -1282,7 +1257,7 @@ class DecisionTestCase(unittest.TestCase):
         self.assertEqual([capability1, capability2], Decision(decision).requires())
 
     def test_status(self):
-        decision = self.g.register("DECISION")
+        decision = Frame("@TEST.DECISION")
 
         self.assertEqual(Decision.Status.PENDING, Decision(decision).status())
 
@@ -1291,12 +1266,12 @@ class DecisionTestCase(unittest.TestCase):
         self.assertEqual(Decision.Status.SELECTED, Decision(decision).status())
 
     def test_effectors(self):
-        decision = self.g.register("DECISION")
+        decision = Frame("@TEST.DECISION")
 
         self.assertEqual([], Decision(decision).effectors())
 
-        effector1 = self.g.register("EFFECTOR", generate_index=True)
-        effector2 = self.g.register("EFFECTOR", generate_index=True)
+        effector1 = Frame("@TEST.EFFECTOR.?")
+        effector2 = Frame("@TEST.EFFECTOR.?")
 
         decision["HAS-EFFECTOR"] += effector1
         decision["HAS-EFFECTOR"] += effector2
@@ -1304,12 +1279,12 @@ class DecisionTestCase(unittest.TestCase):
         self.assertEqual([effector1, effector2], Decision(decision).effectors())
 
     def test_callbacks(self):
-        decision = self.g.register("DECISION")
+        decision = Frame("@TEST.DECISION")
 
         self.assertEqual([], Decision(decision).callbacks())
 
-        callback1 = self.g.register("CALLBACK", generate_index=True)
-        callback2 = self.g.register("CALLBACK", generate_index=True)
+        callback1 = Frame("@TEST.CALLBACK.?")
+        callback2 = Frame("@TEST.CALLBACK.?")
 
         decision["HAS-CALLBACK"] += callback1
         decision["HAS-CALLBACK"] += callback2
@@ -1317,11 +1292,11 @@ class DecisionTestCase(unittest.TestCase):
         self.assertEqual([callback1, callback2], Decision(decision).callbacks())
 
     def test_build(self):
-        goal = self.g.register("GOAL")
-        plan = self.g.register("PLAN")
-        step = self.g.register("STEP")
+        goal = Frame("@TEST.GOAL")
+        plan = Frame("@TEST.PLAN")
+        step = Frame("@TEST.STEP")
 
-        decision = Decision.build(self.g, goal, plan, step)
+        decision = Decision.build(Space("TEST"), goal, plan, step)
 
         self.assertEqual(goal, decision.goal())
         self.assertEqual(plan, decision.plan())
@@ -1414,10 +1389,10 @@ class DecisionTestCase(unittest.TestCase):
         self.assertEqual([], decision.outputs())
 
     def test_calculate_priority(self):
-        definition = Goal.define(self.g, "TEST-GOAL", 1.0, 0.0, [], [], [], [])
-        goal = Goal.instance_of(self.g, definition, [])
+        definition = Goal.define(Space("TEST"), "TEST-GOAL", 1.0, 0.0, [], [], [], [])
+        goal = Goal.instance_of(Space("TEST"), definition, [])
 
-        decision = Decision.build(self.g, goal, "TEST.PLAN", "TEST.STEP")
+        decision = Decision.build(Space("TEST"), goal, "TEST.PLAN", "TEST.STEP")
 
         self.assertIsNone(decision.priority())
 
@@ -1426,10 +1401,10 @@ class DecisionTestCase(unittest.TestCase):
         self.assertEqual(1.0, decision.priority())
 
     def test_calculate_cost(self):
-        definition = Goal.define(self.g, "TEST-GOAL", 0.0, 1.0, [], [], [], [])
-        goal = Goal.instance_of(self.g, definition, [])
+        definition = Goal.define(Space("TEST"), "TEST-GOAL", 0.0, 1.0, [], [], [], [])
+        goal = Goal.instance_of(Space("TEST"), definition, [])
 
-        decision = Decision.build(self.g, goal, "TEST.PLAN", "TEST.STEP")
+        decision = Decision.build(Space("TEST"), goal, "TEST.PLAN", "TEST.STEP")
 
         self.assertIsNone(decision.cost())
 
@@ -1451,14 +1426,14 @@ class DecisionTestCase(unittest.TestCase):
         decision._calculate_cost.assert_called_once()
 
     def test_select(self):
-        decision = Decision.build(self.g, "TEST.GOAL", "TEST.PLAN", "TEST.STEP")
+        decision = Decision.build(Space("TEST"), "TEST.GOAL", "TEST.PLAN", "TEST.STEP")
         self.assertEqual(Decision.Status.PENDING, decision.status())
 
         decision.select()
         self.assertEqual(Decision.Status.SELECTED, decision.status())
 
     def test_decline(self):
-        decision = Decision.build(self.g, "TEST.GOAL", "TEST.PLAN", "TEST.STEP")
+        decision = Decision.build(Space("TEST"), "TEST.GOAL", "TEST.PLAN", "TEST.STEP")
         self.assertEqual(Decision.Status.PENDING, decision.status())
 
         decision.decline()
@@ -1476,13 +1451,13 @@ class DecisionTestCase(unittest.TestCase):
                 out = True
 
         MPRegistry.register(TestMP)
-        capability = Capability.instance(self.g, "CAPABILITY", "TestMP", ["ONT.EVENT"])
-        output = XMR.instance(self.g, "OUTPUT-XMR", XMR.Signal.OUTPUT, XMR.Type.ACTION, XMR.OutputStatus.PENDING, "", "", capability=capability)
+        capability = Capability.instance(Space("TEST"), "CAPABILITY", "TestMP", ["ONT.EVENT"])
+        output = XMR.instance(Space("TEST"), "OUTPUT-XMR", XMR.Signal.OUTPUT, XMR.Type.ACTION, XMR.OutputStatus.PENDING, "", "", capability=capability)
 
-        decision = Decision.build(self.g, "GOAL", "PLAN", "STEP")
+        decision = Decision.build(Space("TEST"), "GOAL", "PLAN", "STEP")
         decision.frame["HAS-OUTPUT"] += output.frame
 
-        effector = Effector.instance(self.g, Effector.Type.PHYSICAL, [capability])
+        effector = Effector.instance(Space("TEST"), Effector.Type.PHYSICAL, [capability])
         effector.reserve(decision, output, capability)
 
         decision.execute(None, [effector])
@@ -1499,18 +1474,18 @@ class DecisionTestCase(unittest.TestCase):
             def run(self): pass
 
         MPRegistry.register(TestMP)
-        capability = Capability.instance(self.g, "CAPABILITY", "TestMP", ["ONT.EVENT"])
-        output = XMR.instance(self.g, "OUTPUT-XMR", XMR.Signal.OUTPUT, XMR.Type.ACTION, XMR.OutputStatus.PENDING, "", "", capability=capability)
+        capability = Capability.instance(Space("TEST"), "CAPABILITY", "TestMP", ["ONT.EVENT"])
+        output = XMR.instance(Space("TEST"), "OUTPUT-XMR", XMR.Signal.OUTPUT, XMR.Type.ACTION, XMR.OutputStatus.PENDING, "", "", capability=capability)
 
-        decision = Decision.build(self.g, "GOAL", "PLAN", "STEP")
+        decision = Decision.build(Space("TEST"), "GOAL", "PLAN", "STEP")
         decision.frame["HAS-OUTPUT"] += output.frame
 
-        effector = Effector.instance(self.g, Effector.Type.PHYSICAL, [capability])
+        effector = Effector.instance(Space("TEST"), Effector.Type.PHYSICAL, [capability])
         effector.reserve(decision, output, capability)
 
         decision.execute(None, [effector])
 
-        callback = self.g["CALLBACK.1"]
+        callback = Frame("@TEST.CALLBACK.1")
         self.assertIn(callback, decision.callbacks())
         self.assertEqual(decision, Callback(callback).decision())
         self.assertEqual(effector, Callback(callback).effector())
@@ -1523,16 +1498,16 @@ class DecisionTestCase(unittest.TestCase):
             def run(self): pass
 
         MPRegistry.register(TestMP)
-        capability = Capability.instance(self.g, "CAPABILITY", "TestMP", ["ONT.EVENT"])
-        output = XMR.instance(self.g, "OUTPUT-XMR", XMR.Signal.OUTPUT, XMR.Type.ACTION, XMR.OutputStatus.PENDING, "", "", capability=capability)
+        capability = Capability.instance(Space("TEST"), "CAPABILITY", "TestMP", ["ONT.EVENT"])
+        output = XMR.instance(Space("TEST"), "OUTPUT-XMR", XMR.Signal.OUTPUT, XMR.Type.ACTION, XMR.OutputStatus.PENDING, "", "", capability=capability)
 
-        decision = Decision.build(self.g, "GOAL", "PLAN", "STEP")
+        decision = Decision.build(Space("TEST"), "GOAL", "PLAN", "STEP")
         decision.frame["HAS-OUTPUT"] += output.frame
 
-        effector = Effector.instance(self.g, Effector.Type.PHYSICAL, [capability])
+        effector = Effector.instance(Space("TEST"), Effector.Type.PHYSICAL, [capability])
         effector.reserve(decision, output, capability)
 
-        callback = Callback.build(self.g, decision, effector)
+        callback = Callback.build(Space("TEST"), decision, effector)
 
         decision.frame["HAS-EFFECTOR"] = effector.frame
         decision.frame["HAS-CALLBACK"] = callback.frame
@@ -1543,13 +1518,13 @@ class DecisionTestCase(unittest.TestCase):
 
     def test_assess_impasses(self):
 
-        subgoal1 = self.g.register("GOAL", generate_index=True)
+        subgoal1 = Frame("@TEST.GOAL.?")
         subgoal1["STATUS"] = Goal.Status.ACTIVE
 
-        subgoal2 = self.g.register("GOAL", generate_index=True)
+        subgoal2 = Frame("@TEST.GOAL.?")
         subgoal2["STATUS"] = Goal.Status.SATISFIED
 
-        decision = self.g.register("DECISION")
+        decision = Frame("@TEST.DECISION.?")
         decision["HAS-IMPASSE"] += subgoal1
         decision["HAS-IMPASSE"] += subgoal2
 
