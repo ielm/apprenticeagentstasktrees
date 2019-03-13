@@ -1,8 +1,14 @@
-from backend.models.graph import Filler, Frame, Graph, Identifier, Literal
+# from backend.models.graph import Filler, Frame, Graph, Identifier, Literal
 from backend.models.mps import MPRegistry
 from backend.models.query import Query
 from pydoc import locate
 from typing import Any, Callable, List, Union
+
+from ontograph import graph
+from ontograph.Frame import Frame
+from ontograph.Graph import Graph
+from ontograph.Index import Identifier
+from ontograph.Space import Space
 
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
@@ -13,12 +19,12 @@ if TYPE_CHECKING:
 class Variable(object):
 
     @classmethod
-    def instance(cls, graph: Graph, name: str, value: Any, varmap: 'VariableMap', assign: bool=True):
+    def instance(cls, space: Space, name: str, value: Any, varmap: 'VariableMap', assign: bool=True):
         if value == []:
             value = [[]]
 
-        frame = graph.register("VARIABLE", generate_index=True)
-        frame["NAME"] = Literal(name)
+        frame = Frame("@" + space.name + ".VARIABLE.?")
+        frame["NAME"] = name
         frame["VALUE"] = value
         frame["FROM"] = varmap.frame
 
@@ -32,15 +38,12 @@ class Variable(object):
 
     def name(self) -> str:
         if "NAME" in self.frame:
-            return self.frame["NAME"][0].resolve().value
+            return self.frame["NAME"][0]
         raise Exception("Unnamed variable '" + self.frame.name() + "'.")
 
     def value(self) -> Any:
         if "VALUE" in self.frame:
-            value = self.frame["VALUE"][0].resolve()
-            if isinstance(value, Literal):
-                return value.value
-            return value
+            return self.frame["VALUE"][0]
         raise Exception("Variable '" + self.name() + "' has no value.")
 
     def set_value(self, value: Any):
@@ -48,7 +51,7 @@ class Variable(object):
 
     def varmap(self) -> 'VariableMap':
         if "FROM" in self.frame:
-            return VariableMap(self.frame["FROM"][0].resolve())
+            return VariableMap(self.frame["FROM"][0])
         raise Exception("Variable '" + self.name() + "' has no varmap.")
 
     def __eq__(self, other):
@@ -63,17 +66,20 @@ class Variable(object):
 class VariableMap(object):
 
     @classmethod
-    def instance_of(cls, graph: Graph, definition: Frame, params: List[Any], existing: Union[str, Identifier, Frame]=None) -> 'VariableMap':
+    def instance_of(cls, space: Space, definition: Frame, params: List[Any], existing: Union[str, Identifier, Frame]=None) -> 'VariableMap':
         if existing is not None:
             if isinstance(existing, str):
-                existing = Identifier.parse(existing)
+                existing = Frame(existing)
             if isinstance(existing, Identifier):
-                existing = existing.resolve(graph)
+                existing = Frame(existing.id)
 
-        frame = existing if existing is not None else graph.register("VARMAP", isa=definition._identifier, generate_index=True)
+        frame = existing
+        if frame is None:
+            frame = Frame("@" + space.name + ".VARMAP.?").add_parent(definition)
+
         for i, var in enumerate(definition["WITH"]):
             frame["WITH"] += var
-            variable_instance = graph.register("VARIABLE", generate_index=True)
+            variable_instance = Frame("@" + space.name + ".VARIABLE.?")
             variable_instance["NAME"] = var
             variable_instance["FROM"] = frame
             variable_instance["VALUE"] = params[i]
@@ -87,11 +93,11 @@ class VariableMap(object):
 
     def assign(self, name: str, variable: Union[str, Identifier, Frame, Variable]):
         if isinstance(variable, str):
-            variable = Identifier.parse(variable)
-        if isinstance(variable, Frame):
-            variable = variable._identifier
+            variable = Frame(variable)
+        if isinstance(variable, Identifier):
+            variable = Frame(variable.id)
         if isinstance(variable, Variable):
-            variable = variable.frame._identifier
+            variable = variable.frame
 
         self.frame["_WITH"] += variable
 
@@ -100,13 +106,13 @@ class VariableMap(object):
 
     def find(self, name: str) -> Variable:
         for var in self.frame["_WITH"]:
-            var = Variable(var.resolve())
+            var = Variable(var)
             if var.name() == name:
                 return var
         raise Exception("Variable '" + name + "' is not defined in this mapping.")
 
     def variables(self) -> List[str]:
-        return list(map(lambda v: v.resolve().value, self.frame["WITH"]))
+        return list(self.frame["WITH"])
 
     def __eq__(self, other):
         if isinstance(other, VariableMap):
@@ -154,10 +160,10 @@ class Statement(object):
 
     @classmethod
     def from_instance(cls, frame: Frame) -> 'Statement':
-        definition = frame.parents()[0].resolve(frame._graph, network=frame._network)
-        clazz = definition["CLASSMAP"][0].resolve().value
+        definition = frame.parents()[0]
+        clazz = definition["CLASSMAP"][0]
         if isinstance(clazz, str):
-            clazz = locate(definition["CLASSMAP"][0].resolve().value)
+            clazz = locate(definition["CLASSMAP"][0])
         return clazz(frame)
 
     def __init__(self, frame: Frame):
@@ -167,16 +173,12 @@ class Statement(object):
         raise Exception("Statement.run(scope, varmap) must be implemented.")
 
     def _resolve_param(self, param: Any, varmap: VariableMap):
-        if isinstance(param, Filler):
-            param = param._value
         if isinstance(param, Frame):
             return param
         if isinstance(param, Identifier):
             try:
                 return param.resolve(self.frame._graph)
             except: param = param.render()
-        if isinstance(param, Literal):
-            param = param.value
         if isinstance(param, str):
             try:
                 return varmap.resolve(param)
@@ -199,26 +201,24 @@ class Statement(object):
 class AddFillerStatement(Statement):
 
     @classmethod
-    def instance(cls, graph: Graph, to: Union[str, Identifier, Frame, Query], slot: str, value: Any):
+    def instance(cls, space: Space, to: Union[str, Identifier, Frame, Query], slot: str, value: Any):
         if isinstance(value, Statement):
             value = value.frame
 
-        frame = graph.register("ADDFILLER-STATEMENT", isa="EXE.ADDFILLER-STATEMENT", generate_index=True)
+        frame = Frame("@" + space.name + "@ADDFILLER-STATEMENT.?").add_parent("@EXE.ADDFILLER-STATEMENT")
         frame["TO"] = to
-        frame["SLOT"] = Literal(slot)
+        frame["SLOT"] = slot
         frame["ADD"] = value
 
         return AddFillerStatement(frame)
 
     def run(self, scope: StatementScope, varmap: VariableMap):
-        to: Any = self.frame["TO"][0].resolve()
-        slot: str = self.frame["SLOT"][0].resolve().value
-        value: Any = self.frame["ADD"][0].resolve()
+        to: Any = self.frame["TO"][0]
+        slot: str = self.frame["SLOT"][0]
+        value: Any = self.frame["ADD"][0]
 
         if isinstance(to, Identifier):
-            to = to.resolve(self.frame._graph)
-        if isinstance(to, Literal):
-            to = to.value
+            to = Frame(self.frame.id)
         if isinstance(to, Query):
             to = self.frame._graph.search(to)
         if isinstance(to, str):
@@ -228,14 +228,12 @@ class AddFillerStatement(Statement):
         if isinstance(to, Frame):
             to = [to]
 
-        if isinstance(value, Literal):
-            value = value.value
         if isinstance(value, str):
             try:
                 value = varmap.resolve(value)
             except: pass
         if isinstance(value, Frame):
-            if value ^ "EXE.RETURNING-STATEMENT":
+            if value ^ "@EXE.RETURNING-STATEMENT":
                 value = Statement.from_instance(value).run(StatementScope(), varmap)
 
         for frame in to:
@@ -269,12 +267,12 @@ class AssertStatement(Statement):
             self.resolutions = resolutions
 
     @classmethod
-    def instance(cls, graph: Graph, assertion: Union[str, Identifier, Frame, Statement], resolutions: List[Union[str, Identifier, Frame, 'MakeInstanceStatement']]):
+    def instance(cls, space: Space, assertion: Union[str, Identifier, Frame, Statement], resolutions: List[Union[str, Identifier, Frame, 'MakeInstanceStatement']]):
         if isinstance(assertion, Statement):
             assertion = assertion.frame
         resolutions = list(map(lambda r: r.frame if isinstance(r, MakeInstanceStatement) else r, resolutions))
 
-        stmt = graph.register("ASSERT-STATEMENT", isa="EXE.ASSERT-STATEMENT", generate_index=True)
+        stmt = Frame("@" + space.name + ".ASSERT-STATEMENT.?").add_parent("@EXE.ASSERT-STATEMENT")
         stmt["ASSERTION"] = assertion
         stmt["RESOLUTION"] = resolutions
 
@@ -284,7 +282,7 @@ class AssertStatement(Statement):
         return Statement.from_instance(self.frame["ASSERTION"].singleton())
 
     def resolutions(self) -> List['MakeInstanceStatement']:
-        return list(map(lambda s: MakeInstanceStatement(s.resolve()), self.frame["RESOLUTION"]))
+        return list(map(lambda s: MakeInstanceStatement(s), self.frame["RESOLUTION"]))
 
     def run(self, scope: StatementScope, varmap: VariableMap):
         if not self.assertion().run(scope, varmap):
@@ -309,14 +307,12 @@ class AssignFillerStatement(Statement):
         return AssignFillerStatement(frame)
 
     def run(self, scope: StatementScope, varmap: VariableMap):
-        to: Any = self.frame["TO"][0].resolve()
-        slot: str = self.frame["SLOT"][0].resolve().value
-        value: Any = self.frame["ASSIGN"][0].resolve()
+        to: Any = self.frame["TO"][0]
+        slot: str = self.frame["SLOT"][0]
+        value: Any = self.frame["ASSIGN"][0]
 
         if isinstance(to, Identifier):
-            to = to.resolve(self.frame._graph)
-        if isinstance(to, Literal):
-            to = to.value
+            to = Frame(to.id)
         if isinstance(to, Query):
             to = self.frame._graph.search(to)
         if isinstance(to, str):
@@ -326,12 +322,12 @@ class AssignFillerStatement(Statement):
         if isinstance(to, Frame):
             to = [to]
 
-        if isinstance(value, Literal) and isinstance(value.value, str):
+        if isinstance(value, str):
             try:
-                value = varmap.resolve(value.value)
+                value = varmap.resolve(value)
             except: pass
         if isinstance(value, Frame):
-            if value ^ "EXE.RETURNING-STATEMENT":
+            if value ^ "@EXE.RETURNING-STATEMENT":
                 value = Statement.from_instance(value).run(StatementScope(), varmap)
 
         for frame in to:
@@ -360,7 +356,7 @@ class AssignVariableStatement(Statement):
         value = self.frame["ASSIGN"].singleton()
         value = self._resolve(value, scope, varmap)
 
-        Variable.instance(self.frame._graph, variable, value, varmap)
+        Variable.instance(self.frame.space(), variable, value, varmap)
 
     def _resolve(self, value, scope: StatementScope, varmap: VariableMap):
         if isinstance(value, list):
@@ -370,9 +366,9 @@ class AssignVariableStatement(Statement):
                 return varmap.resolve(value)
             except:
                 pass
-        if isinstance(value, Statement) and value.frame ^ "EXE.RETURNING-STATEMENT":
+        if isinstance(value, Statement) and value.frame ^ "@EXE.RETURNING-STATEMENT":
             return value.run(StatementScope(), varmap)
-        if isinstance(value, Frame) and value ^ "EXE.RETURNING-STATEMENT":
+        if isinstance(value, Frame) and value ^ "@EXE.RETURNING-STATEMENT":
             return Statement.from_instance(value).run(StatementScope(), varmap)
 
         return value
@@ -386,20 +382,20 @@ class AssignVariableStatement(Statement):
 class ExistsStatement(Statement):
 
     @classmethod
-    def instance(cls, graph: Graph, query: Query):
-        frame = graph.register("EXISTS-STATEMENT", isa="EXE.EXISTS-STATEMENT", generate_index=True)
+    def instance(cls, space: Space, query: Query):
+        frame = Frame("@" + space.name + ".EXISTS-STATEMENT.?").add_parent("@EXE.EXISTS-STATEMENT")
         frame["FIND"] = query
 
         return ExistsStatement(frame)
 
     def run(self, scope: StatementScope, varmap: VariableMap) -> bool:
-        query = self.frame["FIND"][0].resolve().value
-        results = self.frame._graph._network.search(query)
+        query = self.frame["FIND"][0]
+        results = query.start(graph)
         return len(results) > 0
 
     def __eq__(self, other):
         if isinstance(other, ExistsStatement):
-            return other.frame["FIND"] == self.frame["FIND"]
+            return other.frame["FIND"].singleton() == self.frame["FIND"].singleton()
 
         return super().__eq__(other)
 
@@ -407,11 +403,12 @@ class ExistsStatement(Statement):
 class ExpectationStatement(Statement):
 
     @classmethod
-    def instance(cls, graph: Graph, condition: Union[str, Identifier, Frame, Statement]):
+    def instance(cls, space: Space, condition: Union[str, Identifier, Frame, Statement]):
         if isinstance(condition, Statement):
             condition = condition.frame
 
-        frame = graph.register("EXPECTATION-STATEMENT", isa="EXE.EXPECTATION-STATEMENT", generate_index=True)
+        frame = Frame("@" + space.name + ".EXPECTATION-STATEMENT.?").add_parent("@EXE.EXPECTATION-STATEMENT")
+        # frame = graph.register("EXPECTATION-STATEMENT", isa="EXE.EXPECTATION-STATEMENT", generate_index=True)
         frame["CONDITION"] = condition
 
         return ExpectationStatement(frame)
@@ -481,12 +478,10 @@ class IsStatement(Statement):
         return IsStatement(frame)
 
     def run(self, scope: StatementScope, varmap: VariableMap):
-        domain = self.frame["DOMAIN"][0].resolve()
-        slot: str = self.frame["SLOT"][0].resolve().value
-        filler = self.frame["FILLER"][0].resolve()
+        domain = self.frame["DOMAIN"][0]
+        slot: str = self.frame["SLOT"][0]
+        filler = self.frame["FILLER"][0]
 
-        if isinstance(domain, Literal):
-            domain = domain.value
         if isinstance(domain, str):
             try:
                 domain = varmap.resolve(domain)
@@ -494,8 +489,6 @@ class IsStatement(Statement):
         if not isinstance(domain, Frame):
             return False  # Typically this means a variable could not be resolved, so it cannot possibly match yet
 
-        if isinstance(filler, Literal):
-            filler = filler.value
         if isinstance(filler, str):
             try:
                 filler = varmap.resolve(filler)
@@ -514,30 +507,36 @@ class IsStatement(Statement):
 class MakeInstanceStatement(Statement):
 
     @classmethod
-    def instance(cls, graph: Graph, in_graph: str, of: Union[str, Identifier, Frame], params: List[Any]):
-        frame = graph.register("MAKEINSTANCE-STATEMENT", isa="EXE.MAKEINSTANCE-STATEMENT", generate_index=True)
-        frame["IN"] = Literal(in_graph)
+    def instance(cls, space: Space, in_graph: str, of: Union[str, Identifier, Frame], params: List[Any]):
+        frame = Frame("@" + space.name + ".MAKEINSTANCE-STATEMENT.?").add_parent("@EXE.MAKEINSTANCE-STATEMENT")
+        frame["IN"] = in_graph
         frame["OF"] = of
-        frame["PARAMS"] = list(map(lambda param: Literal(param) if isinstance(param, str) else param, params))
+        frame["PARAMS"] = params
 
         return MakeInstanceStatement(frame)
 
     def run(self, scope: StatementScope, varmap: VariableMap):
-        graph: str = self.frame["IN"][0].resolve().value
-        of: Frame = self.frame["OF"][0].resolve()
-        params: List[Any] = list(map(lambda param: param.resolve().value, self.frame["PARAMS"]))
+        space: str = self.frame["IN"][0]
+        of: Frame = self.frame["OF"][0]
+        params: List[Any] = self.frame["PARAMS"]
 
-        instance = self.frame._network[graph].register(of._identifier.name, isa=of, generate_index=True)
+        if isinstance(of, str):
+            of = Frame(of)
+        if isinstance(of, Identifier):
+            of = Frame(of.id)
+
+        instance = Frame("@" + space + "." + Identifier.parse(of.id)[1] + ".?").add_parent(of)
+        # instance = self.frame._network[graph].register(of._identifier.name, isa=of, generate_index=True)
         for slot in of:
             slot = of[slot]
-            instance[slot._name] = slot
+            instance[slot.property] = slot
 
         if len(params) != len(instance["WITH"]):
             raise Exception("Mismatched parameter count when making instance of '" + of.name() + "' with parameters '" + str(params) + "'.")
 
         params = list(map(lambda param: self._resolve_param(param, varmap), params))
 
-        VariableMap.instance_of(self.frame._graph, of, params, existing=instance)
+        VariableMap.instance_of(self.frame.space(), of, params, existing=instance)
 
         return instance
 
@@ -552,19 +551,19 @@ class MakeInstanceStatement(Statement):
 class MeaningProcedureStatement(Statement):
 
     @classmethod
-    def instance(cls, graph: Graph, calls: str, params: List[Any]):
-        frame = graph.register("MP-STATEMENT", isa="EXE.MP-STATEMENT", generate_index=True)
-        frame["CALLS"] = Literal(calls)
+    def instance(cls, space: Space, calls: str, params: List[Any]):
+        frame = Frame("@" + space.name + ".MP-STATEMENT.?").add_parent("@EXE.MP-STATEMENT")
+        frame["CALLS"] = calls
         frame["PARAMS"] = params
 
         return MeaningProcedureStatement(frame)
 
     def run(self, scope: StatementScope, varmap: VariableMap):
-        mp: str = self.frame["CALLS"][0].resolve().value
+        mp: str = self.frame["CALLS"][0]
 
         params = list(map(lambda param: self._resolve_param(param, varmap), self.frame["PARAMS"]))
 
-        result = MPRegistry.run(mp, self.frame._graph._network, *params, statement=self, varmap=varmap)
+        result = MPRegistry.run(mp, graph, *params, statement=self, varmap=varmap)
         return result
 
     def __eq__(self, other):
@@ -577,17 +576,17 @@ class MeaningProcedureStatement(Statement):
 class OutputXMRStatement(Statement):
 
     @classmethod
-    def instance(cls, graph: Graph, template: Union[str, Graph, 'OutputXMRTemplate'], params: List[Any], agent: Union[str, Identifier, Frame]):
+    def instance(cls, space: Space, template: Union[str, Graph, 'OutputXMRTemplate'], params: List[Any], agent: Union[str, Identifier, Frame]):
         from backend.models.output import OutputXMRTemplate
 
-        frame = graph.register("OUTPUTXMR-STATEMENT", isa="EXE.OUTPUTXMR-STATEMENT", generate_index=True)
+        frame = Frame("@" + space.name + ".OUTPUTXMR-STATEMENT.?").add_parent("@EXE.OUTPUTXMR-STATEMENT")
 
-        if isinstance(template, Graph):
+        if isinstance(template, Space):
             template = OutputXMRTemplate(template)
         if isinstance(template, OutputXMRTemplate):
             template = template.name()
 
-        frame["TEMPLATE"] = Literal(template)
+        frame["TEMPLATE"] = template
         frame["PARAMS"] = params
         frame["AGENT"] = agent
 
@@ -596,23 +595,21 @@ class OutputXMRStatement(Statement):
     def template(self) -> 'OutputXMRTemplate':
         from backend.models.output import OutputXMRTemplate
 
-        return OutputXMRTemplate.lookup(self.frame._graph._network, self.frame["TEMPLATE"].singleton())
+        return OutputXMRTemplate.lookup(self.frame["TEMPLATE"].singleton())
 
     def params(self) -> List[Any]:
-        return list(map(lambda param: param._value, self.frame["PARAMS"]))
+        return list(self.frame["PARAMS"])
 
     def agent(self) -> Frame:
         return self.frame["AGENT"].singleton()
 
     def run(self, scope: StatementScope, varmap: VariableMap) -> 'OutputXMR':
         agent = self.agent()
-        network = self.frame._graph._network
-        graph = network["OUTPUTS"]
 
         params = self.params()
         params = list(map(lambda param: self._resolve_param(param, varmap), params))
 
-        output = self.template().create(network, graph, params)
+        output = self.template().create(Space("OUTPUTS"), params)
         scope.outputs.append(output)
 
         return output
@@ -631,8 +628,8 @@ class OutputXMRStatement(Statement):
 class TransientFrameStatement(Statement):
 
     @classmethod
-    def instance(cls, graph: Graph, properties: List['BootstrapTriple']):
-        frame = graph.register("TRANSIENTFRAME-STATEMENT", isa="EXE.TRANSIENTFRAME-STATEMENT", generate_index=True)
+    def instance(cls, space: Space, properties: List['BootstrapTriple']):
+        frame = Frame("@" + space.name + ".TRANSIENTFRAME-STATEMENT.?").add_parent("@EXE.TRANSIENTFRAME-STATEMENT")
 
         for property in properties:
             frame["HAS-PROPERTY"] += property
@@ -640,16 +637,16 @@ class TransientFrameStatement(Statement):
         return TransientFrameStatement(frame)
 
     def properties(self) -> List['BootstrapTriple']:
-        return list(map(lambda p: p.resolve().value, self.frame["HAS-PROPERTY"]))
+        return list(self.frame["HAS-PROPERTY"])
 
     def run(self, scope: StatementScope, varmap: VariableMap):
-        frame = self.frame._network["EXE"].register("TRANSIENT-FRAME", isa="EXE.TRANSIENT-FRAME", generate_index=True)
+        frame = Frame("@EXE.TRANSIENT-FRAME.?").add_parent("@EXE.TRANSIENT-FRAME")
 
         for property in self.properties():
             filler = property.filler
-            if isinstance(filler, Literal) and isinstance(filler.value, str):
+            if isinstance(filler, str):
                 try:
-                    filler = varmap.resolve(filler.value)
+                    filler = varmap.resolve(filler)
                 except: pass
 
             frame[property.slot] += filler
