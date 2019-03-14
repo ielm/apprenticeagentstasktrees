@@ -1,5 +1,6 @@
+from backend.agent import Agent
 from backend.models.agenda import Agenda, Condition, Decision, Effect, Expectation, Goal, Plan, Step, Trigger
-# from backend.models.bootstrap import Bootstrap
+from backend.models.bootstrap import Bootstrap
 # from backend.models.graph import Frame, Graph, Literal, Network
 from backend.models.statement import Statement, StatementScope, VariableMap
 from backend.models.xmr import XMR
@@ -231,14 +232,12 @@ class GoalTestCase(unittest.TestCase):
             def run(self, varmap: VariableMap, *args, **kwargs):
                 return 0.5
 
-        network = Network()
-        graph = network.register("EXE")
-        Bootstrap.bootstrap_resource(network, "backend.resources", "exe.knowledge")
+        Bootstrap.bootstrap_resource(None, "backend.resources", "exe.knowledge")
 
-        graph["RETURNING-STATEMENT"]["CLASSMAP"] = Literal(TestStatement)
-        statement = graph.register("STATEMENT.1", isa="EXE.RETURNING-STATEMENT")
+        Frame("@TEST.RETURNING-STATEMENT")["CLASSMAP"] = TestStatement
+        statement = Frame("@TEST.STATEMENT.1").add_parent("@EXE.RETURNING-STATEMENT")
 
-        f = graph.register("GOAL.1")
+        f = Frame("@TEST.GOAL.1")
         f["PRIORITY"] = statement
 
         goal = Goal(f)
@@ -274,14 +273,12 @@ class GoalTestCase(unittest.TestCase):
             def run(self, varmap: VariableMap, *args, **kwargs):
                 return 0.5
 
-        network = Network()
-        graph = network.register("EXE")
-        Bootstrap.bootstrap_resource(network, "backend.resources", "exe.knowledge")
+        Bootstrap.bootstrap_resource(None, "backend.resources", "exe.knowledge")
 
-        graph["RETURNING-STATEMENT"]["CLASSMAP"] = Literal(TestStatement)
-        statement = graph.register("STATEMENT.1", isa="EXE.RETURNING-STATEMENT")
+        Frame("@TEST.RETURNING-STATEMENT")["CLASSMAP"] = TestStatement
+        statement = Frame("@TEST.STATEMENT.1").add_parent("@EXE.RETURNING-STATEMENT")
 
-        f = graph.register("GOAL.1")
+        f = Frame("@TEST.GOAL.1")
         f["RESOURCES"] = statement
 
         goal = Goal(f)
@@ -335,16 +332,18 @@ class GoalTestCase(unittest.TestCase):
             def run(self, varmap: VariableMap, *args, **kwargs):
                 return True
 
-        network = Network()
-        graph = network.register("EXE")
-        Bootstrap.bootstrap_resource(network, "backend.resources", "exe.knowledge")
+        class TestAgent(Agent):
+            def __init__(self):
+                pass
 
-        goal = graph.register("GOAL.1")
-        condition1 = graph.register("CONDITION.1")
-        condition2 = graph.register("CONDITION.2")
-        statement = graph.register("STATEMENT.1", isa="EXE.BOOLEAN-STATEMENT")
+        Bootstrap.bootstrap_resource(TestAgent(), "backend.resources", "exe.knowledge")
 
-        graph["BOOLEAN-STATEMENT"]["CLASSMAP"] = Literal(TestStatement)
+        goal = Frame("@TEST.GOAL.1")
+        condition1 = Frame("@TEST.CONDITION.1")
+        condition2 = Frame("@TEST.CONDITION.2")
+        statement = Frame("@TEST.STATEMENT.1").add_parent("@EXE.BOOLEAN-STATEMENT")
+
+        Frame("@EXE.BOOLEAN-STATEMENT")["CLASSMAP"] = TestStatement
         goal["WHEN"] = [condition1, condition2]
         condition1["ORDER"] = 2
         condition2["ORDER"] = 1
@@ -447,28 +446,24 @@ class GoalTestCase(unittest.TestCase):
         self.assertEqual([effect1, effect2], Goal(goal).effects())
 
     def test_effects_applied_in_assess_if_goal_satisfied(self):
-        n = Network()
-        graph = n.register("TEST")
+        Bootstrap.bootstrap_resource(None, "backend.resources", "exe.knowledge")
 
-        n.register("EXE")
-        Bootstrap.bootstrap_resource(n, "backend.resources", "exe.knowledge")
-
-        goal = graph.register("GOAL.1")
+        goal = Frame("@TEST.GOAL.1")
 
         from backend.models.statement import AddFillerStatement, Variable
 
-        frame = graph.register("FRAME", generate_index=True)
+        frame = Frame("@TEST.FRAME.?")
 
-        statement1 = AddFillerStatement.instance(graph, "TEST.FRAME.1", "SLOT", 123)
-        statement2 = AddFillerStatement.instance(graph, "TEST.FRAME.1", "SLOT", Literal("$var1"))
+        statement1 = AddFillerStatement.instance(Space("TEST"), "@TEST.FRAME.1", "SLOT", 123)
+        statement2 = AddFillerStatement.instance(Space("TEST"), "@TEST.FRAME.1", "SLOT", "$var1")
 
-        effect1 = Effect.build(graph, [statement1])
-        effect2 = Effect.build(graph, [statement2])
+        effect1 = Effect.build(Space("TEST"), [statement1])
+        effect2 = Effect.build(Space("TEST"), [statement2])
 
         goal["HAS-EFFECT"] += effect1.frame
         goal["HAS-EFFECT"] += effect2.frame
 
-        Variable.instance(graph, "$var1", 456, Goal(goal))
+        Variable.instance(Space("TEST"), "$var1", 456, Goal(goal))
 
         goal["STATUS"] = Goal.Status.ACTIVE
         Goal(goal).assess()
@@ -585,29 +580,29 @@ class ConditionTestCase(unittest.TestCase):
 
     def setUp(self):
         graph.reset()
-        Bootstrap.bootstrap_resource(self.n, "backend.resources", "exe.knowledge")
+        Bootstrap.bootstrap_resource(None, "backend.resources", "exe.knowledge")
 
     def test_order(self):
-        gc = self.g.register("CONDITION.1")
+        gc = Frame("@TEST.CONDITION.1")
         gc["ORDER"] = 1
 
         self.assertEqual(Condition(gc).order(), 1)
 
     def test_status(self):
-        gc = self.g.register("GOAL-CONDITION.1")
-        gc["STATUS"] = Literal(Goal.Status.SATISFIED.name)
+        gc = Frame("@TEST.GOAL-CONDITION.1")
+        gc["STATUS"] = Goal.Status.SATISFIED.name
 
         self.assertEqual(Condition(gc).status(), Goal.Status.SATISFIED)
 
     def test_on(self):
-        gc = self.g.register("GOAL-CONDITION.1")
-        gc["ON"] = Literal(Condition.On.EXECUTED)
+        gc = Frame("@TEST.GOAL-CONDITION.1")
+        gc["ON"] = Condition.On.EXECUTED
 
         self.assertEqual(Condition(gc).on(), Condition.On.EXECUTED)
 
     def test_requires_boolean_statement(self):
-        c = self.g.register("CONDITION.1")
-        b = self.g.register("STATEMENT.1", isa="EXE.STATEMENT")
+        c = Frame("@TEST.CONDITION.1")
+        b = Frame("@TEST.STATEMENT.1").add_parent("@EXE.STATEMENT")
 
         c["IF"] = b
 
@@ -615,14 +610,14 @@ class ConditionTestCase(unittest.TestCase):
             Condition(c)
 
     def test_assess_executed(self):
-        goal = self.g.register("GOAL")
+        goal = Frame("@TEST.GOAL")
 
-        condition = self.g.register("CONDITION")
+        condition = Frame("@TEST.CONDITION")
         condition["ON"] = Condition.On.EXECUTED
 
         self.assertFalse(Condition(condition).assess(VariableMap(goal)))
 
-        goal["PLAN"] = self.g.register("PLAN")
+        goal["PLAN"] = Frame("@TEST.PLAN")
 
         self.assertTrue(Condition(condition).assess(VariableMap(goal)))
 
@@ -632,9 +627,9 @@ class ConditionTestCase(unittest.TestCase):
             def run(self, scope: StatementScope,  varmap: VariableMap):
                 return True
 
-        c = self.g.register("CONDITION.1")
-        b = self.g.register("BOOLEAN-STATEMENT.1", isa="EXE.BOOLEAN-STATEMENT")
-        self.g["BOOLEAN-STATEMENT"]["CLASSMAP"] = Literal(TestStatement)
+        c = Frame("@TEST.CONDITION.1")
+        b = Frame("@TEST.BOOLEAN-STATEMENT.1").add_parent("@EXE.BOOLEAN-STATEMENT")
+        Frame("@EXE.BOOLEAN-STATEMENT")["CLASSMAP"] = TestStatement
 
         c["IF"] = b
 
@@ -653,13 +648,13 @@ class ConditionTestCase(unittest.TestCase):
             def run(self, scope: StatementScope,  varmap: VariableMap):
                 return result2
 
-        c = self.g.register("CONDITION.1")
-        self.g.register("TEST-STATEMENT-A", isa="EXE.BOOLEAN-STATEMENT")
-        self.g.register("TEST-STATEMENT-B", isa="EXE.BOOLEAN-STATEMENT")
-        b1 = self.g.register("TEST-STATEMENT-A.1", isa="TEST-STATEMENT-A")
-        b2 = self.g.register("TEST-STATEMENT-B.1", isa="TEST-STATEMENT-B")
-        self.g["TEST-STATEMENT-A"]["CLASSMAP"] = Literal(TestStatement1)
-        self.g["TEST-STATEMENT-B"]["CLASSMAP"] = Literal(TestStatement2)
+        c = Frame("@TEST.CONDITION.1")
+        Frame("@TEST.TEST-STATEMENT-A").add_parent("@EXE.BOOLEAN-STATEMENT")
+        Frame("@TEST.TEST-STATEMENT-B").add_parent("@EXE.BOOLEAN-STATEMENT")
+        b1 = Frame("@TEST.TEST-STATEMENT-A.1").add_parent("@TEST-STATEMENT-A")
+        b2 = Frame("@TEST.TEST-STATEMENT-B.1").add_parent("@TEST-STATEMENT-B")
+        Frame("@TEST.TEST-STATEMENT-A")["CLASSMAP"] = TestStatement1
+        Frame("@TEST.TEST-STATEMENT-B")["CLASSMAP"] = TestStatement2
 
         c["IF"] = [b1, b2]
         c["LOGIC"] = Condition.Logic.AND
@@ -683,13 +678,13 @@ class ConditionTestCase(unittest.TestCase):
             def run(self, scope: StatementScope,  varmap: VariableMap):
                 return result2
 
-        c = self.g.register("CONDITION.1")
-        self.g.register("TEST-STATEMENT-A", isa="EXE.BOOLEAN-STATEMENT")
-        self.g.register("TEST-STATEMENT-B", isa="EXE.BOOLEAN-STATEMENT")
-        b1 = self.g.register("TEST-STATEMENT-A.1", isa="TEST-STATEMENT-A")
-        b2 = self.g.register("TEST-STATEMENT-B.1", isa="TEST-STATEMENT-B")
-        self.g["TEST-STATEMENT-A"]["CLASSMAP"] = Literal(TestStatement1)
-        self.g["TEST-STATEMENT-B"]["CLASSMAP"] = Literal(TestStatement2)
+        c = Frame("@TEST.CONDITION.1")
+        Frame("@TEST.TEST-STATEMENT-A").add_parent("@EXE.BOOLEAN-STATEMENT")
+        Frame("@TEST.TEST-STATEMENT-B").add_parent("@EXE.BOOLEAN-STATEMENT")
+        b1 = Frame("@TEST.TEST-STATEMENT-A.1").add_parent("@TEST-STATEMENT-A")
+        b2 = Frame("@TEST.TEST-STATEMENT-B.1").add_parent("@TEST-STATEMENT-B")
+        Frame("@TEST.TEST-STATEMENT-A")["CLASSMAP"] = TestStatement1
+        Frame("@TEST.TEST-STATEMENT-B")["CLASSMAP"] = TestStatement2
 
         c["IF"] = [b1, b2]
         c["LOGIC"] = Condition.Logic.OR
@@ -713,13 +708,13 @@ class ConditionTestCase(unittest.TestCase):
             def run(self, scope: StatementScope,  varmap: VariableMap):
                 return result2
 
-        c = self.g.register("CONDITION.1")
-        self.g.register("TEST-STATEMENT-A", isa="EXE.BOOLEAN-STATEMENT")
-        self.g.register("TEST-STATEMENT-B", isa="EXE.BOOLEAN-STATEMENT")
-        b1 = self.g.register("TEST-STATEMENT-A.1", isa="TEST-STATEMENT-A")
-        b2 = self.g.register("TEST-STATEMENT-B.1", isa="TEST-STATEMENT-B")
-        self.g["TEST-STATEMENT-A"]["CLASSMAP"] = Literal(TestStatement1)
-        self.g["TEST-STATEMENT-B"]["CLASSMAP"] = Literal(TestStatement2)
+        c = Frame("@TEST.CONDITION.1")
+        Frame("@TEST.TEST-STATEMENT-A").add_parent("@EXE.BOOLEAN-STATEMENT")
+        Frame("@TEST.TEST-STATEMENT-B").add_parent("@EXE.BOOLEAN-STATEMENT")
+        b1 = Frame("@TEST.TEST-STATEMENT-A.1").add_parent("@TEST-STATEMENT-A")
+        b2 = Frame("@TEST.TEST-STATEMENT-B.1").add_parent("@TEST-STATEMENT-B")
+        Frame("@TEST.TEST-STATEMENT-A")["CLASSMAP"] = TestStatement1
+        Frame("@TEST.TEST-STATEMENT-B")["CLASSMAP"] = TestStatement2
 
         c["IF"] = [b1, b2]
         c["LOGIC"] = Condition.Logic.NOR
@@ -748,13 +743,13 @@ class ConditionTestCase(unittest.TestCase):
             def run(self, scope: StatementScope,  varmap: VariableMap):
                 return result2
 
-        c = self.g.register("CONDITION.1")
-        self.g.register("TEST-STATEMENT-A", isa="EXE.BOOLEAN-STATEMENT")
-        self.g.register("TEST-STATEMENT-B", isa="EXE.BOOLEAN-STATEMENT")
-        b1 = self.g.register("TEST-STATEMENT-A.1", isa="TEST-STATEMENT-A")
-        b2 = self.g.register("TEST-STATEMENT-B.1", isa="TEST-STATEMENT-B")
-        self.g["TEST-STATEMENT-A"]["CLASSMAP"] = Literal(TestStatement1)
-        self.g["TEST-STATEMENT-B"]["CLASSMAP"] = Literal(TestStatement2)
+        c = Frame("@TEST.CONDITION.1")
+        Frame("@TEST.TEST-STATEMENT-A").add_parent("@EXE.BOOLEAN-STATEMENT")
+        Frame("@TEST.TEST-STATEMENT-B").add_parent("@EXE.BOOLEAN-STATEMENT")
+        b1 = Frame("@TEST.TEST-STATEMENT-A.1").add_parent("@TEST-STATEMENT-A")
+        b2 = Frame("@TEST.TEST-STATEMENT-B.1").add_parent("@TEST-STATEMENT-B")
+        Frame("@TEST.TEST-STATEMENT-A")["CLASSMAP"] = TestStatement1
+        Frame("@TEST.TEST-STATEMENT-B")["CLASSMAP"] = TestStatement2
 
         c["IF"] = [b1, b2]
         c["LOGIC"] = Condition.Logic.NAND
@@ -783,13 +778,13 @@ class ConditionTestCase(unittest.TestCase):
             def run(self, scope: StatementScope,  varmap: VariableMap):
                 return result2
 
-        c = self.g.register("CONDITION.1")
-        self.g.register("TEST-STATEMENT-A", isa="EXE.BOOLEAN-STATEMENT")
-        self.g.register("TEST-STATEMENT-B", isa="EXE.BOOLEAN-STATEMENT")
-        b1 = self.g.register("TEST-STATEMENT-A.1", isa="TEST-STATEMENT-A")
-        b2 = self.g.register("TEST-STATEMENT-B.1", isa="TEST-STATEMENT-B")
-        self.g["TEST-STATEMENT-A"]["CLASSMAP"] = Literal(TestStatement1)
-        self.g["TEST-STATEMENT-B"]["CLASSMAP"] = Literal(TestStatement2)
+        c = Frame("@TEST.CONDITION.1")
+        Frame("@TEST.TEST-STATEMENT-A").add_parent("@EXE.BOOLEAN-STATEMENT")
+        Frame("@TEST.TEST-STATEMENT-B").add_parent("@EXE.BOOLEAN-STATEMENT")
+        b1 = Frame("@TEST.TEST-STATEMENT-A.1").add_parent("@TEST-STATEMENT-A")
+        b2 = Frame("@TEST.TEST-STATEMENT-B.1").add_parent("@TEST-STATEMENT-B")
+        Frame("@TEST.TEST-STATEMENT-A")["CLASSMAP"] = TestStatement1
+        Frame("@TEST.TEST-STATEMENT-B")["CLASSMAP"] = TestStatement2
 
         c["IF"] = [b1, b2]
         c["LOGIC"] = Condition.Logic.NOT
@@ -807,7 +802,7 @@ class ConditionTestCase(unittest.TestCase):
         self.assertTrue(Condition(c).assess(None))
 
     def test_assess_no_conditions(self):
-        gc = self.g.register("GOAL-CONDITION.1")
+        gc = Frame("@TEST.GOAL-CONDITION.1")
         self.assertTrue(Condition(gc).assess(None))
 
     def test_assess_with_varmap(self):
@@ -816,15 +811,15 @@ class ConditionTestCase(unittest.TestCase):
             def run(self, scope: StatementScope,  varmap: VariableMap):
                 return varmap.resolve("X")
 
-        c = self.g.register("CONDITION.1")
-        b = self.g.register("BOOLEAN-STATEMENT.1", isa="EXE.BOOLEAN-STATEMENT")
-        self.g["BOOLEAN-STATEMENT"]["CLASSMAP"] = Literal(TestStatement)
-        vm = self.g.register("VARMAP.1")
-        v = self.g.register("VARIABLE.1")
+        c = Frame("@TEST.CONDITION.1")
+        b = Frame("@TEST.BOOLEAN-STATEMENT.1").add_parent("@EXE.BOOLEAN-STATEMENT")
+        Frame("@TEST.BOOLEAN-STATEMENT")["CLASSMAP"] = TestStatement
+        vm = Frame("@TEST.VARMAP.1")
+        v = Frame("@TEST.VARIABLE.1")
 
-        vm["WITH"] = Literal("X")
+        vm["WITH"] = "X"
         vm["_WITH"] = v
-        v["NAME"] = Literal("X")
+        v["NAME"] = "X"
         v["VALUE"] = True
 
         c["IF"] = b
@@ -853,7 +848,7 @@ class PlanTestCase(unittest.TestCase):
         self.assertTrue(Plan(plan).is_negated())
 
     def test_select(self):
-        Bootstrap.bootstrap_resource(self.n, "backend.resources", "exe.knowledge")
+        Bootstrap.bootstrap_resource(None, "backend.resources", "exe.knowledge")
 
         result = True
 
@@ -861,11 +856,11 @@ class PlanTestCase(unittest.TestCase):
             def run(self, varmap: VariableMap, *args, **kwargs):
                 return result
 
-        plan = self.g.register("PLAN.1")
-        statement = self.g.register("BOOLEAN-STATEMENT.1", isa="EXE.BOOLEAN-STATEMENT")
+        plan = Frame("@TEST.PLAN.1")
+        statement = Frame("@TEST.BOOLEAN-STATEMENT.1").add_parent("@EXE.BOOLEAN-STATEMENT")
 
         plan["SELECT"] = statement
-        self.g["BOOLEAN-STATEMENT"]["CLASSMAP"] = Literal(TestStatement)
+        Frame("@EXE.BOOLEAN-STATEMENT")["CLASSMAP"] = TestStatement
 
         self.assertTrue(Plan(plan).select(None))
 
@@ -874,38 +869,38 @@ class PlanTestCase(unittest.TestCase):
         self.assertFalse(Plan(plan).select(None))
 
     def test_select_negated(self):
-        Bootstrap.bootstrap_resource(self.n, "backend.resources", "exe.knowledge")
+        Bootstrap.bootstrap_resource(None, "backend.resources", "exe.knowledge")
 
         class TestStatement(Statement):
             def run(self, varmap: VariableMap, *args, **kwargs):
                 return True
 
-        self.g["BOOLEAN-STATEMENT"]["CLASSMAP"] = Literal(TestStatement)
-        statement = self.g.register("BOOLEAN-STATEMENT.1", isa="EXE.BOOLEAN-STATEMENT")
+        Frame("@EXE.BOOLEAN-STATEMENT")["CLASSMAP"] = TestStatement
+        statement = Frame("@TEST.BOOLEAN-STATEMENT.1").add_parent("@EXE.BOOLEAN-STATEMENT")
 
-        plan = Plan.build(self.g, "test", statement, [])
+        plan = Plan.build(Space("TEST"), "test", statement, [])
         self.assertTrue(plan.select(None))
 
-        plan = Plan.build(self.g, "test", statement, [], negate=True)
+        plan = Plan.build(Space("TEST"), "test", statement, [], negate=True)
         self.assertFalse(plan.select(None))
 
     def test_select_with_variable(self):
-        Bootstrap.bootstrap_resource(self.n, "backend.resources", "exe.knowledge")
+        Bootstrap.bootstrap_resource(None, "backend.resources", "exe.knowledge")
 
         class TestStatement(Statement):
             def run(self, scope: StatementScope, varmap: VariableMap):
                 return varmap.resolve("X")
 
-        varmap = self.g.register("VARMAP.1")
-        variable = self.g.register("VARIABLE.1")
-        plan = self.g.register("PLAN.1")
-        statement = self.g.register("BOOLEAN-STATEMENT.1", isa="EXE.BOOLEAN-STATEMENT")
+        varmap = Frame("@TEST.VARMAP.1")
+        variable = Frame("@TEST.VARIABLE.1")
+        plan = Frame("@TEST.PLAN.1")
+        statement = Frame("@TEST.BOOLEAN-STATEMENT.1").add_parent("@EXE.BOOLEAN-STATEMENT")
 
         varmap["_WITH"] = variable
-        variable["NAME"] = Literal("X")
+        variable["NAME"] = "X"
         variable["VALUE"] = True
         plan["SELECT"] = statement
-        self.g["BOOLEAN-STATEMENT"]["CLASSMAP"] = Literal(TestStatement)
+        Frame("@TEST.BOOLEAN-STATEMENT")["CLASSMAP"] = TestStatement
 
         self.assertTrue(Plan(plan).select(VariableMap(varmap)))
 
@@ -913,7 +908,7 @@ class PlanTestCase(unittest.TestCase):
         from backend.models.mps import AgentMethod
         from backend.models.statement import MeaningProcedureStatement, MPRegistry
 
-        Bootstrap.bootstrap_resource(self.n, "backend.resources", "exe.knowledge")
+        Bootstrap.bootstrap_resource(None, "backend.resources", "exe.knowledge")
 
         class TestMP(AgentMethod):
             def run(self, var1):
@@ -921,13 +916,13 @@ class PlanTestCase(unittest.TestCase):
 
         MPRegistry.register(TestMP)
 
-        mp_statement = MeaningProcedureStatement.instance(self.g, TestMP.__name__, ["$var1"])
-        plan = Plan.build(self.g, "X", mp_statement, [])
+        mp_statement = MeaningProcedureStatement.instance(Space("TEST"), TestMP.__name__, ["$var1"])
+        plan = Plan.build(Space("TEST"), "X", mp_statement, [])
 
-        varmap = self.g.register("VARMAP.1")
-        variable = self.g.register("VARIABLE.1")
+        varmap = Frame("@TEST.VARMAP.1")
+        variable = Frame("@TEST.VARIABLE.1")
         varmap["_WITH"] = variable
-        variable["NAME"] = Literal("$var1")
+        variable["NAME"] = "$var1"
 
         variable["VALUE"] = True
         self.assertTrue(plan.select(VariableMap(varmap)))
@@ -1010,7 +1005,7 @@ class StepTestCase(unittest.TestCase):
         self.assertTrue(Step(step).is_finished())
 
     def test_perform(self):
-        Bootstrap.bootstrap_resource(self.n, "backend.resources", "exe.knowledge")
+        Bootstrap.bootstrap_resource(None, "backend.resources", "exe.knowledge")
 
         out = []
 
@@ -1019,61 +1014,61 @@ class StepTestCase(unittest.TestCase):
                 nonlocal out
                 out.append(self.frame["LOCAL"][0].resolve().value)
 
-        step = self.g.register("STEP")
-        statement1 = self.g.register("STATEMENT", generate_index=True, isa="EXE.STATEMENT")
-        statement2 = self.g.register("STATEMENT", generate_index=True, isa="EXE.STATEMENT")
+        step = Frame("@TEST.STEP")
+        statement1 = Frame("@TEST.STATEMENT.?").add_parent("@EXE.STATEMENT")
+        statement2 = Frame("@TEST.STATEMENT.?").add_parent("@EXE.STATEMENT")
 
-        self.g["STATEMENT"]["CLASSMAP"] = Literal(TestStatement)
+        Frame("@EXE.STATEMENT")["CLASSMAP"] = TestStatement
         step["PERFORM"] = [statement1, statement2]
-        statement1["LOCAL"] = Literal("X")
-        statement2["LOCAL"] = Literal("Y")
+        statement1["LOCAL"] = "X"
+        statement2["LOCAL"] = "Y"
 
-        Step(step).perform(VariableMap(self.g.register("VARMAP")))
+        Step(step).perform(VariableMap(Frame("@TEST.VARMAP")))
 
         self.assertEqual(out, ["X", "Y"])
 
     def test_perform_returns_scope_with_outputs(self):
-        Bootstrap.bootstrap_resource(self.n, "backend.resources", "exe.knowledge")
+        Bootstrap.bootstrap_resource(None, "backend.resources", "exe.knowledge")
 
         class TestStatement(Statement):
             def run(self, scope: StatementScope(), varmap: VariableMap):
                 scope.outputs.append(123)
 
-        agent = self.g.register("AGENT")
-        goal = self.g.register("GOAL")
-        plan = self.g.register("PLAN")
-        step = self.g.register("STEP")
+        agent = Frame("@TEST.AGENT")
+        goal = Frame("@TEST.GOAL")
+        plan = Frame("@TEST.PLAN")
+        step = Frame("@TEST.STEP")
 
-        statement = self.g.register("STATEMENT", generate_index=True, isa="EXE.STATEMENT")
-        self.g["STATEMENT"]["CLASSMAP"] = Literal(TestStatement)
+        statement = Frame("@TEST.STATEMENT.?").add_parent("@EXE.STATEMENT")
+        Frame("@EXE.STATEMENT")["CLASSMAP"] = TestStatement
         step["PERFORM"] = [statement]
 
-        scope = Step(step).perform(VariableMap(self.g.register("VARMAP")))
+        scope = Step(step).perform(VariableMap(Frame("@TEST.VARMAP")))
         self.assertEqual([123], scope.outputs)
 
     def test_perform_returns_scope_with_expectations(self):
-        Bootstrap.bootstrap_resource(self.n, "backend.resources", "exe.knowledge")
+        Bootstrap.bootstrap_resource(None, "backend.resources", "exe.knowledge")
 
         class TestStatement(Statement):
             def run(self, scope: StatementScope(), varmap: VariableMap):
                 scope.expectations.append(123)
 
-        agent = self.g.register("AGENT")
-        goal = self.g.register("GOAL")
-        plan = self.g.register("PLAN")
-        step = self.g.register("STEP")
+        agent = Frame("@TEST.AGENT")
+        goal = Frame("@TEST.GOAL")
+        plan = Frame("@TEST.PLAN")
+        step = Frame("@TEST.STEP")
 
-        statement = self.g.register("STATEMENT", generate_index=True, isa="EXE.STATEMENT")
-        self.g["STATEMENT"]["CLASSMAP"] = Literal(TestStatement)
+        statement = Frame("@TEST.STATEMENT.?").add_parent("@EXE.STATEMENT")
+        Frame("@EXE.STATEMENT")["CLASSMAP"] = TestStatement
         step["PERFORM"] = [statement]
 
-        scope = Step(step).perform(VariableMap(self.g.register("VARMAP")))
+        scope = Step(step).perform(VariableMap(Frame("@TEST.VARMAP")))
         self.assertEqual([123], scope.expectations)
 
     def test_perform_with_transients_overrides_scope_detection(self):
         from backend.models.statement import TransientFrame
 
-        Bootstrap.bootstrap_resource(self.n, "backend.resources", "exe.knowledge")
+        Bootstrap.bootstrap_resource(None, "backend.resources", "exe.knowledge")
 
         transient: Frame = None
 
@@ -1083,16 +1078,16 @@ class StepTestCase(unittest.TestCase):
                 transient = self.frame._graph.register("TRANSIENT")
                 scope.transients.append(TransientFrame(transient))
 
-        agent = self.g.register("AGENT")
-        goal = self.g.register("GOAL")
-        plan = self.g.register("PLAN")
-        step = self.g.register("STEP")
+        agent = Frame("@TEST.AGENT")
+        goal = Frame("@TEST.GOAL")
+        plan = Frame("@TEST.PLAN")
+        step = Frame("@TEST.STEP")
 
-        statement = self.g.register("STATEMENT", generate_index=True, isa="EXE.STATEMENT")
-        self.g["STATEMENT"]["CLASSMAP"] = Literal(TestStatement)
+        statement = Frame("@TEST.STATEMENT.?").add_parent("@EXE.STATEMENT")
+        Frame("@EXE.STATEMENT")["CLASSMAP"] = TestStatement
         step["PERFORM"] = [statement]
 
-        Step(step).perform(VariableMap(self.g.register("VARMAP")))
+        Step(step).perform(VariableMap(Frame("@TEST.VARMAP")))
 
         step["STATUS"] = Step.Status.PENDING
         self.assertTrue(TransientFrame(transient).is_in_scope())
@@ -1101,7 +1096,7 @@ class StepTestCase(unittest.TestCase):
         self.assertFalse(TransientFrame(transient).is_in_scope())
 
     def test_perform_with_variables(self):
-        Bootstrap.bootstrap_resource(self.n, "backend.resources", "exe.knowledge")
+        Bootstrap.bootstrap_resource(None, "backend.resources", "exe.knowledge")
 
         out = []
 
@@ -1110,15 +1105,15 @@ class StepTestCase(unittest.TestCase):
                 nonlocal out
                 out.append(varmap.resolve("X"))
 
-        step = self.g.register("STEP")
-        statement = self.g.register("STATEMENT", generate_index=True, isa="EXE.STATEMENT")
-        varmap = self.g.register("VARMAP")
-        variable = self.g.register("VARIABLE")
+        step = Frame("@TEST.STEP")
+        statement = Frame("@TEST.STATEMENT.?").add_parent("@EXE.STATEMENT")
+        varmap = Frame("@TEST.VARMAP")
+        variable = Frame("@TEST.VARIABLE")
 
-        self.g["STATEMENT"]["CLASSMAP"] = Literal(TestStatement)
+        Frame("@EXE.STATEMENT")["CLASSMAP"] = TestStatement
         step["PERFORM"] = statement
         varmap["_WITH"] = variable
-        variable["NAME"] = Literal("X")
+        variable["NAME"] = "X"
         variable["VALUE"] = 123
 
         Step(step).perform(VariableMap(varmap))
@@ -1126,27 +1121,27 @@ class StepTestCase(unittest.TestCase):
         self.assertEqual(out, [123])
 
     def test_perform_idle(self):
-        Bootstrap.bootstrap_resource(self.n, "backend.resources", "exe.knowledge")
+        Bootstrap.bootstrap_resource(None, "backend.resources", "exe.knowledge")
 
-        step = self.g.register("STEP")
-        step["PERFORM"] = Literal(Step.IDLE)
+        step = Frame("@TEST.STEP")
+        step["PERFORM"] = Step.IDLE
 
-        Step(step).perform(VariableMap(self.g.register("VARMAP")))
+        Step(step).perform(VariableMap(Frame("@TEST.VARMAP")))
 
     def test_perform_raises_impasse_exceptions(self):
-        Bootstrap.bootstrap_resource(self.n, "backend.resources", "exe.knowledge")
+        Bootstrap.bootstrap_resource(None, "backend.resources", "exe.knowledge")
 
         from backend.models.statement import AssertStatement, ExistsStatement
 
-        perform = [AssertStatement.instance(self.g, ExistsStatement.instance(self.g, Frame.q(self.n).id("EXE.DNE")), [])]
+        perform = [AssertStatement.instance(Space("TEST"), ExistsStatement.instance(Space("TEST"), Query().search(IdComparator("@EXE.DNE"))), [])]
 
-        step = Step.build(self.g, 1, perform)
+        step = Step.build(Space("TEST"), 1, perform)
 
         with self.assertRaises(AssertStatement.ImpasseException):
-            step.perform(VariableMap(self.g.register("VARMAP")))
+            step.perform(VariableMap(Frame("@TEST.VARMAP")))
 
-        self.g.register("DNE")
-        step.perform(VariableMap(self.g.register("VARMAP")))
+        Frame("@EXE.DNE")
+        step.perform(VariableMap(Frame("@TEST.VARMAP")))
 
 
 class DecisionTestCase(unittest.TestCase):
@@ -1312,64 +1307,61 @@ class DecisionTestCase(unittest.TestCase):
         from backend.models.output import OutputXMRTemplate
         from backend.models.statement import OutputXMRStatement
 
-        self.n.register("EXE")
-        Bootstrap.bootstrap_resource(self.n, "backend.resources", "exe.knowledge")
+        Bootstrap.bootstrap_resource(None, "backend.resources", "exe.knowledge")
 
-        agent = self.g.register("AGENT")
-        capability = self.g.register("CAPABILITY")
+        agent = Frame("@TEST.AGENT")
+        capability = Frame("@TEST.CAPABILITY")
 
-        template = OutputXMRTemplate.build(self.n, "test-template", XMR.Type.ACTION, capability, [])
-        statement = OutputXMRStatement.instance(self.g, template, [], agent)
-        goal = Goal(self.g.register("GOAL"))
-        step = Step.build(self.g, 1, statement)
+        template = OutputXMRTemplate.build("test-template", XMR.Type.ACTION, capability, [])
+        statement = OutputXMRStatement.instance(Space("TEST"), template, [], agent)
+        goal = Goal(Frame("@TEST.GOAL"))
+        step = Step.build(Space("TEST"), 1, statement)
 
-        decision = Decision.build(self.g, goal, "TEST-PLAN", step)
+        decision = Decision.build(Space("TEST"), goal, "TEST-PLAN", step)
 
         self.assertEqual([], decision.outputs())
 
         decision._generate_outputs()
 
-        self.assertEqual([self.n.lookup("OUTPUTS.XMR.1")], decision.outputs())
+        self.assertEqual([Frame("@OUTPUTS.XMR.1")], decision.outputs())
 
     def test_generate_outputs_populates_expectations(self):
         from backend.models.statement import ExpectationStatement, IsStatement
 
-        self.n.register("EXE")
-        Bootstrap.bootstrap_resource(self.n, "backend.resources", "exe.knowledge")
+        Bootstrap.bootstrap_resource(None, "backend.resources", "exe.knowledge")
 
-        target = self.g.register("TARGET")
+        target = Frame("@TEST.TARGET")
 
-        statement = ExpectationStatement.instance(self.g, IsStatement.instance(self.g, target, "SLOT", 123))
-        goal = Goal(self.g.register("GOAL"))
-        step = Step.build(self.g, 1, statement)
+        statement = ExpectationStatement.instance(Space("TEST"), IsStatement.instance(Space("TEST"), target, "SLOT", 123))
+        goal = Goal(Frame("@TEST.GOAL"))
+        step = Step.build(Space("TEST"), 1, statement)
 
-        decision = Decision.build(self.g, goal, "TEST-PLAN", step)
+        decision = Decision.build(Space("TEST"), goal, "TEST-PLAN", step)
 
         self.assertEqual([], decision.expectations())
 
         decision._generate_outputs()
 
-        self.assertEqual([self.n.lookup("TEST.EXPECTATION.1")], decision.expectations())
+        self.assertEqual([Frame("@TEST.EXPECTATION.1")], decision.expectations())
 
     def test_generate_outputs_halts_and_registers_impasses(self):
         from backend.models.output import OutputXMRTemplate
         from backend.models.statement import AssertStatement, ExistsStatement, MakeInstanceStatement, OutputXMRStatement, Variable
 
-        self.n.register("EXE")
-        Bootstrap.bootstrap_resource(self.n, "backend.resources", "exe.knowledge")
+        Bootstrap.bootstrap_resource(None, "backend.resources", "exe.knowledge")
 
-        Goal.define(self.g, "IMPASSE-GOAL", 0.5, 0.5, [], [], ["$var1"], [])
+        Goal.define(Space("TEST"), "IMPASSE-GOAL", 0.5, 0.5, [], [], ["$var1"], [])
 
-        resolution = MakeInstanceStatement.instance(self.g, self.g._namespace, "TEST.IMPASSE-GOAL", ["$var1"])
-        statement1 = AssertStatement.instance(self.g, ExistsStatement.instance(self.g, Frame.q(self.n).id("EXE.DNE")), [resolution])
+        resolution = MakeInstanceStatement.instance(Space("TEST"), "TEST", "@TEST.IMPASSE-GOAL", ["$var1"])
+        statement1 = AssertStatement.instance(Space("TEST"), ExistsStatement.instance(Space("TEST"), Query().search(IdComparator("@EXE.DNE"))), [resolution])
 
-        template = OutputXMRTemplate.build(self.n, "test-template", XMR.Type.ACTION, None, [])
-        statement2 = OutputXMRStatement.instance(self.g, template, [], None)
+        template = OutputXMRTemplate.build("test-template", XMR.Type.ACTION, None, [])
+        statement2 = OutputXMRStatement.instance(Space("TEST"), template, [], None)
 
-        goal = Goal(self.g.register("GOAL"))
-        Variable.instance(self.g, "$var1", 123, goal)
-        step = Step.build(self.g, 1, [statement1, statement2])
-        decision = Decision.build(self.g, goal, "TEST-PLAN", step)
+        goal = Goal(Frame("@TEST.GOAL"))
+        Variable.instance(Space("TEST"), "$var1", 123, goal)
+        step = Step.build(Space("TEST"), 1, [statement1, statement2])
+        decision = Decision.build(Space("TEST"), goal, "TEST-PLAN", step)
 
         self.assertEqual([], decision.impasses())
         self.assertEqual([], decision.outputs())
@@ -1379,10 +1371,10 @@ class DecisionTestCase(unittest.TestCase):
 
         self.assertEqual(1, len(decision.impasses()))
         self.assertEqual("IMPASSE-GOAL", decision.impasses()[0].name())
-        self.assertEqual("TEST.IMPASSE-GOAL.1", decision.impasses()[0].frame.name())
+        self.assertEqual("@TEST.IMPASSE-GOAL.1", decision.impasses()[0].frame.id)
         self.assertEqual(123, decision.impasses()[0].resolve("$var1"))
 
-        self.assertEqual("TEST.IMPASSE-GOAL.1", goal.subgoals()[0].frame.name())
+        self.assertEqual("@TEST.IMPASSE-GOAL.1", goal.subgoals()[0].frame.id)
 
         self.assertEqual(Decision.Status.BLOCKED, decision.status())
 
@@ -1538,14 +1530,10 @@ class DecisionTestCase(unittest.TestCase):
 class ExpectationTestCase(unittest.TestCase):
 
     def setUp(self):
-        self.n = Network()
-        self.g = self.n.register("TEST")
-
-        self.n.register("EXE")
-        Bootstrap.bootstrap_resource(self.n, "backend.resources", "exe.knowledge")
+        Bootstrap.bootstrap_resource(None, "backend.resources", "exe.knowledge")
 
     def test_status(self):
-        e = self.g.register("EXPECTATION")
+        e = Frame("@TEST.EXPECTATION")
         e["STATUS"] = Expectation.Status.EXPECTING
 
         self.assertEqual(Expectation.Status.EXPECTING, Expectation(e).status())
@@ -1553,26 +1541,26 @@ class ExpectationTestCase(unittest.TestCase):
     def test_condition(self):
         from backend.models.statement import ExistsStatement
 
-        e = self.g.register("EXPECTATION")
-        e["CONDITION"] = ExistsStatement.instance(self.g, Frame.q(self.n).id("TEST.FRAME.1")).frame
+        e = Frame("@TEST.EXPECTATION")
+        e["CONDITION"] = ExistsStatement.instance(Space("TEST"), Query().search(IdComparator("@TEST.FRAME.1"))).frame
 
-        self.assertEqual(ExistsStatement.instance(self.g, Frame.q(self.n).id("TEST.FRAME.1")), Expectation(e).condition())
+        self.assertEqual(ExistsStatement.instance(Space("TEST"), Query().search(IdComparator("@TEST.FRAME.1"))), Expectation(e).condition())
 
     def test_build(self):
         from backend.models.statement import ExistsStatement
 
-        e = Expectation.build(self.g, Expectation.Status.EXPECTING, ExistsStatement.instance(self.g, Frame.q(self.n).id("TEST.FRAME.1")))
+        e = Expectation.build(Space("TEST"), Expectation.Status.EXPECTING, ExistsStatement.instance(Space("TEST"), Query().search(IdComparator("@TEST.FRAME.1"))))
 
         self.assertEqual(Expectation.Status.EXPECTING, e.status())
-        self.assertEqual(ExistsStatement.instance(self.g, Frame.q(self.n).id("TEST.FRAME.1")), e.condition())
+        self.assertEqual(ExistsStatement.instance(Space("TEST"), Query().search(IdComparator("@TEST.FRAME.1"))), e.condition())
 
     def test_assess(self):
         from backend.models.statement import IsStatement
 
-        target = self.g.register("TARGET")
-        varmap = VariableMap(self.g.register("VARMAP"))
+        target = Frame("@TEST.TARGET")
+        varmap = VariableMap(Frame("@TEST.VARMAP"))
 
-        e = Expectation.build(self.g, Expectation.Status.PENDING, IsStatement.instance(self.g, target, "SLOT", 123))
+        e = Expectation.build(Space("TEST"), Expectation.Status.PENDING, IsStatement.instance(Space("TEST"), target, "SLOT", 123))
         self.assertEqual(Expectation.Status.PENDING, e.status())
 
         e.assess(varmap)
@@ -1590,19 +1578,15 @@ class ExpectationTestCase(unittest.TestCase):
 class EffectTestCase(unittest.TestCase):
 
     def setUp(self):
-        self.n = Network()
-        self.g = self.n.register("TEST")
-
-        self.n.register("EXE")
-        Bootstrap.bootstrap_resource(self.n, "backend.resources", "exe.knowledge")
+        Bootstrap.bootstrap_resource(None, "backend.resources", "exe.knowledge")
 
     def test_statements(self):
         from backend.models.statement import AddFillerStatement
 
-        statement1 = AddFillerStatement.instance(self.g, "TEST.FRAME.1", "SLOT", 123)
-        statement2 = AddFillerStatement.instance(self.g, "TEST.FRAME.1", "SLOT", 123)
+        statement1 = AddFillerStatement.instance(Space("TEST"), "TEST.FRAME.1", "SLOT", 123)
+        statement2 = AddFillerStatement.instance(Space("TEST"), "TEST.FRAME.1", "SLOT", 123)
 
-        frame = self.g.register("EFFECT")
+        frame = Frame("@TEST.EFFECT")
         frame["HAS-STATEMENT"] += statement1.frame
         frame["HAS-STATEMENT"] += statement2.frame
 
@@ -1611,27 +1595,27 @@ class EffectTestCase(unittest.TestCase):
     def test_build(self):
         from backend.models.statement import AddFillerStatement
 
-        statement1 = AddFillerStatement.instance(self.g, "TEST.FRAME.1", "SLOT", 123)
-        statement2 = AddFillerStatement.instance(self.g, "TEST.FRAME.1", "SLOT", 123)
+        statement1 = AddFillerStatement.instance(Space("TEST"), "TEST.FRAME.1", "SLOT", 123)
+        statement2 = AddFillerStatement.instance(Space("TEST"), "TEST.FRAME.1", "SLOT", 123)
 
-        effect = Effect.build(self.g, [statement1, statement2])
+        effect = Effect.build(Space("TEST"), [statement1, statement2])
 
         self.assertEqual([statement1, statement2], effect.statements())
 
     def test_apply(self):
         from backend.models.statement import AddFillerStatement, Variable
 
-        statement1 = AddFillerStatement.instance(self.g, "TEST.FRAME.1", "SLOT", 123)
-        statement2 = AddFillerStatement.instance(self.g, "TEST.FRAME.1", "SLOT", Literal("$var1"))
+        statement1 = AddFillerStatement.instance(Space("TEST"), "@TEST.FRAME.1", "SLOT", 123)
+        statement2 = AddFillerStatement.instance(Space("TEST"), "@TEST.FRAME.1", "SLOT", "$var1")
 
-        effect = Effect.build(self.g, [statement1, statement2])
+        effect = Effect.build(Space("TEST"), [statement1, statement2])
 
-        frame = self.g.register("FRAME", generate_index=True)
+        frame = Frame("@TEST.FRAME.?")
 
         self.assertEqual([], frame["SLOT"])
 
-        varmap = VariableMap(self.g.register("VARMAP"))
-        Variable.instance(self.g, "$var1", 456, varmap)
+        varmap = VariableMap(Frame("@TEST.VARMAP"))
+        Variable.instance(Space("TEST"), "$var1", 456, varmap)
         effect.apply(varmap)
 
         self.assertEqual([123, 456], frame["SLOT"])

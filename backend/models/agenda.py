@@ -146,6 +146,9 @@ class Goal(VariableMap):
         slot = self.frame["NAME", Role.LOC]
         if len(slot) == 1:
             return slot.singleton()
+        slot = self.frame["NAME"]
+        if len(slot) == 1:
+            return slot.singleton()
         # if "NAME" in self.frame:
         #     return self.frame["NAME"].singleton()
         return "Unknown Goal"
@@ -301,7 +304,7 @@ class Plan(object):
     DEFAULT = "DEFAULT"
 
     @classmethod
-    def build(cls, space: Space, name: str, select: Union[Statement, str], steps: Union['Step', Frame, List[Union['Step', Frame]]], negate: bool=False):
+    def build(cls, space: Space, name: str, select: Union[Statement, Frame, str], steps: Union['Step', Frame, List[Union['Step', Frame]]], negate: bool=False):
 
         if isinstance(select, Statement):
             select = select.frame
@@ -344,7 +347,7 @@ class Plan(object):
 
         if "SELECT" in self.frame:
             select = self.frame["SELECT"].singleton()
-            if isinstance(select, Frame) and (select ^ "EXE.BOOLEAN-STATEMENT" or select ^ "EXE.MP-STATEMENT"):
+            if isinstance(select, Frame) and (select ^ "@EXE.BOOLEAN-STATEMENT" or select ^ "@EXE.MP-STATEMENT"):
                 result = Statement.from_instance(select).run(StatementScope(), varmap)
                 if self.is_negated():
                     result = not result
@@ -372,8 +375,8 @@ class Plan(object):
     def __eq__(self, other):
         if isinstance(other, Plan):
             return (self.frame == other.frame) or (
-                self.frame["NAME"] == other.frame["NAME"] and
-                self.frame["NEGATE"] == other.frame["NEGATE"] and
+                self.frame["NAME"] == list(other.frame["NAME"]) and
+                self.frame["NEGATE"] == list(other.frame["NEGATE"]) and
                 self.__eqSELECT(other) and
                 self.__eqSTEPS(other)
             )
@@ -382,24 +385,24 @@ class Plan(object):
         return super().__eq__(other)
 
     def __eqSELECT(self, other: 'Plan'):
-        if self.frame["SELECT"] == other.frame["SELECT"]:
+        if self.frame["SELECT"] == list(other.frame["SELECT"]):
             return True
         if self.frame["SELECT"] == Plan.DEFAULT or other.frame["SELECT"] == Plan.DEFAULT:
             return False
 
-        s1 = list(map(lambda frame: Statement.from_instance(frame.resolve()), self.frame["SELECT"]))
-        s2 = list(map(lambda frame: Statement.from_instance(frame.resolve()), other.frame["SELECT"]))
+        s1 = list(map(lambda frame: Statement.from_instance(frame), self.frame["SELECT"]))
+        s2 = list(map(lambda frame: Statement.from_instance(frame), other.frame["SELECT"]))
 
         return s1 == s2
 
     def __eqSTEPS(self, other: 'Plan'):
-        if self.frame["HAS-STEP"] == other.frame["HAS-STEP"]:
+        if self.frame["HAS-STEP"] == list(other.frame["HAS-STEP"]):
             return True
         if len(self.frame["HAS-STEP"]) != len(other.frame["HAS-STEP"]):
             return False
 
-        s1 = list(map(lambda frame: Step(frame.resolve()), self.frame["HAS-STEP"]))
-        s2 = list(map(lambda frame: Step(frame.resolve()), other.frame["HAS-STEP"]))
+        s1 = list(map(lambda frame: Step(frame), self.frame["HAS-STEP"]))
+        s2 = list(map(lambda frame: Step(frame), other.frame["HAS-STEP"]))
 
         return s1 == s2
 
@@ -451,10 +454,10 @@ class Step(object):
     def perform(self, varmap: VariableMap) -> StatementScope:
         scope = StatementScope()
         for statement in self.frame["PERFORM"]:
-            statement = statement.resolve()
+            statement = statement
             if statement == Step.IDLE:
                 pass
-            if isinstance(statement, Frame) and statement ^ "EXE.STATEMENT":
+            if isinstance(statement, Frame) and statement ^ "@EXE.STATEMENT":
                 Statement.from_instance(statement).run(scope, varmap)
 
         for transient in scope.transients:
@@ -466,21 +469,21 @@ class Step(object):
         if isinstance(other, Step):
             return self.frame == other.frame or (
                 self.__eqPERFORM(other) and
-                self.frame["STATUS"] == other.frame["STATUS"] and
-                self.frame["INDEX"] == other.frame["INDEX"]
+                self.frame["STATUS"] == list(other.frame["STATUS"]) and
+                self.frame["INDEX"] == list(other.frame["INDEX"])
             )
         if isinstance(other, Frame):
             return self.frame == other
         return super().__eq__(other)
 
     def __eqPERFORM(self, other: 'Step'):
-        if self.frame["PERFORM"] == other.frame["PERFORM"]:
+        if self.frame["PERFORM"] == list(other.frame["PERFORM"]):
             return True
         if self.frame["PERFORM"] == Step.IDLE or other.frame["PERFORM"] == Step.IDLE:
             return False
 
-        s1 = list(map(lambda frame: Statement.from_instance(frame.resolve()), self.frame["PERFORM"]))
-        s2 = list(map(lambda frame: Statement.from_instance(frame.resolve()), other.frame["PERFORM"]))
+        s1 = list(map(lambda frame: Statement.from_instance(frame), self.frame["PERFORM"]))
+        s2 = list(map(lambda frame: Statement.from_instance(frame), other.frame["PERFORM"]))
 
         return s1 == s2
 
@@ -536,8 +539,8 @@ class Trigger(object):
 class Condition(object):
 
     @classmethod
-    def build(cls, graph: Graph, statements: List[Statement], status: Goal.Status, logic: 'Condition.Logic'=1, order: int=1, on: 'Condition.On'=None):
-        frame = graph.register("CONDITION", generate_index=True)
+    def build(cls, space: Space, statements: List[Statement], status: Goal.Status, logic: 'Condition.Logic'=1, order: int=1, on: 'Condition.On'=None):
+        frame = Frame("@" + space.name + ".CONDITION.?")
         frame["IF"] = list(map(lambda statement: statement.frame, statements))
         frame["LOGIC"] = logic
         frame["STATUS"] = status
@@ -562,7 +565,7 @@ class Condition(object):
         self.frame = frame
 
         for statement in self.frame["IF"]:
-            if not statement ^ "EXE.BOOLEAN-STATEMENT":
+            if not statement ^ "@EXE.BOOLEAN-STATEMENT":
                 raise Exception("IF statement is not a BOOLEAN-STATEMENT.")
 
     def order(self) -> int:
@@ -621,10 +624,10 @@ class Condition(object):
         if isinstance(other, Condition):
             return self.frame == other.frame or (
                 self.__eqIF(other) and
-                self.frame["LOGIC"] == other.frame["LOGIC"] and
-                self.frame["STATUS"] == other.frame["STATUS"] and
-                self.frame["ORDER"] == other.frame["ORDER"] and
-                self.frame["ON"] == other.frame["ON"]
+                self.frame["LOGIC"] == list(other.frame["LOGIC"]) and
+                self.frame["STATUS"] == list(other.frame["STATUS"]) and
+                self.frame["ORDER"] == list(other.frame["ORDER"]) and
+                self.frame["ON"] == list(other.frame["ON"])
             )
         if isinstance(other, Frame):
             return self.frame == other
@@ -634,8 +637,8 @@ class Condition(object):
         if self.frame["IF"] == other.frame["IF"]:
             return True
 
-        s1 = list(map(lambda frame: Statement.from_instance(frame.resolve()), self.frame["IF"]))
-        s2 = list(map(lambda frame: Statement.from_instance(frame.resolve()), other.frame["IF"]))
+        s1 = list(map(lambda frame: Statement.from_instance(frame), self.frame["IF"]))
+        s2 = list(map(lambda frame: Statement.from_instance(frame), other.frame["IF"]))
 
         return s1 == s2
 
@@ -753,7 +756,7 @@ class Decision(object):
         try:
             scope = self.step().perform(self.goal())
             self.frame["HAS-OUTPUT"] = list(map(lambda output: output.frame, scope.outputs))
-            self.frame["HAS-EXPECTATION"] = list(map(lambda expectation: Expectation.build(self.goal().frame._graph, Expectation.Status.PENDING, expectation).frame, scope.expectations))
+            self.frame["HAS-EXPECTATION"] = list(map(lambda expectation: Expectation.build(self.goal().frame.space(), Expectation.Status.PENDING, expectation).frame, scope.expectations))
         except AssertStatement.ImpasseException as e:
             for r in e.resolutions:
                 impasse: Frame = r.run(StatementScope(), self.goal())
@@ -805,11 +808,11 @@ class Expectation(object):
         SATISFIED = "SATISFIED"
 
     @classmethod
-    def build(cls, graph: Graph, status: 'Expectation.Status', condition: Union[str, Identifier, Frame, Statement]):
+    def build(cls, space: Space, status: 'Expectation.Status', condition: Union[str, Identifier, Frame, Statement]):
         if isinstance(condition, Statement):
             condition = condition.frame
 
-        frame = graph.register("EXPECTATION", generate_index=True)
+        frame = Frame("@" + space.name + ".EXPECTATION.?")
 
         frame["STATUS"] = status
         frame["CONDITION"] = condition
@@ -858,7 +861,7 @@ class Effect(object):
         self.frame = frame
 
     def statements(self) -> List[Statement]:
-        return list(map(lambda s: Statement.from_instance(s.resolve()), self.frame["HAS-STATEMENT"]))
+        return list(map(lambda s: Statement.from_instance(s), self.frame["HAS-STATEMENT"]))
 
     def apply(self, varmap: VariableMap):
         scope = StatementScope()
