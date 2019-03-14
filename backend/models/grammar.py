@@ -1,5 +1,6 @@
-from backend.models.graph import Identifier, Literal, Network
+# from backend.models.graph import Identifier, Literal, Network
 from lark import Lark, Transformer
+from ontograph.Index import Identifier
 from pkgutil import get_data
 
 from typing import TYPE_CHECKING
@@ -9,19 +10,26 @@ if TYPE_CHECKING:
 
 class Grammar(object):
 
+    # @classmethod
+    # def parse(cls):
+    #     raise NotImplementedError
+
     @classmethod
-    def parse(cls, network: Network, input: str, resource: str="backend.resources", peg: str="grammar.lark", start: str="start", agent: 'Agent'=None):
+    def parse(cls, agent: 'Agent', input: str, resource: str="backend.resources", peg: str="grammar.lark", start: str="start"):
         grammar = get_data(resource, peg).decode('ascii')
         lark = Lark(grammar, start=start)
         tree = lark.parse(input)
-        return GrammarTransformer(network, agent=agent).transform(tree)
+        return GrammarTransformer(agent).transform(tree)
 
 
 class GrammarTransformer(Transformer):
 
-    def __init__(self, network: Network, agent: 'Agent'=None):
+    # def __init__(self):
+    #     raise NotImplementedError
+    #     raise NotImplementedError
+
+    def __init__(self, agent: 'Agent'):
         super().__init__()
-        self.network = network
         self.agent = agent
 
     def start(self, matches):
@@ -38,17 +46,17 @@ class GrammarTransformer(Transformer):
 
         graph = matches[0]
         name = matches[1]
-        index = False if str(matches[2]) == "=" else matches[2]
+        index_opt = list(filter(lambda m: isinstance(m, int) or isinstance(m, bool), matches))
+        index = index_opt[0] if len(index_opt) > 0 else False
+
         isa = list(filter(lambda m: isinstance(m, Identifier), matches))
         properties = list(filter(lambda m: isinstance(m, BootstrapTriple), matches))
 
         for p in properties:
-            if isinstance(p.filler, Identifier) and p.filler.name == "SELF" and p.filler.graph is None and p.filler.instance is None:
-                p.filler.graph = self.agent.identity._identifier.graph
-                p.filler.name = self.agent.identity._identifier.name
-                p.filler.instance = self.agent.identity._identifier.instance
+            if isinstance(p.filler, Identifier) and p.filler.id == "SELF":
+                p.filler.id = self.agent.identity.id
 
-        return BootstrapDeclareKnowledge(self.network, graph, name, index=index, isa=isa, properties=properties)
+        return BootstrapDeclareKnowledge(graph, name, index=index, isa=isa, properties=properties)
 
     def declare_knowledge_instance(self, matches):
         if isinstance(matches[0], int):
@@ -75,7 +83,7 @@ class GrammarTransformer(Transformer):
         identifier = matches[0]
         properties = list(filter(lambda m: isinstance(m, BootstrapTriple), matches))
 
-        return BootstrapAppendKnowledge(self.network, identifier, properties)
+        return BootstrapAppendKnowledge(identifier, properties)
 
     def append_knowledge_element(self, matches):
         return matches[0]
@@ -97,9 +105,13 @@ class GrammarTransformer(Transformer):
         return BootstrapRegisterMP(mp, name=name)
 
     def agent_method(self, matches):
+        index = matches[0].rfind(".")
+        module = matches[0][0:index]
+        clazz = matches[0][index + 1:]
+
         import sys
-        __import__(matches[0])
-        return getattr(sys.modules[matches[0]], matches[1])
+        __import__(module)
+        return getattr(sys.modules[module], clazz)
 
     def add_trigger(self, matches):
         from backend.models.bootstrap import BootstrapAddTrigger
@@ -108,7 +120,7 @@ class GrammarTransformer(Transformer):
         definition = matches[5]
         query = matches[7]
 
-        return BootstrapAddTrigger(self.agent, agenda, definition, query)
+        return BootstrapAddTrigger(agenda, definition, query)
 
     def output_xmr_template(self, matches):
         from backend.models.bootstrap import BootstrapDeclareKnowledge, BootstrapDefineOutputXMRTemplate
@@ -126,7 +138,7 @@ class GrammarTransformer(Transformer):
         else:
             include = matches[7]
 
-        return BootstrapDefineOutputXMRTemplate(self.network, name, type, capability, params, root, include)
+        return BootstrapDefineOutputXMRTemplate(name, type, capability, params, root, include)
 
     def output_xmr_template_type(self, matches):
         from backend.models.xmr import XMR
@@ -156,7 +168,7 @@ class GrammarTransformer(Transformer):
         return matches[0]
 
     def filler_argument(self, matches):
-        return Literal(matches[0])
+        return matches[0]
 
     # Statements and executables
 
@@ -166,10 +178,11 @@ class GrammarTransformer(Transformer):
     def goal(self, matches):
         from backend.models.agenda import Condition, Effect, Goal, Plan
         from backend.models.bootstrap import BoostrapGoal
+        from ontograph.Space import Space
 
         name = str(matches[0])
         variables = matches[1]
-        graph = matches[5]
+        space = matches[5]
 
         priority = matches[6]
         resources = matches[7]
@@ -182,7 +195,7 @@ class GrammarTransformer(Transformer):
             c.frame["ORDER"] = condition_order
             condition_order += 1
 
-        return BoostrapGoal(Goal.define(self.agent[graph], name, priority, resources, plan, conditions, variables, effects))
+        return BoostrapGoal(Goal.define(Space(space), name, priority, resources, plan, conditions, variables, effects))
 
     def priority(self, matches):
         from backend.models.statement import Statement
@@ -332,14 +345,14 @@ class GrammarTransformer(Transformer):
         from backend.models.statement import AssignFillerStatement
         domain = matches[0]
         slot = str(matches[1])
-        filler = matches[3]
+        filler = matches[2]
 
         return AssignFillerStatement.instance(self.agent.exe, domain, slot, filler)
 
     def assign_variable_statement(self, matches):
         from backend.models.statement import AssignVariableStatement
         variable = str(matches[0])
-        value = matches[2]
+        value = matches[1]
 
         return AssignVariableStatement.instance(self.agent.exe, variable, value)
 
@@ -369,13 +382,13 @@ class GrammarTransformer(Transformer):
     def mp_statement(self, matches):
         from backend.models.statement import MeaningProcedureStatement
 
-        params = list(map(lambda m: Literal(m) if isinstance(m, str) and m.startswith("$") else m, matches[2]))
+        params = matches[2]
 
         return MeaningProcedureStatement.instance(self.agent.exe, matches[1], params)
 
     def statement_instance(self, matches):
         if isinstance(matches[0], Identifier):
-            if matches[0].render() == "SELF":
+            if matches[0].id == "SELF":
                 return self.agent.identity
             return matches[0]
         if str(matches[0]) == "SELF":
@@ -426,8 +439,7 @@ class GrammarTransformer(Transformer):
         return str(matches[0])
 
     def output_arguments(self, matches):
-        from backend.models.graph import Frame
-        return list(map(lambda match: Literal(match) if not isinstance(match, Frame) and not isinstance(match, Identifier) else match, matches))
+        return matches
 
     def output_argument(self, matches):
         return matches[0]
@@ -436,11 +448,11 @@ class GrammarTransformer(Transformer):
         name = str(matches[0]).upper()
 
         return {
-            "INTERNAL": self.agent.internal._namespace,
-            "EXE": self.agent.exe._namespace,
-            "ONTOLOGY": self.agent.ontology._namespace,
-            "WM": self.agent.wo_memory._namespace,
-            "LT": self.agent.lt_memory._namespace
+            "INTERNAL": self.agent.internal.name,
+            "EXE": self.agent.exe.name,
+            "ONTOLOGY": self.agent.ontology.name,
+            "WM": self.agent.wo_memory.name,
+            "LT": self.agent.lt_memory.name
         }[name]
 
     def list(self, matches):
@@ -461,7 +473,7 @@ class GrammarTransformer(Transformer):
         if len(paths) == 0:
             paths = None
 
-        return View(self.network, matches[1], query=query, follow=paths)
+        return View(self.agent, matches[1], query=query, follow=paths)
 
     def view_all(self, matches):
         return None
@@ -492,14 +504,14 @@ class GrammarTransformer(Transformer):
 
     def to(self, matches):
         from backend.models.query import FrameQuery, Query
-        return FrameQuery(self.network, list(filter(lambda match: isinstance(match, Query), matches))[0])
+        return FrameQuery(list(filter(lambda match: isinstance(match, Query), matches))[0])
 
     def relation(self, matches):
         return str(matches[0])
 
     def frame_query(self, matches):
         from backend.models.query import FrameQuery, Query
-        return FrameQuery(self.network, list(filter(lambda match: isinstance(match, Query), matches))[0])
+        return FrameQuery(list(filter(lambda match: isinstance(match, Query), matches))[0])
 
     def frame_id_query(self, matches):
         return matches[0]
@@ -509,57 +521,57 @@ class GrammarTransformer(Transformer):
 
     def logical_and_slot_query(self, matches):
         from backend.models.query import AndQuery, Query
-        return AndQuery(self.network, list(filter(lambda match: isinstance(match, Query), matches)))
+        return AndQuery(list(filter(lambda match: isinstance(match, Query), matches)))
 
     def logical_or_slot_query(self, matches):
         from backend.models.query import OrQuery, Query
-        return OrQuery(self.network, list(filter(lambda match: isinstance(match, Query), matches)))
+        return OrQuery(list(filter(lambda match: isinstance(match, Query), matches)))
 
     def logical_not_slot_query(self, matches):
         from backend.models.query import NotQuery
-        return NotQuery(self.network, matches[1])
+        return NotQuery(matches[1])
 
     def logical_exact_slot_query(self, matches):
         from backend.models.query import ExactQuery
-        return ExactQuery(self.network, matches[1].queries)
+        return ExactQuery(matches[1].queries)
 
     def slot_query(self, matches):
         from backend.models.query import SlotQuery
-        return SlotQuery(self.network, matches[0])
+        return SlotQuery(matches[0])
 
     def slot_name_only_query(self, matches):
         from backend.models.query import NameQuery
-        return NameQuery(self.network, matches[1])
+        return NameQuery(matches[1])
 
     def slot_name_fillers_query(self, matches):
         from backend.models.query import AndQuery, NameQuery
         if matches[0] == "*":
             return matches[1]
         else:
-            return AndQuery(self.network, [NameQuery(self.network, matches[0]), matches[1]])
+            return AndQuery([NameQuery(matches[0]), matches[1]])
 
     def logical_filler_query(self, matches):
         return matches[0]
 
     def logical_and_filler_query(self, matches):
         from backend.models.query import AndQuery, Query
-        return AndQuery(self.network, list(filter(lambda match: isinstance(match, Query), matches)))
+        return AndQuery(list(filter(lambda match: isinstance(match, Query), matches)))
 
     def logical_or_filler_query(self, matches):
         from backend.models.query import OrQuery, Query
-        return OrQuery(self.network, list(filter(lambda match: isinstance(match, Query), matches)))
+        return OrQuery(list(filter(lambda match: isinstance(match, Query), matches)))
 
     def logical_not_filler_query(self, matches):
         from backend.models.query import NotQuery
-        return NotQuery(self.network, matches[1])
+        return NotQuery(matches[1])
 
     def logical_exact_filler_query(self, matches):
         from backend.models.query import ExactQuery
-        return ExactQuery(self.network, matches[1].queries)
+        return ExactQuery(matches[1].queries)
 
     def filler_query(self, matches):
         from backend.models.query import FillerQuery
-        return FillerQuery(self.network, matches[0])
+        return FillerQuery(matches[0])
 
     def identifier_query(self, matches):
         from backend.models.query import IdentifierQuery
@@ -579,17 +591,20 @@ class GrammarTransformer(Transformer):
         set = True
         if matches[1] == "!":
             set = False
-        return IdentifierQuery(self.network, matches[-1], comparator, set=set, from_concept=from_concept)
+        return IdentifierQuery(matches[-1], comparator, set=set, from_concept=from_concept)
 
     def literal_query(self, matches):
         from backend.models.query import LiteralQuery
-        return LiteralQuery(self.network, matches[1])
+        return LiteralQuery(matches[1])
 
     def identifier(self, matches):
-        return Identifier.parse(".".join(map(lambda match: str(match), matches)))
+        id = "@" + ".".join(map(lambda match: str(match), matches))
+        if id == "@SELF":
+            id = self.agent.identity.id
+        return Identifier(id)
 
     def literal(self, matches):
-        return Literal(matches[0])
+        return matches[0]
 
     def graph(self, matches):
         return str(matches[0])

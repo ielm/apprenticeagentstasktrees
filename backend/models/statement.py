@@ -241,13 +241,13 @@ class AddFillerStatement(Statement):
 
     def __eq__(self, other):
         if isinstance(other, AddFillerStatement):
-            return other.frame["TO"] == self.frame["TO"] and \
-                   other.frame["SLOT"] == self.frame["SLOT"] and \
+            return other.frame["TO"] == list(self.frame["TO"]) and \
+                   other.frame["SLOT"] == list(self.frame["SLOT"]) and \
                    self.__eqADD(other)
         return super().__eq__(other)
 
     def __eqADD(self, other: 'AddFillerStatement') -> bool:
-        if other.frame["ADD"] == self.frame["ADD"]:
+        if other.frame["ADD"] == list(self.frame["ADD"]):
             return True
 
         try:
@@ -298,10 +298,10 @@ class AssertStatement(Statement):
 class AssignFillerStatement(Statement):
 
     @classmethod
-    def instance(cls, graph: Graph, to: Union[str, Identifier, Frame, Query], slot: str, value: Any):
-        frame = graph.register("ASSIGNFILLER-STATEMENT", isa="EXE.ASSIGNFILLER-STATEMENT", generate_index=True)
-        frame["TO"] = to if not isinstance(to, str) else Literal(to)
-        frame["SLOT"] = Literal(slot)
+    def instance(cls, space: Space, to: Union[str, Identifier, Frame, Query], slot: str, value: Any):
+        frame = Frame("@" + space.name + ".ASSIGNFILLER-STATEMENT.?").add_parent("@EXE.ASSIGNFILLER-STATEMENT")
+        frame["TO"] = to
+        frame["SLOT"] = slot
         frame["ASSIGN"] = value
 
         return AssignFillerStatement(frame)
@@ -335,18 +335,18 @@ class AssignFillerStatement(Statement):
 
     def __eq__(self, other):
         if isinstance(other, AssignFillerStatement):
-            return other.frame["TO"] == self.frame["TO"] and \
-                   other.frame["SLOT"] == self.frame["SLOT"] and \
-                   other.frame["ASSIGN"] == self.frame["ASSIGN"]
+            return other.frame["TO"] == list(self.frame["TO"]) and \
+                   other.frame["SLOT"] == list(self.frame["SLOT"]) and \
+                   other.frame["ASSIGN"] == list(self.frame["ASSIGN"])
         return super().__eq__(other)
 
 
 class AssignVariableStatement(Statement):
 
     @classmethod
-    def instance(cls, graph: Graph, variable: str, value: Any):
-        frame = graph.register("ASSIGNVARIABLE-STATEMENT", isa="EXE.ASSIGNVARIABLE-STATEMENT", generate_index=True)
-        frame["TO"] = Literal(variable)
+    def instance(cls, space: Space, variable: str, value: Any):
+        frame = Frame("@" + space.name + ".ASSIGNVARIABLE-STATEMENT.?").add_parent("@EXE.ASSIGNVARIABLE-STATEMENT")
+        frame["TO"] = variable
         frame["ASSIGN"] = value
 
         return AssignVariableStatement(frame)
@@ -375,7 +375,7 @@ class AssignVariableStatement(Statement):
 
     def __eq__(self, other):
         if isinstance(other, AssignVariableStatement):
-            return self.frame["TO"] == other.frame["TO"] and self.frame["ASSIGN"] == other.frame["ASSIGN"]
+            return list(self.frame["TO"]) == list(other.frame["TO"]) and list(self.frame["ASSIGN"]) == list(other.frame["ASSIGN"])
         return super().__eq__(other)
 
 
@@ -429,14 +429,14 @@ class ExpectationStatement(Statement):
 class ForEachStatement(Statement):
 
     @classmethod
-    def instance(cls, graph: Graph, query: Query, assign: str, do: Union[Statement, List[Statement]]):
+    def instance(cls, space: Space, query: Query, assign: str, do: Union[Statement, List[Statement]]):
         if isinstance(do, Statement):
             do = [do]
         do = list(map(lambda do: do.frame, do))
 
-        frame = graph.register("FOREACH-STATEMENT", isa="EXE.FOREACH-STATEMENT", generate_index=True)
+        frame = Frame("@" + space.name + ".FOREACH-STATEMENT.?").add_parent("@EXE.FOREACH-STATEMENT")
         frame["FROM"] = query
-        frame["ASSIGN"] = Literal(assign)
+        frame["ASSIGN"] = assign
         frame["DO"] = do
 
         return ForEachStatement(frame)
@@ -459,9 +459,9 @@ class ForEachStatement(Statement):
 
     def __eq__(self, other):
         if isinstance(other, ForEachStatement):
-            return other.frame["FROM"] == self.frame["FROM"] and \
-                   other.frame["ASSIGN"] == self.frame["ASSIGN"] and \
-                   list(map(lambda frame: Statement.from_instance(frame.resolve()), other.frame["DO"])) == list(map(lambda frame: Statement.from_instance(frame.resolve()), self.frame["DO"]))
+            return list(other.frame["FROM"]) == list(self.frame["FROM"]) and \
+                   other.frame["ASSIGN"] == list(self.frame["ASSIGN"]) and \
+                   list(map(lambda frame: Statement.from_instance(frame), other.frame["DO"])) == list(map(lambda frame: Statement.from_instance(frame), self.frame["DO"]))
 
         return super().__eq__(other)
 
@@ -469,10 +469,10 @@ class ForEachStatement(Statement):
 class IsStatement(Statement):
 
     @classmethod
-    def instance(clsg, graph: Graph, domain: Union[str, Identifier, Frame], slot: str, filler: Any):
-        frame = graph.register("IS-STATEMENT", isa="EXE.IS-STATEMENT", generate_index=True)
-        frame["DOMAIN"] = domain if not isinstance(domain, str) else Literal(domain)
-        frame["SLOT"] = Literal(slot)
+    def instance(clsg, space: Space, domain: Union[str, Identifier, Frame], slot: str, filler: Any):
+        frame = Frame("@" + space.name + ".IS-STATEMENT.?").add_parent("@EXE.IS-STATEMENT")
+        frame["DOMAIN"] = domain
+        frame["SLOT"] = slot
         frame["FILLER"] = filler
 
         return IsStatement(frame)
@@ -498,9 +498,9 @@ class IsStatement(Statement):
 
     def __eq__(self, other):
         if isinstance(other, IsStatement):
-            return other.frame["DOMAIN"] == self.frame["DOMAIN"] and \
-                   other.frame["SLOT"] == self.frame["SLOT"] and \
-                   other.frame["FILLER"] == self.frame["FILLER"]
+            return other.frame["DOMAIN"] == list(self.frame["DOMAIN"]) and \
+                   other.frame["SLOT"] == list(self.frame["SLOT"]) and \
+                   other.frame["FILLER"] == list(self.frame["FILLER"])
         return super().__eq__(other)
 
 
@@ -542,9 +542,9 @@ class MakeInstanceStatement(Statement):
 
     def __eq__(self, other):
         if isinstance(other, MakeInstanceStatement):
-            return other.frame["IN"] == self.frame["IN"] and \
-                   other.frame["OF"] == self.frame["OF"] and \
-                   other.frame["PARAMS"] == self.frame["PARAMS"]
+            return other.frame["IN"] == list(self.frame["IN"]) and \
+                   other.frame["OF"] == list(self.frame["OF"]) and \
+                   other.frame["PARAMS"] == list(self.frame["PARAMS"])
         return super().__eq__(other)
 
 
@@ -568,8 +568,8 @@ class MeaningProcedureStatement(Statement):
 
     def __eq__(self, other):
         if isinstance(other, MeaningProcedureStatement):
-            return other.frame["CALLS"] == self.frame["CALLS"] and \
-                   other.frame["PARAMS"] == self.frame["PARAMS"]
+            return other.frame["CALLS"] == list(self.frame["CALLS"]) and \
+                   other.frame["PARAMS"] == list(self.frame["PARAMS"])
         return super().__eq__(other)
 
 

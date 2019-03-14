@@ -34,7 +34,7 @@ class Bootstrap(object):
     @classmethod
     def bootstrap_resource(cls, agent: Agent, package: str, file: str):
         input: str = get_data(package, file).decode('ascii')
-        bootstraps = Grammar.parse(agent, input, start="bootstrap", agent=agent)
+        bootstraps = Grammar.parse(agent, input, start="bootstrap")
         for bootstrap in bootstraps:
             bootstrap()
 
@@ -94,7 +94,10 @@ class BootstrapDeclareKnowledge(Bootstrap):
             frame.add_parent(parent)
 
         for property in self.properties:
-            frame[property.slot][property.facet] += property.filler
+            if property.facet is None:
+                frame[property.slot] += property.filler
+            else:
+                frame[property.slot][property.facet] += property.filler
             # if isinstance(self.graph, Ontology):
             #     frame[property.slot] += OntologyFiller(property.filler, property.facet)
             # else:
@@ -102,8 +105,7 @@ class BootstrapDeclareKnowledge(Bootstrap):
 
     def __eq__(self, other):
         if isinstance(other, BootstrapDeclareKnowledge):
-            return self.network == other.network and \
-                    self.graph == other.graph and \
+            return self.space == other.space and \
                     self.name == other.name and \
                     self.index == other.index and \
                     self.isa == other.isa and \
@@ -135,8 +137,7 @@ class BootstrapAppendKnowledge(Bootstrap):
 
     def __eq__(self, other):
         if isinstance(other, BootstrapAppendKnowledge):
-            return self.network == other.network and \
-                    self.frame == other.frame and \
+            return self.frame == other.frame and \
                     self.properties == other.properties
         return super().__eq__(other)
 
@@ -187,8 +188,7 @@ class BootstrapAddTrigger(Bootstrap):
 
     def __eq__(self, other):
         if isinstance(other, BootstrapAddTrigger):
-            return self.network == other.network and \
-                    self.agenda == other.agenda and \
+            return self.agenda == other.agenda and \
                     self.definition == other.definition and \
                     self.query == other.query
         return super().__eq__(other)
@@ -241,8 +241,7 @@ class BootstrapDefineOutputXMRTemplate(Bootstrap):
 
     def __eq__(self, other):
         if isinstance(other, BootstrapDefineOutputXMRTemplate):
-            return self.network == other.network and \
-                self.name == other.name and \
+            return self.name == other.name and \
                 self.type == other.type and \
                 self.capability == other.capability and \
                 self.params == other.params and \

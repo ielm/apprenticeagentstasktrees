@@ -15,7 +15,7 @@ append_knowledge_element: (append_property_knowledge)
 append_property_knowledge: slot (facet)? filler
 
 register_mp: REGISTER MP agent_method (AS NAME)?
-agent_method: MODULE "." CLASS
+agent_method: MODULE
 
 add_trigger: ADD TRIGGER TO identifier INSTANTIATE identifier WHEN logical_slot_query
 
@@ -166,8 +166,8 @@ logical_not_slot_query: NOT logical_slot_query
 logical_exact_slot_query: EXACTLY logical_and_slot_query
 
 slot_query: (slot_name_only_query | slot_name_fillers_query)
-slot_name_only_query: HAS NAME
-slot_name_fillers_query: (NAME | WILDCARD) (logical_filler_query)
+slot_name_only_query: HAS SLOT
+slot_name_fillers_query: (SLOT | WILDCARD) (logical_filler_query)
 logical_filler_query: (filler_query | "(" filler_query ")" | logical_and_filler_query | logical_or_filler_query | logical_not_filler_query | logical_exact_filler_query)
 logical_and_filler_query: "(" logical_filler_query (AND logical_filler_query)+ ")"
 logical_or_filler_query: "(" logical_filler_query (OR logical_filler_query)+ ")"
@@ -221,9 +221,10 @@ SUBCLASSES: ">"
 CLASS: /[a-z0-9\_]+/i
 GRAPH: /[a-zA-Z]+/
 MODULE: /[a-z0-9\_]+[\.[a-z0-9\_]+]*/i
-NAME: /(?!True|False|isa)[a-zA-Z\.\*\_\-]+/i
+NAME: /(?!True|False|isa)[a-zA-Z\*\_\-]+/i
 INSTANCE: /[0-9]+/
 RELATION: /[a-zA-Z0-9\-]+/
+SLOT: /(?!True|False|isa)[a-zA-Z\.\*\_\-]+/i
 WILDCARD: "*"
 
 INTEGER: /[0-9]+/
