@@ -1,6 +1,7 @@
-from backend.models.graph import Network
 from backend.models.path import Path
 from backend.models.query import FrameQuery, IdentifierQuery
+from ontograph import graph
+from ontograph.Frame import Frame
 
 import unittest
 
@@ -8,12 +9,11 @@ import unittest
 class PathTestCase(unittest.TestCase):
 
     def setUp(self):
-        self.n = Network()
-        self.g = self.n.register("TEST")
+        graph.reset()
 
     def test_path_single_step(self):
-        f1 = self.g.register("TEST.FRAME.1")
-        f2 = self.g.register("TEST.FRAME.2")
+        f1 = Frame("@TEST.FRAME.1")
+        f2 = Frame("@TEST.FRAME.2")
 
         f1["REL1"] = f2
 
@@ -23,8 +23,8 @@ class PathTestCase(unittest.TestCase):
         self.assertTrue(f2 in results)
 
     def test_path_single_step_with_wildcard(self):
-        f1 = self.g.register("TEST.FRAME.1")
-        f2 = self.g.register("TEST.FRAME.2")
+        f1 = Frame("@TEST.FRAME.1")
+        f2 = Frame("@TEST.FRAME.2")
 
         f1["REL1"] = f2
 
@@ -34,9 +34,9 @@ class PathTestCase(unittest.TestCase):
         self.assertTrue(f2 in results)
 
     def test_path_multiple_steps(self):
-        f1 = self.g.register("TEST.FRAME.1")
-        f2 = self.g.register("TEST.FRAME.2")
-        f3 = self.g.register("TEST.FRAME.3")
+        f1 = Frame("@TEST.FRAME.1")
+        f2 = Frame("@TEST.FRAME.2")
+        f3 = Frame("@TEST.FRAME.3")
 
         f1["REL1"] = f2
         f2["REL2"] = f3
@@ -48,9 +48,9 @@ class PathTestCase(unittest.TestCase):
         self.assertTrue(f3 in results)
 
     def test_path_recursive_step(self):
-        f1 = self.g.register("TEST.FRAME.1")
-        f2 = self.g.register("TEST.FRAME.2")
-        f3 = self.g.register("TEST.FRAME.3")
+        f1 = Frame("@TEST.FRAME.1")
+        f2 = Frame("@TEST.FRAME.2")
+        f3 = Frame("@TEST.FRAME.3")
 
         f1["REL"] = f2
         f2["REL"] = f3
@@ -62,9 +62,9 @@ class PathTestCase(unittest.TestCase):
         self.assertTrue(f3 in results)
 
     def test_path_recursive_step_with_cycle(self):
-        f1 = self.g.register("TEST.FRAME.1")
-        f2 = self.g.register("TEST.FRAME.2")
-        f3 = self.g.register("TEST.FRAME.3")
+        f1 = Frame("@TEST.FRAME.1")
+        f2 = Frame("@TEST.FRAME.2")
+        f3 = Frame("@TEST.FRAME.3")
 
         f1["REL"] = f2
         f2["REL"] = f3
@@ -79,13 +79,13 @@ class PathTestCase(unittest.TestCase):
         self.assertEqual(2, len(results))
 
     def test_path_step_with_query(self):
-        f1 = self.g.register("TEST.FRAME.1")
-        f2 = self.g.register("TEST.FRAME.2")
-        f3 = self.g.register("TEST.FRAME.3")
+        f1 = Frame("@TEST.FRAME.1")
+        f2 = Frame("@TEST.FRAME.2")
+        f3 = Frame("@TEST.FRAME.3")
 
         f1["REL"] = [f2, f3]
 
-        query = FrameQuery(self.n, IdentifierQuery(self.n, "TEST.FRAME.2", IdentifierQuery.Comparator.EQUALS))
+        query = FrameQuery(IdentifierQuery("@TEST.FRAME.2", IdentifierQuery.Comparator.EQUALS))
         path = Path().to("REL", query=query)
         results = path.start(f1)
 

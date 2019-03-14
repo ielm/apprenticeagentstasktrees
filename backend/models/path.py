@@ -1,5 +1,5 @@
-from backend.models.graph import Frame, Identifier
 from backend.models.query import FrameQuery
+from ontograph.Frame import Frame
 from typing import List
 
 
@@ -34,10 +34,10 @@ class Path(object):
             for f in current:
                 next.extend(self._follow(f, step))
 
-            results_ids = set(map(lambda result: result._identifier.render(), results))
-            next_ids = set(map(lambda result: result._identifier.render(), next))
+            results_ids = set(map(lambda result: result.id, results))
+            next_ids = set(map(lambda result: result.id, next))
             to_add_ids = next_ids.difference(results_ids)
-            next = list(filter(lambda result: result._identifier.render() in to_add_ids and result != frame, next))
+            next = list(filter(lambda result: result.id in to_add_ids and result != frame, next))
 
             current = next
             results.extend(current)
@@ -52,16 +52,14 @@ class Path(object):
     def _follow(self, frame: Frame, step: 'PathStep') -> List[Frame]:
         results = []
 
-        fillers = frame[step.relation]._storage
+        fillers = list(frame[step.relation])
         if step.relation == "*":
             for slot in frame:
-                fillers.extend(frame[slot]._storage)
-        fillers = list(filter(lambda filler: isinstance(filler._value, Identifier), fillers))
+                fillers.extend(slot)
 
         for filler in fillers:
-            frame = filler.resolve()
-            if step.query is None or step.query.compare(frame):
-                results.append(frame)
+            if step.query is None or step.query.compare(filler):
+                results.append(filler)
         return results
 
     def __eq__(self, other):
