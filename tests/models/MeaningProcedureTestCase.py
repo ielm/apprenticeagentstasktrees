@@ -1,6 +1,8 @@
-from backend.models.graph import Frame, Graph, Literal
+# from backend.models.graph import Frame, Graph, Literal
 from backend.models.mps import AgentMethod, Executable, MeaningProcedure, MPRegistry, Registry
 from io import StringIO
+from ontograph import graph
+from ontograph.Frame import Frame
 
 import contextlib
 import sys
@@ -73,26 +75,29 @@ class RegistryTestCase(unittest.TestCase):
 
 class MeaningProcedureTestCase(unittest.TestCase):
 
+    def setUp(self):
+        graph.reset()
+
     def test_calls(self):
         def test_mp(*args, **kwargs): pass
 
         registry = Registry()
         registry.register(test_mp)
 
-        frame = Frame("MEANING-PROCEDURE.1")
-        frame["CALLS"] = Literal(test_mp.__name__)
+        frame = Frame("@TEST.MEANING-PROCEDURE.1")
+        frame["CALLS"] = test_mp.__name__
 
         mp = MeaningProcedure(frame)
         self.assertEqual(mp.calls(), test_mp.__name__)
 
     def test_calls_raises_exception_if_not_one_property(self):
-        frame = Frame("MEANING-PROCEDURE.1")
+        frame = Frame("@TEST.MEANING-PROCEDURE.1")
 
         with self.assertRaises(Exception):
             MeaningProcedure(frame).calls()
 
-        frame["CALLS"] += Literal("test1")
-        frame["CALLS"] += Literal("test2")
+        frame["CALLS"] += "test1"
+        frame["CALLS"] += "test2"
 
         with self.assertRaises(Exception):
             MeaningProcedure(frame).calls()
@@ -112,8 +117,8 @@ class MeaningProcedureTestCase(unittest.TestCase):
 
         MPRegistry.register(TestMP)
 
-        frame = Frame("MEANING-PROCEDURE.1")
-        frame["CALLS"] = Literal(TestMP.__name__)
+        frame = Frame("@TEST.MEANING-PROCEDURE.1")
+        frame["CALLS"] = TestMP.__name__
 
         mp = MeaningProcedure(frame)
         mp.run(None, False, test=123)
@@ -122,7 +127,7 @@ class MeaningProcedureTestCase(unittest.TestCase):
         self.assertEqual(proof_b, 123)
 
     def test_order(self):
-        frame = Frame("MEANING-PROCEDURE.1")
+        frame = Frame("@TEST.MEANING-PROCEDURE.1")
 
         mp = MeaningProcedure(frame)
         self.assertEqual(mp.order(), sys.maxsize)
@@ -136,11 +141,13 @@ class MeaningProcedureTestCase(unittest.TestCase):
 
 class ExecutableTestCase(unittest.TestCase):
 
+    def setUp(self):
+        graph.reset()
+
     def test_mps(self):
-        g = Graph("TEST")
-        e = g.register("EXECUTABLE.1")
-        mp1 = g.register("MEANING-PROCEDURE.1")
-        mp2 = g.register("MEANING-PROCEDURE.2")
+        e = Frame("@TEST.EXECUTABLE.1")
+        mp1 = Frame("@TEST.MEANING-PROCEDURE.1")
+        mp2 = Frame("@TEST.MEANING-PROCEDURE.2")
 
         e["RUN"] = [mp1, mp2]
         executable = Executable(e)
@@ -165,12 +172,11 @@ class ExecutableTestCase(unittest.TestCase):
 
         MPRegistry.register(TestMP)
 
-        g = Graph("TEST")
-        e = g.register("EXECUTABLE.1")
-        mp = g.register("MEANING-PROCEDURE.1")
+        e = Frame("@TEST.EXECUTABLE.1")
+        mp = Frame("@TEST.MEANING-PROCEDURE.1")
 
         e["RUN"] = mp
-        mp["CALLS"] = Literal(TestMP.__name__)
+        mp["CALLS"] = TestMP.__name__
 
         executable = Executable(e)
         executable.run(None, False, test=123)
@@ -194,14 +200,13 @@ class ExecutableTestCase(unittest.TestCase):
         MPRegistry.register(TestMP1)
         MPRegistry.register(TestMP2)
 
-        g = Graph("TEST")
-        e = g.register("EXECUTABLE.1")
-        mp1 = g.register("MEANING-PROCEDURE.1")
-        mp2 = g.register("MEANING-PROCEDURE.2")
+        e = Frame("@TEST.EXECUTABLE.1")
+        mp1 = Frame("@TEST.MEANING-PROCEDURE.1")
+        mp2 = Frame("@TEST.MEANING-PROCEDURE.2")
 
         e["RUN"] = [mp1, mp2]
-        mp1["CALLS"] = Literal(TestMP1.__name__)
-        mp2["CALLS"] = Literal(TestMP2.__name__)
+        mp1["CALLS"] = TestMP1.__name__
+        mp2["CALLS"] = TestMP2.__name__
         mp1["ORDER"] = 2
         mp2["ORDER"] = 1
 
@@ -211,6 +216,6 @@ class ExecutableTestCase(unittest.TestCase):
         self.assertEqual(proof, 1)
 
     def test_run_raises_exception_if_no_mps_found(self):
-        executable = Executable(Frame("TEST.1"))
+        executable = Executable(Frame("@TEST.FRAME.1"))
         with self.assertRaises(Exception):
             executable.run()

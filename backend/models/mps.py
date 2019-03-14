@@ -1,4 +1,6 @@
-from backend.models.graph import Frame, Identifier
+# from backend.models.graph import Frame, Identifier
+from ontograph.Frame import Frame
+from ontograph.Index import Identifier
 from typing import Any, Callable, List, Union
 
 from typing import TYPE_CHECKING
@@ -85,7 +87,7 @@ class Executable(object):
         self.frame = frame
 
     def mps(self, slot="RUN") -> List['MeaningProcedure']:
-        return list(map(lambda mp: MeaningProcedure(mp.resolve()), self.frame[slot]))
+        return list(map(lambda mp: MeaningProcedure(mp), self.frame[slot]))
 
     def run(self, *args, slot="RUN", **kwargs) -> Any:
         if len(self.frame[slot]) == 0:
@@ -107,16 +109,16 @@ class MeaningProcedure(object):
         if len(self.frame["CALLS"]) > 1:
             raise Exception("Too many CALLS properties found in MEANING-PROCEDURE.")
 
-        name = self.frame["CALLS"][0].resolve().value
+        name = self.frame["CALLS"][0]
         return name
 
     def order(self) -> int:
         if len(self.frame["ORDER"]) == 0:
             return sys.maxsize
         if len(self.frame["ORDER"]) == 1:
-            return self.frame["ORDER"][0].resolve().value
+            return self.frame["ORDER"][0]
 
-        return max(map(lambda filler: filler.resolve().value, self.frame["ORDER"]))
+        return max(self.frame["ORDER"])
 
     def run(self, *args, **kwargs) -> Any:
         name = self.calls()
