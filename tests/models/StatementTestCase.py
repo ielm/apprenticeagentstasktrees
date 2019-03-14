@@ -2,7 +2,7 @@ from backend.models.bootstrap import Bootstrap
 # from backend.models.graph import Frame, Graph, Identifier, Literal, Network
 from backend.models.mps import AgentMethod, MPRegistry
 from backend.models.query import Query
-from backend.models.statement import TransientFrame, Statement, StatementScope, Variable, VariableMap
+from backend.models.statement import TransientFrame, Statement, StatementRegistry, StatementScope, Variable, VariableMap
 from backend.models.xmr import XMR
 from ontograph import graph
 from ontograph.Frame import Frame
@@ -202,10 +202,12 @@ class StatementTestCase(unittest.TestCase):
             def run(self, scope: StatementScope, varmap: VariableMap):
                 return 1
 
-        Frame("@TEST.TEST-STATEMENT").add_parent("@EXE.STATEMENT")
-        Frame("@TEST.TEST-STATEMENT")["CLASSMAP"] = TestStatement
+        StatementRegistry.register(TestStatement)
 
-        frame = Frame("@TEST.TEST.1").add_parent("@TEST-STATEMENT")
+        Frame("@TEST.STATEMENT").add_parent("@EXE.STATEMENT")
+        Frame("@EXE.STATEMENT")["CLASSMAP"] = TestStatement.__qualname__
+
+        frame = Frame("@TEST.TEST.1").add_parent("@TEST.STATEMENT")
         stmt = Statement.from_instance(frame)
 
         self.assertIsInstance(stmt, TestStatement)
@@ -265,11 +267,13 @@ class AddFillerStatementTestCase(unittest.TestCase):
             def run(self, scope: StatementScope(), varmap: VariableMap):
                 return 123
 
+        StatementRegistry.register(TestStatement)
+
         addfiller = Frame("@TEST.FRAME").add_parent("@EXE.ADDFILLER-STATEMENT")
         target = Frame("@TEST.TARGET")
         stmt = Frame("@TEST.TEST-STMT").add_parent("@EXE.RETURNING-STATEMENT")
 
-        Frame("@RETURNING-STATEMENT")["CLASSMAP"] = TestStatement
+        Frame("@EXE.RETURNING-STATEMENT")["CLASSMAP"] = TestStatement.__qualname__
 
         addfiller["TO"] = target
         addfiller["SLOT"] = "X"
@@ -407,14 +411,16 @@ class AssignFillerStatementTestCase(unittest.TestCase):
             def run(self, scope: StatementScope(), varmap: VariableMap):
                 return 123
 
-        assignfiller = self.g.register("TEST", isa="EXE.ASSIGNFILLER-STATEMENT")
-        target = self.g.register("TARGET")
-        stmt = self.g.register("TEST-STMT", isa="EXE.RETURNING-STATEMENT")
+        StatementRegistry.register(TestStatement)
 
-        self.g["RETURNING-STATEMENT"]["CLASSMAP"] = Literal(TestStatement)
+        assignfiller = Frame("@TEST.FRAME").add_parent("@EXE.ASSIGNFILLER-STATEMENT")
+        target = Frame("@TEST.TARGET")
+        stmt = Frame("@TEST.STMT").add_parent("@EXE.RETURNING-STATEMENT")
+
+        Frame("@EXE.RETURNING-STATEMENT")["CLASSMAP"] = TestStatement.__qualname__
 
         assignfiller["TO"] = target
-        assignfiller["SLOT"] = Literal("X")
+        assignfiller["SLOT"] = "X"
         assignfiller["ASSIGN"] = stmt
 
         Statement.from_instance(assignfiller).run(StatementScope(), None)
@@ -557,7 +563,9 @@ class ForEachStatementTestCase(unittest.TestCase):
         class TestStatement(Statement):
             def run(self, scope: StatementScope(), varmap: VariableMap):
                 frame = varmap.resolve("$FOR")
-                frame["c"] = frame["a"][0].resolve().value + frame["b"][0].resolve().value
+                frame["c"] = frame["a"][0] + frame["b"][0]
+
+        StatementRegistry.register(TestStatement)
 
         foreach = Frame("@TEST.FRAME").add_parent("@EXE.FOREACH-STATEMENT")
         stmt = Frame("@TEST.STMT").add_parent("@EXE.STATEMENT")
@@ -571,10 +579,10 @@ class ForEachStatementTestCase(unittest.TestCase):
         target1["b"] = 2
         target2["b"] = 3
 
-        self.g["STATEMENT"]["CLASSMAP"] = Literal(TestStatement)
+        Frame("@EXE.STATEMENT")["CLASSMAP"] = TestStatement.__qualname__
 
-        foreach["FROM"] = Query.parse(self.g._network, "WHERE a = 1")
-        foreach["ASSIGN"] = Literal("$FOR")
+        foreach["FROM"] = Query().search(ExistsComparator(slot="a", filler=1))
+        foreach["ASSIGN"] = "$FOR"
         foreach["DO"] = stmt
 
         Statement.from_instance(foreach).run(StatementScope(), VariableMap(varmap))

@@ -475,15 +475,15 @@ class ForEachStatement(Statement):
     def run(self, scope: StatementScope, varmap: VariableMap):
         query: Query = self.frame["FROM"].singleton()
         variable: str = self.frame["ASSIGN"].singleton()
-        do: List[Statement] = list(map(lambda stmt: Statement.from_instance(stmt.resolve()), self.frame["DO"]))
+        do: List[Statement] = list(map(lambda stmt: Statement.from_instance(stmt), self.frame["DO"]))
 
         var: Variable = None
         try:
             var = varmap.find(variable)
         except:
-            var = Variable.instance(self.frame._graph, variable, None, varmap)
+            var = Variable.instance(self.frame.space(), variable, None, varmap)
 
-        for frame in self.frame._graph._network.search(query):
+        for frame in query.start(graph):
             var.set_value(frame)
             for stmt in do:
                 stmt.run(scope, varmap)
