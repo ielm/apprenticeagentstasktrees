@@ -58,6 +58,9 @@ class XMR(object):
     @classmethod
     def instance(g, space: Space, refers_to: Union[str, Space], signal: Signal, type: Type, status: Union[InputStatus, OutputStatus], source: Union[str, Identifier, Frame], root: [str, Identifier, Frame], capability: [str, Identifier, Frame, Capability]=None) -> 'XMR':
 
+        if isinstance(source, str):
+            source = Frame(source)
+
         if isinstance(refers_to, Space):
             refers_to = refers_to.name
 
@@ -74,9 +77,9 @@ class XMR(object):
         frame = Frame("@" + space.name + ".XMR.?").add_parent(isa)
 
         frame["REFERS-TO-GRAPH"] = refers_to
-        frame["SIGNAL"] = signal.name
-        frame["TYPE"] = type.name
-        frame["STATUS"] = status.name
+        frame["SIGNAL"] = signal
+        frame["TYPE"] = type
+        frame["STATUS"] = status
         frame["SOURCE"] = source
         frame["ROOT"] = root
         frame["TIMESTAMP"] = time.time()
@@ -141,18 +144,18 @@ class XMR(object):
         self.frame["STATUS"] = status
 
     def render(self) -> str:
-        return self.frame.name()
+        return self.frame.id
 
 
 class AMR(XMR):
 
     def render(self):
         try:
-            if self.source().name() != "SELF.ROBOT.1":
+            if self.source().id != "@SELF.ROBOT.1":
                 return super().render()
 
-            action = self.root()._identifier.name.upper()
-            theme = self.root()["THEME"].singleton().name()
+            action = Identifier.parse(self.root().id)[1].upper()
+            theme = self.root()["THEME"].singleton().id
 
             return "I am taking the " + action + "(" + theme + ") action."
 
@@ -163,10 +166,10 @@ class MMR(XMR):
 
     def render(self):
         try:
-            if self.root()._identifier.name != "INIT-GOAL":
+            if Identifier.parse(self.root().id)[1] != "INIT-GOAL":
                 return super().render()
 
-            if self.source().name() != "SELF.ROBOT.1":
+            if self.source().id != "@SELF.ROBOT.1":
                 return super().render()
 
             from backend.models.agenda import Goal

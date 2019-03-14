@@ -1,11 +1,20 @@
 from backend.models.environment import Environment
-from backend.models.graph import Frame, Graph, Identifier, Literal, Network
-from backend.models.ontology import Ontology
+# from backend.models.graph import Frame, Graph, Identifier, Literal, Network
+# from backend.models.ontology import Ontology
 from backend.models.xmr import XMR
 from backend.utils.AtomicCounter import AtomicCounter
+from ontograph.Frame import Frame
+from ontograph.Index import Identifier
+from ontograph.Space import Space
 
 import time
 from typing import List, Union
+
+
+class Network(object): pass
+class Ontology(object): pass
+class Graph(object): pass
+class Literal(object): pass
 
 
 class VMR(XMR):
@@ -100,7 +109,7 @@ class VMR(XMR):
             environment.enter(object, location=location)
 
     def events(self) -> List[Frame]:
-        return list(map(lambda f: f.resolve(), self.graph(self._network())["EVENTS"]["HAS-EVENT"]))
+        return list(Frame("@" + self.graph().name + ".EVENTS")["HAS-EVENT"])
 
     def epoch(self) -> Frame:
         return self.frame["EPOCH"].singleton()
@@ -131,7 +140,7 @@ class VMR(XMR):
 
         def get_then(now: Frame) -> Frame:
             if len(now["FOLLOWS"]) == 0:
-                return Frame("NO-SUCH-EPOCH")
+                return Frame("@ENV.NO-SUCH-EPOCH", declare=False)
             return now["FOLLOWS"].singleton()
 
         def get_view(env: Environment, epoch: Frame) -> List[Frame]:
@@ -145,10 +154,10 @@ class VMR(XMR):
                 return frame["NAME"].singleton()
             if "HAS-NAME" in frame:
                 return frame["HAS-NAME"].singleton()
-            return frame.name()
+            return frame.id
 
         try:
-            env = Environment(self.frame._graph._network["ENV"])
+            env = Environment(Space("ENV"))
 
             now = self.epoch()
             then = get_then(now)
@@ -174,7 +183,7 @@ class VMR(XMR):
             for e in self.events():
                 agent = e["AGENT"].singleton()
                 theme = e["THEME"].singleton()
-                action = e._identifier.name
+                action = Identifier.parse(e.id)[1]
 
                 observations.append("I see that " + get_name(agent) + " did " + action + "(" + get_name(theme) + ")")
 
