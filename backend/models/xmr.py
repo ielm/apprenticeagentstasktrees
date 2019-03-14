@@ -1,10 +1,17 @@
 from backend.models.effectors import Capability
-from backend.models.graph import Frame, Graph, Identifier, Literal, Network
+# from backend.models.graph import Frame, Graph, Identifier, Literal, Network
 
 from enum import Enum
+from ontograph.Frame import Frame
+from ontograph.Graph import Graph
+from ontograph.Index import Identifier
+from ontograph.Space import Space
 from typing import Union
 
 import time
+
+
+class Network(object): pass
 
 
 # XMR is a Frame wrapper object for holding a node as a reference to a particular meaning representation, and resolving
@@ -49,26 +56,27 @@ class XMR(object):
         return clazz(frame)
 
     @classmethod
-    def instance(g, graph: Graph, refers_to: Union[str, Graph], signal: Signal, type: Type, status: Union[InputStatus, OutputStatus], source: Union[str, Identifier, Frame], root: [str, Identifier, Frame], capability: [str, Identifier, Frame, Capability]=None) -> 'XMR':
+    def instance(g, space: Space, refers_to: Union[str, Space], signal: Signal, type: Type, status: Union[InputStatus, OutputStatus], source: Union[str, Identifier, Frame], root: [str, Identifier, Frame], capability: [str, Identifier, Frame, Capability]=None) -> 'XMR':
 
-        if isinstance(refers_to, Graph):
-            refers_to = refers_to._namespace
+        if isinstance(refers_to, Space):
+            refers_to = refers_to.name
 
         if isinstance(capability, Capability):
             capability = capability.frame
 
         isa = {
-            "ACTION": "EXE.AMR",
-            "MENTAL": "EXE.MMR",
-            "LANGUAGE": "EXE.TMR",
-            "VISUAL": "EXE.VMR",
+            "ACTION": Frame("@EXE.AMR"),
+            "MENTAL": Frame("@EXE.MMR"),
+            "LANGUAGE": Frame("@EXE.TMR"),
+            "VISUAL": Frame("@EXE.VMR"),
         }[type.name]
 
-        frame = graph.register("XMR", isa=isa, generate_index=True)
-        frame["REFERS-TO-GRAPH"] = Literal(refers_to)
-        frame["SIGNAL"] = Literal(signal)
-        frame["TYPE"] = Literal(type)
-        frame["STATUS"] = Literal(status)
+        frame = Frame("@" + space.name + ".XMR.?").add_parent(isa)
+
+        frame["REFERS-TO-GRAPH"] = refers_to
+        frame["SIGNAL"] = signal.name
+        frame["TYPE"] = type.name
+        frame["STATUS"] = status.name
         frame["SOURCE"] = source
         frame["ROOT"] = root
         frame["TIMESTAMP"] = time.time()
@@ -117,8 +125,8 @@ class XMR(object):
     def source(self) -> Frame:
         return self.frame["SOURCE"].singleton()
 
-    def graph(self, network: Network) -> Graph:
-        return network[self.frame["REFERS-TO-GRAPH"].singleton()]
+    def graph(self) -> Space:
+        return Space(self.frame["REFERS-TO-GRAPH"].singleton())
 
     def timestamp(self) -> float:
         return self.frame["TIMESTAMP"].singleton()

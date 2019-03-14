@@ -1,58 +1,74 @@
 from backend.models.effectors import Capability
-from backend.models.graph import Frame, Graph, Identifier, Literal, Network
+# from backend.models.graph import Frame, Graph, Identifier, Literal, Network
 from backend.models.xmr import XMR
+from ontograph import graph
+from ontograph.Frame import Frame
+from ontograph.Index import Identifier
+from ontograph.Space import Space
 from typing import Any, List, Tuple, Union
+
+
+class Graph(object): pass
+class Literal(object): pass
+class Network(object): pass
 
 
 class OutputXMRTemplate(object):
 
     @classmethod
-    def build(cls, network: Network, name: str, type: XMR.Type, capability: Union[str, Identifier, Frame, Capability], params: List[str]) -> 'OutputXMRTemplate':
-        template_id = "XMR-TEMPLATE#" + str(len(list(filter(lambda graph: graph.startswith("XMR-TEMPLATE#"), network._storage.keys()))) + 1)
+    def build(cls, name: str, type: XMR.Type, capability: Union[str, Identifier, Frame, Capability], params: List[str]) -> 'OutputXMRTemplate':
+        spaces = filter(lambda space: space.name.startswith("XMR-TEMPLATE#"), graph)
+        spaces = list(map(lambda space: int(space.name.replace("XMR-TEMPLATE#", "")), spaces))
 
-        graph = network.register(template_id)
-        anchor = graph.register("TEMPLATE-ANCHOR", generate_index=True)
+        template_id = "XMR-TEMPLATE#" + str(max(spaces) + 1 if len(spaces) > 0 else 1)
+
+        #template_id = "XMR-TEMPLATE#" + str(len(list(filter(lambda graph: graph.startswith("XMR-TEMPLATE#"), network._storage.keys()))) + 1)
+
+        space = Space(template_id)
+        anchor = Frame("@" + space.name + ".TEMPLATE-ANCHOR.?")
 
         if isinstance(capability, str):
-            capability = Identifier.parse(capability)
+            capability = Frame(capability)
         if isinstance(capability, Capability):
             capability = capability.frame
+        if isinstance(capability, Identifier):
+            capability = Frame(capability.id)
 
-        params = list(map(lambda param: Literal(param) if not isinstance(param, Literal) else param, params))
+        # params = list(map(lambda param: Literal(param) if not isinstance(param, Literal) else param, params))
 
-        anchor["NAME"] = Literal(name)
+        anchor["NAME"] = name
         anchor["TYPE"] = type
         anchor["REQUIRES"] = capability
         anchor["PARAMS"] = params
 
-        return OutputXMRTemplate(graph)
+        return OutputXMRTemplate(space)
 
     @classmethod
-    def lookup(cls, network: Network, name: str) -> Union['OutputXMRTemplate', None]:
-        for graph in network._storage.values():
+    def lookup(cls, name: str) -> Union['OutputXMRTemplate', None]:
+        for space in graph:
             try:
-                template = OutputXMRTemplate(graph)
+                template = OutputXMRTemplate(space)
                 if template.name() == name:
                     return template
             except: pass
         return None
 
     @classmethod
-    def list(cls, network: Network) -> List['OutputXMRTemplate']:
+    def list(cls) -> List['OutputXMRTemplate']:
         templates = []
-        for graph in network._storage.values():
+        for space in graph:
             try:
-                template = OutputXMRTemplate(graph)
-                if template.graph._namespace.startswith("XMR-TEMPLATE#") and template.anchor() is not None:
+                template = OutputXMRTemplate(space)
+                if template.space.name.startswith("XMR-TEMPLATE#") and template.anchor() is not None:
                     templates.append(template)
             except: pass
         return templates
 
-    def __init__(self, graph: Graph):
-        self.graph = graph
+    def __init__(self, space: Space):
+        self.space = space
 
     def anchor(self) -> Frame:
-        candidates = list(filter(lambda frame: frame._identifier.name == "TEMPLATE-ANCHOR", self.graph.values()))
+        candidates = list(filter(lambda frame: Identifier.parse(frame.id)[1] == "TEMPLATE-ANCHOR", self.space))
         if len(candidates) != 1:
             raise Exception
         return candidates[0]
@@ -65,13 +81,13 @@ class OutputXMRTemplate(object):
         anchor = self.anchor()
         return anchor["TYPE"].singleton()
 
-    def capability(self) -> Identifier:
+    def capability(self) -> Capability:
         anchor = self.anchor()
-        return anchor["REQUIRES"].singleton()
+        return Capability(anchor["REQUIRES"].singleton())
 
     def params(self) -> List[str]:
         anchor = self.anchor()
-        return list(map(lambda filler: filler.resolve(), anchor["PARAMS"]))
+        return list(anchor["PARAMS"])
 
     def root(self) -> Union[Frame, None]:
         if "ROOT" not in self.anchor():
@@ -85,62 +101,64 @@ class OutputXMRTemplate(object):
         anchor = self.anchor()
         anchor["ROOT"] = root
 
-    def create(self, network: Network, graph: Graph, params: List[Any]) -> XMR:
-        graph_id = "XMR#" + str(len(list(filter(lambda graph: graph.startswith("XMR#"), network._storage.keys()))) + 1)
+    def create(self, space: Space, params: List[Any]) -> XMR:
+        spaces = filter(lambda space: space.name.startswith("XMR#"), graph)
+        spaces = list(map(lambda space: int(space.name.replace("XMR#", "")), spaces))
 
-        xmr_graph = network.register(graph_id)
+        graph_id = "XMR#" + str(max(spaces) + 1 if len(spaces) > 0 else 1)
+
+        xmr_graph = Space(graph_id)
         root = None
         if self.root() is not None:
-            root = Identifier(graph_id, self.root()._identifier.name, self.root()._identifier.instance)
-        anchor = XMR.instance(graph, xmr_graph, XMR.Signal.OUTPUT, self.type(), XMR.OutputStatus.PENDING, "SELF.ROBOT.1", root, self.capability())
+            root = Identifier(self.root().id.replace("@" + self.root().space().name, "@" + graph_id))
+        anchor = XMR.instance(space, xmr_graph, XMR.Signal.OUTPUT, self.type(), XMR.OutputStatus.PENDING, "SELF.ROBOT.1", root, self.capability())
 
         def materialize_transient_frame(param: Any):
             if isinstance(param, Identifier):
-                param = param.resolve(None, network)
+                param = Frame(param.id)
             if not isinstance(param, Frame):
                 return param
-            if not param ^ "EXE.TRANSIENT-FRAME":
+            if not param ^ "@EXE.TRANSIENT-FRAME":
                 return param
 
             transient_frame: Frame = param
             parent = transient_frame["INSTANCE-OF"].singleton()
 
-            materialized_id = Identifier(graph_id, parent._identifier.name)
-            materialized_frame = xmr_graph.register(str(materialized_id), generate_index=True)
+            materialized_id = "@" + graph_id + "." + Identifier.parse(parent.id)[1] + ".?"
+            materialized_frame = Frame(materialized_id)
 
             for slot in transient_frame:
-                for filler in transient_frame[slot]:
-                    materialized_frame[slot] += filler
+                for filler in slot:
+                    materialized_frame[slot.property] += filler
 
             return materialized_frame
 
         params = list(map(lambda param: materialize_transient_frame(param), params))
 
-        for frame in self.graph.values():
+        for frame in self.space:
             if frame == self.anchor():
                 continue
 
-            modified_id = Identifier(graph_id, frame._identifier.name, frame._identifier.instance)
-            copied = xmr_graph.register(str(modified_id))
+            modified_id = frame.id.replace(frame.space().name, graph_id)
+            copied = Frame(modified_id)
 
             for slot in frame:
-                for filler in frame[slot]:
-                    value = filler.resolve()
-                    if not isinstance(value, Frame):
-                        if isinstance(value.value, str) and value.value.startswith("$"):
-                            copied[slot] += params[self.params().index(value.value)]
+                for filler in slot:
+                    if not isinstance(filler, Frame):
+                        if isinstance(filler, str) and filler.startswith("$"):
+                            copied[slot.property] += params[self.params().index(filler)]
                         else:
-                            copied[slot] += value
-                    elif value._identifier not in self.graph:
-                        copied[slot] += value
+                            copied[slot.property] += filler
+                    elif filler not in self.space:
+                        copied[slot.property] += filler
                     else:
-                        copied[slot] += Identifier(graph_id, value._identifier.name, value._identifier.instance)
+                        copied[slot.property] += Frame(filler.id.replace(filler.space().name, graph_id))
 
         return anchor
 
     def __eq__(self, other):
         if isinstance(other, OutputXMRTemplate):
-            return self.graph == other.graph
-        if isinstance(other, Graph):
-            return self.graph == other
+            return self.space == other.space
+        if isinstance(other, Space):
+            return self.space == other
         return super().__eq__(other)
