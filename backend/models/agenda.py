@@ -191,7 +191,7 @@ class Goal(VariableMap):
                 effect.apply(self)
 
     def conditions(self) -> List['Condition']:
-        return list(map(lambda condition: Condition(condition.resolve()), self.frame["WHEN"]))
+        return list(map(lambda condition: Condition(condition), self.frame["WHEN"]))
 
     def subgoals(self) -> List['Goal']:
         return list(map(lambda goal: Goal(goal), self.frame["HAS-GOAL"]))
@@ -593,7 +593,7 @@ class Condition(object):
         if "IF" not in self.frame:
             return True
 
-        results = map(lambda wc: self._assess_if(wc.resolve(), varmap), self.frame["IF"])
+        results = map(lambda wc: self._assess_if(wc, varmap), self.frame["IF"])
 
         if self.logic() == Condition.Logic.AND:
             return reduce(lambda x, y: x and y, results)
@@ -616,7 +616,7 @@ class Condition(object):
         return Condition.Logic.AND
 
     def _assess_if(self, frame: Frame, varmap: VariableMap) -> bool:
-        if not frame ^ "EXE.BOOLEAN-STATEMENT":
+        if not frame ^ "@EXE.BOOLEAN-STATEMENT":
             raise Exception("IF statement is not a BOOLEAN-STATEMENT.")
         return Statement.from_instance(frame).run(StatementScope(), varmap)
 

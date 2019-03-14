@@ -1,13 +1,14 @@
 # from backend.models.graph import Filler, Frame, Graph, Identifier, Literal
 from backend.models.mps import MPRegistry
-from backend.models.query import Query
+# from backend.models.query import Query
 from pydoc import locate
-from typing import Any, Callable, List, Union
+from typing import Any, Callable, List, Type, Union
 
 from ontograph import graph
 from ontograph.Frame import Frame
 from ontograph.Graph import Graph
 from ontograph.Index import Identifier
+from ontograph.Query import Query
 from ontograph.Space import Space
 
 from typing import TYPE_CHECKING
@@ -156,15 +157,40 @@ class StatementScope(object):
         self.variables = {}
 
 
+class Registry(object):
+
+    def __init__(self):
+        self.statements = dict()
+        self.load_defaults()
+
+    def load_defaults(self):
+        for sub in Statement.__subclasses__():
+            self.register(sub)
+
+    def register(self, clazz: Type['Statement'], name: str=None):
+        if name is None:
+            name = clazz.__qualname__
+
+        self.statements[name] = clazz
+
+    def lookup(self, name: str) -> Type['Statement']:
+        return self.statements[name]
+
+    def reset(self):
+        self.statements = dict()
+        self.load_defaults()
+
+
 class Statement(object):
 
     @classmethod
     def from_instance(cls, frame: Frame) -> 'Statement':
         definition = frame.parents()[0]
         clazz = definition["CLASSMAP"][0]
-        if isinstance(clazz, str):
-            clazz = locate(definition["CLASSMAP"][0])
-        return clazz(frame)
+        return StatementRegistry.lookup(clazz)(frame)
+        # if isinstance(clazz, str):
+        #     clazz = locate(definition["CLASSMAP"][0])
+        # return clazz(frame)
 
     def __init__(self, frame: Frame):
         self.frame = frame
@@ -205,7 +231,7 @@ class AddFillerStatement(Statement):
         if isinstance(value, Statement):
             value = value.frame
 
-        frame = Frame("@" + space.name + "@ADDFILLER-STATEMENT.?").add_parent("@EXE.ADDFILLER-STATEMENT")
+        frame = Frame("@" + space.name + ".ADDFILLER-STATEMENT.?").add_parent("@EXE.ADDFILLER-STATEMENT")
         frame["TO"] = to
         frame["SLOT"] = slot
         frame["ADD"] = value
@@ -220,10 +246,15 @@ class AddFillerStatement(Statement):
         if isinstance(to, Identifier):
             to = Frame(self.frame.id)
         if isinstance(to, Query):
-            to = self.frame._graph.search(to)
+            to = to.start(graph)
         if isinstance(to, str):
             try:
                 to = varmap.resolve(to)
+            except: pass
+        if isinstance(to, str):
+            try:
+                Identifier.parse(to)
+                to = Frame(to)
             except: pass
         if isinstance(to, Frame):
             to = [to]
@@ -527,9 +558,9 @@ class MakeInstanceStatement(Statement):
 
         instance = Frame("@" + space + "." + Identifier.parse(of.id)[1] + ".?").add_parent(of)
         # instance = self.frame._network[graph].register(of._identifier.name, isa=of, generate_index=True)
-        for slot in of:
-            slot = of[slot]
-            instance[slot.property] = slot
+        # for slot in of:
+        #     slot = of[slot]
+        #     instance[slot.property] = slot
 
         if len(params) != len(instance["WITH"]):
             raise Exception("Mismatched parameter count when making instance of '" + of.name() + "' with parameters '" + str(params) + "'.")
@@ -662,3 +693,6 @@ class TransientFrameStatement(Statement):
             return self.frame == other
 
         return super().__eq__(other)
+
+
+StatementRegistry = Registry()

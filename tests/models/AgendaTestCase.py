@@ -2,7 +2,7 @@ from backend.agent import Agent
 from backend.models.agenda import Agenda, Condition, Decision, Effect, Expectation, Goal, Plan, Step, Trigger
 from backend.models.bootstrap import Bootstrap
 # from backend.models.graph import Frame, Graph, Literal, Network
-from backend.models.statement import Statement, StatementScope, VariableMap
+from backend.models.statement import Statement, StatementRegistry, StatementScope, VariableMap
 from backend.models.xmr import XMR
 from ontograph import graph
 from ontograph.Frame import Frame
@@ -232,9 +232,11 @@ class GoalTestCase(unittest.TestCase):
             def run(self, varmap: VariableMap, *args, **kwargs):
                 return 0.5
 
+        StatementRegistry.register(TestStatement)
+
         Bootstrap.bootstrap_resource(None, "backend.resources", "exe.knowledge")
 
-        Frame("@TEST.RETURNING-STATEMENT")["CLASSMAP"] = TestStatement
+        Frame("@EXE.RETURNING-STATEMENT")["CLASSMAP"] = TestStatement.__qualname__
         statement = Frame("@TEST.STATEMENT.1").add_parent("@EXE.RETURNING-STATEMENT")
 
         f = Frame("@TEST.GOAL.1")
@@ -273,9 +275,11 @@ class GoalTestCase(unittest.TestCase):
             def run(self, varmap: VariableMap, *args, **kwargs):
                 return 0.5
 
+        StatementRegistry.register(TestStatement)
+
         Bootstrap.bootstrap_resource(None, "backend.resources", "exe.knowledge")
 
-        Frame("@TEST.RETURNING-STATEMENT")["CLASSMAP"] = TestStatement
+        Frame("@EXE.RETURNING-STATEMENT")["CLASSMAP"] = TestStatement.__qualname__
         statement = Frame("@TEST.STATEMENT.1").add_parent("@EXE.RETURNING-STATEMENT")
 
         f = Frame("@TEST.GOAL.1")
@@ -332,6 +336,8 @@ class GoalTestCase(unittest.TestCase):
             def run(self, varmap: VariableMap, *args, **kwargs):
                 return True
 
+        StatementRegistry.register(TestStatement)
+
         class TestAgent(Agent):
             def __init__(self):
                 pass
@@ -343,7 +349,7 @@ class GoalTestCase(unittest.TestCase):
         condition2 = Frame("@TEST.CONDITION.2")
         statement = Frame("@TEST.STATEMENT.1").add_parent("@EXE.BOOLEAN-STATEMENT")
 
-        Frame("@EXE.BOOLEAN-STATEMENT")["CLASSMAP"] = TestStatement
+        Frame("@EXE.BOOLEAN-STATEMENT")["CLASSMAP"] = TestStatement.__qualname__
         goal["WHEN"] = [condition1, condition2]
         condition1["ORDER"] = 2
         condition2["ORDER"] = 1
@@ -627,9 +633,11 @@ class ConditionTestCase(unittest.TestCase):
             def run(self, scope: StatementScope,  varmap: VariableMap):
                 return True
 
+        StatementRegistry.register(TestStatement)
+
         c = Frame("@TEST.CONDITION.1")
         b = Frame("@TEST.BOOLEAN-STATEMENT.1").add_parent("@EXE.BOOLEAN-STATEMENT")
-        Frame("@EXE.BOOLEAN-STATEMENT")["CLASSMAP"] = TestStatement
+        Frame("@EXE.BOOLEAN-STATEMENT")["CLASSMAP"] = TestStatement.__qualname__
 
         c["IF"] = b
 
@@ -644,17 +652,21 @@ class ConditionTestCase(unittest.TestCase):
             def run(self, scope: StatementScope, varmap: VariableMap):
                 return result1
 
+        StatementRegistry.register(TestStatement1)
+
         class TestStatement2(Statement):
             def run(self, scope: StatementScope,  varmap: VariableMap):
                 return result2
 
+        StatementRegistry.register(TestStatement2)
+
         c = Frame("@TEST.CONDITION.1")
-        Frame("@TEST.TEST-STATEMENT-A").add_parent("@EXE.BOOLEAN-STATEMENT")
-        Frame("@TEST.TEST-STATEMENT-B").add_parent("@EXE.BOOLEAN-STATEMENT")
-        b1 = Frame("@TEST.TEST-STATEMENT-A.1").add_parent("@TEST-STATEMENT-A")
-        b2 = Frame("@TEST.TEST-STATEMENT-B.1").add_parent("@TEST-STATEMENT-B")
-        Frame("@TEST.TEST-STATEMENT-A")["CLASSMAP"] = TestStatement1
-        Frame("@TEST.TEST-STATEMENT-B")["CLASSMAP"] = TestStatement2
+        Frame("@TEST.STATEMENT-A").add_parent("@EXE.BOOLEAN-STATEMENT")
+        Frame("@TEST.STATEMENT-B").add_parent("@EXE.BOOLEAN-STATEMENT")
+        b1 = Frame("@TEST.STATEMENT-A.1").add_parent("@TEST.STATEMENT-A")
+        b2 = Frame("@TEST.STATEMENT-B.1").add_parent("@TEST.STATEMENT-B")
+        Frame("@TEST.STATEMENT-A")["CLASSMAP"] = TestStatement1.__qualname__
+        Frame("@TEST.STATEMENT-B")["CLASSMAP"] = TestStatement2.__qualname__
 
         c["IF"] = [b1, b2]
         c["LOGIC"] = Condition.Logic.AND
@@ -674,17 +686,21 @@ class ConditionTestCase(unittest.TestCase):
             def run(self, scope: StatementScope,  varmap: VariableMap):
                 return result1
 
+        StatementRegistry.register(TestStatement1)
+
         class TestStatement2(Statement):
             def run(self, scope: StatementScope,  varmap: VariableMap):
                 return result2
 
+        StatementRegistry.register(TestStatement2)
+
         c = Frame("@TEST.CONDITION.1")
-        Frame("@TEST.TEST-STATEMENT-A").add_parent("@EXE.BOOLEAN-STATEMENT")
-        Frame("@TEST.TEST-STATEMENT-B").add_parent("@EXE.BOOLEAN-STATEMENT")
-        b1 = Frame("@TEST.TEST-STATEMENT-A.1").add_parent("@TEST-STATEMENT-A")
-        b2 = Frame("@TEST.TEST-STATEMENT-B.1").add_parent("@TEST-STATEMENT-B")
-        Frame("@TEST.TEST-STATEMENT-A")["CLASSMAP"] = TestStatement1
-        Frame("@TEST.TEST-STATEMENT-B")["CLASSMAP"] = TestStatement2
+        Frame("@TEST.STATEMENT-A").add_parent("@EXE.BOOLEAN-STATEMENT")
+        Frame("@TEST.STATEMENT-B").add_parent("@EXE.BOOLEAN-STATEMENT")
+        b1 = Frame("@TEST.STATEMENT-A.1").add_parent("@TEST.STATEMENT-A")
+        b2 = Frame("@TEST.STATEMENT-B.1").add_parent("@TEST.STATEMENT-B")
+        Frame("@TEST.STATEMENT-A")["CLASSMAP"] = TestStatement1.__qualname__
+        Frame("@TEST.STATEMENT-B")["CLASSMAP"] = TestStatement2.__qualname__
 
         c["IF"] = [b1, b2]
         c["LOGIC"] = Condition.Logic.OR
@@ -704,17 +720,21 @@ class ConditionTestCase(unittest.TestCase):
             def run(self, scope: StatementScope,  varmap: VariableMap):
                 return result1
 
+        StatementRegistry.register(TestStatement1)
+
         class TestStatement2(Statement):
             def run(self, scope: StatementScope,  varmap: VariableMap):
                 return result2
 
+        StatementRegistry.register(TestStatement2)
+
         c = Frame("@TEST.CONDITION.1")
-        Frame("@TEST.TEST-STATEMENT-A").add_parent("@EXE.BOOLEAN-STATEMENT")
-        Frame("@TEST.TEST-STATEMENT-B").add_parent("@EXE.BOOLEAN-STATEMENT")
-        b1 = Frame("@TEST.TEST-STATEMENT-A.1").add_parent("@TEST-STATEMENT-A")
-        b2 = Frame("@TEST.TEST-STATEMENT-B.1").add_parent("@TEST-STATEMENT-B")
-        Frame("@TEST.TEST-STATEMENT-A")["CLASSMAP"] = TestStatement1
-        Frame("@TEST.TEST-STATEMENT-B")["CLASSMAP"] = TestStatement2
+        Frame("@TEST.STATEMENT-A").add_parent("@EXE.BOOLEAN-STATEMENT")
+        Frame("@TEST.STATEMENT-B").add_parent("@EXE.BOOLEAN-STATEMENT")
+        b1 = Frame("@TEST.STATEMENT-A.1").add_parent("@TEST.STATEMENT-A")
+        b2 = Frame("@TEST.STATEMENT-B.1").add_parent("@TEST.STATEMENT-B")
+        Frame("@TEST.STATEMENT-A")["CLASSMAP"] = TestStatement1.__qualname__
+        Frame("@TEST.STATEMENT-B")["CLASSMAP"] = TestStatement2.__qualname__
 
         c["IF"] = [b1, b2]
         c["LOGIC"] = Condition.Logic.NOR
@@ -739,17 +759,21 @@ class ConditionTestCase(unittest.TestCase):
             def run(self, scope: StatementScope,  varmap: VariableMap):
                 return result1
 
+        StatementRegistry.register(TestStatement1)
+
         class TestStatement2(Statement):
             def run(self, scope: StatementScope,  varmap: VariableMap):
                 return result2
 
+        StatementRegistry.register(TestStatement2)
+
         c = Frame("@TEST.CONDITION.1")
-        Frame("@TEST.TEST-STATEMENT-A").add_parent("@EXE.BOOLEAN-STATEMENT")
-        Frame("@TEST.TEST-STATEMENT-B").add_parent("@EXE.BOOLEAN-STATEMENT")
-        b1 = Frame("@TEST.TEST-STATEMENT-A.1").add_parent("@TEST-STATEMENT-A")
-        b2 = Frame("@TEST.TEST-STATEMENT-B.1").add_parent("@TEST-STATEMENT-B")
-        Frame("@TEST.TEST-STATEMENT-A")["CLASSMAP"] = TestStatement1
-        Frame("@TEST.TEST-STATEMENT-B")["CLASSMAP"] = TestStatement2
+        Frame("@TEST.STATEMENT-A").add_parent("@EXE.BOOLEAN-STATEMENT")
+        Frame("@TEST.STATEMENT-B").add_parent("@EXE.BOOLEAN-STATEMENT")
+        b1 = Frame("@TEST.STATEMENT-A.1").add_parent("@TEST.STATEMENT-A")
+        b2 = Frame("@TEST.STATEMENT-B.1").add_parent("@TEST.STATEMENT-B")
+        Frame("@TEST.STATEMENT-A")["CLASSMAP"] = TestStatement1.__qualname__
+        Frame("@TEST.STATEMENT-B")["CLASSMAP"] = TestStatement2.__qualname__
 
         c["IF"] = [b1, b2]
         c["LOGIC"] = Condition.Logic.NAND
@@ -774,17 +798,21 @@ class ConditionTestCase(unittest.TestCase):
             def run(self, scope: StatementScope,  varmap: VariableMap):
                 return result1
 
+        StatementRegistry.register(TestStatement1)
+
         class TestStatement2(Statement):
             def run(self, scope: StatementScope,  varmap: VariableMap):
                 return result2
 
+        StatementRegistry.register(TestStatement2)
+
         c = Frame("@TEST.CONDITION.1")
-        Frame("@TEST.TEST-STATEMENT-A").add_parent("@EXE.BOOLEAN-STATEMENT")
-        Frame("@TEST.TEST-STATEMENT-B").add_parent("@EXE.BOOLEAN-STATEMENT")
-        b1 = Frame("@TEST.TEST-STATEMENT-A.1").add_parent("@TEST-STATEMENT-A")
-        b2 = Frame("@TEST.TEST-STATEMENT-B.1").add_parent("@TEST-STATEMENT-B")
-        Frame("@TEST.TEST-STATEMENT-A")["CLASSMAP"] = TestStatement1
-        Frame("@TEST.TEST-STATEMENT-B")["CLASSMAP"] = TestStatement2
+        Frame("@TEST.STATEMENT-A").add_parent("@EXE.BOOLEAN-STATEMENT")
+        Frame("@TEST.STATEMENT-B").add_parent("@EXE.BOOLEAN-STATEMENT")
+        b1 = Frame("@TEST.STATEMENT-A.1").add_parent("@TEST.STATEMENT-A")
+        b2 = Frame("@TEST.STATEMENT-B.1").add_parent("@TEST.STATEMENT-B")
+        Frame("@TEST.STATEMENT-A")["CLASSMAP"] = TestStatement1.__qualname__
+        Frame("@TEST.STATEMENT-B")["CLASSMAP"] = TestStatement2.__qualname__
 
         c["IF"] = [b1, b2]
         c["LOGIC"] = Condition.Logic.NOT
@@ -811,9 +839,11 @@ class ConditionTestCase(unittest.TestCase):
             def run(self, scope: StatementScope,  varmap: VariableMap):
                 return varmap.resolve("X")
 
+        StatementRegistry.register(TestStatement)
+
         c = Frame("@TEST.CONDITION.1")
         b = Frame("@TEST.BOOLEAN-STATEMENT.1").add_parent("@EXE.BOOLEAN-STATEMENT")
-        Frame("@TEST.BOOLEAN-STATEMENT")["CLASSMAP"] = TestStatement
+        Frame("@EXE.BOOLEAN-STATEMENT")["CLASSMAP"] = TestStatement.__qualname__
         vm = Frame("@TEST.VARMAP.1")
         v = Frame("@TEST.VARIABLE.1")
 
@@ -856,11 +886,13 @@ class PlanTestCase(unittest.TestCase):
             def run(self, varmap: VariableMap, *args, **kwargs):
                 return result
 
+        StatementRegistry.register(TestStatement)
+
         plan = Frame("@TEST.PLAN.1")
         statement = Frame("@TEST.BOOLEAN-STATEMENT.1").add_parent("@EXE.BOOLEAN-STATEMENT")
 
         plan["SELECT"] = statement
-        Frame("@EXE.BOOLEAN-STATEMENT")["CLASSMAP"] = TestStatement
+        Frame("@EXE.BOOLEAN-STATEMENT")["CLASSMAP"] = TestStatement.__qualname__
 
         self.assertTrue(Plan(plan).select(None))
 
@@ -875,7 +907,9 @@ class PlanTestCase(unittest.TestCase):
             def run(self, varmap: VariableMap, *args, **kwargs):
                 return True
 
-        Frame("@EXE.BOOLEAN-STATEMENT")["CLASSMAP"] = TestStatement
+        StatementRegistry.register(TestStatement)
+
+        Frame("@EXE.BOOLEAN-STATEMENT")["CLASSMAP"] = TestStatement.__qualname__
         statement = Frame("@TEST.BOOLEAN-STATEMENT.1").add_parent("@EXE.BOOLEAN-STATEMENT")
 
         plan = Plan.build(Space("TEST"), "test", statement, [])
@@ -891,6 +925,8 @@ class PlanTestCase(unittest.TestCase):
             def run(self, scope: StatementScope, varmap: VariableMap):
                 return varmap.resolve("X")
 
+        StatementRegistry.register(TestStatement)
+
         varmap = Frame("@TEST.VARMAP.1")
         variable = Frame("@TEST.VARIABLE.1")
         plan = Frame("@TEST.PLAN.1")
@@ -900,7 +936,7 @@ class PlanTestCase(unittest.TestCase):
         variable["NAME"] = "X"
         variable["VALUE"] = True
         plan["SELECT"] = statement
-        Frame("@TEST.BOOLEAN-STATEMENT")["CLASSMAP"] = TestStatement
+        Frame("@EXE.BOOLEAN-STATEMENT")["CLASSMAP"] = TestStatement.__qualname__
 
         self.assertTrue(Plan(plan).select(VariableMap(varmap)))
 
@@ -984,6 +1020,7 @@ class StepTestCase(unittest.TestCase):
 
     def setUp(self):
         graph.reset()
+        StatementRegistry.reset()
 
     def test_index(self):
         step = Frame("@TEST.STEP")
@@ -1012,13 +1049,15 @@ class StepTestCase(unittest.TestCase):
         class TestStatement(Statement):
             def run(self, varmap: VariableMap, *args, **kwargs):
                 nonlocal out
-                out.append(self.frame["LOCAL"][0].resolve().value)
+                out.append(self.frame["LOCAL"][0])
+
+        StatementRegistry.register(TestStatement)
 
         step = Frame("@TEST.STEP")
         statement1 = Frame("@TEST.STATEMENT.?").add_parent("@EXE.STATEMENT")
         statement2 = Frame("@TEST.STATEMENT.?").add_parent("@EXE.STATEMENT")
 
-        Frame("@EXE.STATEMENT")["CLASSMAP"] = TestStatement
+        Frame("@EXE.STATEMENT")["CLASSMAP"] = TestStatement.__qualname__
         step["PERFORM"] = [statement1, statement2]
         statement1["LOCAL"] = "X"
         statement2["LOCAL"] = "Y"
@@ -1034,13 +1073,15 @@ class StepTestCase(unittest.TestCase):
             def run(self, scope: StatementScope(), varmap: VariableMap):
                 scope.outputs.append(123)
 
+        StatementRegistry.register(TestStatement)
+
         agent = Frame("@TEST.AGENT")
         goal = Frame("@TEST.GOAL")
         plan = Frame("@TEST.PLAN")
         step = Frame("@TEST.STEP")
 
         statement = Frame("@TEST.STATEMENT.?").add_parent("@EXE.STATEMENT")
-        Frame("@EXE.STATEMENT")["CLASSMAP"] = TestStatement
+        Frame("@EXE.STATEMENT")["CLASSMAP"] = TestStatement.__qualname__
         step["PERFORM"] = [statement]
 
         scope = Step(step).perform(VariableMap(Frame("@TEST.VARMAP")))
@@ -1053,13 +1094,15 @@ class StepTestCase(unittest.TestCase):
             def run(self, scope: StatementScope(), varmap: VariableMap):
                 scope.expectations.append(123)
 
+        StatementRegistry.register(TestStatement)
+
         agent = Frame("@TEST.AGENT")
         goal = Frame("@TEST.GOAL")
         plan = Frame("@TEST.PLAN")
         step = Frame("@TEST.STEP")
 
         statement = Frame("@TEST.STATEMENT.?").add_parent("@EXE.STATEMENT")
-        Frame("@EXE.STATEMENT")["CLASSMAP"] = TestStatement
+        Frame("@EXE.STATEMENT")["CLASSMAP"] = TestStatement.__qualname__
         step["PERFORM"] = [statement]
 
         scope = Step(step).perform(VariableMap(Frame("@TEST.VARMAP")))
@@ -1075,8 +1118,10 @@ class StepTestCase(unittest.TestCase):
         class TestStatement(Statement):
             def run(self, scope: StatementScope(), varmap: VariableMap):
                 nonlocal transient
-                transient = self.frame._graph.register("TRANSIENT")
+                transient = Frame("@" + self.frame.space().name + ".TRANSIENT")
                 scope.transients.append(TransientFrame(transient))
+
+        StatementRegistry.register(TestStatement)
 
         agent = Frame("@TEST.AGENT")
         goal = Frame("@TEST.GOAL")
@@ -1084,7 +1129,7 @@ class StepTestCase(unittest.TestCase):
         step = Frame("@TEST.STEP")
 
         statement = Frame("@TEST.STATEMENT.?").add_parent("@EXE.STATEMENT")
-        Frame("@EXE.STATEMENT")["CLASSMAP"] = TestStatement
+        Frame("@EXE.STATEMENT")["CLASSMAP"] = TestStatement.__qualname__
         step["PERFORM"] = [statement]
 
         Step(step).perform(VariableMap(Frame("@TEST.VARMAP")))
@@ -1105,12 +1150,14 @@ class StepTestCase(unittest.TestCase):
                 nonlocal out
                 out.append(varmap.resolve("X"))
 
+        StatementRegistry.register(TestStatement)
+
         step = Frame("@TEST.STEP")
         statement = Frame("@TEST.STATEMENT.?").add_parent("@EXE.STATEMENT")
         varmap = Frame("@TEST.VARMAP")
         variable = Frame("@TEST.VARIABLE")
 
-        Frame("@EXE.STATEMENT")["CLASSMAP"] = TestStatement
+        Frame("@EXE.STATEMENT")["CLASSMAP"] = TestStatement.__qualname__
         step["PERFORM"] = statement
         varmap["_WITH"] = variable
         variable["NAME"] = "X"
