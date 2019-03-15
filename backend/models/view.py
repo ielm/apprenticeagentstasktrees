@@ -1,19 +1,20 @@
-from backend.models.graph import Frame, Graph, Identifier, Network
+from backend.agent import Agent
 from backend.models.path import Path
-from backend.models.query import FrameQuery
-from typing import List, Union
+from ontograph.Frame import Facet, Frame, Slot
+from ontograph.Query import Query
+from ontograph.Space import Space
+from typing import Any, List, Iterable, Union
+
+
+class Network(object): pass
+class Graph(object): pass
 
 
 class View(object):
 
-    # query: A FrameQuery as a starting point for included frames in the view.
-    # paths: A set of instructions for paths to follow from the included frames; anything on the paths is also included.
-    # filter: A set of relations (type only) to exclude.
-    # include: A set of IDs to include.
-    # exclude: A set of IDs to exclude.
-    def __init__(self, network: Network, graph: Union[Graph, str], query: FrameQuery=None, follow: Union[List[Path], Path]=None, filter=None, include=None, exclude=None):
-        self.network = network
-        self.namespace = graph if isinstance(graph, str) else graph._namespace
+    def __init__(self, agent: Agent, space: Union[Space, str], query: Query=None, follow: Union[List[Path], Path]=None, filter=None, include=None, exclude=None):
+        self.agent = agent
+        self.space = space if isinstance(space, str) else space.name
 
         self.query = query
 
@@ -24,11 +25,7 @@ class View(object):
         self.filter = filter
 
     def view(self) -> 'ViewGraph':
-        graph = self.network[self.namespace]
-        namespace = self.namespace
-
-        view = ViewGraph(namespace)
-        frames = list(graph._storage.values()) if self.query is None else graph.search(self.query)
+        frames = list(Space(self.space)) if self.query is None else self.query.start(Space(self.space))
 
         if self.follow is not None:
             followed_results = []
@@ -37,20 +34,9 @@ class View(object):
                     followed_results.extend(path.start(frame))
             frames.extend(followed_results)
 
-        frames = list(map(lambda frame: frame.deep_copy(view), set(frames)))
+        excluded = set(map(lambda frame: frame.id, Space(self.space))).difference(set(map(lambda frame: frame.id, frames)))
 
-        excluded = set(map(lambda frame: frame._identifier.render(), graph._storage.values())).difference(set(map(lambda frame: frame._identifier.render(), frames)))
-
-        for f in excluded:
-            for frame in frames:
-                to_remove = []
-                for s in frame._storage.values():
-                    s -= Identifier.parse(f)
-                    if len(s) == 0:
-                        to_remove.append(s._name)
-                for s in to_remove:
-                    del frame._storage[s]
-
+        view = ViewGraph(self.space, excluded)
         view.set_frames(frames)
 
         return view
@@ -58,24 +44,61 @@ class View(object):
     def __eq__(self, other):
         if not isinstance(other, View):
             return super().__eq__(other)
-        return self.network == other.network and self.namespace == other.namespace and self.query == other.query and self.follow == other.follow and self.filter == other.filter
+        return self.agent == other.agent and self.space == other.space and self.query == other.query and self.follow == other.follow and self.filter == other.filter
 
 
-class ViewGraph(Graph):
+class ViewGraph(Space):
 
-    def __init__(self, namespace: str):
+    def __init__(self, namespace: str, excluded: set):
         super().__init__(namespace)
+        self.frames = None
+        self.excluded = excluded
 
     def set_frames(self, frames: List[Frame]):
-        for frame in frames:
-            original_graph = frame._identifier.graph
-            self[frame._identifier] = frame
+        self.frames = frames
 
-            frame._identifier.graph = original_graph
-            for slot in frame:
-                for filler in frame[slot]:
-                    if isinstance(filler._value, Identifier) and filler._value.graph is None:
-                        filler._value.graph = original_graph
+    def __iter__(self) -> Iterable[Frame]:
+        if self.frames is None:
+            for frame in super().__iter__():
+                yield ViewFrame(frame.id, self.excluded)
 
-    def _modify_key(self, key: Union[Identifier, str]) -> str:
-        return key
+
+        for frame in self.frames:
+            yield ViewFrame(frame, self.excluded)
+
+
+class ViewFrame(Frame):
+
+    def __init__(self, frame: Frame, excluded: set):
+        super().__init__(frame.id, declare=False)
+        self.excluded = excluded
+
+    def slots(self):
+        return list(filter(lambda slot: len(slot) > 0, map(lambda slot: ViewSlot(slot, self.excluded), super().slots())))
+
+
+class ViewSlot(Slot):
+
+    def __init__(self, slot: Slot, excluded: set):
+        super().__init__(slot.frame, slot.property, as_inverse=slot.as_inverse, include_inherited=slot.include_inherited)
+        self.excluded = excluded
+
+    def facets(self):
+        return list(map(lambda facet: ViewFacet(facet, self.excluded), super().facets()))
+
+    def list(self):
+        for filler in super().list():
+            if not isinstance(filler, Frame) or filler.id not in self.excluded:
+                yield filler
+
+
+class ViewFacet(Facet):
+
+    def __init__(self, facet: Facet, excluded: set):
+        super().__init__(facet.frame, facet.property, facet.type, as_inverse=facet.as_inverse, include_inherited=facet.include_inherited)
+        self.excluded = excluded
+
+    def list(self) -> Iterable[Any]:
+        for filler in super().list():
+            if not isinstance(filler, Frame) or filler.id not in self.excluded:
+                yield filler

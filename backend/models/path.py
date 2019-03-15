@@ -1,5 +1,5 @@
-from backend.models.query import FrameQuery
 from ontograph.Frame import Frame
+from ontograph.Query import SearchComparator
 from typing import List
 
 
@@ -14,8 +14,8 @@ class Path(object):
     def __repr__(self):
         return str(self)
 
-    def to(self, relation: str, recursive: bool=False, query: FrameQuery=None) -> 'Path':
-        self.steps.append(PathStep(relation, recursive, query))
+    def to(self, relation: str, recursive: bool=False, comparator: SearchComparator=None) -> 'Path':
+        self.steps.append(PathStep(relation, recursive, comparator))
         return self
 
     def to_step(self, step: 'PathStep') -> 'Path':
@@ -58,7 +58,7 @@ class Path(object):
                 fillers.extend(slot)
 
         for filler in fillers:
-            if step.query is None or step.query.compare(filler):
+            if step.comparator is None or step.comparator.compare(filler):
                 results.append(filler)
         return results
 
@@ -70,13 +70,13 @@ class Path(object):
 
 class PathStep(object):
 
-    def __init__(self, relation: str, recursive: bool, query: FrameQuery):
+    def __init__(self, relation: str, recursive: bool, comparator: SearchComparator):
         self.relation = relation
         self.recursive = recursive
-        self.query = query
+        self.comparator = comparator
 
     def __str__(self):
-        return "[" + self.relation + ("*" if self.recursive else "") + "]->" + ("q" if self.query is not None else "")
+        return "[" + self.relation + ("*" if self.recursive else "") + "]->" + ("q" if self.comparator is not None else "")
 
     def __repr__(self):
         return str(self)
@@ -84,4 +84,4 @@ class PathStep(object):
     def __eq__(self, other):
         if not isinstance(other, PathStep):
             return super().__eq__(other)
-        return self.relation == other.relation and self.recursive == other.recursive and self.query == other.query
+        return self.relation == other.relation and self.recursive == other.recursive and self.comparator == other.comparator
