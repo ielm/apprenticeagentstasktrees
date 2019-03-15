@@ -323,6 +323,42 @@ def environment():
 
 def format_environment(env):
     env_dict = dict()
+
+    epochs = env.history()
+    index = 0
+
+    for epoch in epochs:
+        # print(index)
+        # print(list(map(lambda f: f.resolve(), env.graph[epoch]["CONTAINS"])))
+        e = env.view(epoch)
+        # print(e)
+        epoch_dict = dict()
+        # print(epoch)
+        # print(type(epoch))
+        for val in e:
+            if env.location(val.name()) is None:  # Catch None location first
+                if None not in epoch_dict.keys():
+                    epoch_dict["UNKNOWN"] = [val.name()]
+                else:
+                    epoch_dict["UNKNOWN"].append(val.name())
+            elif env.location(val.name()).name() not in epoch_dict.keys():  # if location is not in env_dict keys
+                epoch_dict[env.location(val.name()).name()] = [val.name()]  # add list of object to env_dict[location]
+            elif env.location(val.name()).name() in epoch_dict.keys():  # if location is in env_dict keys
+                epoch_dict[env.location(val.name()).name()].append(val.name())  # append object to list
+        # print("epoch: ", epoch_dict)
+        env_dict["epoch."+str(index)] = epoch_dict
+        index += 1
+
+    # print(env_dict)
+    return env_dict
+
+
+def format_epoch(epoch):
+    epoch_dict = dict()
+
+
+def format_epoch_singular(env):
+    env_dict = dict()
     epoch = env.view(-1)
 
     for val in epoch:
@@ -353,14 +389,23 @@ def format_environment_object(instance):
     }
 
 
+@app.route("/test", methods=["GET"])
+def get_test():
+    return json.dumps(format_environment(agent.env()))
+
+
 @app.route("/environment/get", methods=["GET"])
 def get_environment():
+    # format_environment(agent.env())
     # TODO - populate agent.env() with agent["ENV"]
     #     set env to agent.env()
     # print(agent["ENV"])
     # env = agent.env().view(-1)
+
+    if "env" in request.args:
+        json.dumps(format_environment(agent.env()))
     if "instance" not in request.args:
-        g = format_environment(agent.env())
+        g = format_epoch_singular(agent.env())
         return json.dumps(g)
     else:
         return json.dumps(format_environment_object(request.args["instance"]))
@@ -384,6 +429,12 @@ def bootstrap():
     resources = map(lambda r: {"resource": r, "loaded": r[0] + "." + r[1] in Bootstrap.loaded}, resources)
 
     return render_template("bootstrap.html", resources=resources)
+
+
+# TODO - set up websocket on env change
+@socketio.on('event')
+def handle_event(message):
+    print(str(message))
 
 
 if __name__ == '__main__':

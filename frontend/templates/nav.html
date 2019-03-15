@@ -121,12 +121,22 @@
     });
 
     var socket = io.connect('http://' + document.domain + ':' + location.port);
+    /**
+     * Called on IIDEA update
+     */
     socket.on("iidea updated", function(msg) {
+        socket.emit('updated', {data: "updated"});
         updateRunningCondition(msg);
         if (typeof updateIIDEAData === "function") {
             updateIIDEAData(msg);
         }
     });
+    /**
+     * Custom event emit on connect
+     *socket.on('connect', function() {
+     *    socket.emit('event', {data: "connected and such"});
+     *});
+     */
 </script>
 
 <div style="margin-bottom: 80px"></div>

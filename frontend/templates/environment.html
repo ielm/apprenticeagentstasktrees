@@ -39,12 +39,27 @@
 
                 $("#raw_env").JSONView(output, {collapsed: false});
 
+                testEnv(data); // gets test environment data structured by epoch
+
                 document.querySelector("#locations").appendChild(buildEnvNavigation(data));
 
                 document.querySelector("#nav-tab").appendChild(buildLocationPanels(data));
 
             }
 
+            function testEnv(env){
+                $.ajax({
+                    url: "/test",
+                    method: "GET",
+                    success: printEnv,
+                });
+
+                function printEnv(data, status) {
+                    console.log(data);
+                }
+
+            }
+       
             /**
              * Build Environment Viewer Navigation
              * @param env
