@@ -1,7 +1,7 @@
 from backend.models.path import Path
-from backend.models.query import FrameQuery, IdentifierQuery
 from ontograph import graph
 from ontograph.Frame import Frame
+from ontograph.Query import IdComparator
 
 import unittest
 
@@ -85,8 +85,8 @@ class PathTestCase(unittest.TestCase):
 
         f1["REL"] = [f2, f3]
 
-        query = FrameQuery(IdentifierQuery("@TEST.FRAME.2", IdentifierQuery.Comparator.EQUALS))
-        path = Path().to("REL", query=query)
+        comparator = IdComparator("@TEST.FRAME.2")
+        path = Path().to("REL", comparator=comparator)
         results = path.start(f1)
 
         self.assertTrue(f2 in results)

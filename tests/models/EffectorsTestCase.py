@@ -61,7 +61,7 @@ class EffectorTestCase(unittest.TestCase):
         self.assertEqual(decision, Effector(f).on_decision())
 
     def test_effector_on_output(self):
-        output = XMR.instance(self.g, "TEST", XMR.Signal.OUTPUT, XMR.Type.ACTION, XMR.OutputStatus.PENDING, "", "", capability="CAPABILITY")
+        output = XMR.instance(self.g, "TEST", XMR.Signal.OUTPUT, XMR.Type.ACTION, XMR.OutputStatus.PENDING, "@TEST.FRAME.1", "", capability="CAPABILITY")
 
         f = Frame("@EXE.TEST-EFFECTOR").add_parent(self.effector)
         f["ON-OUTPUT"] = output.frame
@@ -87,7 +87,7 @@ class EffectorTestCase(unittest.TestCase):
         self.assertIsNone(effector.on_capability())
 
         decision = Decision.build(self.g, "GOAL", "PLAN", "STEP")
-        output = XMR.instance(self.g, "TEST", XMR.Signal.OUTPUT, XMR.Type.ACTION, XMR.OutputStatus.PENDING, "", "", capability="CAPABILITY")
+        output = XMR.instance(self.g, "TEST", XMR.Signal.OUTPUT, XMR.Type.ACTION, XMR.OutputStatus.PENDING, "@TEST.FRAME.1", "", capability="CAPABILITY")
         capability = Capability.instance(self.g, "TEST-CAPABILITY", "TestMP", ["ONT.EVENT"])
 
         effector.reserve(decision, output, capability)
@@ -103,7 +103,7 @@ class EffectorTestCase(unittest.TestCase):
         effector = Effector.instance(self.g, Effector.Type.PHYSICAL, [])
 
         decision = Decision.build(self.g, "GOAL", "PLAN", "STEP")
-        output = XMR.instance(self.g, "TEST", XMR.Signal.OUTPUT, XMR.Type.ACTION, XMR.OutputStatus.PENDING, "", "", capability="CAPABILITY")
+        output = XMR.instance(self.g, "TEST", XMR.Signal.OUTPUT, XMR.Type.ACTION, XMR.OutputStatus.PENDING, "@TEST.FRAME.1", "", capability="CAPABILITY")
         capability = Capability.instance(self.g, "TEST-CAPABILITY", "TestMP", ["ONT.EVENT"])
 
         effector.reserve(decision, output, capability)
@@ -182,7 +182,7 @@ class CapabilityTestCase(unittest.TestCase):
 
         capability = Capability.instance(self.g, "TEST-CAPABILITY", TestMP.__name__, ["ONT.EVENT"])
 
-        output = XMR.instance(self.g, "TEST", XMR.Signal.OUTPUT, XMR.Type.ACTION, XMR.OutputStatus.PENDING, "", "", capability=capability)
+        output = XMR.instance(self.g, "TEST", XMR.Signal.OUTPUT, XMR.Type.ACTION, XMR.OutputStatus.PENDING, "@TEST.FRAME.1", "", capability=capability)
         callback = Callback.build(self.g, "DECISION", "EFFECTOR")
 
         capability.run(None, output, callback)

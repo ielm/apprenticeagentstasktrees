@@ -2,7 +2,6 @@ from backend.agent import Agent
 from backend.models.bootstrap import Bootstrap
 from backend.models.agenda import Condition, Effect, Goal, Plan, Step
 from backend.models.grammar import Grammar
-# from backend.models.graph import Frame, Identifier, Literal, Network
 from backend.models.mps import AgentMethod
 from backend.models.output import OutputXMRTemplate
 from backend.models.path import Path
@@ -13,6 +12,7 @@ from backend.models.xmr import XMR
 from ontograph import graph
 from ontograph.Frame import Frame
 from ontograph.Index import Identifier
+from ontograph.Query import IdComparator
 from ontograph.Space import Space
 
 import unittest
@@ -168,10 +168,10 @@ class GrammarTestCase(unittest.TestCase):
         self.assertEqual(Path().to("REL1").to("REL2"), Grammar.parse(self.a, "[REL1]-> THEN [REL2]->", start="path"))
         self.assertEqual(Path().to("REL", recursive=True), Grammar.parse(self.a, "[REL*]->", start="path"))
         self.assertEqual(Path().to("REL", recursive=True), Grammar.parse(self.a, "[REL *]->", start="path"))
-        self.assertEqual(Path().to("REL", query=FrameQuery(IdentifierQuery("@TEST.FRAME.1", IdentifierQuery.Comparator.EQUALS))), Grammar.parse(self.a, "[REL]->TO @ = @TEST.FRAME.1", start="path"))
-        self.assertEqual(Path().to("REL", query=FrameQuery(IdentifierQuery("@TEST.FRAME.1", IdentifierQuery.Comparator.EQUALS))), Grammar.parse(self.a, "[REL]-> TO @ = @TEST.FRAME.1", start="path"))
-        self.assertEqual(Path().to("REL", query=FrameQuery(IdentifierQuery("@TEST.FRAME.1", IdentifierQuery.Comparator.EQUALS))).to("OTHER"), Grammar.parse(self.a, "[REL]-> TO @ = @TEST.FRAME.1 [OTHER]->", start="path"))
-        self.assertEqual(Path().to("REL", query=FrameQuery(IdentifierQuery("@TEST.FRAME.1", IdentifierQuery.Comparator.EQUALS))).to("OTHER"), Grammar.parse(self.a, "[REL]-> TO @ = @TEST.FRAME.1 THEN [OTHER]->", start="path"))
+        self.assertEqual(Path().to("REL", comparator=FrameQuery(IdentifierQuery("@TEST.FRAME.1", IdentifierQuery.Comparator.EQUALS))), Grammar.parse(self.a, "[REL]->TO @ = @TEST.FRAME.1", start="path"))
+        self.assertEqual(Path().to("REL", comparator=FrameQuery(IdentifierQuery("@TEST.FRAME.1", IdentifierQuery.Comparator.EQUALS))), Grammar.parse(self.a, "[REL]-> TO @ = @TEST.FRAME.1", start="path"))
+        self.assertEqual(Path().to("REL", comparator=FrameQuery(IdentifierQuery("@TEST.FRAME.1", IdentifierQuery.Comparator.EQUALS))).to("OTHER"), Grammar.parse(self.a, "[REL]-> TO @ = @TEST.FRAME.1 [OTHER]->", start="path"))
+        self.assertEqual(Path().to("REL", comparator=FrameQuery(IdentifierQuery("@TEST.FRAME.1", IdentifierQuery.Comparator.EQUALS))).to("OTHER"), Grammar.parse(self.a, "[REL]-> TO @ = @TEST.FRAME.1 THEN [OTHER]->", start="path"))
 
     def test_parse_view_graph_with_path(self):
         self.assertEqual(View(self.a, Space("TEST"), follow=Path().to("REL")), Grammar.parse(self.a, "VIEW TEST SHOW ALL FOLLOW [REL]->"))

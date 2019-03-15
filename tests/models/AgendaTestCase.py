@@ -1491,7 +1491,7 @@ class DecisionTestCase(unittest.TestCase):
 
         MPRegistry.register(TestMP)
         capability = Capability.instance(Space("TEST"), "CAPABILITY", "TestMP", ["ONT.EVENT"])
-        output = XMR.instance(Space("TEST"), "OUTPUT-XMR", XMR.Signal.OUTPUT, XMR.Type.ACTION, XMR.OutputStatus.PENDING, "", "", capability=capability)
+        output = XMR.instance(Space("TEST"), "OUTPUT-XMR", XMR.Signal.OUTPUT, XMR.Type.ACTION, XMR.OutputStatus.PENDING, "@TEST.FRAME.1", "", capability=capability)
 
         decision = Decision.build(Space("TEST"), "GOAL", "PLAN", "STEP")
         decision.frame["HAS-OUTPUT"] += output.frame
@@ -1514,7 +1514,7 @@ class DecisionTestCase(unittest.TestCase):
 
         MPRegistry.register(TestMP)
         capability = Capability.instance(Space("TEST"), "CAPABILITY", "TestMP", ["ONT.EVENT"])
-        output = XMR.instance(Space("TEST"), "OUTPUT-XMR", XMR.Signal.OUTPUT, XMR.Type.ACTION, XMR.OutputStatus.PENDING, "", "", capability=capability)
+        output = XMR.instance(Space("TEST"), "OUTPUT-XMR", XMR.Signal.OUTPUT, XMR.Type.ACTION, XMR.OutputStatus.PENDING, "@TEST.FRAME.1", "", capability=capability)
 
         decision = Decision.build(Space("TEST"), "GOAL", "PLAN", "STEP")
         decision.frame["HAS-OUTPUT"] += output.frame
@@ -1538,7 +1538,7 @@ class DecisionTestCase(unittest.TestCase):
 
         MPRegistry.register(TestMP)
         capability = Capability.instance(Space("TEST"), "CAPABILITY", "TestMP", ["ONT.EVENT"])
-        output = XMR.instance(Space("TEST"), "OUTPUT-XMR", XMR.Signal.OUTPUT, XMR.Type.ACTION, XMR.OutputStatus.PENDING, "", "", capability=capability)
+        output = XMR.instance(Space("TEST"), "OUTPUT-XMR", XMR.Signal.OUTPUT, XMR.Type.ACTION, XMR.OutputStatus.PENDING, "@TEST.FRAME.1", "", capability=capability)
 
         decision = Decision.build(Space("TEST"), "GOAL", "PLAN", "STEP")
         decision.frame["HAS-OUTPUT"] += output.frame
