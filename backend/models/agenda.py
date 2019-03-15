@@ -234,7 +234,7 @@ class Goal(VariableMap):
         except: pass # Not a Statement
 
         try:
-            resources = self.frame["RESOURCES"].singleton()
+            resources = self.frame["RESOURCES", Role.LOC].singleton()
 
             self.frame["_RESOURCES"] = resources
             return resources
@@ -327,7 +327,7 @@ class Plan(object):
         if isinstance(plan, Frame):
             plan = Plan(plan)
 
-        return Plan.build(space, plan.name(), plan.frame["SELECT"].singleton(), list(map(lambda step: Step.instance_of(graph, step).frame, plan.steps())), negate=plan.is_negated())
+        return Plan.build(space, plan.name(), plan.frame["SELECT"].singleton(), list(map(lambda step: Step.instance_of(space, step).frame, plan.steps())), negate=plan.is_negated())
 
     def __init__(self, frame: Frame):
         self.frame = frame
@@ -425,12 +425,12 @@ class Step(object):
         return Step(frame)
 
     @classmethod
-    def instance_of(cls, graph: Graph, step: Union[Frame, 'Step']) -> 'Step':
+    def instance_of(cls, space: Space, step: Union[Frame, 'Step']) -> 'Step':
 
         if isinstance(step, Frame):
             step = Step(step)
 
-        return Step.build(graph, step.index(), list(map(lambda stmt: stmt.resolve(), step.frame["PERFORM"])))
+        return Step.build(space, step.index(), list(step.frame["PERFORM"]))
 
     class Status(Enum):
         PENDING = "PENDING"
@@ -735,11 +735,11 @@ class Decision(object):
 
     def effectors(self) -> List['Effector']:
         from backend.models.effectors import Effector
-        return list(self.frame["HAS-EFFECTOR"])
+        return list(map(lambda e: Effector(e), self.frame["HAS-EFFECTOR"]))
 
     def callbacks(self) -> List['Callback']:
         from backend.models.effectors import Callback
-        return list(self.frame["HAS-CALLBACK"])
+        return list(map(lambda c: Callback(c), self.frame["HAS-CALLBACK"]))
 
     def select(self):
         self.frame["STATUS"] = Decision.Status.SELECTED
