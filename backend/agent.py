@@ -42,7 +42,7 @@ class Agent(Network):
         self.inputs = Space("INPUTS")
         self.outputs = Space("OUTPUTS")
 
-        self.identity = Frame("@SELF.ROBOT").add_parent("@ONT.ROBOT")
+        self.identity = Frame("@SELF.ROBOT.1").add_parent("@ONT.ROBOT")
         self._bootstrap()
 
         self.input_memory = []
