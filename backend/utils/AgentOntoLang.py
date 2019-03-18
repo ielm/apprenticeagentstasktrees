@@ -51,6 +51,24 @@ class AgentOntoLangTransformer(OntoLangTransformer):
     def ontoagent_process_define_goal(self, matches: List['OntoAgentProcessorDefineGoal']) -> 'OntoAgentProcessorDefineGoal':
         return matches[1]
 
+    def ontoagent_process_define_output_xmr_template(self, matches):
+        #from backend.models.bootstrap import BootstrapDeclareKnowledge, BootstrapDefineOutputXMRTemplate
+
+        name = str(matches[1])
+        params = matches[2]
+        type = matches[5]
+        capability = matches[6]
+        root = None
+        include = []
+
+        if isinstance(matches[7], Identifier):
+            root = matches[7]
+            include = matches[8]
+        else:
+            include = matches[7]
+
+        return OntoAgentProcessorDefineOutputXMRTemplate(name, type, capability, params, root, include)
+
     def ontoagent_process_register_mp(self, matches: List[Tree]) -> 'OntoAgentProcessorRegisterMP':
         mp: Type[Union[AgentMethod, OutputMethod]] = matches[2]
         name: str = None if len(matches) == 3 else str(matches[4])
@@ -259,6 +277,22 @@ class AgentOntoLangTransformer(OntoLangTransformer):
 
         return OutputXMRStatement.instance(Space("EXE"), template, params, agent)
 
+    def output_xmr_template_include(self, matches) -> List[AssignOntoLangProcessor]:
+        return matches[1:]
+
+    def output_xmr_template_requires(self, matches) -> Identifier:
+        return matches[1]
+
+    def output_xmr_template_root(self, matches) -> Identifier:
+        return matches[1]
+
+    def output_xmr_template_type(self, matches) -> XMR.Type:
+        return {
+            "PHYSICAL": XMR.Type.ACTION,
+            "MENTAL": XMR.Type.MENTAL,
+            "VERBAL": XMR.Type.LANGUAGE
+        }[matches[1]]
+
     def plan(self, matches) -> Plan:
         name = matches[1]
         select, negate = matches[2]
@@ -399,12 +433,6 @@ class OntoAgentProcessorDefineOutputXMRTemplate(OntoLangProcessor):
 
                 if isinstance(i.filler, Identifier):
                     i.filler.id = i.filler.id.replace("@OUT", "@" + template.space.name)
-
-
-            # frame.space = template.space
-            # for triple in frame.properties:
-            #     if isinstance(triple.filler, Identifier):
-            #         triple.filler.id = triple.filler.id.replace("@OUT", "@" + template.space.name)
 
         for frame in self.frames:
             frame.run()

@@ -6,6 +6,7 @@ from backend.models.xmr import XMR
 from ontograph import graph
 from ontograph.Frame import Frame
 from ontograph.Index import Identifier
+from ontograph.OntoLang import AssignOntoLangProcessor
 from ontograph.Query import ExistsComparator, IdComparator, Query
 from ontograph.Space import Space
 from utils.AgentOntoLang import AgentOntoLang, OntoAgentProcessorAddTrigger, OntoAgentProcessorDefineOutputXMRTemplate, OntoAgentProcessorRegisterMP
@@ -25,6 +26,72 @@ class AgentOntoLangTestCase(unittest.TestCase):
         parsed = self.ontolang.parse("ADD TRIGGER TO @SELF.AGENDA.1 INSTANTIATE @EXE.MYGOAL.1 WHEN THEME = 123;")
 
         self.assertEqual([processor], parsed)
+
+    def test_plan(self):
+        self.ontolang.get_starting_rule = lambda: "plan"
+
+        stmt = Frame("@EXE.EXISTS-STATEMENT").add_parent("@EXE.BOOLEAN-STATEMENT")
+        stmt["CLASSMAP"] = ExistsStatement.__qualname__
+
+        stmt = Frame("@EXE.MP-STATEMENT").add_parent("@EXE.BOOLEAN-STATEMENT")
+        stmt["CLASSMAP"] = MeaningProcedureStatement.__qualname__
+
+        space = Space("SELF")
+
+        plan = Plan.build(space, "testplan", Plan.DEFAULT, Step.build(space, 1, Step.IDLE))
+        parsed = self.ontolang.parse("PLAN (testplan) SELECT DEFAULT STEP DO IDLE")
+        self.assertEqual(plan, parsed)
+
+        query = Query().search(ExistsComparator(slot="THEME", filler=123, isa=False))
+        plan = Plan.build(space, "testplan", ExistsStatement.instance(space, query), Step.build(space, 1, Step.IDLE))
+        parsed = self.ontolang.parse("PLAN (testplan) SELECT IF EXISTS THEME = 123 STEP DO IDLE")
+        self.assertEqual(plan, parsed)
+
+        statement = MeaningProcedureStatement.instance(space, "mp1", ["$var1"])
+        plan = Plan.build(space, "testplan", statement, Step.build(space, 1, Step.IDLE))
+        parsed = self.ontolang.parse( "PLAN (testplan) SELECT IF SELF.mp1($var1) STEP DO IDLE")
+        self.assertEqual(plan, parsed)
+
+        statement = MeaningProcedureStatement.instance(space, "mp1", ["$var1"])
+        plan = Plan.build(space, "testplan", statement, Step.build(space, 1, Step.IDLE), negate=True)
+        parsed = self.ontolang.parse("PLAN (testplan) SELECT IF NOT SELF.mp1($var1) STEP DO IDLE")
+        self.assertEqual(plan, parsed)
+
+        statement = MeaningProcedureStatement.instance(space, "mp1", [])
+        plan = Plan.build(space, "testplan", Plan.DEFAULT, Step.build(space, 1, [statement, statement]))
+        parsed = self.ontolang.parse("PLAN (testplan) SELECT DEFAULT STEP DO SELF.mp1() DO SELF.mp1()")
+        self.assertEqual(plan, parsed)
+
+        statement = MeaningProcedureStatement.instance(space, "mp1", [])
+        plan = Plan.build(space, "testplan", Plan.DEFAULT, [Step.build(space, 1, [statement]), Step.build(space, 2, [statement])])
+        parsed = self.ontolang.parse("PLAN (testplan) SELECT DEFAULT STEP DO SELF.mp1() STEP DO SELF.mp1()")
+        self.assertEqual(plan, parsed)
+
+    def test_condition(self):
+        self.ontolang.get_starting_rule = lambda: "condition"
+
+        stmt = Frame("@EXE.EXISTS-STATEMENT").add_parent("@EXE.BOOLEAN-STATEMENT")
+        stmt["CLASSMAP"] = ExistsStatement.__qualname__
+
+        space = Space("SELF")
+
+        query = Query().search(ExistsComparator(slot="THEME", filler=123, isa=False))
+
+        condition = Condition.build(space, [ExistsStatement.instance(space, query)], Goal.Status.SATISFIED, logic=Condition.Logic.AND, order=1)
+        parsed = self.ontolang.parse("WHEN EXISTS THEME = 123 THEN satisfied")
+        self.assertEqual(condition, parsed)
+
+        condition = Condition.build(space, [ExistsStatement.instance(space, query), ExistsStatement.instance(space, query)], Goal.Status.SATISFIED, logic=Condition.Logic.AND, order=1)
+        parsed = self.ontolang.parse("WHEN EXISTS THEME = 123 AND EXISTS THEME = 123 THEN satisfied")
+        self.assertEqual(condition, parsed)
+
+        condition = Condition.build(space, [ExistsStatement.instance(space, query), ExistsStatement.instance(space, query)], Goal.Status.SATISFIED, logic=Condition.Logic.OR, order=1)
+        parsed = self.ontolang.parse("WHEN EXISTS THEME = 123 OR EXISTS THEME = 123 THEN satisfied")
+        self.assertEqual(condition, parsed)
+
+        condition = Condition.build(space, [], Goal.Status.SATISFIED, on=Condition.On.EXECUTED)
+        parsed = self.ontolang.parse("WHEN EXECUTED THEN satisfied")
+        self.assertEqual(condition, parsed)
 
     def test_define_goal(self):
         space = Space("TEST")
@@ -99,6 +166,58 @@ class AgentOntoLangTestCase(unittest.TestCase):
         processor = OntoAgentProcessorRegisterMP(TestAgentMethod, name="TestMP")
         parsed = self.ontolang.parse("REGISTER MP tests.utils.AgentOntoLangTestCase.TestAgentMethod AS TestMP;")
         self.assertEqual([processor], parsed)
+
+    def test_find_something_to_do(self):
+        from ontograph.Query import AndComparator, IsAComparator
+
+        self.ontolang.get_starting_rule = lambda: "ontoagent_process_define_goal"
+
+        stmt = Frame("@EXE.EXISTS-STATEMENT").add_parent("@EXE.BOOLEAN-STATEMENT")
+        stmt["CLASSMAP"] = ExistsStatement.__qualname__
+
+        space = Space("SELF")
+
+        query = Query().search(AndComparator([IsAComparator("@SELF.INPUT-TMR"), ExistsComparator(slot="ACKNOWLEDGED", filler=False, isa=False)]))
+
+        goal1 = Goal.define(space, "FIND-SOMETHING-TO-DO", 0.1, 0.5, [
+            Plan.build(space,
+                         "acknowledge input",
+                         ExistsStatement.instance(space, query),
+                         Step.build(space, 1,
+                                    ForEachStatement.instance(
+                                        space,
+                                        query,
+                                        "$tmr",
+                                        [
+                                            AddFillerStatement.instance(space, "@SELF.ROBOT.1", "HAS-GOAL", MakeInstanceStatement.instance(space, "SELF", "@SELF.UNDERSTAND-TMR", ["$tmr"])),
+                                           AssignFillerStatement.instance(space, "$tmr", "ACKNOWLEDGED", True)
+                                        ])
+                         )),
+            Plan.build(space, "idle", Plan.DEFAULT, [Step.build(space, 1, Step.IDLE), Step.build(space, 2, Step.IDLE)])
+        ], [], [], [])
+
+        script = '''
+        DEFINE FIND-SOMETHING-TO-DO()
+            AS GOAL
+            IN SELF
+            PRIORITY 0.1
+            PLAN (acknowledge input)
+                SELECT IF EXISTS (@ ISA @SELF.INPUT-TMR AND ACKNOWLEDGED = FALSE)
+                STEP
+                    DO FOR EACH $tmr IN (@ ISA @SELF.INPUT-TMR AND ACKNOWLEDGED = FALSE)
+                    | SELF[HAS-GOAL] += @SELF:@SELF.UNDERSTAND-TMR($tmr)
+                    | $tmr[ACKNOWLEDGED] = True
+            PLAN (idle)
+                SELECT DEFAULT
+                STEP
+                    DO IDLE
+                STEP
+                    DO IDLE
+        ;
+        '''
+
+        parsed: Goal = self.ontolang.parse(script).goal
+        self.assertEqual(goal1, parsed)
 
 
 class AgentOntoLangStatementTestCase(unittest.TestCase):
@@ -361,6 +480,111 @@ class AgentOntoLangStatementTestCase(unittest.TestCase):
         self.assertEqual(statement, parsed)
 
 
+class AgentOntoLangDefineOutputXMRTemplateTestCase(unittest.TestCase):
+
+    def setUp(self):
+        graph.reset()
+        self.ontolang = AgentOntoLang()
+
+    def test_parse_type(self):
+        self.ontolang.get_starting_rule = lambda: "output_xmr_template_type"
+
+        type = XMR.Type.ACTION
+        parsed = self.ontolang.parse("TYPE PHYSICAL")
+        self.assertEqual(type, parsed)
+
+        type = XMR.Type.MENTAL
+        parsed = self.ontolang.parse("TYPE MENTAL")
+        self.assertEqual(type, parsed)
+
+        type = XMR.Type.LANGUAGE
+        parsed = self.ontolang.parse("TYPE VERBAL")
+        self.assertEqual(type, parsed)
+
+    def test_parse_requires(self):
+        self.ontolang.get_starting_rule = lambda: "output_xmr_template_requires"
+
+        requires = Identifier("@EXE.TEST-CAPABILITY")
+        parsed = self.ontolang.parse("REQUIRES @EXE.TEST-CAPABILITY")
+        self.assertEqual(requires, parsed)
+
+        requires = Identifier("@EXE.TEST-CAPABILITY.1")
+        parsed = self.ontolang.parse("REQUIRES @EXE.TEST-CAPABILITY.1")
+        self.assertEqual(requires, parsed)
+
+    def test_parse_root(self):
+        self.ontolang.get_starting_rule = lambda: "output_xmr_template_root"
+
+        requires = Identifier("@OUT.TEST-ROOT")
+        parsed = self.ontolang.parse("ROOT @OUT.TEST-ROOT")
+        self.assertEqual(requires, parsed)
+
+        requires = Identifier("@OUT.TEST-ROOT.1")
+        parsed = self.ontolang.parse("ROOT @OUT.TEST-ROOT.1")
+        self.assertEqual(requires, parsed)
+
+    def test_parse_include(self):
+        self.ontolang.get_starting_rule = lambda: "output_xmr_template_include"
+
+        assign = AssignOntoLangProcessor("@OUT.MYFRAME.1")
+        assign.append("MYPROP", Identifier("@ONT.ALL"))
+        assign.append("OTHERPROP", "$var1")
+
+        include = [assign]
+        parsed = self.ontolang.parse("INCLUDE @OUT.MYFRAME.1 = {MYPROP @ONT.ALL; OTHERPROP \"$var1\";};")
+        self.assertEqual(include, parsed)
+
+        include = [AssignOntoLangProcessor("@OUT.MYFRAME.1"), AssignOntoLangProcessor("@OUT.MYFRAME.2")]
+        parsed = self.ontolang.parse("INCLUDE @OUT.MYFRAME.1 = {}; @OUT.MYFRAME.2 = {};")
+        self.assertEqual(include, parsed)
+
+        assign = AssignOntoLangProcessor("@OUT.MYFRAME.1")
+        assign.append("AGENT", "@SELF.ROBOT.1")
+
+    def test_parse_template(self):
+        self.ontolang.get_starting_rule = lambda: "ontoagent_process_define_output_xmr_template"
+
+        input = '''
+        DEFINE get-item-template($var1, $var2) AS TEMPLATE
+            TYPE PHYSICAL
+            REQUIRES @EXE.GET-CAPABILITY
+            ROOT @OUT.POSSESSION-EVENT.1
+
+            INCLUDE
+
+            @OUT.POSSESSION-EVENT.1 = {
+                AGENT  @SELF.ROBOT.1;
+                THEME  "$var1";
+                OTHER  @OUT.OBJECT.1;
+            };
+
+            @OUT.OBJECT.1 = {};
+        ;
+        '''
+
+        name = "get-item-template"
+        type = XMR.Type.ACTION
+        capability = "@EXE.GET-CAPABILITY"
+        params = ["$var1", "$var2"]
+        root = "@OUT.POSSESSION-EVENT.1"
+
+        assign1 = AssignOntoLangProcessor("@OUT.POSSESSION-EVENT.1")
+        assign1.append("AGENT", Identifier("@SELF.ROBOT.1"))
+        assign1.append("THEME", "$var1")
+        assign1.append("OTHER", Identifier("@OUT.OBJECT.1"))
+
+        assign2 = AssignOntoLangProcessor("@OUT.OBJECT.1")
+
+        frames = [
+            assign1,
+            assign2
+        ]
+
+        bootstrap = OntoAgentProcessorDefineOutputXMRTemplate(name, type, capability, params, root, frames)
+        parsed = self.ontolang.parse(input)
+        self.assertEqual(bootstrap, parsed)
+
+
 class OntoAgentProcessorAddTriggerTestCase(unittest.TestCase):
 
     def setUp(self):
@@ -386,8 +610,6 @@ class OntoAgentProcessorDefineOutputXMRTemplateTestCase(unittest.TestCase):
         self.capability = Frame("@TEST.CAPABILITY")
 
     def test_call(self):
-        from ontograph.OntoLang import AssignOntoLangProcessor
-
         name = "Test Name"
         type = XMR.Type.ACTION
         capability = self.capability

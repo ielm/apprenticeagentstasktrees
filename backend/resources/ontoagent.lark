@@ -3,6 +3,7 @@ ontoagent_process: (ontoagent_process_add_trigger | ontoagent_process_define_goa
 
 ontoagent_process_add_trigger: ADD TRIGGER TO identifier INSTANTIATE identifier WHEN comparator ";"
 ontoagent_process_define_goal: DEFINE goal ";"
+ontoagent_process_define_output_xmr_template: DEFINE NAME arguments AS TEMPLATE output_xmr_template_type output_xmr_template_requires (output_xmr_template_root)? output_xmr_template_include ";"
 ontoagent_process_register_mp: REGISTER MP agent_method (AS NAME)? ";"
 
 // Rules
@@ -40,6 +41,10 @@ ontoagent_triple: slot (facet)? (filler | argument)
 output_argument: (argument | literal | statement_instance)
 output_arguments: "(" (output_argument ("," output_argument)*)? ")"
 output_statement: OUTPUT NAME output_arguments BY statement_instance
+output_xmr_template_type: TYPE (VERBAL | PHYSICAL | MENTAL)
+output_xmr_template_requires: REQUIRES identifier
+output_xmr_template_root: ROOT identifier
+output_xmr_template_include: INCLUDE assign_process*
 plan: PLAN "(" PLAN_NAME ")" plan_selection plan_step+
 plan_do: DO (statement | IDLE)
 plan_selection: SELECT (DEFAULT | IF NOT? (boolean_statement | mp_statement))
@@ -69,20 +74,27 @@ GOAL: "goal"i
 IDLE: "idle"i
 IF: "if"i
 IMPASSE: "impasse"i
+INCLUDE: "include"i
 INSTANTIATE: "instantiate"i
+MENTAL: "mental"i
 MP: "mp"i
 NAND: "nand"i
 NOR: "nor"i
 OUTPUT: "output"i
 PENDING: "pending"i
+PHYSICAL: "physical"i
 PLAN: "plan"i
 PRIORITY: "priority"i
 REGISTER: "register"i
 RESOURCES: "resources"i
+REQUIRES: "requires"i
+ROOT: "root"i
 SATISFIED: "satisfied"i
 SELF: "self"i
 STEP: "step"i
+TEMPLATE: "template"i
 TRIGGER: "trigger"i
+VERBAL: "verbal"i
 WHEN: "when"i
 WITH: "with"i
 

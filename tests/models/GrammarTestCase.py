@@ -18,6 +18,7 @@ from ontograph.Space import Space
 import unittest
 
 
+@DeprecationWarning
 class GrammarTestCase(unittest.TestCase):
 
     def setUp(self):
@@ -28,10 +29,12 @@ class GrammarTestCase(unittest.TestCase):
         graph.reset()
         self.a = TestAgent()
 
+    @DeprecationWarning
     def test_parse_instance(self):
         self.assertEqual(1, Grammar.parse(self.a, "1", start="instance"))
         self.assertEqual(123, Grammar.parse(self.a, "123", start="instance"))
 
+    @DeprecationWarning
     def test_parse_name(self):
         self.assertEqual("EVENT", Grammar.parse(self.a, "EVENT", start="name"))
         self.assertEqual("EvEnT", Grammar.parse(self.a, "EvEnT", start="name"))
@@ -39,6 +42,7 @@ class GrammarTestCase(unittest.TestCase):
         self.assertEqual("EvEn_T", Grammar.parse(self.a, "EvEn_T", start="name"))
         self.assertEqual("*EvEnT", Grammar.parse(self.a, "*EvEnT", start="name"))
 
+    @DeprecationWarning
     def test_parse_graph(self):
         self.assertEqual("WM", Grammar.parse(self.a, "WM", start="graph"))
         self.assertEqual("TmR", Grammar.parse(self.a, "TmR", start="graph"))
@@ -46,6 +50,7 @@ class GrammarTestCase(unittest.TestCase):
         self.assertEqual("XMR#123456", Grammar.parse(self.a, "XMR#123456", start="graph"))
         self.assertEqual("XMR-TEMPLATE#123456", Grammar.parse(self.a, "XMR-TEMPLATE#123456", start="graph"))
 
+    @DeprecationWarning
     def test_parse_identifier(self):
         self.assertEqual(Identifier("@WM.EVENT.1"), Grammar.parse(self.a, "@WM.EVENT.1", start="identifier"))
         self.assertEqual(Identifier("@EVENT.1"), Grammar.parse(self.a, "@EVENT.1", start="identifier"))
@@ -56,19 +61,23 @@ class GrammarTestCase(unittest.TestCase):
         with self.assertRaises(Exception):
             Grammar.parse(self.a, "False", start="identifier")
 
+    @DeprecationWarning
     def test_parse_integer(self):
         self.assertEqual(1, Grammar.parse(self.a, "1", start="integer"))
         self.assertEqual(123, Grammar.parse(self.a, "123", start="integer"))
 
+    @DeprecationWarning
     def test_parse_double(self):
         self.assertEqual(1.0, Grammar.parse(self.a, "1.0", start="double"))
         self.assertEqual(1.01, Grammar.parse(self.a, "1.01", start="double"))
 
+    @DeprecationWarning
     def test_parse_string(self):
         self.assertEqual("test", Grammar.parse(self.a, "\"test\"", start="string"))
         self.assertEqual("123", Grammar.parse(self.a, "\"123\"", start="string"))
         self.assertEqual("12ac3b3", Grammar.parse(self.a, "\"12ac3b3\"", start="string"))
 
+    @DeprecationWarning
     def test_parse_literal(self):
         self.assertEqual(1, Grammar.parse(self.a, "1", start="literal"))
         self.assertEqual(1.0, Grammar.parse(self.a, "1.0", start="literal"))
@@ -80,10 +89,12 @@ class GrammarTestCase(unittest.TestCase):
         self.assertEqual(False, Grammar.parse(self.a, "False", start="literal"))
         self.assertEqual(False, Grammar.parse(self.a, "FaLsE", start="literal"))
 
+    @DeprecationWarning
     def test_parse_literal_query(self):
         self.assertEqual(LiteralQuery(123), Grammar.parse(self.a, "=123", start="literal_query"))
         self.assertEqual(LiteralQuery(123), Grammar.parse(self.a, "= 123", start="literal_query"))
 
+    @DeprecationWarning
     def test_parse_identifier_query(self):
         self.assertEqual(IdentifierQuery("@WM.HUMAN.1", IdentifierQuery.Comparator.EQUALS), Grammar.parse(self.a, "=@WM.HUMAN.1", start="identifier_query"))
         self.assertEqual(IdentifierQuery("@WM.HUMAN.1", IdentifierQuery.Comparator.EQUALS), Grammar.parse(self.a, "= @WM.HUMAN.1", start="identifier_query"))
@@ -99,10 +110,12 @@ class GrammarTestCase(unittest.TestCase):
         self.assertEqual(IdentifierQuery("@WM.HUMAN.1", IdentifierQuery.Comparator.SUBCLASSES, set=False), Grammar.parse(self.a, ">! @WM.HUMAN.1", start="identifier_query"))
         self.assertEqual(IdentifierQuery("@WM.HUMAN.1", IdentifierQuery.Comparator.SUBCLASSES, from_concept=True), Grammar.parse(self.a, "~> @WM.HUMAN.1", start="identifier_query"))
 
+    @DeprecationWarning
     def test_parse_filler_query(self):
         self.assertEqual(FillerQuery(LiteralQuery(123)), Grammar.parse(self.a, "=123", start="filler_query"))
         self.assertEqual(FillerQuery(IdentifierQuery("@WM.HUMAN.1", IdentifierQuery.Comparator.EQUALS)), Grammar.parse(self.a, "=@WM.HUMAN.1", start="filler_query"))
 
+    @DeprecationWarning
     def test_parse_slot_query(self):
         nq = NameQuery("THEME")
         fq1 = FillerQuery(LiteralQuery(123))
@@ -124,6 +137,7 @@ class GrammarTestCase(unittest.TestCase):
         self.assertEqual(SlotQuery(ExactQuery([fq1, fq2])), Grammar.parse(self.a, "* exactly (= 123 AND = 456)", start="slot_query"))
         self.assertEqual(SlotQuery(AndQuery([nq, ExactQuery([fq1, fq2])])), Grammar.parse(self.a, "THEME EXACTLY (= 123 AND = 456)", start="slot_query"))
 
+    @DeprecationWarning
     def test_parse_frame_query(self):
         iq = IdentifierQuery("@WM.HUMAN.1", IdentifierQuery.Comparator.EQUALS)
         sq1 = SlotQuery( AndQuery([NameQuery("THEME"), FillerQuery(LiteralQuery(123))]))
@@ -150,16 +164,19 @@ class GrammarTestCase(unittest.TestCase):
         self.assertEqual(FrameQuery(NotQuery(iq)), Grammar.parse(self.a, "WHERE NOT @ =@WM.HUMAN.1", start="frame_query"))
         self.assertEqual(FrameQuery(IdentifierQuery("@ONT.EVENT", IdentifierQuery.Comparator.ISA)), Grammar.parse(self.a, "WHERE @^@ONT.EVENT", start="frame_query"))
 
+    @DeprecationWarning
     def test_parse_view_graph(self):
         self.assertEqual(View(self.a, Space("TEST")), Grammar.parse(self.a, "VIEW TEST SHOW ALL"))
         self.assertEqual(View(self.a, Space("TEST")), Grammar.parse(self.a, "view TEST show all"))
         self.assertEqual(View(self.a, Space("TMR#123")), Grammar.parse(self.a, "view TMR#123 show all"))
 
+    @DeprecationWarning
     def test_parse_view_graph_with_query(self):
         query = FrameQuery(IdentifierQuery("@TEST.FRAME.1", IdentifierQuery.Comparator.EQUALS))
         self.assertEqual(View(self.a, Space("TEST"), query=query), Grammar.parse(self.a, "VIEW TEST SHOW FRAMES WHERE @=@TEST.FRAME.1"))
         self.assertEqual(View(self.a, Space("TEST"), query=query), Grammar.parse(self.a, "view TEST show frames where @=@TEST.FRAME.1"))
 
+    @DeprecationWarning
     def test_parse_follow(self):
         self.assertEqual(Path().to("REL"), Grammar.parse(self.a, "[REL]->", start="path"))
         self.assertEqual(Path().to("*"), Grammar.parse(self.a, "[*]->", start="path"))
@@ -173,12 +190,14 @@ class GrammarTestCase(unittest.TestCase):
         self.assertEqual(Path().to("REL", comparator=FrameQuery(IdentifierQuery("@TEST.FRAME.1", IdentifierQuery.Comparator.EQUALS))).to("OTHER"), Grammar.parse(self.a, "[REL]-> TO @ = @TEST.FRAME.1 [OTHER]->", start="path"))
         self.assertEqual(Path().to("REL", comparator=FrameQuery(IdentifierQuery("@TEST.FRAME.1", IdentifierQuery.Comparator.EQUALS))).to("OTHER"), Grammar.parse(self.a, "[REL]-> TO @ = @TEST.FRAME.1 THEN [OTHER]->", start="path"))
 
+    @DeprecationWarning
     def test_parse_view_graph_with_path(self):
         self.assertEqual(View(self.a, Space("TEST"), follow=Path().to("REL")), Grammar.parse(self.a, "VIEW TEST SHOW ALL FOLLOW [REL]->"))
         self.assertEqual(View(self.a, Space("TEST"), follow=Path().to("REL").to("OTHER")), Grammar.parse(self.a, "view TEST SHOW ALL FOLLOW [REL]->[OTHER]->"))
         self.assertEqual(View(self.a, Space("TEST"), follow=[Path().to("REL1"), Path().to("REL2")]), Grammar.parse(self.a, "view TEST SHOW ALL FOLLOW [REL1]-> AND FOLLOW [REL2]->"))
 
 
+@DeprecationWarning
 class AgendaGrammarTestCase(unittest.TestCase):
 
     class TestAgent(Agent):
@@ -197,6 +216,7 @@ class AgendaGrammarTestCase(unittest.TestCase):
 
         self.agent = AgendaGrammarTestCase.TestAgent(Space("SELF"), self.agentFrame)
 
+    @DeprecationWarning
     def test_statement_instance(self):
         space = Space("SELF")
         concept = Frame("@SELF.MYCONCEPT")
@@ -224,11 +244,13 @@ class AgendaGrammarTestCase(unittest.TestCase):
         # Any variable can also be used
         self.assertEqual("$var1", Grammar.parse(self.agent, "$var1", start="statement_instance"))
 
+    @DeprecationWarning
     def test_is_statement(self):
         f = Frame("@SELF.FRAME")
 
         self.assertEqual(IsStatement.instance(Space("SELF"), f, "SLOT", 123), Grammar.parse(self.agent, "@SELF.FRAME[SLOT] == 123", start="is_statement"))
 
+    @DeprecationWarning
     def test_make_instance_statement(self):
         space = Space("SELF")
         concept = Frame("@SELF.MYCONCEPT")
@@ -236,6 +258,7 @@ class AgendaGrammarTestCase(unittest.TestCase):
         self.assertEqual(MakeInstanceStatement.instance(space, space.name, concept, []), Grammar.parse(self.agent, "@AGENT.INTERNAL!:@SELF.MYCONCEPT()", start="make_instance_statement"))
         self.assertEqual(MakeInstanceStatement.instance(space, space.name, concept, ["$arg1", "$arg2"]), Grammar.parse(self.agent, "@SELF:@SELF.MYCONCEPT($arg1, $arg2)", start="make_instance_statement"))
 
+    @DeprecationWarning
     def test_add_filler_statement(self):
         space = Space("SELF")
         f = Frame("@SELF.FRAME")
@@ -252,6 +275,7 @@ class AgendaGrammarTestCase(unittest.TestCase):
         parsed = Grammar.parse(self.agent, "@SELF.FRAME[SLOT] += 123", start="add_filler_statement")
         self.assertEqual(statement, parsed)
 
+    @DeprecationWarning
     def test_assert_statement(self):
         Bootstrap.bootstrap_resource(None, "backend.resources", "exe.knowledge")
 
@@ -277,6 +301,7 @@ class AgendaGrammarTestCase(unittest.TestCase):
         parsed = Grammar.parse(self.agent, "ASSERT EXISTS HAS XYZ ELSE IMPASSE WITH @TEST:@TEST.MYGOAL() OR @TEST:@TEST.MYGOAL($var1, $var2)", start="assert_statement")
         self.assertEqual(statement, parsed)
 
+    @DeprecationWarning
     def test_assign_filler_statement(self):
         space = Space("SELF")
         f = Frame("@SELF.FRAME")
@@ -293,6 +318,7 @@ class AgendaGrammarTestCase(unittest.TestCase):
         parsed = Grammar.parse(self.agent, "@SELF.FRAME[SLOT] = 123", start="assign_filler_statement")
         self.assertEqual(statement, parsed)
 
+    @DeprecationWarning
     def test_assign_variable_statement(self):
         from backend.models.bootstrap import BootstrapTriple
 
@@ -337,11 +363,13 @@ class AgendaGrammarTestCase(unittest.TestCase):
         parsed = Grammar.parse(self.agent, "$var1 = {SLOT 123;}", start="assign_variable_statement")
         self.assertEqual(statement, parsed)
 
+    @DeprecationWarning
     def test_exists_statement(self):
         statement = ExistsStatement.instance(Space("SELF"), SlotQuery(AndQuery([NameQuery("THEME"), FillerQuery(LiteralQuery(123))])))
         parsed = Grammar.parse(self.agent, "EXISTS THEME = 123", start="exists_statement")
         self.assertEqual(statement, parsed)
 
+    @DeprecationWarning
     def test_expectation_statement(self):
         space = Space("SELF")
         Bootstrap.bootstrap_resource(None, "backend.resources", "exe.knowledge")
@@ -358,6 +386,7 @@ class AgendaGrammarTestCase(unittest.TestCase):
         parsed = Grammar.parse(self.agent, "EXPECT @SELF.FRAME.1[SLOT] == 123", start="expectation_statement")
         self.assertEqual(statement, parsed)
 
+    @DeprecationWarning
     def test_foreach_statement(self):
         space = Space("SELF")
         Bootstrap.bootstrap_resource(None, "backend.resources", "exe.knowledge")
@@ -372,6 +401,7 @@ class AgendaGrammarTestCase(unittest.TestCase):
         parsed = Grammar.parse(self.agent, "FOR EACH $var IN THEME = 123 | $var[SLOT] += 456 | $var[SLOT] += 456", start="foreach_statement")
         self.assertEqual(statement, parsed)
 
+    @DeprecationWarning
     def test_mp_statement(self):
         space = Space("SELF")
 
@@ -387,6 +417,7 @@ class AgendaGrammarTestCase(unittest.TestCase):
         parsed = Grammar.parse(self.agent, "SELF.mp1(123, @SELF.TEST)", start="mp_statement")
         self.assertEqual(statement, parsed)
 
+    @DeprecationWarning
     def test_output_statement(self):
         template = OutputXMRTemplate.build("test-xmr", XMR.Type.ACTION, "@SELF.TEST-CAPABILITY", ["$var1", "$var2", "$var3", "$var4"])
 
@@ -394,6 +425,7 @@ class AgendaGrammarTestCase(unittest.TestCase):
         parsed = Grammar.parse(self.agent, "OUTPUT test-xmr(1, \"abc\", $var1, @SELF.TEST) BY SELF", start="output_statement")
         self.assertEqual(statement, parsed)
 
+    @DeprecationWarning
     def test_transientframe_statement(self):
         from backend.models.bootstrap import BootstrapTriple
 
@@ -415,6 +447,7 @@ class AgendaGrammarTestCase(unittest.TestCase):
         parsed = Grammar.parse(self.agent, "{SLOTB \"abc\"; SLOTC $var1; SLOTD @TEST.FRAME.1;}", start="transient_statement")
         self.assertEqual(statement, parsed)
 
+    @DeprecationWarning
     def test_plan(self):
         space = Space("SELF")
         Bootstrap.bootstrap_resource(None, "backend.resources", "exe.knowledge")
@@ -448,6 +481,7 @@ class AgendaGrammarTestCase(unittest.TestCase):
         parsed = Grammar.parse(self.agent, "PLAN (testplan) SELECT DEFAULT STEP DO SELF.mp1() STEP DO SELF.mp1()", start="plan")
         self.assertEqual(plan, parsed)
 
+    @DeprecationWarning
     def test_condition(self):
         space = Space("SELF")
         Bootstrap.bootstrap_resource(None, "backend.resources", "exe.knowledge")
@@ -470,6 +504,7 @@ class AgendaGrammarTestCase(unittest.TestCase):
         parsed = Grammar.parse(self.agent, "WHEN EXECUTED THEN satisfied", start="condition")
         self.assertEqual(condition, parsed)
 
+    @DeprecationWarning
     def test_define_goal(self):
         space = Space("SELF")
         Bootstrap.bootstrap_resource(None, "backend.resources", "exe.knowledge")
@@ -534,6 +569,7 @@ class AgendaGrammarTestCase(unittest.TestCase):
         parsed: Goal = Grammar.parse(self.agent, "DEFINE XYZ() AS GOAL IN SELF EFFECT DO @TEST.FRAME.1[SLOT] = 123 DO @TEST.FRAME.1[SLOT] = $var1", start="define").goal
         self.assertEqual(goal, parsed)
 
+    @DeprecationWarning
     def test_find_something_to_do(self):
         space = Space("SELF")
         Bootstrap.bootstrap_resource(None, "backend.resources", "exe.knowledge")
@@ -579,6 +615,7 @@ class AgendaGrammarTestCase(unittest.TestCase):
         self.assertEqual(goal1, parsed)
 
 
+@DeprecationWarning
 class BootstrapGrammarTestCase(unittest.TestCase):
 
     def setUp(self):
@@ -587,6 +624,7 @@ class BootstrapGrammarTestCase(unittest.TestCase):
 
         self.agent = AgendaGrammarTestCase.TestAgent(Space("SELF"), self.agentFrame)
 
+    @DeprecationWarning
     def test_bootstrap_comments(self):
         input = '''
         // A comment
@@ -598,6 +636,7 @@ class BootstrapGrammarTestCase(unittest.TestCase):
         bootstrap = Grammar.parse(self.agent, input, start="bootstrap")
         self.assertEqual(3, len(bootstrap))
 
+    @DeprecationWarning
     def test_bootstrap_multiple(self):
         from backend.models.bootstrap import Bootstrap
 
@@ -616,6 +655,7 @@ class BootstrapGrammarTestCase(unittest.TestCase):
         for b in bootstrap:
             self.assertIsInstance(b, Bootstrap)
 
+    @DeprecationWarning
     def test_declare_knowledge(self):
         from backend.models.bootstrap import BootstrapDeclareKnowledge, BootstrapTriple
 
@@ -651,6 +691,7 @@ class BootstrapGrammarTestCase(unittest.TestCase):
         parsed = Grammar.parse(self.agent, "@MYGRAPH.MYFRAME = {MYPROP SEM @ONT.ALL}", start="declare_knowledge")
         self.assertEqual(bootstrap, parsed)
 
+    @DeprecationWarning
     def test_append_knowledge(self):
         from backend.models.bootstrap import BootstrapAppendKnowledge, BootstrapTriple
 
@@ -666,6 +707,7 @@ class BootstrapGrammarTestCase(unittest.TestCase):
         parsed = Grammar.parse(self.agent, "@SELF.FRAME += {MYPROP SEM @ONT.ALL}", start="append_knowledge")
         self.assertEqual(bootstrap, parsed)
 
+    @DeprecationWarning
     def test_register_mp(self):
         from backend.models.bootstrap import BootstrapRegisterMP
 
@@ -677,6 +719,7 @@ class BootstrapGrammarTestCase(unittest.TestCase):
         parsed = Grammar.parse(self.agent, "REGISTER MP tests.models.GrammarTestCase.TestAgentMethod AS TestMP", start="register_mp")
         self.assertEqual(bootstrap, parsed)
 
+    @DeprecationWarning
     def test_add_trigger(self):
         from backend.models.bootstrap import BootstrapAddTrigger
 
@@ -687,6 +730,7 @@ class BootstrapGrammarTestCase(unittest.TestCase):
         self.assertEqual(bootstrap, parsed)
 
 
+@DeprecationWarning
 class OutputXMRTemplateGrammarTestCase(unittest.TestCase):
 
     def setUp(self):
@@ -695,6 +739,7 @@ class OutputXMRTemplateGrammarTestCase(unittest.TestCase):
 
         self.agent = AgendaGrammarTestCase.TestAgent(Space("SELF"), self.agentFrame)
 
+    @DeprecationWarning
     def test_parse_type(self):
         type = XMR.Type.ACTION
         parsed = Grammar.parse(self.agent, "TYPE PHYSICAL", start="output_xmr_template_type")
@@ -708,6 +753,7 @@ class OutputXMRTemplateGrammarTestCase(unittest.TestCase):
         parsed = Grammar.parse(self.agent, "TYPE VERBAL", start="output_xmr_template_type")
         self.assertEqual(type, parsed)
 
+    @DeprecationWarning
     def test_parse_requires(self):
         requires = Identifier("@EXE.TEST-CAPABILITY")
         parsed = Grammar.parse(self.agent, "REQUIRES @EXE.TEST-CAPABILITY", start="output_xmr_template_requires")
@@ -717,6 +763,7 @@ class OutputXMRTemplateGrammarTestCase(unittest.TestCase):
         parsed = Grammar.parse(self.agent, "REQUIRES @EXE.TEST-CAPABILITY.1", start="output_xmr_template_requires")
         self.assertEqual(requires, parsed)
 
+    @DeprecationWarning
     def test_parse_root(self):
         requires = Identifier("@OUT.TEST-ROOT")
         parsed = Grammar.parse(self.agent, "ROOT @OUT.TEST-ROOT", start="output_xmr_template_root")
@@ -726,6 +773,7 @@ class OutputXMRTemplateGrammarTestCase(unittest.TestCase):
         parsed = Grammar.parse(self.agent, "ROOT @OUT.TEST-ROOT.1", start="output_xmr_template_root")
         self.assertEqual(requires, parsed)
 
+    @DeprecationWarning
     def test_parse_include(self):
         from backend.models.bootstrap import BootstrapDeclareKnowledge, BootstrapTriple
 
@@ -745,6 +793,7 @@ class OutputXMRTemplateGrammarTestCase(unittest.TestCase):
         parsed = Grammar.parse(self.agent, "INCLUDE @OUT.MYFRAME.1 = {AGENT @SELF}", start="output_xmr_template_include")
         self.assertEqual(include, parsed)
 
+    @DeprecationWarning
     def test_parse_template(self):
         from backend.models.bootstrap import BootstrapDeclareKnowledge, BootstrapDefineOutputXMRTemplate, BootstrapTriple
 
