@@ -270,9 +270,9 @@ class Goal(VariableMap):
     def __eq__(self, other):
         if isinstance(other, Goal):
             return self.frame == other.frame or (
-                self.frame["NAME"] == other.frame["NAME"] and
-                self.frame["PRIORITY"] == other.frame["PRIORITY"] and
-                self.frame["STATUS"] == other.frame["STATUS"] and
+                self.frame["NAME"] == list(other.frame["NAME"]) and
+                self.frame["PRIORITY"] == list(other.frame["PRIORITY"]) and
+                self.frame["STATUS"] == list(other.frame["STATUS"]) and
                 self.__eqPLAN(other) and
                 self.__eqWHEN(other)
             )
@@ -281,20 +281,20 @@ class Goal(VariableMap):
         return super().__eq__(other)
 
     def __eqPLAN(self, other: 'Goal'):
-        if self.frame["PLAN", Role.LOC] == other.frame["PLAN", Role.LOC]:
+        if self.frame["PLAN", Role.LOC] == list(other.frame["PLAN", Role.LOC]):
             return True
 
-        s1 = list(map(lambda frame: Plan(frame.resolve()), self.frame["PLAN", Role.LOC]))
-        s2 = list(map(lambda frame: Plan(frame.resolve()), other.frame["PLAN", Role.LOC]))
+        s1 = list(map(lambda frame: Plan(frame), self.frame["PLAN", Role.LOC]))
+        s2 = list(map(lambda frame: Plan(frame), other.frame["PLAN", Role.LOC]))
 
         return s1 == s2
 
     def __eqWHEN(self, other: 'Goal'):
-        if self.frame["WHEN"] == other.frame["WHEN"]:
+        if self.frame["WHEN"] == list(other.frame["WHEN"]):
             return True
 
-        s1 = list(map(lambda frame: Condition(frame.resolve()), self.frame["WHEN"]))
-        s2 = list(map(lambda frame: Condition(frame.resolve()), other.frame["WHEN"]))
+        s1 = list(map(lambda frame: Condition(frame), self.frame["WHEN"]))
+        s2 = list(map(lambda frame: Condition(frame), other.frame["WHEN"]))
 
         return s1 == s2
 
@@ -634,7 +634,7 @@ class Condition(object):
         return super().__eq__(other)
 
     def __eqIF(self, other: 'Condition'):
-        if self.frame["IF"] == other.frame["IF"]:
+        if self.frame["IF"] == list(other.frame["IF"]):
             return True
 
         s1 = list(map(lambda frame: Statement.from_instance(frame), self.frame["IF"]))

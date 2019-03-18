@@ -188,9 +188,6 @@ class Statement(object):
         definition = frame.parents()[0]
         clazz = definition["CLASSMAP"][0]
         return StatementRegistry.lookup(clazz)(frame)
-        # if isinstance(clazz, str):
-        #     clazz = locate(definition["CLASSMAP"][0])
-        # return clazz(frame)
 
     def __init__(self, frame: Frame):
         self.frame = frame
