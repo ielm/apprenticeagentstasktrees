@@ -2,7 +2,7 @@ from backend.agent import Agent
 from backend.models.agenda import Decision, Goal
 from backend.models.bootstrap import Bootstrap
 from backend.models.effectors import Callback, Effector
-from backend.models.ontology import Ontology
+from backend.utils.OntologyLoader import OntologyServiceLoader
 
 from tests.experiments.ExperimentTestCase import ExperimentTestCase
 
@@ -11,7 +11,8 @@ class ExampleExperimentTestCase(ExperimentTestCase):
 
     def test_example_throughput(self):
 
-        agent = Agent(ontology=Ontology.init_default())
+        OntologyServiceLoader().load()
+        agent = Agent()
 
         # Bootstrap the knowledge
         Bootstrap.bootstrap_resource(agent, "backend.resources.example", "example.knowledge")
@@ -27,7 +28,7 @@ class ExampleExperimentTestCase(ExperimentTestCase):
         agent.iidea()
 
         # 1b) There is one instance of ACKNOWLEDGE-LANGUAGE-INPUT; it is active, and focused on SELF.XMR.1
-        self.assertGoalExists(agent, isa="EXE.ACKNOWLEDGE-LANGUAGE-INPUT", status=Goal.Status.ACTIVE, query=lambda goal: goal.resolve("$tmr")._identifier == "INPUTS.XMR.1")
+        self.assertGoalExists(agent, isa="@EXE.ACKNOWLEDGE-LANGUAGE-INPUT", status=Goal.Status.ACTIVE, query=lambda goal: goal.resolve("$tmr")._identifier == "@INPUTS.XMR.1")
 
         # 1c) There is one decision, for ACKNOWLEDGE-LANGUAGE-INPUT > acknowledge language input > Step 1; it is selected, and has an output, no effectors, and no callbacks
         self.assertEqual(1, len(agent.decisions()))
