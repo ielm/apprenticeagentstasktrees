@@ -325,6 +325,9 @@ def format_environment(env):
     env_dict = dict()
 
     epochs = env.history()
+
+    print(len(epochs))
+
     index = 0
 
     for epoch in epochs:
@@ -391,6 +394,11 @@ def format_environment_object(instance):
 
 @app.route("/test", methods=["GET"])
 def get_test():
+    return json.dumps(format_environment(agent.env()))
+
+
+@app.route("/environment/get-struc", methods=["GET"])
+def get_structured_environment():
     return json.dumps(format_environment(agent.env()))
 
 

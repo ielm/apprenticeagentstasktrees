@@ -20,6 +20,48 @@
 
     <link rel="stylesheet" href="../assets/css/customRange.css">
 
+    {#
+        TODO
+            - buildEnvViewer on timeline update according to epoch index
+            - asynchronously update environment on data update
+            -
+
+    #}
+
+
+    <script>
+        var epoch_dict = {};
+        function loadStruc() {
+            $.ajax({
+                url: "/environment/get-struc",
+                method: "GET",
+                success: structureEnv,
+                error: strucError,
+
+            });
+
+            /**
+             * Structures epoch indexed environment data
+             * @param data
+             * @param status
+             */
+            function structureEnv(data, status) {
+                let output = JSON.parse(data);
+                for (let key in output) {
+                    if (output.hasOwnProperty(key)) {
+                        console.log(key, output[key]);
+                        epoch_dict[key] = output[key];
+                    }
+                }
+            }
+
+            function strucError() {
+                console.log("Couldn't get structured environment data");
+            }
+        }
+
+    </script>
+
     <script>
         function load() {
             $.ajax({
@@ -28,6 +70,16 @@
                 success: buildEnvViewer,
                 error: viewerError
             });
+
+            function structureEnv(data, status) {
+                let output = JSON.parse(data);
+                for (let key in output) {
+                    if (output.hasOwnProperty(key)) {
+
+                    }
+                }
+            }
+
 
             /**
              * Builds Environment Viewer
@@ -39,7 +91,7 @@
 
                 $("#raw_env").JSONView(output, {collapsed: false});
 
-                testEnv(data); // gets test environment data structured by epoch
+                {#testEnv(data); // gets test environment data structured by epoch#}
 
                 document.querySelector("#locations").appendChild(buildEnvNavigation(data));
 
@@ -228,7 +280,7 @@
         }
     </script>
 
-    {#  Location Navigation Tempalte  #}
+    {#  Location Navigation Template  #}
     <div style="display: none; margin-bottom: 25px;" data-type="loc-nav-template" id="location-nav-template" class="card">
         <div class="card-header">
             <ul id="location-titles" class="nav nav-tabs card-header-tabs"></ul>
@@ -248,7 +300,7 @@
 
 </head>
 
-<body onload="load()">
+<body onload="load(); loadStruc();">
 
     {% include 'nav.html' %}
     <script>
