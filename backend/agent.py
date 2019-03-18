@@ -49,7 +49,7 @@ class Agent(Network):
         self.action_queue = []
         # self.context = LCTContext(self)
 
-        # self._logger = CachedAgentLogger()
+        self._logger = CachedAgentLogger()
         # self.wo_memory.logger(self._logger)
         # self.lt_memory.logger(self._logger)
 

@@ -7,22 +7,27 @@ from pkgutil import get_data
 
 from backend.agent import Agent
 from backend.models.bootstrap import Bootstrap
-from backend.contexts.LCTContext import LCTContext
+# from backend.contexts.LCTContext import LCTContext
 from backend.models.grammar import Grammar
-from backend.models.graph import Frame, Identifier
-from backend.models.ontology import Ontology
+# from backend.models.graph import Frame, Identifier
+# from backend.models.ontology import Ontology
 from backend.models.xmr import XMR
 from backend.service.AgentAdvanceThread import AgentAdvanceThread
 from backend.service.IIDEAConverter import IIDEAConverter
+from backend.utils.OntologyLoader import OntologyServiceLoader
 from backend.utils.YaleUtils import format_learned_event_yale, input_to_tmrs, lookup_by_visual_id
+from ontograph import graph as g
+from ontograph.Frame import Frame
+from ontograph.Space import Space
 
 
 app = Flask(__name__, template_folder="../../frontend/templates/")
 CORS(app)
 socketio = SocketIO(app)
 
-agent = Agent(ontology=Ontology.init_default())
+agent = Agent()
 agent.logger().enable()
+OntologyServiceLoader().load()
 thread = None
 
 
@@ -41,36 +46,35 @@ def build_payload():
     }
 
 
-def graph_to_json(graph):
+def graph_to_json(space: Space):
     frames = []
 
-    for f in graph:
-        frame = graph[f]
+    for frame in space:
+
+        t = frame.__class__.__name__
+        if frame.space() == g.ontology():
+            t = "OntologyFrame"
+        if frame.space() is not None and frame.space().name.startswith("TMR#"):
+            t = "TMRFrame"
 
         converted = {
-            "type": frame.__class__.__name__,
-            "graph": graph._namespace if frame._identifier.graph is None else frame._identifier.graph,
-            "name": frame._identifier.render(graph=False),
+            "type": t,
+            "graph": space.name if frame.space() is None else frame.space().name,
+            "name": frame.id,
             "relations": [],
             "attributes": []
         }
 
-        for s in frame:
-            slot = frame[s]
+        for slot in frame:
             for filler in slot:
-                if isinstance(filler._value, Identifier):
-
-                    modified = Identifier(filler._value.graph, filler._value.name, instance=filler._value.instance)
-                    if modified.graph is None:
-                        modified.graph = graph._namespace
-
+                if isinstance(filler, Frame):
                     converted["relations"].append({
-                        "graph": modified.graph,
-                        "slot": s,
-                        "value": modified.render(graph=False),
+                        "graph": space.name if filler.space() is None else filler.space().name,
+                        "slot": slot.property,
+                        "value": filler.id
                     })
                 else:
-                    value = filler._value.value
+                    value = filler
                     if isinstance(value, type):
                         value = value.__module__ + '.' + value.__name__
                     elif isinstance(value, int):
@@ -79,7 +83,7 @@ def graph_to_json(graph):
                         value = str(value)
 
                     converted["attributes"].append({
-                        "slot": s,
+                        "slot": slot.property,
                         "value": value
                     })
 
@@ -125,7 +129,7 @@ def reset():
 
 @app.route("/network", methods=["GET"])
 def network():
-    return json.dumps(list(agent._storage.keys()))
+    return json.dumps(list(map(lambda s: s.name, g)))
 
 
 @app.route("/view", methods=["POST"])

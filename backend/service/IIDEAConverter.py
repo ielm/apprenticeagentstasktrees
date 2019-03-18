@@ -1,9 +1,10 @@
 from backend.agent import Agent
 from backend.models.agenda import Decision, Expectation, Goal, Plan, Step, Trigger
 from backend.models.effectors import Callback, Capability, Effector
-from backend.models.graph import Frame, Identifier, Literal
+# from backend.models.graph import Frame, Identifier, Literal
 from backend.models.xmr import XMR
 from backend.utils.AgentLogger import CachedAgentLogger
+from ontograph.Frame import Frame
 
 
 class IIDEAConverter(object):
@@ -15,8 +16,8 @@ class IIDEAConverter(object):
         payload = []
 
         # 1) Gather all of the inputs and outputs
-        payload.extend(agent["INPUTS"].values())
-        payload.extend(agent["OUTPUTS"].values())
+        payload.extend(agent.inputs)
+        payload.extend(agent.outputs)
 
         # 2) Map them to the correct XMR objects
         payload = list(map(lambda frame: XMR.from_instance(frame), payload))
@@ -27,7 +28,7 @@ class IIDEAConverter(object):
         # 4) Map them to simple dictionaries
         def source(xmr: XMR) -> str:
             if xmr.source() is not None:
-                return xmr.source().name()
+                return xmr.source().id
             if xmr.signal() == XMR.Signal.INPUT:
                 return "ONT.HUMAN"
             return "SELF.ROBOT.1"
@@ -77,12 +78,8 @@ class IIDEAConverter(object):
 
     @classmethod
     def convert_value(cls, value):
-        if isinstance(value, Literal):
-            return value.value
         if isinstance(value, Frame):
-            return value._identifier.render()
-        if isinstance(value, Identifier):
-            return value.render()
+            return value.id
         return value
 
     @classmethod
@@ -127,7 +124,7 @@ class IIDEAConverter(object):
             "goal": decision.goal().name(),
             "plan": decision.plan().name(),
             "step": "Step " + str(decision.step().index()),
-            "outputs": list(map(lambda output: IIDEAConverter.convert_output(agent, output), decision.outputs())),
+            "outputs": list(map(lambda output: IIDEAConverter.convert_output(output), decision.outputs())),
             "priority": decision.priority(),
             "cost": decision.cost(),
             "requires": list(map(lambda required: required.frame.name(), decision.requires())),
@@ -139,10 +136,10 @@ class IIDEAConverter(object):
         }
 
     @classmethod
-    def convert_output(cls, agent: Agent, output: XMR):
+    def convert_output(cls, output: XMR):
         return {
-            "frame": output.frame.name(),
-            "graph": output.graph(agent)._namespace,
+            "frame": output.frame.id,
+            "graph": output.graph().name,
             "status": output.status().name
         }
 
