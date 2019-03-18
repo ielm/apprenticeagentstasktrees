@@ -26,8 +26,8 @@ class ServiceTestCase(unittest.TestCase):
         f1 = Frame("@TEST.FRAME.1")
         f2 = Frame("@TEST.FRAME.2")
 
-        response = self.app.post("/view", data="VIEW TEST SHOW FRAMES WHERE @=@TEST.FRAME.1")
-        self.assertEqual(json.loads(response.data), [{"type": "Frame", "graph": "TEST", "name": "FRAME.1", "relations": [], "attributes": []}])
+        response = self.app.post("/view", data="FROM TEST SEARCH FOR @ = @TEST.FRAME.1;")
+        self.assertEqual(json.loads(response.data), [{"type": "ViewFrame", "graph": "TEST", "name": "@TEST.FRAME.1", "relations": [], "attributes": []}])
 
     def test_graph_to_json_types(self):
         from backend.models.view import View

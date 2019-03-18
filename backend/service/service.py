@@ -134,8 +134,10 @@ def network():
 
 @app.route("/view", methods=["POST"])
 def view():
+    from backend.models.view import View
     data = request.data.decode("utf-8")
-    view = Grammar.parse(agent, data)
+    q_processor = g.ontolang().parse(data)[0]
+    view = View(agent, q_processor.start, query=q_processor.query)
     view_graph = view.view()
     return graph_to_json(view_graph)
 
