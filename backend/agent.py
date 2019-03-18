@@ -58,6 +58,7 @@ class Agent(Network):
             self._logger = logger
         return self._logger
 
+    @DeprecationWarning
     def input(self, input):
         tmr = TMR.from_json(self, self.ontology, input)
         self.input_memory.append(tmr)
