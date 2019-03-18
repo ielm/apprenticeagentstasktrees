@@ -1046,11 +1046,16 @@ class AgentAssessTestCase(unittest.TestCase):
 
         self.assertEqual(count, len(self.g))
 
-        TransientFrame(f1).update_scope(lambda: False)
-        TransientFrame(f2).update_scope(lambda: False)
-        TransientFrame(f3).update_scope(lambda: False)
-        TransientFrame(f4).update_scope(lambda: False)
+        TransientFrame(f1).update_scope(TestScope())
+        TransientFrame(f2).update_scope(TestScope())
+        TransientFrame(f3).update_scope(TestScope())
+        TransientFrame(f4).update_scope(TestScope())
 
         self.agent._assess()
 
         self.assertEqual(count - 4, len(self.g))
+
+
+class TestScope():
+    def __call__(self, *args, **kwargs):
+        return False

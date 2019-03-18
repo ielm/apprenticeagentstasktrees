@@ -169,7 +169,7 @@ class TransientFrameTestCase(unittest.TestCase):
 
         self.assertTrue(f.is_in_scope())
 
-        f.update_scope(lambda: False)
+        f.update_scope(TestScope())
 
         self.assertFalse(f.is_in_scope())
 
@@ -936,3 +936,8 @@ class TransientFrameStatementTestCase(unittest.TestCase):
         self.assertEqual(789, frame["ABC"])
         self.assertEqual("test", frame["DEF"])
         self.assertIn(frame, scope.transients)
+
+
+class TestScope():
+    def __call__(self, *args, **kwargs):
+        return False

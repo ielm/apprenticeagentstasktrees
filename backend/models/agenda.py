@@ -461,7 +461,7 @@ class Step(object):
                 Statement.from_instance(statement).run(scope, varmap)
 
         for transient in scope.transients:
-            transient.update_scope(lambda: self.is_pending())
+            transient.update_scope(StepScope(self))
 
         return scope
 
@@ -875,3 +875,12 @@ class Effect(object):
         if isinstance(other, Frame):
             return self.frame == other
         return super().__eq__(other)
+
+
+class StepScope():
+
+    def __init__(self, step: Step):
+        self.step = step
+
+    def __call__(self, *args, **kwargs):
+        return self.step.is_pending()
