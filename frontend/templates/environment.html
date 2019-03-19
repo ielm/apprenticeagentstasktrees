@@ -33,7 +33,7 @@
         var epoch_dict = {};
         function loadStruc() {
             $.ajax({
-                url: "/environment/get-struc",
+                url: "/environment/epochs",
                 method: "GET",
                 success: structureEnv,
                 error: strucError,
@@ -47,6 +47,7 @@
              */
             function structureEnv(data, status) {
                 let output = JSON.parse(data);
+                console.log(output);
                 for (let key in output) {
                     if (output.hasOwnProperty(key)) {
                         console.log(key, output[key]);
@@ -65,218 +66,231 @@
     <script>
         function load() {
             $.ajax({
-                url: "/environment/get",
+                url: "/environment/epochs",
                 method: "GET",
-                success: buildEnvViewer,
+                success: loadSuccess,
                 error: viewerError
             });
 
-            function structureEnv(data, status) {
-                let output = JSON.parse(data);
-                for (let key in output) {
-                    if (output.hasOwnProperty(key)) {
+            function loadSuccess(data) {
+                console.log(JSON.parse(data));
+                let index = JSON.parse(data);
+                let timeline = document.querySelector("div[id='timeline']");
 
+                timeline.querySelector("#timelineLabel").textContent = "Current Epoch: " + index;
+                let timeline_range = timeline.querySelector(".card-body").querySelector(".custom-range");
+
+                timeline_range.setAttribute("max", index);
+                timeline_range.setAttribute("value", index);
+
+                getEpochData(index);
+            }
+        }
+        function getEpochData(index) {
+            $.ajax({
+                url: "/environment/epoch?index=" + index,
+                method: "GET",
+                success: buildEnvViewer,
+                error: viewerError
+            })
+
+        }
+
+        /**
+         * Builds Environment Viewer
+         * @param data
+         * @param status
+         */
+        function buildEnvViewer(data, status) {
+            var output = JSON.parse(data);
+
+            $("#raw_env").JSONView(output, {collapsed: false});
+
+            {#testEnv(data); // gets test environment data structured by epoch#}
+
+            document.querySelector("#locations").appendChild(buildEnvNavigation(data));
+
+            document.querySelector("#nav-tab").appendChild(buildLocationPanels(data));
+
+        }
+
+        function testEnv(env){
+            $.ajax({
+                url: "/environment/epochs",
+                method: "GET",
+                success: printEnv,
+            });
+
+            function printEnv(data, status) {
+                console.log(data);
+            }
+
+        }
+
+        /**
+         * Build Environment Viewer Navigation
+         * @param env
+         */
+        function buildEnvNavigation(env){
+            let tempNode = document.querySelector("div[data-type='loc-nav-template']").cloneNode(true);
+
+            let active = true;
+
+            let environment = JSON.parse(env);
+
+            for (const key in environment) {
+                if (environment.hasOwnProperty(key)) {
+                    {# Creates location navigation tabs #}
+                    let locLi = document.createElement("li");
+
+                    locLi.classList.add("nav-item");
+
+                    let locTitle = document.createElement("a");
+
+                    locTitle.href = "#" + key.toLowerCase();
+                    locTitle.classList.add("nav-location");
+                    locTitle.classList.add("nav-link");
+                    locTitle.id = key.toLowerCase() + "-tab";
+                    locTitle.setAttribute("data-toggle", "tab");
+
+                    {# Sets first location to active tab #}
+                    if (active===true) {
+                        locTitle.classList.add("active");
+                        active = false;
                     }
+
+                    {# Sets tab titles #}
+                    let locTitleText = document.createTextNode(key);
+
+                    {# Append respective navigation titles #}
+                    locTitle.appendChild(locTitleText);
+                    locLi.appendChild(locTitle);
+                    tempNode.querySelector("#location-titles").appendChild(locLi);
                 }
             }
 
+            {# Edit/remove template attributes for document #}
+            tempNode.style.display = "block";
+            tempNode.setAttribute("id", "nav-tab");
+            tempNode.removeAttribute("data-type");
+
+            return tempNode;
+        }
+
+        /**
+         * Builds tab panel for each location in environment
+         * @param env
+         */
+        function buildLocationPanels(env) {
+            let environment = JSON.parse(env);
+            let active = true;
+            let tabContent = document.createElement("div");
+
+            tabContent.classList.add("tab-content");
+            tabContent.setAttribute("id", "nav-tabContent");
+
+            {# Create tab panel for each location in the environment #}
+            for (const location in environment) {
+                if (environment.hasOwnProperty(location)) {
+                    let tempPanel = document.querySelector("div[data-type='loc-panel-template']").cloneNode(true);
+
+                    tempPanel.setAttribute("id", location.toLowerCase());
+                    tempPanel.setAttribute("aria-labelledby", location.toLowerCase()+"-tab");
+                    tempPanel.removeAttribute("style");
+                    tempPanel.removeAttribute("data-type");
+
+                    if (active===true) {
+                        tempPanel.classList.add("show");
+                        tempPanel.classList.add("active");
+                        active = false;
+                    }
+
+                    for (const obj in environment[location]) {
+                        if (environment[location].hasOwnProperty(obj)) {
+                            tempPanel.querySelector("div[id='object-cards']").appendChild(buildObjectCard(environment[location][obj]));
+                        }
+                    }
+                    tabContent.appendChild(tempPanel);
+                }
+            }
+            return tabContent;
+        }
+
+        /**
+         * Builds and returns card for each object with attributes
+         * @param object
+         * @returns {HTMLElement}
+         */
+        function buildObjectCard(object) {
+            let tempCard = document.createElement("div");
+            tempCard.classList.add("card");
+            tempCard.classList.add("p-3");
+            tempCard.style.margin = ".75rem";
+
+            let tempCol = document.createElement("div");
+            tempCol.classList.add("col-sm-6");
+
+            $.ajax({
+                url: "/environment/epoch?instance=" + object,
+                method: "GET",
+                success: buildCard,
+                error: getObjectError,
+            });
 
             /**
-             * Builds Environment Viewer
+             * Builds card for current object
              * @param data
              * @param status
              */
-            function buildEnvViewer(data, status) {
-                var output = JSON.parse(data);
+            function buildCard(data, status) {
+                let obj = JSON.parse(data);
 
-                $("#raw_env").JSONView(output, {collapsed: false});
+                tempCard.setAttribute("id", obj["identifier"]);
 
-                {#testEnv(data); // gets test environment data structured by epoch#}
+                let cardTitle = document.createElement("h5");
+                cardTitle.classList.add("card-title");
+                cardTitle.textContent = obj["identifier"];
 
-                document.querySelector("#locations").appendChild(buildEnvNavigation(data));
+                let cardAttr = document.createElement("div");
+                cardAttr.classList.add("card-text");
 
-                document.querySelector("#nav-tab").appendChild(buildLocationPanels(data));
+                for (const attr in obj["attributes"]) {
+                    if (obj["attributes"].hasOwnProperty(attr)) {
+                        let tempAttr = document.createElement("p");
+                        tempAttr.classList.add("object-attribute");
 
-            }
+                        tempAttr.textContent = attr + ": " + obj["attributes"][attr];
 
-            function testEnv(env){
-                $.ajax({
-                    url: "/test",
-                    method: "GET",
-                    success: printEnv,
-                });
+                        tempAttr.style.fontSize = ".75rem";
 
-                function printEnv(data, status) {
-                    console.log(data);
-                }
-
-            }
-       
-            /**
-             * Build Environment Viewer Navigation
-             * @param env
-             */
-            function buildEnvNavigation(env){
-                let tempNode = document.querySelector("div[data-type='loc-nav-template']").cloneNode(true);
-
-                let active = true;
-
-                let environment = JSON.parse(env);
-
-                for (const key in environment) {
-                    if (environment.hasOwnProperty(key)) {
-                        {# Creates location navigation tabs #}
-                        let locLi = document.createElement("li");
-
-                        locLi.classList.add("nav-item");
-
-                        let locTitle = document.createElement("a");
-
-                        locTitle.href = "#" + key.toLowerCase();
-                        locTitle.classList.add("nav-location");
-                        locTitle.classList.add("nav-link");
-                        locTitle.id = key.toLowerCase() + "-tab";
-                        locTitle.setAttribute("data-toggle", "tab");
-
-                        {# Sets first location to active tab #}
-                        if (active===true) {
-                            locTitle.classList.add("active");
-                            active = false;
-                        }
-
-                        {# Sets tab titles #}
-                        let locTitleText = document.createTextNode(key);
-
-                        {# Append respective navigation titles #}
-                        locTitle.appendChild(locTitleText);
-                        locLi.appendChild(locTitle);
-                        tempNode.querySelector("#location-titles").appendChild(locLi);
+                        cardAttr.appendChild(tempAttr);
                     }
                 }
 
-                {# Edit/remove template attributes for document #}
-                tempNode.style.display = "block";
-                tempNode.setAttribute("id", "nav-tab");
-                tempNode.removeAttribute("data-type");
-
-                return tempNode;
+                tempCard.appendChild(cardTitle);
+                tempCard.appendChild(cardAttr);
+                tempCol.appendChild(tempCard);
             }
 
-            /**
-             * Builds tab panel for each location in environment
-             * @param env
-             */
-            function buildLocationPanels(env) {
-                let environment = JSON.parse(env);
-                let active = true;
-                let tabContent = document.createElement("div");
-
-                tabContent.classList.add("tab-content");
-                tabContent.setAttribute("id", "nav-tabContent");
-
-                {# Create tab panel for each location in the environment #}
-                for (const location in environment) {
-                    if (environment.hasOwnProperty(location)) {
-                        let tempPanel = document.querySelector("div[data-type='loc-panel-template']").cloneNode(true);
-
-                        tempPanel.setAttribute("id", location.toLowerCase());
-                        tempPanel.setAttribute("aria-labelledby", location.toLowerCase()+"-tab");
-                        tempPanel.removeAttribute("style");
-                        tempPanel.removeAttribute("data-type");
-
-                        if (active===true) {
-                            tempPanel.classList.add("show");
-                            tempPanel.classList.add("active");
-                            active = false;
-                        }
-
-                        for (const obj in environment[location]) {
-                            if (environment[location].hasOwnProperty(obj)) {
-                                tempPanel.querySelector("div[id='object-cards']").appendChild(buildObjectCard(environment[location][obj]));
-                            }
-                        }
-                        tabContent.appendChild(tempPanel);
-                    }
-                }
-                return tabContent;
+            function getObjectError(){
+                console.log("Could not get object data")
             }
+            return tempCol;
+        }
 
-            /**
-             * Builds and returns card for each object with attributes
-             * @param object
-             * @returns {HTMLElement}
-             */
-            function buildObjectCard(object) {
-                let tempCard = document.createElement("div");
-                tempCard.classList.add("card");
-                tempCard.classList.add("p-3");
-                tempCard.style.margin = ".75rem";
+        function viewerError() {
+            let tempNode = document.querySelector("div[data-type='loc-nav-template']").cloneNode(true);
 
-                let tempCol = document.createElement("div");
-                tempCol.classList.add("col-sm-6");
+            tempNode.querySelector(".card-header").textContent = "Empty Environment";
+            tempNode.style.display = "block";
+            tempNode.setAttribute("id", "nav-tab");
+            tempNode.removeAttribute("data-type");
 
-                $.ajax({
-                    url: "/environment/get?instance=" + object,
-                    method: "GET",
-                    success: buildCard,
-                    error: getObjectError,
-                });
+            let emptyBody = document.createElement("div");
+            emptyBody.classList.add("card-body");
 
-                /**
-                 * Builds card for current object
-                 * @param data
-                 * @param status
-                 */
-                function buildCard(data, status) {
-                    let obj = JSON.parse(data);
-
-                    tempCard.setAttribute("id", obj["identifier"]);
-
-                    let cardTitle = document.createElement("h5");
-                    cardTitle.classList.add("card-title");
-                    cardTitle.textContent = obj["identifier"];
-
-                    let cardAttr = document.createElement("div");
-                    cardAttr.classList.add("card-text");
-
-                    for (const attr in obj["attributes"]) {
-                        if (obj["attributes"].hasOwnProperty(attr)) {
-                            let tempAttr = document.createElement("p");
-                            tempAttr.classList.add("object-attribute");
-
-                            tempAttr.textContent = attr + ": " + obj["attributes"][attr];
-
-                            tempAttr.style.fontSize = ".75rem";
-
-                            cardAttr.appendChild(tempAttr);
-                        }
-                    }
-
-                    tempCard.appendChild(cardTitle);
-                    tempCard.appendChild(cardAttr);
-                    tempCol.appendChild(tempCard);
-                }
-
-                function getObjectError(){
-                    alert("Could not get object data")
-                }
-                return tempCol;
-            }
-
-            function viewerError() {
-                let tempNode = document.querySelector("div[data-type='loc-nav-template']").cloneNode(true);
-
-                tempNode.querySelector(".card-header").textContent = "Empty Environment";
-                tempNode.style.display = "block";
-                tempNode.setAttribute("id", "nav-tab");
-                tempNode.removeAttribute("data-type");
-
-                let emptyBody = document.createElement("div");
-                emptyBody.classList.add("card-body");
-
-                tempNode.appendChild(emptyBody);
-                document.querySelector("#locations").appendChild(tempNode);
-            }
+            tempNode.appendChild(emptyBody);
+            document.querySelector("#locations").appendChild(tempNode);
         }
     </script>
 
@@ -300,7 +314,7 @@
 
 </head>
 
-<body onload="load(); loadStruc();">
+<body onload="load();">
 
     {% include 'nav.html' %}
     <script>
@@ -313,6 +327,12 @@
         $(document).on('input', '#timelineSlider', function() {
             console.log($(this).val() );
             $("#timelineLabel").html("Current Epoch: " + $(this).val() );
+
+            let i = Number($(this).val());
+            console.log( typeof i );
+
+            getEpochData(i);
+
         });
     </script>
 
@@ -324,7 +344,7 @@
                     <div style="margin-bottom: 25px;" class="card">
                         <label id="timelineLabel" for="timelineSlider" class="card-header">Current Epoch: _</label>
                         <div class="card-body">
-                            <input type="range" class="custom-range" min="0" max="1" value="1" id="timelineSlider">
+                            <input type="range" class="custom-range" min="1" max="1" value="1" id="timelineSlider">
                         </div>
                     </div>
                 </div>

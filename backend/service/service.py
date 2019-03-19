@@ -356,8 +356,8 @@ def format_environment(env):
     return env_dict
 
 
-def format_epoch(epoch):
-    epoch_dict = dict()
+def format_epochs(env):
+    return len(env.history())
 
 
 def format_epoch_singular(env):
@@ -392,24 +392,19 @@ def format_environment_object(instance):
     }
 
 
+# TODO - remove this test route
 @app.route("/test", methods=["GET"])
 def get_test():
     return json.dumps(format_environment(agent.env()))
 
 
-@app.route("/environment/get-struc", methods=["GET"])
+@app.route("/environment/epochs", methods=["GET"])
 def get_structured_environment():
-    return json.dumps(format_environment(agent.env()))
+    return json.dumps(format_epochs(agent.env()))
 
 
-@app.route("/environment/get", methods=["GET"])
-def get_environment():
-    # format_environment(agent.env())
-    # TODO - populate agent.env() with agent["ENV"]
-    #     set env to agent.env()
-    # print(agent["ENV"])
-    # env = agent.env().view(-1)
-
+@app.route("/environment/epoch", methods=["GET"])
+def get_epoch():
     if "env" in request.args:
         json.dumps(format_environment(agent.env()))
     if "instance" not in request.args:
