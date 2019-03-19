@@ -102,6 +102,8 @@
          * @param status
          */
         function buildEnvViewer(data, status) {
+            $("#locations").empty();
+
             var output = JSON.parse(data);
 
             $("#raw_env").JSONView(output, {collapsed: false});
@@ -325,11 +327,7 @@
 
     <script>
         $(document).on('input', '#timelineSlider', function() {
-            console.log($(this).val() );
             $("#timelineLabel").html("Current Epoch: " + $(this).val() );
-
-            let i = Number($(this).val());
-            console.log( typeof i );
 
             getEpochData(i);
 
