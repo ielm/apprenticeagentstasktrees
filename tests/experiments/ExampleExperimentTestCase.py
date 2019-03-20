@@ -1,6 +1,5 @@
 from backend.agent import Agent
 from backend.models.agenda import Decision, Goal
-from backend.models.bootstrap import Bootstrap
 from backend.models.effectors import Callback, Effector
 from backend.utils.OntologyLoader import OntologyServiceLoader
 from ontograph import graph

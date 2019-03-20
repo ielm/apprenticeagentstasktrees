@@ -26,6 +26,11 @@ class AgentOntoLang(OntoLang):
     def get_transformer_type(self):
         return AgentOntoLangTransformer
 
+    def load_knowledge(self, package: str, resource: str):
+        from pkgutil import get_data
+        input: str = get_data(package, resource).decode('ascii')
+        self.run(input)
+
 
 class AgentOntoLangTransformer(OntoLangTransformer):
 
@@ -174,13 +179,13 @@ class AgentOntoLangTransformer(OntoLangTransformer):
         return Condition.On[str(matches[0])]
 
     def exists_statement(self, matches):
-        return ExistsStatement.instance(Space("EXE"), Query().search(matches[1]))
+        return ExistsStatement.instance(Space("EXE"), Query(matches[1]))
 
     def expectation_statement(self, matches):
         return ExpectationStatement.instance(Space("EXE"), matches[1])
 
     def foreach_statement(self, matches):
-        return ForEachStatement.instance(Space("EXE"), Query().search(matches[4]), str(matches[2]), matches[5:])
+        return ForEachStatement.instance(Space("EXE"), Query(matches[4]), str(matches[2]), matches[5:])
 
     def goal(self, matches: List[Tree]) -> 'OntoAgentProcessorDefineGoal':
         from backend.models.agenda import Condition, Effect, Goal, Plan

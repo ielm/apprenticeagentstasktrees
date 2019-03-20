@@ -1,9 +1,10 @@
 from backend.agent import Agent
 from backend.models.agenda import Agenda, Condition, Decision, Effect, Expectation, Goal, Plan, Step, Trigger
-from backend.models.bootstrap import Bootstrap
+# from backend.models.bootstrap import Bootstrap
 # from backend.models.graph import Frame, Graph, Literal, Network
 from backend.models.statement import Statement, StatementRegistry, StatementScope, VariableMap
 from backend.models.xmr import XMR
+from backend.utils.AgentOntoLang import AgentOntoLang
 from ontograph import graph
 from ontograph.Frame import Frame
 from ontograph.Query import ExistsComparator, IdComparator, IsAComparator, Query
@@ -80,8 +81,8 @@ class AgendaTestCase(unittest.TestCase):
         agenda = Frame("@TEST.AGENDA")
         definition = Frame("@TEST.MYGOAL")
 
-        query1 = Query().search(IsAComparator("@TEST.TEST.?"))
-        query2 = Query().search(IsAComparator("@TEST.TEST.?"))
+        query1 = Query(IsAComparator("@TEST.TEST.?"))
+        query2 = Query(IsAComparator("@TEST.TEST.?"))
 
         trigger1 = Trigger.build(space, query1, definition)
         trigger2 = Trigger.build(space, query2, definition)
@@ -95,7 +96,7 @@ class AgendaTestCase(unittest.TestCase):
         agenda = Frame("@TEST.AGENDA")
         definition = Frame("@TEST.MYGOAL")
 
-        query = Query().search(IsAComparator("@TEST.TEST.?"))
+        query = Query(IsAComparator("@TEST.TEST.?"))
 
         trigger = Trigger.build(Space("TEST"), query, definition)
 
@@ -111,7 +112,7 @@ class AgendaTestCase(unittest.TestCase):
         definition = Frame("@TEST.MYGOAL")
         definition["WITH"] = "$var1"
 
-        query = Query().search(IdComparator("@TEST.TARGET.1"))
+        query = Query(IdComparator("@TEST.TARGET.1"))
 
         trigger1 = Trigger.build(space, query, definition)
         agenda.add_trigger(trigger1)
@@ -234,7 +235,7 @@ class GoalTestCase(unittest.TestCase):
 
         StatementRegistry.register(TestStatement)
 
-        Bootstrap.bootstrap_resource(None, "backend.resources", "exe.knowledge")
+        AgentOntoLang().load_knowledge("backend.resources", "exe.knowledge")
 
         Frame("@EXE.RETURNING-STATEMENT")["CLASSMAP"] = TestStatement.__qualname__
         statement = Frame("@TEST.STATEMENT.1").add_parent("@EXE.RETURNING-STATEMENT")
@@ -277,7 +278,7 @@ class GoalTestCase(unittest.TestCase):
 
         StatementRegistry.register(TestStatement)
 
-        Bootstrap.bootstrap_resource(None, "backend.resources", "exe.knowledge")
+        AgentOntoLang().load_knowledge("backend.resources", "exe.knowledge")
 
         Frame("@EXE.RETURNING-STATEMENT")["CLASSMAP"] = TestStatement.__qualname__
         statement = Frame("@TEST.STATEMENT.1").add_parent("@EXE.RETURNING-STATEMENT")
@@ -342,7 +343,7 @@ class GoalTestCase(unittest.TestCase):
             def __init__(self):
                 pass
 
-        Bootstrap.bootstrap_resource(TestAgent(), "backend.resources", "exe.knowledge")
+        AgentOntoLang().load_knowledge("backend.resources", "exe.knowledge")
 
         goal = Frame("@TEST.GOAL.1")
         condition1 = Frame("@TEST.CONDITION.1")
@@ -452,7 +453,7 @@ class GoalTestCase(unittest.TestCase):
         self.assertEqual([effect1, effect2], Goal(goal).effects())
 
     def test_effects_applied_in_assess_if_goal_satisfied(self):
-        Bootstrap.bootstrap_resource(None, "backend.resources", "exe.knowledge")
+        AgentOntoLang().load_knowledge("backend.resources", "exe.knowledge")
 
         goal = Frame("@TEST.GOAL.1")
 
@@ -487,7 +488,7 @@ class TriggerTestCase(unittest.TestCase):
 
     def test_query(self):
 
-        query = Query().search(IdComparator("@TEST.FRAME.123"))
+        query = Query(IdComparator("@TEST.FRAME.123"))
 
         trigger = Frame("@TEST.TRIGGER")
         trigger["QUERY"] = query
@@ -518,7 +519,7 @@ class TriggerTestCase(unittest.TestCase):
         definition = Frame("@TEST.MYGOAL")
         definition["WITH"] = "$var1"
 
-        trigger = Trigger.build(Space("TEST"), Query().search(IdComparator("@TEST.TARGET.1")), definition)
+        trigger = Trigger.build(Space("TEST"), Query(IdComparator("@TEST.TARGET.1")), definition)
         agenda.add_trigger(trigger)
 
         target = Frame("@TEST.TARGET.?")
@@ -536,7 +537,7 @@ class TriggerTestCase(unittest.TestCase):
         definition = Frame("@TEST.MYGOAL")
         definition["WITH"] = "$var1"
 
-        trigger = Trigger.build(Space("TEST"), Query().search(ExistsComparator(slot="MYSLOT")), definition)
+        trigger = Trigger.build(Space("TEST"), Query(ExistsComparator(slot="MYSLOT")), definition)
 
         target1 = Frame("@TEST.TARGET.?")
         target1["MYSLOT"] = 123
@@ -550,8 +551,11 @@ class TriggerTestCase(unittest.TestCase):
 
         self.assertIn(Frame("@TEST.GOAL.1"), agenda.goals(pending=True, active=True))
         self.assertIn(Frame("@TEST.GOAL.2"), agenda.goals(pending=True, active=True))
-        self.assertEqual(target1, Goal(Frame("@TEST.GOAL.1")).resolve("$var1"))
-        self.assertEqual(target2, Goal(Frame("@TEST.GOAL.2")).resolve("$var1"))
+
+        resolved = [Goal(Frame("@TEST.GOAL.1")).resolve("$var1"), Goal(Frame("@TEST.GOAL.2")).resolve("$var1")]
+        self.assertEqual(2, len(resolved))
+        self.assertIn(target1, resolved)
+        self.assertIn(target2, resolved)
 
     def test_fire_filters_existing_triggered_instances(self):
         agenda = Agenda(Frame("@TEST.AGENDA"))
@@ -559,7 +563,7 @@ class TriggerTestCase(unittest.TestCase):
         definition = Frame("@TEST.MYGOAL")
         definition["WITH"] = "$var1"
 
-        trigger = Trigger.build(Space("TEST"), Query().search(ExistsComparator(slot="MYSLOT")), definition)
+        trigger = Trigger.build(Space("TEST"), Query(ExistsComparator(slot="MYSLOT")), definition)
 
         target1 = Frame("@TEST.TARGET.?")
         target1["MYSLOT"] = 123
@@ -586,7 +590,7 @@ class ConditionTestCase(unittest.TestCase):
 
     def setUp(self):
         graph.reset()
-        Bootstrap.bootstrap_resource(None, "backend.resources", "exe.knowledge")
+        AgentOntoLang().load_knowledge("backend.resources", "exe.knowledge")
 
     def test_order(self):
         gc = Frame("@TEST.CONDITION.1")
@@ -878,7 +882,7 @@ class PlanTestCase(unittest.TestCase):
         self.assertTrue(Plan(plan).is_negated())
 
     def test_select(self):
-        Bootstrap.bootstrap_resource(None, "backend.resources", "exe.knowledge")
+        AgentOntoLang().load_knowledge("backend.resources", "exe.knowledge")
 
         result = True
 
@@ -901,7 +905,7 @@ class PlanTestCase(unittest.TestCase):
         self.assertFalse(Plan(plan).select(None))
 
     def test_select_negated(self):
-        Bootstrap.bootstrap_resource(None, "backend.resources", "exe.knowledge")
+        AgentOntoLang().load_knowledge("backend.resources", "exe.knowledge")
 
         class TestStatement(Statement):
             def run(self, varmap: VariableMap, *args, **kwargs):
@@ -919,7 +923,7 @@ class PlanTestCase(unittest.TestCase):
         self.assertFalse(plan.select(None))
 
     def test_select_with_variable(self):
-        Bootstrap.bootstrap_resource(None, "backend.resources", "exe.knowledge")
+        AgentOntoLang().load_knowledge("backend.resources", "exe.knowledge")
 
         class TestStatement(Statement):
             def run(self, scope: StatementScope, varmap: VariableMap):
@@ -944,7 +948,7 @@ class PlanTestCase(unittest.TestCase):
         from backend.models.mps import AgentMethod
         from backend.models.statement import MeaningProcedureStatement, MPRegistry
 
-        Bootstrap.bootstrap_resource(None, "backend.resources", "exe.knowledge")
+        AgentOntoLang().load_knowledge("backend.resources", "exe.knowledge")
 
         class TestMP(AgentMethod):
             def run(self, var1):
@@ -1042,7 +1046,7 @@ class StepTestCase(unittest.TestCase):
         self.assertTrue(Step(step).is_finished())
 
     def test_perform(self):
-        Bootstrap.bootstrap_resource(None, "backend.resources", "exe.knowledge")
+        AgentOntoLang().load_knowledge("backend.resources", "exe.knowledge")
 
         out = []
 
@@ -1067,7 +1071,7 @@ class StepTestCase(unittest.TestCase):
         self.assertEqual(out, ["X", "Y"])
 
     def test_perform_returns_scope_with_outputs(self):
-        Bootstrap.bootstrap_resource(None, "backend.resources", "exe.knowledge")
+        AgentOntoLang().load_knowledge("backend.resources", "exe.knowledge")
 
         class TestStatement(Statement):
             def run(self, scope: StatementScope(), varmap: VariableMap):
@@ -1088,7 +1092,7 @@ class StepTestCase(unittest.TestCase):
         self.assertEqual([123], scope.outputs)
 
     def test_perform_returns_scope_with_expectations(self):
-        Bootstrap.bootstrap_resource(None, "backend.resources", "exe.knowledge")
+        AgentOntoLang().load_knowledge("backend.resources", "exe.knowledge")
 
         class TestStatement(Statement):
             def run(self, scope: StatementScope(), varmap: VariableMap):
@@ -1111,7 +1115,7 @@ class StepTestCase(unittest.TestCase):
     def test_perform_with_transients_overrides_scope_detection(self):
         from backend.models.statement import TransientFrame
 
-        Bootstrap.bootstrap_resource(None, "backend.resources", "exe.knowledge")
+        AgentOntoLang().load_knowledge("backend.resources", "exe.knowledge")
 
         transient: Frame = None
 
@@ -1141,7 +1145,7 @@ class StepTestCase(unittest.TestCase):
         self.assertFalse(TransientFrame(transient).is_in_scope())
 
     def test_perform_with_variables(self):
-        Bootstrap.bootstrap_resource(None, "backend.resources", "exe.knowledge")
+        AgentOntoLang().load_knowledge("backend.resources", "exe.knowledge")
 
         out = []
 
@@ -1168,7 +1172,7 @@ class StepTestCase(unittest.TestCase):
         self.assertEqual(out, [123])
 
     def test_perform_idle(self):
-        Bootstrap.bootstrap_resource(None, "backend.resources", "exe.knowledge")
+        AgentOntoLang().load_knowledge("backend.resources", "exe.knowledge")
 
         step = Frame("@TEST.STEP")
         step["PERFORM"] = Step.IDLE
@@ -1176,11 +1180,11 @@ class StepTestCase(unittest.TestCase):
         Step(step).perform(VariableMap(Frame("@TEST.VARMAP")))
 
     def test_perform_raises_impasse_exceptions(self):
-        Bootstrap.bootstrap_resource(None, "backend.resources", "exe.knowledge")
+        AgentOntoLang().load_knowledge("backend.resources", "exe.knowledge")
 
         from backend.models.statement import AssertStatement, ExistsStatement
 
-        perform = [AssertStatement.instance(Space("TEST"), ExistsStatement.instance(Space("TEST"), Query().search(IdComparator("@EXE.DNE"))), [])]
+        perform = [AssertStatement.instance(Space("TEST"), ExistsStatement.instance(Space("TEST"), Query(IdComparator("@EXE.DNE"))), [])]
 
         step = Step.build(Space("TEST"), 1, perform)
 
@@ -1354,7 +1358,7 @@ class DecisionTestCase(unittest.TestCase):
         from backend.models.output import OutputXMRTemplate
         from backend.models.statement import OutputXMRStatement
 
-        Bootstrap.bootstrap_resource(None, "backend.resources", "exe.knowledge")
+        AgentOntoLang().load_knowledge("backend.resources", "exe.knowledge")
 
         agent = Frame("@TEST.AGENT")
         capability = Frame("@TEST.CAPABILITY")
@@ -1375,7 +1379,7 @@ class DecisionTestCase(unittest.TestCase):
     def test_generate_outputs_populates_expectations(self):
         from backend.models.statement import ExpectationStatement, IsStatement
 
-        Bootstrap.bootstrap_resource(None, "backend.resources", "exe.knowledge")
+        AgentOntoLang().load_knowledge("backend.resources", "exe.knowledge")
 
         target = Frame("@TEST.TARGET")
 
@@ -1395,12 +1399,12 @@ class DecisionTestCase(unittest.TestCase):
         from backend.models.output import OutputXMRTemplate
         from backend.models.statement import AssertStatement, ExistsStatement, MakeInstanceStatement, OutputXMRStatement, Variable
 
-        Bootstrap.bootstrap_resource(None, "backend.resources", "exe.knowledge")
+        AgentOntoLang().load_knowledge("backend.resources", "exe.knowledge")
 
         Goal.define(Space("TEST"), "IMPASSE-GOAL", 0.5, 0.5, [], [], ["$var1"], [])
 
         resolution = MakeInstanceStatement.instance(Space("TEST"), "TEST", "@TEST.IMPASSE-GOAL", ["$var1"])
-        statement1 = AssertStatement.instance(Space("TEST"), ExistsStatement.instance(Space("TEST"), Query().search(IdComparator("@EXE.DNE"))), [resolution])
+        statement1 = AssertStatement.instance(Space("TEST"), ExistsStatement.instance(Space("TEST"), Query(IdComparator("@EXE.DNE"))), [resolution])
 
         template = OutputXMRTemplate.build("test-template", XMR.Type.ACTION, None, [])
         statement2 = OutputXMRStatement.instance(Space("TEST"), template, [], None)
@@ -1577,7 +1581,7 @@ class DecisionTestCase(unittest.TestCase):
 class ExpectationTestCase(unittest.TestCase):
 
     def setUp(self):
-        Bootstrap.bootstrap_resource(None, "backend.resources", "exe.knowledge")
+        AgentOntoLang().load_knowledge("backend.resources", "exe.knowledge")
 
     def test_status(self):
         e = Frame("@TEST.EXPECTATION")
@@ -1589,17 +1593,17 @@ class ExpectationTestCase(unittest.TestCase):
         from backend.models.statement import ExistsStatement
 
         e = Frame("@TEST.EXPECTATION")
-        e["CONDITION"] = ExistsStatement.instance(Space("TEST"), Query().search(IdComparator("@TEST.FRAME.1"))).frame
+        e["CONDITION"] = ExistsStatement.instance(Space("TEST"), Query(IdComparator("@TEST.FRAME.1"))).frame
 
-        self.assertEqual(ExistsStatement.instance(Space("TEST"), Query().search(IdComparator("@TEST.FRAME.1"))), Expectation(e).condition())
+        self.assertEqual(ExistsStatement.instance(Space("TEST"), Query(IdComparator("@TEST.FRAME.1"))), Expectation(e).condition())
 
     def test_build(self):
         from backend.models.statement import ExistsStatement
 
-        e = Expectation.build(Space("TEST"), Expectation.Status.EXPECTING, ExistsStatement.instance(Space("TEST"), Query().search(IdComparator("@TEST.FRAME.1"))))
+        e = Expectation.build(Space("TEST"), Expectation.Status.EXPECTING, ExistsStatement.instance(Space("TEST"), Query(IdComparator("@TEST.FRAME.1"))))
 
         self.assertEqual(Expectation.Status.EXPECTING, e.status())
-        self.assertEqual(ExistsStatement.instance(Space("TEST"), Query().search(IdComparator("@TEST.FRAME.1"))), e.condition())
+        self.assertEqual(ExistsStatement.instance(Space("TEST"), Query(IdComparator("@TEST.FRAME.1"))), e.condition())
 
     def test_assess(self):
         from backend.models.statement import IsStatement
@@ -1625,7 +1629,7 @@ class ExpectationTestCase(unittest.TestCase):
 class EffectTestCase(unittest.TestCase):
 
     def setUp(self):
-        Bootstrap.bootstrap_resource(None, "backend.resources", "exe.knowledge")
+        AgentOntoLang().load_knowledge("backend.resources", "exe.knowledge")
 
     def test_statements(self):
         from backend.models.statement import AddFillerStatement

@@ -98,8 +98,8 @@ def lookup_by_visual_id(id: int):
     if "ENV" not in graph:
         return id
 
-    results = Query().search(ExistsComparator(slot="visual-object-id", filler=id)).start(Space("ENV"))
-    if len(results) == 1:
+    results = Query(ExistsComparator(slot="visual-object-id", filler=id)).start()
+    if len(list(results)) == 1:
         return results[0]
     return id
 

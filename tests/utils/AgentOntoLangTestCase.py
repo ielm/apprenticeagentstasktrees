@@ -20,7 +20,7 @@ class AgentOntoLangTestCase(unittest.TestCase):
         self.ontolang = AgentOntoLang()
 
     def test_add_trigger(self):
-        query = Query().search(ExistsComparator(slot="THEME", filler=123, isa=False))
+        query = Query(ExistsComparator(slot="THEME", filler=123, isa=False))
 
         processor = OntoAgentProcessorAddTrigger("@SELF.AGENDA.1", "@EXE.MYGOAL.1", query)
         parsed = self.ontolang.parse("ADD TRIGGER TO @SELF.AGENDA.1 INSTANTIATE @EXE.MYGOAL.1 WHEN THEME = 123;")
@@ -42,7 +42,7 @@ class AgentOntoLangTestCase(unittest.TestCase):
         parsed = self.ontolang.parse("PLAN (testplan) SELECT DEFAULT STEP DO IDLE")
         self.assertEqual(plan, parsed)
 
-        query = Query().search(ExistsComparator(slot="THEME", filler=123, isa=False))
+        query = Query(ExistsComparator(slot="THEME", filler=123, isa=False))
         plan = Plan.build(space, "testplan", ExistsStatement.instance(space, query), Step.build(space, 1, Step.IDLE))
         parsed = self.ontolang.parse("PLAN (testplan) SELECT IF EXISTS THEME = 123 STEP DO IDLE")
         self.assertEqual(plan, parsed)
@@ -75,7 +75,7 @@ class AgentOntoLangTestCase(unittest.TestCase):
 
         space = Space("SELF")
 
-        query = Query().search(ExistsComparator(slot="THEME", filler=123, isa=False))
+        query = Query(ExistsComparator(slot="THEME", filler=123, isa=False))
 
         condition = Condition.build(space, [ExistsStatement.instance(space, query)], Goal.Status.SATISFIED, logic=Condition.Logic.AND, order=1)
         parsed = self.ontolang.parse("WHEN EXISTS THEME = 123 THEN satisfied")
@@ -143,8 +143,8 @@ class AgentOntoLangTestCase(unittest.TestCase):
         self.assertEqual(goal, parsed)
 
         # A goal can have conditions (which are ordered as written)
-        q1 = Query().search(ExistsComparator(slot="THEME", filler=123, isa=False))
-        q2 = Query().search(ExistsComparator(slot="THEME", filler=456, isa=False))
+        q1 = Query(ExistsComparator(slot="THEME", filler=123, isa=False))
+        q2 = Query(ExistsComparator(slot="THEME", filler=456, isa=False))
         c1: Condition = Condition.build(space, [ExistsStatement.instance(space, q1)], Goal.Status.SATISFIED, Condition.Logic.AND, 1)
         c2: Condition = Condition.build(space, [ExistsStatement.instance(space, q2)], Goal.Status.ABANDONED, Condition.Logic.AND, 2)
         goal: Goal = Goal.define(space, "XYZ", 0.5, 0.5, [], [c1, c2], [], [])
@@ -177,7 +177,7 @@ class AgentOntoLangTestCase(unittest.TestCase):
 
         space = Space("SELF")
 
-        query = Query().search(AndComparator([IsAComparator("@SELF.INPUT-TMR"), ExistsComparator(slot="ACKNOWLEDGED", filler=False, isa=False)]))
+        query = Query(AndComparator([IsAComparator("@SELF.INPUT-TMR"), ExistsComparator(slot="ACKNOWLEDGED", filler=False, isa=False)]))
 
         goal1 = Goal.define(space, "FIND-SOMETHING-TO-DO", 0.1, 0.5, [
             Plan.build(space,
@@ -299,7 +299,7 @@ class AgentOntoLangStatementTestCase(unittest.TestCase):
         resolution1 = MakeInstanceStatement.instance(space, "TEST", "@TEST.MYGOAL", [])
         resolution2 = MakeInstanceStatement.instance(space, "TEST", "@TEST.MYGOAL", ["$var1", "$var2"])
 
-        statement = AssertStatement.instance(space, ExistsStatement.instance(space, Query().search(ExistsComparator(slot="XYZ", isa=False))), [resolution1])
+        statement = AssertStatement.instance(space, ExistsStatement.instance(space, Query(ExistsComparator(slot="XYZ", isa=False))), [resolution1])
         parsed = self.ontolang.parse("ASSERT EXISTS XYZ = * ELSE IMPASSE WITH @TEST:@TEST.MYGOAL()")
         self.assertEqual(statement, parsed)
 
@@ -311,7 +311,7 @@ class AgentOntoLangStatementTestCase(unittest.TestCase):
         parsed = self.ontolang.parse("ASSERT SELF.some_mp($var1) ELSE IMPASSE WITH @TEST:@TEST.MYGOAL()")
         self.assertEqual(statement, parsed)
 
-        statement = AssertStatement.instance(space, ExistsStatement.instance(space, Query().search(ExistsComparator(slot="XYZ", isa=False))), [resolution1, resolution2])
+        statement = AssertStatement.instance(space, ExistsStatement.instance(space, Query(ExistsComparator(slot="XYZ", isa=False))), [resolution1, resolution2])
         parsed = self.ontolang.parse("ASSERT EXISTS XYZ = * ELSE IMPASSE WITH @TEST:@TEST.MYGOAL() OR @TEST:@TEST.MYGOAL($var1, $var2)")
         self.assertEqual(statement, parsed)
 
@@ -361,7 +361,7 @@ class AgentOntoLangStatementTestCase(unittest.TestCase):
         parsed = self.ontolang.parse("$var1 = SELF.TestMP()")
         self.assertEqual(statement, parsed)
 
-        statement = AssignVariableStatement.instance(space, "$var1", ExistsStatement.instance(space, Query().search(IdComparator("@EXE.TEST.1"))))
+        statement = AssignVariableStatement.instance(space, "$var1", ExistsStatement.instance(space, Query(IdComparator("@EXE.TEST.1"))))
         parsed = self.ontolang.parse("$var1 = EXISTS @ = @EXE.TEST.1")
         self.assertEqual(statement, parsed)
 
@@ -382,7 +382,7 @@ class AgentOntoLangStatementTestCase(unittest.TestCase):
     def test_exists_statement(self):
         self.ontolang.get_starting_rule = lambda: "exists_statement"
 
-        statement = ExistsStatement.instance(Space("SELF"), Query().search(ExistsComparator(slot="THEME", filler=123, isa=False)))
+        statement = ExistsStatement.instance(Space("SELF"), Query(ExistsComparator(slot="THEME", filler=123, isa=False)))
         parsed = self.ontolang.parse("EXISTS THEME = 123")
         self.assertEqual(statement, parsed)
 
@@ -400,7 +400,7 @@ class AgentOntoLangStatementTestCase(unittest.TestCase):
 
         space = Space("SELF")
 
-        statement = ExpectationStatement.instance(space, ExistsStatement.instance(space, Query().search(ExistsComparator(slot="XYZ", isa=False))))
+        statement = ExpectationStatement.instance(space, ExistsStatement.instance(space, Query(ExistsComparator(slot="XYZ", isa=False))))
         parsed = self.ontolang.parse("EXPECT EXISTS XYZ = *")
         self.assertEqual(statement, parsed)
 
@@ -420,7 +420,7 @@ class AgentOntoLangStatementTestCase(unittest.TestCase):
 
         space = Space("SELF")
 
-        query = Query().search(ExistsComparator(slot="THEME", filler=123, isa=False))
+        query = Query(ExistsComparator(slot="THEME", filler=123, isa=False))
 
         statement = ForEachStatement.instance(space, query, "$var", AddFillerStatement.instance(space, "$var", "SLOT", 456))
         parsed = self.ontolang.parse("FOR EACH $var IN THEME = 123 | $var[SLOT] += 456")
@@ -593,7 +593,7 @@ class OntoAgentProcessorAddTriggerTestCase(unittest.TestCase):
     def test_call(self):
         agenda = Frame("@TEST.AGENDA")
         definition = Frame("@TEST.DEFINITION")
-        query = Query().search(IdComparator("@TEST.SOMETHING.123"))
+        query = Query(IdComparator("@TEST.SOMETHING.123"))
 
         process = OntoAgentProcessorAddTrigger(agenda, definition, query)
         process.run()

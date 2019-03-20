@@ -132,8 +132,10 @@ class XMRTestCase(unittest.TestCase):
         self.assertEqual(capability, xmr.capability())
 
     def test_instance_uses_correct_concept_type(self):
-        from backend.models.bootstrap import Bootstrap
-        Bootstrap.bootstrap_resource(None, "backend.resources", "exe.knowledge")
+        # from backend.models.bootstrap import Bootstrap
+        # Bootstrap.bootstrap_resource(None, "backend.resources", "exe.knowledge")
+        from backend.utils.AgentOntoLang import AgentOntoLang
+        AgentOntoLang().load_knowledge("backend.resources", "exe.knowledge")
 
         xmr = XMR.instance(Space("TEST"), Space("TARGET"), XMR.Signal.INPUT, XMR.Type.ACTION, XMR.InputStatus.RECEIVED, "@TEST.SOURCE", "@TARGET.ROOT")
         self.assertTrue(xmr.frame ^ "@EXE.AMR")

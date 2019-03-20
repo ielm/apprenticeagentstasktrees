@@ -418,7 +418,7 @@ class ExistsStatement(Statement):
 
     def run(self, scope: StatementScope, varmap: VariableMap) -> bool:
         query = self.frame["FIND"][0]
-        results = query.start(graph)
+        results = query.start()
         return len(results) > 0
 
     def __eq__(self, other):
@@ -480,7 +480,7 @@ class ForEachStatement(Statement):
         except:
             var = Variable.instance(self.frame.space(), variable, None, varmap)
 
-        for frame in query.start(graph):
+        for frame in query.start():
             var.set_value(frame)
             for stmt in do:
                 stmt.run(scope, varmap)

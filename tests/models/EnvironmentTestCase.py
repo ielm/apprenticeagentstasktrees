@@ -17,17 +17,17 @@ class EnvironmentTestCase(unittest.TestCase):
         Frame("@ONT.LOCATION")
 
     def test_advance(self):
-        self.assertEqual(1, len(Query().search(IsAComparator("@ENV.EPOCH")).start(graph)))
+        self.assertEqual(1, len(Query(IsAComparator("@ENV.EPOCH")).start()))
 
         env = Environment(Space("ENV"))
 
         env.advance()
-        self.assertEqual(2, len(Query().search(IsAComparator("@ENV.EPOCH")).start(graph)))
+        self.assertEqual(2, len(Query(IsAComparator("@ENV.EPOCH")).start()))
         self.assertEqual(1, Frame("@ENV.EPOCH.1")["TIME"].singleton())
         self.assertNotIn("FOLLOWS", Frame("@ENV.EPOCH.1"))
 
         env.advance()
-        self.assertEqual(3, len(Query().search(IsAComparator("@ENV.EPOCH")).start(graph)))
+        self.assertEqual(3, len(Query(IsAComparator("@ENV.EPOCH")).start()))
         self.assertEqual(2, Frame("@ENV.EPOCH.2")["TIME"].singleton())
         self.assertEqual(Frame("@ENV.EPOCH.1"), Frame("@ENV.EPOCH.2")["FOLLOWS"])
 

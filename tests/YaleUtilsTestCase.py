@@ -184,15 +184,11 @@ class YaleUtilsTestCase(ApprenticeAgentsTestCase):
         frame1["visual-object-id"] = 123
 
         frame2 = Frame("@TEST.FRAME.?")
-        frame2["visual-object-id"] = 123
-
-        frame3 = Frame("@TEST.FRAME.?")
-        frame3["visual-object-id"] = 456
+        frame2["visual-object-id"] = 456
 
         self.assertEqual(frame1, lookup_by_visual_id(123))
-        self.assertEqual(456, lookup_by_visual_id(456))
-        self.assertEqual(frame1, lookup_by_visual_id(frame1))
-        self.assertEqual("@ENV.FRAME", lookup_by_visual_id("@ENV.FRAME"))
+        self.assertEqual(frame2, lookup_by_visual_id(456))
+        self.assertEqual(999, lookup_by_visual_id(999))
 
     @skip("This uses the old Agent.input method and FR stuff; should probably be removed.")
     def test_simple_format(self):

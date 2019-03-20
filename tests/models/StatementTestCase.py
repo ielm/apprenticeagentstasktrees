@@ -1,9 +1,10 @@
-from backend.models.bootstrap import Bootstrap
+# from backend.models.bootstrap import Bootstrap
 # from backend.models.graph import Frame, Graph, Identifier, Literal, Network
 from backend.models.mps import AgentMethod, MPRegistry
-from backend.models.query import Query
+# from backend.models.query import Query
 from backend.models.statement import TransientFrame, Statement, StatementRegistry, StatementScope, Variable, VariableMap
 from backend.models.xmr import XMR
+from backend.utils.AgentOntoLang import AgentOntoLang
 from ontograph import graph
 from ontograph.Frame import Frame
 from ontograph.Index import Identifier
@@ -179,7 +180,8 @@ class StatementTestCase(unittest.TestCase):
     def setUp(self):
         graph.reset()
 
-        Bootstrap.bootstrap_resource(None, "backend.resources", "exe.knowledge")
+        # Bootstrap.bootstrap_resource(None, "backend.resources", "exe.knowledge")
+        AgentOntoLang().load_knowledge("backend.resources", "exe.knowledge")
 
     def test_run(self):
 
@@ -217,7 +219,9 @@ class AddFillerStatementTestCase(unittest.TestCase):
 
     def setUp(self):
         graph.reset()
-        Bootstrap.bootstrap_resource(None, "backend.resources", "exe.knowledge")
+
+        # Bootstrap.bootstrap_resource(None, "backend.resources", "exe.knowledge")
+        AgentOntoLang().load_knowledge("backend.resources", "exe.knowledge")
 
     def test_run(self):
         addfiller = Frame("@TEST.FRAME").add_parent("@EXE.ADDFILLER-STATEMENT")
@@ -287,12 +291,14 @@ class AssertStatementTestCase(unittest.TestCase):
 
     def setUp(self):
         graph.reset()
-        Bootstrap.bootstrap_resource(None, "backend.resources", "exe.knowledge")
+
+        # Bootstrap.bootstrap_resource(None, "backend.resources", "exe.knowledge")
+        AgentOntoLang().load_knowledge("backend.resources", "exe.knowledge")
 
     def test_assertion(self):
         from backend.models.statement import AssertStatement, ExistsStatement
 
-        assertion = ExistsStatement.instance(Space("TEST"), Query().search(ExistsComparator(slot="TEST")))
+        assertion = ExistsStatement.instance(Space("TEST"), Query(ExistsComparator(slot="TEST")))
 
         stmt = Frame("@TEST.ASSERT-STATEMENT.?")
         stmt["ASSERTION"] = assertion.frame
@@ -313,7 +319,7 @@ class AssertStatementTestCase(unittest.TestCase):
     def test_instance(self):
         from backend.models.statement import AssertStatement, ExistsStatement, MakeInstanceStatement
 
-        assertion = ExistsStatement.instance(Space("TEST"), Query().search(ExistsComparator(slot="TEST")))
+        assertion = ExistsStatement.instance(Space("TEST"), Query(ExistsComparator(slot="TEST")))
         mi1 = MakeInstanceStatement.instance(Space("TEST"), "TEST", "EXE.TEST-GOAL-A", [])
         mi2 = MakeInstanceStatement.instance(Space("TEST"), "TEST", "EXE.TEST-GOAL-B", [])
 
@@ -334,7 +340,7 @@ class AssertStatementTestCase(unittest.TestCase):
         target = Frame("@TEST.TARGET")
         target["TEST"] = 123
 
-        assertion = ExistsStatement.instance(Space("TEST"), Query().search(ExistsComparator(slot="TEST")))
+        assertion = ExistsStatement.instance(Space("TEST"), Query(ExistsComparator(slot="TEST")))
         stmt = AssertStatement.instance(Space("TEST"), assertion, [])
 
         stmt.run(StatementScope(), VariableMap(Frame("@TEST.VARMAP")))
@@ -344,7 +350,7 @@ class AssertStatementTestCase(unittest.TestCase):
 
         Frame("@TEST.TARGET")
 
-        assertion = ExistsStatement.instance(Space("TEST"), Query().search(ExistsComparator(slot="TEST")))
+        assertion = ExistsStatement.instance(Space("TEST"), Query(ExistsComparator(slot="TEST")))
         mi = MakeInstanceStatement.instance(Space("TEST"), "TEST", "@EXE.TEST-GOAL", [])
         stmt = AssertStatement.instance(Space("TEST"), assertion, [mi])
 
@@ -359,7 +365,9 @@ class AssignFillerStatementTestCase(unittest.TestCase):
 
     def setUp(self):
         graph.reset()
-        Bootstrap.bootstrap_resource(None, "backend.resources", "exe.knowledge")
+
+        # Bootstrap.bootstrap_resource(None, "backend.resources", "exe.knowledge")
+        AgentOntoLang().load_knowledge("backend.resources", "exe.knowledge")
 
     def test_run(self):
         assignfiller = Frame("@TEST.FRAME").add_parent("@EXE.ASSIGNFILLER-STATEMENT")
@@ -431,7 +439,9 @@ class AssignVariableStatementTestCase(unittest.TestCase):
 
     def setUp(self):
         graph.reset()
-        Bootstrap.bootstrap_resource(None, "backend.resources", "exe.knowledge")
+
+        # Bootstrap.bootstrap_resource(None, "backend.resources", "exe.knowledge")
+        AgentOntoLang().load_knowledge("backend.resources", "exe.knowledge")
 
     def test_run_assign_literal(self):
         assignvariable = Frame("@TEST.TARGET").add_parent("@EXE.ASSIGNVARIABLE-STATEMENT")
@@ -481,7 +491,7 @@ class AssignVariableStatementTestCase(unittest.TestCase):
         self.assertEqual(123, varmap.resolve("$var1"))
 
         assignvariable["TO"] = "$var2"
-        assignvariable["ASSIGN"] = ExistsStatement.instance(Space("TEST"), Query().search(IdComparator("@TEST.FRAME")))
+        assignvariable["ASSIGN"] = ExistsStatement.instance(Space("TEST"), Query(IdComparator("@TEST.FRAME")))
         Statement.from_instance(assignvariable).run(StatementScope(), varmap)
         self.assertEqual(True, varmap.resolve("$var2"))
 
@@ -495,15 +505,17 @@ class ExistsStatementTestCase(unittest.TestCase):
 
     def setUp(self):
         graph.reset()
-        Bootstrap.bootstrap_resource(None, "backend.resources", "exe.knowledge")
+
+        # Bootstrap.bootstrap_resource(None, "backend.resources", "exe.knowledge")
+        AgentOntoLang().load_knowledge("backend.resources", "exe.knowledge")
 
     def test_run(self):
         stmt = Frame("@TEST.FRAME").add_parent("@EXE.EXISTS-STATEMENT")
 
-        stmt["FIND"] = Query().search(IsAComparator("@EXE.EXISTS-STATEMENT"))
+        stmt["FIND"] = Query(IsAComparator("@EXE.EXISTS-STATEMENT"))
         self.assertTrue(Statement.from_instance(stmt).run(StatementScope(), None))
 
-        stmt["FIND"] = Query().search(ExistsComparator(slot="abc", filler=123))
+        stmt["FIND"] = Query(ExistsComparator(slot="abc", filler=123))
         self.assertFalse(Statement.from_instance(stmt).run(StatementScope(), None))
 
 
@@ -511,22 +523,24 @@ class ExpectationStatementTestCase(unittest.TestCase):
 
     def setUp(self):
         graph.reset()
-        Bootstrap.bootstrap_resource(None, "backend.resources", "exe.knowledge")
+
+        # Bootstrap.bootstrap_resource(None, "backend.resources", "exe.knowledge")
+        AgentOntoLang().load_knowledge("backend.resources", "exe.knowledge")
 
     def test_condition(self):
         from backend.models.statement import ExistsStatement, ExpectationStatement
 
         stmt = Frame("@TEST.STATEMENT")
-        stmt["CONDITION"] = ExistsStatement.instance(Space("TEST"), Query().search(IdComparator("@TEST.FRAME.1"))).frame
+        stmt["CONDITION"] = ExistsStatement.instance(Space("TEST"), Query(IdComparator("@TEST.FRAME.1"))).frame
 
-        self.assertEqual(ExistsStatement.instance(Space("TEST"), Query().search(IdComparator("@TEST.FRAME.1"))), ExpectationStatement(stmt).condition())
+        self.assertEqual(ExistsStatement.instance(Space("TEST"), Query(IdComparator("@TEST.FRAME.1"))), ExpectationStatement(stmt).condition())
 
     def test_instance(self):
         from backend.models.statement import ExistsStatement, ExpectationStatement
 
-        stmt = ExpectationStatement.instance(Space("TEST"), ExistsStatement.instance(Space("TEST"), Query().search(IdComparator("@TEST.FRAME.1"))))
+        stmt = ExpectationStatement.instance(Space("TEST"), ExistsStatement.instance(Space("TEST"), Query(IdComparator("@TEST.FRAME.1"))))
 
-        self.assertEqual(ExistsStatement.instance(Space("TEST"), Query().search(IdComparator("@TEST.FRAME.1"))), stmt.condition())
+        self.assertEqual(ExistsStatement.instance(Space("TEST"), Query(IdComparator("@TEST.FRAME.1"))), stmt.condition())
 
     def test_from_instance(self):
         from backend.models.statement import ExpectationStatement
@@ -539,7 +553,7 @@ class ExpectationStatementTestCase(unittest.TestCase):
     def test_run(self):
         from backend.models.statement import ExistsStatement, ExpectationStatement
 
-        condition = ExistsStatement.instance(Space("TEST"), Query().search(IdComparator("@TEST.FRAME.1")))
+        condition = ExistsStatement.instance(Space("TEST"), Query(IdComparator("@TEST.FRAME.1")))
         stmt = ExpectationStatement.instance(Space("TEST"), condition)
 
         scope = StatementScope()
@@ -556,7 +570,9 @@ class ForEachStatementTestCase(unittest.TestCase):
 
     def setUp(self):
         graph.reset()
-        Bootstrap.bootstrap_resource(None, "backend.resources", "exe.knowledge")
+
+        # Bootstrap.bootstrap_resource(None, "backend.resources", "exe.knowledge")
+        AgentOntoLang().load_knowledge("backend.resources", "exe.knowledge")
 
     def test_run(self):
 
@@ -581,7 +597,7 @@ class ForEachStatementTestCase(unittest.TestCase):
 
         Frame("@EXE.STATEMENT")["CLASSMAP"] = TestStatement.__qualname__
 
-        foreach["FROM"] = Query().search(ExistsComparator(slot="a", filler=1))
+        foreach["FROM"] = Query(ExistsComparator(slot="a", filler=1))
         foreach["ASSIGN"] = "$FOR"
         foreach["DO"] = stmt
 
@@ -595,7 +611,9 @@ class IsStatementTestCase(unittest.TestCase):
 
     def setUp(self):
         graph.reset()
-        Bootstrap.bootstrap_resource(None, "backend.resources", "exe.knowledge")
+
+        # Bootstrap.bootstrap_resource(None, "backend.resources", "exe.knowledge")
+        AgentOntoLang().load_knowledge("backend.resources", "exe.knowledge")
 
     def test_run(self):
         stmt = Frame("@TEST.FRAME").add_parent("@EXE.IS-STATEMENT")
@@ -655,7 +673,9 @@ class MakeInstanceStatementTestCase(unittest.TestCase):
 
     def setUp(self):
         graph.reset()
-        Bootstrap.bootstrap_resource(None, "backend.resources", "exe.knowledge")
+
+        # Bootstrap.bootstrap_resource(None, "backend.resources", "exe.knowledge")
+        AgentOntoLang().load_knowledge("backend.resources", "exe.knowledge")
 
     def test_run(self):
         makeinstance = Frame("@TEST.FRAME").add_parent("@EXE.MAKEINSTANCE-STATEMENT")
@@ -692,7 +712,9 @@ class MeaningProcedureStatementTestCase(unittest.TestCase):
 
     def setUp(self):
         graph.reset()
-        Bootstrap.bootstrap_resource(None, "backend.resources", "exe.knowledge")
+
+        # Bootstrap.bootstrap_resource(None, "backend.resources", "exe.knowledge")
+        AgentOntoLang().load_knowledge("backend.resources", "exe.knowledge")
 
     def test_run(self):
         result = 0
@@ -751,7 +773,9 @@ class OutputXMRStatementTestCase(unittest.TestCase):
 
     def setUp(self):
         graph.reset()
-        Bootstrap.bootstrap_resource(None, "backend.resources", "exe.knowledge")
+
+        # Bootstrap.bootstrap_resource(None, "backend.resources", "exe.knowledge")
+        AgentOntoLang().load_knowledge("backend.resources", "exe.knowledge")
 
     def test_template(self):
         from backend.models.output import OutputXMRTemplate
@@ -873,7 +897,9 @@ class TransientFrameStatementTestCase(unittest.TestCase):
 
     def setUp(self):
         graph.reset()
-        Bootstrap.bootstrap_resource(None, "backend.resources", "exe.knowledge")
+
+        # Bootstrap.bootstrap_resource(None, "backend.resources", "exe.knowledge")
+        AgentOntoLang().load_knowledge("backend.resources", "exe.knowledge")
 
     def test_properties(self):
         from backend.models.bootstrap import BootstrapTriple

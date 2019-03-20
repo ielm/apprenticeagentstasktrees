@@ -6,9 +6,9 @@ from flask_socketio import SocketIO
 from pkgutil import get_data
 
 from backend.agent import Agent
-from backend.models.bootstrap import Bootstrap
+# from backend.models.bootstrap import Bootstrap
 # from backend.contexts.LCTContext import LCTContext
-from backend.models.grammar import Grammar
+# from backend.models.grammar import Grammar
 # from backend.models.graph import Frame, Identifier
 # from backend.models.ontology import Ontology
 from backend.models.xmr import XMR
@@ -121,8 +121,10 @@ def grammar():
 
 @app.route("/reset", methods=["DELETE"])
 def reset():
+    g.reset()
+
     global agent
-    agent = Agent(Ontology.init_default())
+    agent = Agent()
 
     return "OK"
 
@@ -134,12 +136,14 @@ def network():
 
 @app.route("/view", methods=["POST"])
 def view():
-    from backend.models.view import View
     data = request.data.decode("utf-8")
-    q_processor = g.ontolang().parse(data)[0]
-    view = View(agent, q_processor.start, query=q_processor.query)
-    view_graph = view.view()
-    return graph_to_json(view_graph)
+    return graph_to_json(g.ontolang().run(data))
+    # from backend.models.view import View
+    # data = request.data.decode("utf-8")
+    # q_processor = g.ontolang().parse(data)[0]
+    # view = View(agent, q_processor.start, query=q_processor.query)
+    # view_graph = view.view()
+    # return graph_to_json(view_graph)
 
 
 @app.route("/graph", methods=["GET"])
@@ -149,7 +153,7 @@ def graph():
 
     id = request.args["id"]
 
-    return graph_to_json(agent[id])
+    return graph_to_json(Space(id))
 
 
 @app.route("/iidea/start", methods=["GET"])

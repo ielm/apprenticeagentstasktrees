@@ -1,12 +1,11 @@
 from backend.agent import Agent
 from backend.models.agenda import Decision, Expectation, Goal, Plan, Step, Trigger
 from backend.models.effectors import Capability, Effector
-# from backend.models.graph import Literal, Network
-# from backend.models.ontology import Ontology
 from backend.models.output import OutputXMRTemplate
 from backend.models.statement import OutputXMRStatement, VariableMap
 from backend.models.tmr import TMR
 from backend.models.xmr import XMR
+from backend.utils.AgentOntoLang import AgentOntoLang
 from ontograph import graph
 from ontograph.Frame import Frame
 from ontograph.Query import ExistsComparator, IdComparator, Query
@@ -225,7 +224,7 @@ class AgentDecideTestCase(unittest.TestCase):
 
     def test_decide_only_creates_decisions_for_selectable_plans(self):
         from backend.models.statement import ExistsStatement
-        stmt = ExistsStatement.instance(self.g, Query().search(ExistsComparator(slot="DNE", filler=123)))
+        stmt = ExistsStatement.instance(self.g, Query(ExistsComparator(slot="DNE", filler=123)))
 
         step = Step.build(self.g, 1, [])
         plan1 = Plan.build(self.g, "plan-1", Plan.DEFAULT, [step])
@@ -509,7 +508,7 @@ class AgentDecideTestCase(unittest.TestCase):
     def test_decide_goals_whose_decisions_are_blocked_are_still_marked_as_active(self):
         from backend.models.statement import AssertStatement, ExistsStatement, MakeInstanceStatement
 
-        assertion = ExistsStatement.instance(self.g, Query().search(IdComparator("@SELF.DNE")))
+        assertion = ExistsStatement.instance(self.g, Query(IdComparator("@SELF.DNE")))
         resolutions = [MakeInstanceStatement.instance(self.g, self.g.name, Goal.define(self.g, "resolution", 1.0, 0.5, [], [], [], []).frame, [])]
         statement = AssertStatement.instance(self.g, assertion, resolutions)
 
@@ -764,10 +763,10 @@ class AgentAssessTestCase(unittest.TestCase):
         self.assertEqual(Decision.Status.EXECUTING, decision2.status())
 
     def test_assess_marks_executing_decisions_as_finished_if_no_pending_expectations_remain(self):
-        from backend.models.bootstrap import Bootstrap
+        # from backend.models.bootstrap import Bootstrap
         from backend.models.statement import IsStatement
 
-        Bootstrap.bootstrap_resource(None, "backend.resources", "exe.knowledge")
+        AgentOntoLang().load_knowledge("backend.resources", "exe.knowledge")
 
         target = Frame("@EXE.TARGET")
         target["SLOT"] = 123
@@ -1002,10 +1001,11 @@ class AgentAssessTestCase(unittest.TestCase):
         self.assertIn(subgoal, self.agent.agenda().goals())
 
     def test_assess_updates_expectation_status(self):
-        from backend.models.bootstrap import Bootstrap
+        # from backend.models.bootstrap import Bootstrap
         from backend.models.statement import IsStatement
 
-        Bootstrap.bootstrap_resource(None, "backend.resources", "exe.knowledge")
+        # Bootstrap.bootstrap_resource(None, "backend.resources", "exe.knowledge")
+        AgentOntoLang().load_knowledge("backend.resources", "exe.knowledge")
 
         target = Frame("@EXE.TARGET")
         target["SLOT"] = 123
@@ -1030,10 +1030,11 @@ class AgentAssessTestCase(unittest.TestCase):
         self.assertEqual(Expectation.Status.SATISFIED, expectation.status())
 
     def test_assess_removes_transient_frames_out_of_scope(self):
-        from backend.models.bootstrap import Bootstrap
+        # from backend.models.bootstrap import Bootstrap
         from backend.models.statement import TransientFrame
 
-        Bootstrap.bootstrap_resource(None, "backend.resources", "exe.knowledge")
+        # Bootstrap.bootstrap_resource(None, "backend.resources", "exe.knowledge")
+        AgentOntoLang().load_knowledge("backend.resources", "exe.knowledge")
 
         f1 = Frame("@EXE.FRAME.?").add_parent("@EXE.TRANSIENT-FRAME")
         f2 = Frame("@EXE.FRAME.?").add_parent("@EXE.TRANSIENT-FRAME")
