@@ -6,14 +6,10 @@ from flask_socketio import SocketIO
 from pkgutil import get_data
 
 from backend.agent import Agent
-# from backend.models.bootstrap import Bootstrap
-# from backend.contexts.LCTContext import LCTContext
-# from backend.models.grammar import Grammar
-# from backend.models.graph import Frame, Identifier
-# from backend.models.ontology import Ontology
 from backend.models.xmr import XMR
 from backend.service.AgentAdvanceThread import AgentAdvanceThread
 from backend.service.IIDEAConverter import IIDEAConverter
+from backend.service.KnowledgeLoader import KnowledgeLoader
 from backend.utils.OntologyLoader import OntologyServiceLoader
 from backend.utils.YaleUtils import format_learned_event_yale, input_to_tmrs, lookup_by_visual_id
 from ontograph import graph as g
@@ -28,6 +24,7 @@ socketio = SocketIO(app)
 agent = Agent()
 agent.logger().enable()
 OntologyServiceLoader().load()
+KnowledgeLoader.bootstrap_resource("backend.resources", "exe.knowledge")
 thread = None
 
 
@@ -111,7 +108,7 @@ def favicon():
 
 @app.route("/", methods=["GET"])
 def index():
-    return render_template("index.html", network=agent._storage.keys())
+    return render_template("index.html", network=list(map(lambda s: s.name, g)))
 
 
 @app.route("/grammar", methods=["GET"])
@@ -211,7 +208,7 @@ def iidea_input():
         from backend.utils.YaleUtils import analyze
         tmr = analyze(data["input"])
 
-    source = lookup_by_visual_id(agent, data["source"])
+    source = lookup_by_visual_id(data["source"])
     agent._input(input=tmr, source=source, type=data["type"])
 
     return json.dumps(build_payload())
@@ -285,11 +282,11 @@ def input():
     for tmr in tmrs:
         agent.input(tmr)
 
-    if isinstance(agent.context, LCTContext):
-        learning = list(map(lambda instance: instance.name(), agent.wo_memory.search(Frame.q(network).f(LCTContext.LEARNING, True))))
-        return json.dumps({
-            LCTContext.LEARNING: learning
-        })
+    # if isinstance(agent.context, LCTContext):
+    #     learning = list(map(lambda instance: instance.name(), agent.wo_memory.search(Frame.q(network).f(LCTContext.LEARNING, True))))
+    #     return json.dumps({
+    #         LCTContext.LEARNING: learning
+    #     })
 
     return "OK"
 
@@ -304,7 +301,7 @@ def components_graph():
         include_sources = request.args["include_sources"].lower() == "true"
 
     graph = request.args["namespace"]
-    graph = graph_to_json(agent[graph])
+    graph = graph_to_json(Space(graph))
     return render_template("graph.html", gj=json.loads(graph), include_sources=include_sources)
 
 
@@ -331,17 +328,17 @@ def bootstrap():
     if request.method == "POST":
         script = request.form["custom-bootstrap"]
         script = script.replace("\r\n", "\n")
-        Bootstrap.bootstrap_script(agent, script)
+        KnowledgeLoader.load_script(script)
         return redirect("/bootstrap", code=302)
 
     if "package" in request.args and "resource" in request.args:
         package = request.args["package"]
         resource = request.args["resource"]
-        Bootstrap.bootstrap_resource(agent, package, resource)
+        KnowledgeLoader.bootstrap_resource(package, resource)
         return redirect("/bootstrap", code=302)
 
-    resources = Bootstrap.list_resources("backend.resources") + Bootstrap.list_resources("backend.resources.experiments") + Bootstrap.list_resources("backend.resources.example")
-    resources = map(lambda r: {"resource": r, "loaded": r[0] + "." + r[1] in Bootstrap.loaded}, resources)
+    resources = KnowledgeLoader.list_resources("backend.resources") + KnowledgeLoader.list_resources("backend.resources.experiments") + KnowledgeLoader.list_resources("backend.resources.example")
+    resources = map(lambda r: {"resource": r, "loaded": r[0] + "." + r[1] in KnowledgeLoader.loaded}, resources)
 
     return render_template("bootstrap.html", resources=resources)
 

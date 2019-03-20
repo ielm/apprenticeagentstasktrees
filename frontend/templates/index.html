@@ -115,13 +115,13 @@
 
             var framesByID = {};
             for (var frame in graph) {
-                framesByID[graph[frame]["graph"] + "." + graph[frame]["name"]] = graph[frame];
+                framesByID[graph[frame]["name"]] = graph[frame];
             }
 
             var frames = graph
                 .map(function(frame) {
                     return {
-                        id: frame["graph"] + "." + frame["name"],
+                        id: frame["name"],
                         label: frame["name"],
                         color: colors[frame["type"]],
                     }
@@ -133,8 +133,8 @@
                         .filter(r => ["AGENT-OF", "THEME-OF", "INSTRUMENT-OF", "SCOPE-OF", "DESTINATION-OF"].indexOf(r.slot) == -1)
                         .map(function(relation) {
                             return {
-                                from: frame["graph"] + "." + frame["name"],
-                                to: relation["graph"] + "." + relation["value"],
+                                from: frame["name"],
+                                to: relation["value"],
                                 label: relation["slot"],
                                 arrows: "to",
                             }
@@ -230,7 +230,7 @@
             <tr>
                 <td>{|slot|}</td>
                 <td class="property-icon"><img src="/assets/svg/arrow-thick-right.svg" alt="arrow-thick-right" style="height: 12px"></td>
-                <td><a class='frame-link' data-frame='{|graph|}.{|value|}'>{|graph|}.{|value|}</a></td>
+                <td><a class='frame-link' data-frame='{|value|}'>{|value|}</a></td>
             </tr>
             {|/frame.relations|}
         </table>
@@ -268,7 +268,7 @@
                 var id = $(e.target).data("frame");
                 for (var i in _graph) {
                     var frame = _graph[i];
-                    if (frame.graph + "." + frame.name == id) {
+                    if (frame.name == id) {
                         load_frame(frame);
                         _network.selectNodes([id]);
                         break;
@@ -290,7 +290,7 @@
 
             $(".graph-link").on("click", function(e) {
                 var graph = $(e.target).data("graph");
-                var query = "VIEW " + graph + " SHOW ALL";
+                var query = "FROM * SEARCH FOR @ IN " + graph + ";";
                 $("#viewQuery").val(query);
                 fetch_view(query);
             });

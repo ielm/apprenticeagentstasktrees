@@ -38,28 +38,28 @@ class IIDEAConverter(object):
             "timestamp": datetime.utcfromtimestamp(xmr.timestamp()).strftime('%H:%M:%S'),
             "source": source(xmr),
             "rendered": xmr.render(),
-            "id": xmr.frame.name(),
-            "graph": xmr.graph(agent)._namespace
+            "id": xmr.frame.id,
+            "graph": xmr.graph().name
         }, payload))
 
         return payload
 
     @classmethod
     def inputs(cls, agent: Agent):
-        return list(map(lambda input: IIDEAConverter.convert_input(input.resolve()), agent.identity["HAS-INPUT"]))
+        return list(map(lambda input: IIDEAConverter.convert_input(input), agent.identity["HAS-INPUT"]))
 
     @classmethod
     def convert_input(cls, input: Frame):
         status = XMR(input).status().value.lower()
 
         return {
-            "name": input["REFERS-TO-GRAPH"][0].resolve().value,
+            "name": input["REFERS-TO-GRAPH"][0],
             "status": status
         }
 
     @classmethod
     def agenda(cls, agent: Agent):
-        return list(map(lambda goal: IIDEAConverter.convert_goal(agent, goal.resolve()), agent.identity["HAS-GOAL"]))
+        return list(map(lambda goal: IIDEAConverter.convert_goal(agent, goal), agent.identity["HAS-GOAL"]))
 
     @classmethod
     def convert_goal(cls, agent: Agent, goal: Frame):
@@ -67,12 +67,12 @@ class IIDEAConverter(object):
 
         return {
             "name": goal.name(),
-            "id": goal.frame.name(),
+            "id": goal.frame.id,
             "pending": goal.is_pending(),
             "active": goal.is_active(),
             "satisfied": goal.is_satisfied(),
             "abandoned": goal.is_abandoned(),
-            "plan": list(map(lambda plan: IIDEAConverter.convert_plan(agent, plan.resolve(), goal), goal.frame["PLAN"])),
+            "plan": list(map(lambda plan: IIDEAConverter.convert_plan(agent, plan, goal), goal.frame["PLAN"])),
             "params": list(map(lambda variable: {"var": variable, "value": IIDEAConverter.convert_value(goal.resolve(variable))}, goal.variables()))
         }
 
@@ -120,18 +120,18 @@ class IIDEAConverter(object):
     @classmethod
     def convert_decision(cls, agent: Agent, decision: Decision):
         return {
-            "id": decision.frame.name(),
+            "id": decision.frame.id,
             "goal": decision.goal().name(),
             "plan": decision.plan().name(),
             "step": "Step " + str(decision.step().index()),
             "outputs": list(map(lambda output: IIDEAConverter.convert_output(output), decision.outputs())),
             "priority": decision.priority(),
             "cost": decision.cost(),
-            "requires": list(map(lambda required: required.frame.name(), decision.requires())),
+            "requires": list(map(lambda required: required.frame.id, decision.requires())),
             "status": decision.status().name,
-            "effectors": list(map(lambda effector: effector.frame.name(), decision.effectors())),
-            "callbacks": list(map(lambda callback: callback.frame.name(), decision.callbacks())),
-            "impasses": list(map(lambda impasse: impasse.frame.name(), decision.impasses())),
+            "effectors": list(map(lambda effector: effector.frame.id, decision.effectors())),
+            "callbacks": list(map(lambda callback: callback.frame.id, decision.callbacks())),
+            "impasses": list(map(lambda impasse: impasse.frame.id, decision.impasses())),
             "expectations": list(map(lambda expectation: IIDEAConverter.convert_expectation(expectation), decision.expectations()))
         }
 
@@ -158,7 +158,7 @@ class IIDEAConverter(object):
             condition = str(condition)
 
         return {
-            "frame": expectation.frame.name(),
+            "frame": expectation.frame.id,
             "status": expectation.status().name,
             "condition": condition
         }
@@ -171,10 +171,10 @@ class IIDEAConverter(object):
     def convert_effector(cls, agent: Agent, effector: Effector):
         effecting = None
         if not effector.is_free():
-            effecting = effector.on_decision().goal().frame.name()
+            effecting = effector.on_decision().goal().frame.id
 
         return {
-            "name": effector.frame.name(),
+            "name": effector.frame.id,
             "type": effector.type().name,
             "status": effector.is_free(),
             "effecting": effecting,
@@ -198,10 +198,10 @@ class IIDEAConverter(object):
         if wrt_effector.on_capability() == capability and wrt_effector.on_decision() is not None:
             callbacks = wrt_effector.on_decision().callbacks()
             callbacks = list(filter(lambda callback: callback.effector() == wrt_effector, callbacks))
-            callbacks = list(map(lambda cb: {"name": cb.frame.name(), "waiting": cb.status() == Callback.Status.WAITING}, callbacks))
+            callbacks = list(map(lambda cb: {"name": cb.frame.id, "waiting": cb.status() == Callback.Status.WAITING}, callbacks))
 
         return {
-            "name": capability.frame.name(),
+            "name": capability.frame.id,
             "not_selected": selected == "not",
             "selected_elsewhere": selected == "elsewhere",
             "selected_here": selected == "here",
