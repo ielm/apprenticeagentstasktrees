@@ -24,7 +24,7 @@ socketio = SocketIO(app)
 agent = Agent()
 agent.logger().enable()
 OntologyServiceLoader().load()
-KnowledgeLoader.bootstrap_resource("backend.resources", "exe.knowledge")
+KnowledgeLoader.load_resource("backend.resources", "exe.knowledge")
 thread = None
 
 
@@ -108,7 +108,7 @@ def favicon():
 
 @app.route("/", methods=["GET"])
 def index():
-    return render_template("index.html", network=list(map(lambda s: s.name, g)))
+    return render_template("index.html", network=list(map(lambda s: s.name, agent.spaces())))
 
 
 @app.route("/grammar", methods=["GET"])
@@ -135,12 +135,6 @@ def network():
 def view():
     data = request.data.decode("utf-8")
     return graph_to_json(g.ontolang().run(data))
-    # from backend.models.view import View
-    # data = request.data.decode("utf-8")
-    # q_processor = g.ontolang().parse(data)[0]
-    # view = View(agent, q_processor.start, query=q_processor.query)
-    # view_graph = view.view()
-    # return graph_to_json(view_graph)
 
 
 @app.route("/graph", methods=["GET"])
@@ -282,12 +276,6 @@ def input():
     for tmr in tmrs:
         agent.input(tmr)
 
-    # if isinstance(agent.context, LCTContext):
-    #     learning = list(map(lambda instance: instance.name(), agent.wo_memory.search(Frame.q(network).f(LCTContext.LEARNING, True))))
-    #     return json.dumps({
-    #         LCTContext.LEARNING: learning
-    #     })
-
     return "OK"
 
 
@@ -317,10 +305,7 @@ def htn():
 
     instance = request.args["instance"]
 
-    from backend.models.fr import FRInstance
-    instance: FRInstance = agent.search(Frame.q(agent).id(instance))[0]
-
-    return json.dumps(format_learned_event_yale(instance, agent.ontology), indent=4)
+    return json.dumps(format_learned_event_yale(Frame(instance), agent.ontology), indent=4)
 
 
 @app.route("/bootstrap", methods=["GET", "POST"])
@@ -334,7 +319,7 @@ def bootstrap():
     if "package" in request.args and "resource" in request.args:
         package = request.args["package"]
         resource = request.args["resource"]
-        KnowledgeLoader.bootstrap_resource(package, resource)
+        KnowledgeLoader.load_resource(package, resource)
         return redirect("/bootstrap", code=302)
 
     resources = KnowledgeLoader.list_resources("backend.resources") + KnowledgeLoader.list_resources("backend.resources.experiments") + KnowledgeLoader.list_resources("backend.resources.example")

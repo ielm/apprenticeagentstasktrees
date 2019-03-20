@@ -145,6 +145,19 @@ class TransientFrame(object):
         return super().__eq__(other)
 
 
+class TransientTriple(object):
+
+    def __init__(self, slot: str, filler: Union[Identifier, Any], facet: str=None):
+        self.slot = slot
+        self.facet = facet
+        self.filler = filler
+
+    def __eq__(self, other):
+        if isinstance(other, TransientTriple):
+            return self.slot == other.slot and self.facet == other.facet and self.filler == other.filler
+        return super().__eq__(other)
+
+
 class StatementScope(object):
 
     def __init__(self):

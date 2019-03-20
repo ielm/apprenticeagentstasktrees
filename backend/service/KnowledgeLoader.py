@@ -10,7 +10,7 @@ class KnowledgeLoader(object):
         AgentOntoLang().run(script)
 
     @classmethod
-    def bootstrap_resource(cls, package: str, file: str):
+    def load_resource(cls, package: str, file: str):
         AgentOntoLang().load_knowledge(package, file)
         KnowledgeLoader.loaded.append(package + "." + file)
 

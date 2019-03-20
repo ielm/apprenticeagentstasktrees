@@ -6,6 +6,7 @@ from ontograph.Query import IdComparator
 import unittest
 
 
+@unittest.skip
 class PathTestCase(unittest.TestCase):
 
     def setUp(self):

@@ -3,6 +3,7 @@ from ontograph.Query import SearchComparator
 from typing import List
 
 
+@DeprecationWarning
 class Path(object):
 
     def __init__(self):
@@ -68,6 +69,7 @@ class Path(object):
         return self.steps == other.steps
 
 
+@DeprecationWarning
 class PathStep(object):
 
     def __init__(self, relation: str, recursive: bool, comparator: SearchComparator):

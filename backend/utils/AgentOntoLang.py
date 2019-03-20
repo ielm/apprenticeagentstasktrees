@@ -1,9 +1,9 @@
 from backend.models.agenda import Agenda, Goal, Plan, Step, Trigger
-from backend.models.bootstrap import BootstrapTriple
+# from backend.models.bootstrap import BootstrapTriple
 from backend.models.effectors import Capability
 from backend.models.mps import AgentMethod, MPRegistry, OutputMethod
 from backend.models.output import OutputXMRTemplate
-from backend.models.statement import AddFillerStatement, AssertStatement, AssignFillerStatement, AssignVariableStatement, ExistsStatement, ExpectationStatement, ForEachStatement, IsStatement, MakeInstanceStatement, MeaningProcedureStatement, OutputXMRStatement, Statement, TransientFrameStatement
+from backend.models.statement import AddFillerStatement, AssertStatement, AssignFillerStatement, AssignVariableStatement, ExistsStatement, ExpectationStatement, ForEachStatement, IsStatement, MakeInstanceStatement, MeaningProcedureStatement, OutputXMRStatement, Statement, TransientFrameStatement, TransientTriple
 from backend.models.xmr import XMR
 from lark import Tree
 from ontograph.Frame import Frame
@@ -367,7 +367,7 @@ class AgentOntoLangTransformer(OntoLangTransformer):
 
     def transient_statement(self, matches):
         properties = list(filter(lambda m: isinstance(m, tuple), matches))
-        properties = list(map(lambda p: BootstrapTriple(p[0], p[2], facet=p[1]), properties))
+        properties = list(map(lambda p: TransientTriple(p[0], p[2], facet=p[1]), properties))
 
         return TransientFrameStatement.instance(Space("EXE"), properties)
 

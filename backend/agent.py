@@ -47,27 +47,13 @@ class Agent(Network):
 
         self.input_memory = []
         self.action_queue = []
-        # self.context = LCTContext(self)
 
         self._logger = CachedAgentLogger()
-        # self.wo_memory.logger(self._logger)
-        # self.lt_memory.logger(self._logger)
 
     def logger(self, logger=None) -> AgentLogger:
         if not logger is None:
             self._logger = logger
         return self._logger
-
-    @DeprecationWarning
-    def input(self, input):
-        tmr = TMR.from_json(self, self.ontology, input)
-        self.input_memory.append(tmr)
-
-        self._logger.log("Input: " + tmr.render())
-
-        agenda = self.context.default_understanding()
-        agenda.logger(self._logger)
-        agenda.process(self, tmr)
 
     class IDEA(object):
         D = 1
@@ -139,7 +125,7 @@ class Agent(Network):
 
         # If input is visual input, create VMR, else create tmr and continue
         if type == "VISUAL":
-            xmr = VMR.from_json(self, self.ontology, input, source=source)
+            xmr = VMR.from_json(input, source=source)
             xmr.update_environment(self.env())
             xmr.update_memory(self.wo_memory)
         else:
@@ -149,8 +135,6 @@ class Agent(Network):
         # registered_xMR = self.register(input)
 
         self.identity["HAS-INPUT"] += xmr.frame
-
-        # self._logger.log("Input: " + xmr.render())
 
     def _decide(self):
         agenda = self.agenda()
@@ -262,15 +246,12 @@ class Agent(Network):
         if reassess:
             self._assess()
 
-
-        #for transient_frame in self.exe.search(Frame.q(self).isa("EXE.TRANSIENT-FRAME")):
         for transient_frame in Query(IsAComparator("@EXE.TRANSIENT-FRAME")).start():
             if transient_frame.id == "@EXE.TRANSIENT-FRAME":
                 continue
             if TransientFrame(transient_frame).is_in_scope():
                 continue
             transient_frame.delete()
-            # del self.exe[transient_frame.name()]
 
     def agenda(self):
         return Agenda(self.identity)
@@ -316,10 +297,6 @@ class Agent(Network):
         from backend.utils.AgentOntoLang import AgentOntoLang
         ontolang: AgentOntoLang = graph.ontolang()
         ontolang.load_knowledge(package, resource)
-
-        # from pkgutil import get_data
-        # input: str = get_data(package, resource).decode('ascii')
-        # graph.ontolang().run(input)
 
     def spaces(self) -> List[Space]:
         results = {"EXE", "ONT", "SELF", "WM", "LT", "ENV", "INPUTS", "OUTPUTS"}

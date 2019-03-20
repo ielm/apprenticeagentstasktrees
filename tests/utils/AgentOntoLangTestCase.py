@@ -336,7 +336,7 @@ class AgentOntoLangStatementTestCase(unittest.TestCase):
     def test_assign_variable_statement(self):
         self.ontolang.get_starting_rule = lambda: "assign_variable_statement"
 
-        from backend.models.bootstrap import BootstrapTriple
+        from backend.models.statement import TransientTriple
 
         space = Space("SELF")
         f = Frame("@SELF.FRAME")
@@ -375,7 +375,7 @@ class AgentOntoLangStatementTestCase(unittest.TestCase):
         self.assertIsInstance(parsed.frame["ASSIGN"][0], list)
         self.assertEqual(statement, parsed)
 
-        statement = AssignVariableStatement.instance(space, "$var1", TransientFrameStatement.instance(space, [BootstrapTriple("SLOT", 123)]))
+        statement = AssignVariableStatement.instance(space, "$var1", TransientFrameStatement.instance(space, [TransientTriple("SLOT", 123)]))
         parsed = self.ontolang.parse("$var1 = {SLOT 123;}")
         self.assertEqual(statement, parsed)
 
@@ -459,13 +459,13 @@ class AgentOntoLangStatementTestCase(unittest.TestCase):
     def test_transientframe_statement(self):
         self.ontolang.get_starting_rule = lambda: "transient_statement"
 
-        from backend.models.bootstrap import BootstrapTriple
+        from backend.models.statement import TransientTriple
 
-        property1 = BootstrapTriple("SLOTA", 123)
-        property2 = BootstrapTriple("SLOTA", 456)
-        property3 = BootstrapTriple("SLOTB", "abc")
-        property4 = BootstrapTriple("SLOTC", "$var1")
-        property5 = BootstrapTriple("SLOTD", Identifier("@TEST.FRAME.1"))
+        property1 = TransientTriple("SLOTA", 123)
+        property2 = TransientTriple("SLOTA", 456)
+        property3 = TransientTriple("SLOTB", "abc")
+        property4 = TransientTriple("SLOTC", "$var1")
+        property5 = TransientTriple("SLOTD", Identifier("@TEST.FRAME.1"))
 
         statement = TransientFrameStatement.instance(Space("EXE"), [property1])
         parsed = self.ontolang.parse("{SLOTA 123;}")

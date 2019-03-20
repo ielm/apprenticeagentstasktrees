@@ -898,16 +898,14 @@ class TransientFrameStatementTestCase(unittest.TestCase):
     def setUp(self):
         graph.reset()
 
-        # Bootstrap.bootstrap_resource(None, "backend.resources", "exe.knowledge")
         AgentOntoLang().load_knowledge("backend.resources", "exe.knowledge")
 
     def test_properties(self):
-        from backend.models.bootstrap import BootstrapTriple
-        from backend.models.statement import TransientFrameStatement
+        from backend.models.statement import TransientFrameStatement, TransientTriple
 
-        triple1 = BootstrapTriple("TEST", 123)
-        triple2 = BootstrapTriple("TEST", 456)
-        triple3 = BootstrapTriple("XYZ", Identifier("@TEST.FRAME.1"))
+        triple1 = TransientTriple("TEST", 123)
+        triple2 = TransientTriple("TEST", 456)
+        triple3 = TransientTriple("XYZ", Identifier("@TEST.FRAME.1"))
 
         statement = Frame("@TEST.STATEMENT")
         statement["HAS-PROPERTY"] += triple1
@@ -917,12 +915,11 @@ class TransientFrameStatementTestCase(unittest.TestCase):
         self.assertEqual([triple1, triple2, triple3], TransientFrameStatement(statement).properties())
 
     def test_instance(self):
-        from backend.models.bootstrap import BootstrapTriple
-        from backend.models.statement import TransientFrameStatement
+        from backend.models.statement import TransientFrameStatement, TransientTriple
 
-        triple1 = BootstrapTriple("TEST", 123)
-        triple2 = BootstrapTriple("TEST", 456)
-        triple3 = BootstrapTriple("XYZ", Identifier("@TEST.FRAME.1"))
+        triple1 = TransientTriple("TEST", 123)
+        triple2 = TransientTriple("TEST", 456)
+        triple3 = TransientTriple("XYZ", Identifier("@TEST.FRAME.1"))
 
         statement = TransientFrameStatement.instance(Space("TEST"), [triple1, triple2, triple3])
 
@@ -937,14 +934,13 @@ class TransientFrameStatementTestCase(unittest.TestCase):
         self.assertIsInstance(statement, TransientFrameStatement)
 
     def test_run(self):
-        from backend.models.bootstrap import BootstrapTriple
-        from backend.models.statement import TransientFrameStatement
+        from backend.models.statement import TransientFrameStatement, TransientTriple
 
-        triple1 = BootstrapTriple("TEST", 123)
-        triple2 = BootstrapTriple("TEST", 456)
-        triple3 = BootstrapTriple("XYZ", Identifier("@TEST.FRAME.1"))
-        triple4 = BootstrapTriple("ABC", "$var1")
-        triple5 = BootstrapTriple("DEF", "test")
+        triple1 = TransientTriple("TEST", 123)
+        triple2 = TransientTriple("TEST", 456)
+        triple3 = TransientTriple("XYZ", Identifier("@TEST.FRAME.1"))
+        triple4 = TransientTriple("ABC", "$var1")
+        triple5 = TransientTriple("DEF", "test")
 
         statement = TransientFrameStatement.instance(Space("TEST"), [triple1, triple2, triple3, triple4, triple5])
 
