@@ -313,9 +313,13 @@ class Agent(Network):
         self.load_knowledge("backend.resources", "exe.knowledge")
 
     def load_knowledge(self, package: str, resource: str):
-        from pkgutil import get_data
-        input: str = get_data(package, resource).decode('ascii')
-        graph.ontolang().run(input)
+        from backend.utils.AgentOntoLang import AgentOntoLang
+        ontolang: AgentOntoLang = graph.ontolang()
+        ontolang.load_knowledge(package, resource)
+
+        # from pkgutil import get_data
+        # input: str = get_data(package, resource).decode('ascii')
+        # graph.ontolang().run(input)
 
     def spaces(self) -> List[Space]:
         results = {"EXE", "ONT", "SELF", "WM", "LT", "ENV", "INPUTS", "OUTPUTS"}

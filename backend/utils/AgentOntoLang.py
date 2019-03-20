@@ -16,6 +16,8 @@ from typing import Any, List, Tuple, Type, Union
 
 class AgentOntoLang(OntoLang):
 
+    cached_processors = {}
+
     def __init__(self):
         super().__init__()
         self.resources.insert(0, ("backend.resources", "ontoagent.lark"))
@@ -29,7 +31,15 @@ class AgentOntoLang(OntoLang):
     def load_knowledge(self, package: str, resource: str):
         from pkgutil import get_data
         input: str = get_data(package, resource).decode('ascii')
-        self.run(input)
+
+        if package + "." + resource in AgentOntoLang.cached_processors:
+            processors = AgentOntoLang.cached_processors[package + "." + resource]
+        else:
+            processors = self.parse(input)
+            AgentOntoLang.cached_processors[package + "." + resource] = processors
+
+        for p in processors:
+            p.run()
 
 
 class AgentOntoLangTransformer(OntoLangTransformer):

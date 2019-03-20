@@ -1032,6 +1032,7 @@ class AgentAssessTestCase(unittest.TestCase):
     def test_assess_removes_transient_frames_out_of_scope(self):
         # from backend.models.bootstrap import Bootstrap
         from backend.models.statement import TransientFrame
+        Frame("@EXE.TRANSIENT-FRAME")
 
         # Bootstrap.bootstrap_resource(None, "backend.resources", "exe.knowledge")
         AgentOntoLang().load_knowledge("backend.resources", "exe.knowledge")
