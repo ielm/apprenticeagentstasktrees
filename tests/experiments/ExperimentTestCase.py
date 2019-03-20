@@ -47,7 +47,7 @@ class ExperimentTestCase(unittest.TestCase):
                 return m
 
     def assertGoalExists(self, agent: Agent, isa: str=None, status: Goal.Status=None, query: Callable=None):
-        goals = list(map(lambda g: Goal(g.resolve()), agent.identity["HAS-GOAL"]))
+        goals = list(map(lambda g: Goal(g), agent.identity["HAS-GOAL"]))
 
         if status is not None:
             goals = agent.agenda().goals(pending=(status == Goal.Status.PENDING), active=(status == Goal.Status.ACTIVE), abandoned=(status == Goal.Status.ABANDONED), satisfied=(status == Goal.Status.SATISFIED))

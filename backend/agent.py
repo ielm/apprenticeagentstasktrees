@@ -264,7 +264,7 @@ class Agent(Network):
 
 
         #for transient_frame in self.exe.search(Frame.q(self).isa("EXE.TRANSIENT-FRAME")):
-        for transient_frame in Query().search(IsAComparator("@EXE.TRANSIENT-FRAME")).start(self.exe):
+        for transient_frame in Query(IsAComparator("@EXE.TRANSIENT-FRAME")).start():
             if transient_frame.id == "@EXE.TRANSIENT-FRAME":
                 continue
             if TransientFrame(transient_frame).is_in_scope():
@@ -307,8 +307,15 @@ class Agent(Network):
         return default
 
     def _bootstrap(self):
-        from backend.models.bootstrap import Bootstrap
-        Bootstrap.bootstrap_resource(self, "backend.resources", "exe.knowledge")
+        from backend.utils.AgentOntoLang import AgentOntoLang
+        graph.set_ontolang(AgentOntoLang())
+
+        self.load_knowledge("backend.resources", "exe.knowledge")
+
+    def load_knowledge(self, package: str, resource: str):
+        from pkgutil import get_data
+        input: str = get_data(package, resource).decode('ascii')
+        graph.ontolang().run(input)
 
     def spaces(self) -> List[Space]:
         results = {"EXE", "ONT", "SELF", "WM", "LT", "ENV", "INPUTS", "OUTPUTS"}

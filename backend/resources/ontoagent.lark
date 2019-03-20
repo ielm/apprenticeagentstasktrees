@@ -1,5 +1,5 @@
 ontoagent: (ontolang | ontoagent_process)*
-ontoagent_process: (ontoagent_process_add_trigger | ontoagent_process_define_goal | ontoagent_process_register_mp)
+ontoagent_process: (ontoagent_process_add_trigger | ontoagent_process_define_goal | ontoagent_process_define_output_xmr_template | ontoagent_process_register_mp)
 
 ontoagent_process_add_trigger: ADD TRIGGER TO identifier INSTANTIATE identifier WHEN comparator ";"
 ontoagent_process_define_goal: DEFINE goal ";"

@@ -46,7 +46,7 @@ class AgentOntoLangTransformer(OntoLangTransformer):
         definition: Identifier = matches[5]
         query: SearchComparator = matches[7]
 
-        return OntoAgentProcessorAddTrigger(agenda, definition, Query().search(query))
+        return OntoAgentProcessorAddTrigger(agenda, definition, Query(query))
 
     def ontoagent_process_define_goal(self, matches: List['OntoAgentProcessorDefineGoal']) -> 'OntoAgentProcessorDefineGoal':
         return matches[1]

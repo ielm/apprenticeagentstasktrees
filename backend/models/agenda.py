@@ -521,7 +521,7 @@ class Trigger(object):
         if isinstance(agenda, Frame):
             agenda = Agenda(agenda)
 
-        results = self.query().start(graph)
+        results = list(self.query().start())
         results = filter(lambda r: r not in self.frame["TRIGGERED-ON"], results)
 
         for r in results:
