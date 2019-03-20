@@ -94,6 +94,8 @@ class Goal(VariableMap):
     @classmethod
     def define(cls, space: Space, name: str, priority: Union[Statement, float], resources: Union[Statement, float], plan: List['Plan'], conditions: List['Condition'], variables: List[str], effects: List['Effect']):
         frame = Frame("@" + space.name + "." + name)
+        frame.add_parent("@EXE.GOAL")
+
         frame["NAME"] = name
         frame["PRIORITY"] = priority
         frame["RESOURCES"] = resources

@@ -12,6 +12,7 @@ class ExampleExperimentTestCase(ExperimentTestCase):
 
     def test_example_throughput(self):
 
+        graph.reset()
         OntologyServiceLoader().load()
         agent = Agent()
 

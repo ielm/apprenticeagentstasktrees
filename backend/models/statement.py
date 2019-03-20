@@ -554,7 +554,6 @@ class MakeInstanceStatement(Statement):
             of = Frame(of.id)
 
         instance = Frame("@" + space + "." + Identifier.parse(of.id)[1] + ".?").add_parent(of)
-        # instance = self.frame._network[graph].register(of._identifier.name, isa=of, generate_index=True)
         # for slot in of:
         #     slot = of[slot]
         #     instance[slot.property] = slot
@@ -564,7 +563,11 @@ class MakeInstanceStatement(Statement):
 
         params = list(map(lambda param: self._resolve_param(param, varmap), params))
 
-        VariableMap.instance_of(self.frame.space(), of, params, existing=instance)
+        if of ^ "@EXE.GOAL":
+            from backend.models.agenda import Goal
+            Goal.instance_of(self.frame.space(), of, params, existing=instance)
+        else:
+            VariableMap.instance_of(self.frame.space(), of, params, existing=instance)
 
         return instance
 

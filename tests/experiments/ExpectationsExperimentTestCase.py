@@ -11,6 +11,7 @@ class ExpectationsExperimentTestCase(ExperimentTestCase):
 
     def test_example_throughput(self):
 
+        graph.reset()
         agent = Agent()
 
         # Bootstrap the knowledge
@@ -35,7 +36,7 @@ class ExpectationsExperimentTestCase(ExperimentTestCase):
         # 2a) Adjust memory to include an instance of a PHYSICAL-EVENT with AGENT = the human and THEME = the screwdriver
         graph.ontolang().run('''
             @WM.PHYSICAL-EVENT.1 = {
-                ISA @ONT.PHYSICAL-EVENT;
+                IS-A @ONT.PHYSICAL-EVENT;
                 AGENT @ENV.HUMAN.1;
                 THEME @ENV.SCREWDRIVER.1;
             };
