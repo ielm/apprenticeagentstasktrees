@@ -71,8 +71,8 @@ class OutputXMRTemplateTestCase(unittest.TestCase):
         self.assertEqual(XMR.Type.ACTION, xmr.type())
         self.assertEqual("@TEST.CAPABILITY", xmr.capability().frame.id)
         self.assertEqual(XMR.OutputStatus.PENDING, xmr.status())
-        self.assertEqual(Space("XMR#1"), xmr.graph())
-        self.assertIn("@XMR#1.FRAME.1", xmr.graph())
+        self.assertEqual(Space("XMR#1"), xmr.space())
+        self.assertIn("@XMR#1.FRAME.1", xmr.space())
 
     def test_create_with_root(self):
         output = OutputXMRTemplate.build("Test Name", XMR.Type.ACTION, self.capability, [])

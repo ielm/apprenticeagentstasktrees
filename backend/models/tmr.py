@@ -96,7 +96,7 @@ class TMR(XMR):
 
     def find_main_event(self):
         event = None
-        for instance in self.graph():
+        for instance in self.space():
             if TMRFrame(instance.id).is_event():
                 event = instance
                 break
@@ -107,7 +107,7 @@ class TMR(XMR):
         return event
 
     def is_prefix(self):
-        for instance in self.graph():
+        for instance in self.space():
             if TMRFrame(instance.id).is_event():
                 if [">", "FIND-ANCHOR-TIME"] in instance["TIME"]:
                     return True
@@ -115,13 +115,13 @@ class TMR(XMR):
         return False
 
     def is_postfix(self):
-        for instance in self.graph():
+        for instance in self.space():
             if TMRFrame(instance.id).is_event():
                 if ["<", "FIND-ANCHOR-TIME"] in instance["TIME"]:
                     return True
 
         # For closing generic events, such as "Finished."
-        for instance in self.graph():
+        for instance in self.space():
             if instance.isa("@ONT.ASPECT"):
                 if instance["PHASE"] == "END":
                     scopes = list(map(lambda filler: filler.parents()[0], instance["SCOPE"]))  # TODO: this needs search functionality ("is a filler in the slot exactly concept X?")
@@ -132,7 +132,7 @@ class TMR(XMR):
 
     # TODO: Ultimately, replace with a generic querying capability
     def find_by_concept(self, concept):
-        instances = list(filter(lambda instance: instance.isa(concept), self.graph()))
+        instances = list(filter(lambda instance: instance.isa(concept), self.space()))
         return instances
 
 

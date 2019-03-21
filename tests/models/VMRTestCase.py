@@ -57,7 +57,7 @@ class VMRTestCase(unittest.TestCase):
         }
 
         vmr = VMR.from_json(input)
-        vmr = vmr.graph()
+        vmr = vmr.space()
 
         self.assertEqual("ENV", Frame("@VMR#1.ENVIRONMENT")["REFERS-TO"].singleton())
         self.assertIn("@VMR#1.LOCATION.1", vmr)
@@ -98,7 +98,7 @@ class VMRTestCase(unittest.TestCase):
         }
 
         vmr = VMR.from_json(input)
-        vmr = vmr.graph()
+        vmr = vmr.space()
 
         self.assertIn("@VMR#1.PHYSICAL-EVENT.1", vmr)
         self.assertIn("@VMR#1.PHYSICAL-EVENT.2", vmr)
@@ -142,7 +142,7 @@ class VMRTestCase(unittest.TestCase):
         }
 
         vmr = VMR.from_contents(contains=contains, events=events)
-        vmr = vmr.graph()
+        vmr = vmr.space()
 
         self.assertEqual("ENV", Frame("@VMR#1.ENVIRONMENT")["REFERS-TO"].singleton())
         self.assertIn("@VMR#1.LOCATION.1", vmr)

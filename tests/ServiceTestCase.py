@@ -35,7 +35,7 @@ class ServiceTestCase(unittest.TestCase):
         Frame("@G1.TEST.1")
         Frame("@ONT.ALL")
 
-        g3 = TMR.from_contents(namespace="TMR#1").graph()
+        g3 = TMR.from_contents(namespace="TMR#1").space()
         Frame("@TMR#1.TEST.3")
 
         # g4 = View(None, g3).view()

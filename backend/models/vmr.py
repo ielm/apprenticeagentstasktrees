@@ -76,7 +76,7 @@ class VMR(XMR):
         return vmr
 
     def locations(self) -> List[Frame]:
-        space = self.graph()
+        space = self.space()
         return list(filter(lambda f: Identifier.parse(f.id)[1] == "LOCATION", space))
 
     def update_environment(self, environment: Union[Space, Environment]):
@@ -93,13 +93,13 @@ class VMR(XMR):
             object = location_marker["DOMAIN"].singleton()
             location = location_marker["RANGE"].singleton()
 
-            if location == Frame("@" + self.graph().name + ".ENVIRONMENT"):
+            if location == Frame("@" + self.space().name + ".ENVIRONMENT"):
                 location = "@ONT.LOCATION"
 
             environment.enter(object, location=location)
 
     def events(self) -> List[Frame]:
-        return list(Frame("@" + self.graph().name + ".EVENTS")["HAS-EVENT"])
+        return list(Frame("@" + self.space().name + ".EVENTS")["HAS-EVENT"])
 
     def epoch(self) -> Frame:
         return self.frame["EPOCH"].singleton()

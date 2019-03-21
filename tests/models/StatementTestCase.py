@@ -842,7 +842,7 @@ class OutputXMRStatementTestCase(unittest.TestCase):
 
         self.assertIsInstance(output, XMR)
         self.assertIn(output.frame, Space("OUTPUTS"))
-        self.assertEqual(Space("XMR#1"), output.graph())
+        self.assertEqual(Space("XMR#1"), output.space())
 
     def test_run_affects_scope(self):
         from backend.models.output import OutputXMRTemplate
@@ -887,7 +887,7 @@ class OutputXMRStatementTestCase(unittest.TestCase):
 
         output = stmt.run(StatementScope(), varmap)
 
-        fi = Frame("@" + output.graph().name + ".FRAME.1")
+        fi = Frame("@" + output.space().name + ".FRAME.1")
         self.assertEqual(123, fi["PROP1"])
         self.assertEqual(123, fi["PROP2"])
         self.assertEqual("abc", fi["PROP3"])

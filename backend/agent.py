@@ -259,7 +259,7 @@ class Agent(object):
     def pending_inputs(self) -> List[Space]:
         inputs = map(lambda input: XMR(input), self.identity["HAS-INPUT"])
         inputs = filter(lambda input: input.status() == XMR.InputStatus.RECEIVED, inputs)
-        inputs = map(lambda input: input.graph(), inputs)
+        inputs = map(lambda input: input.space(), inputs)
 
         return list(inputs)
 

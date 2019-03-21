@@ -32,9 +32,9 @@ class TMRTestCase(unittest.TestCase):
     def test_tmr_as_graph(self):
         tmr = TMR.from_contents()
 
-        agent1 = Frame("@" + tmr.graph().name + ".AGENT.?")
-        event1 = Frame("@" + tmr.graph().name + ".EVENT.?")
-        theme1 = Frame("@" + tmr.graph().name + ".THEME.?")
+        agent1 = Frame("@" + tmr.space().name + ".AGENT.?")
+        event1 = Frame("@" + tmr.space().name + ".EVENT.?")
+        theme1 = Frame("@" + tmr.space().name + ".THEME.?")
 
         event1["AGENT"] = agent1
         event1["THEME"] = theme1
@@ -50,7 +50,7 @@ class TMRTestCase(unittest.TestCase):
 
         r = self.load_resource("tests.resources", "DemoMay2018_Analyses.json", parse_json=True)
         tmr = TMR.from_json(r[0])
-        tmr = tmr.graph()
+        tmr = tmr.space()
 
         self.assertEqual(Frame("@TMR#1.BUILD.1")["THEME"][0], Frame("@TMR#1.CHAIR.1"))
         self.assertTrue(Frame("@TMR#1.BUILD.1")["THEME"][0] ^ "@ONT.CHAIR")
@@ -59,7 +59,7 @@ class TMRTestCase(unittest.TestCase):
 
     def test_tmr_is_event_or_object(self):
         tmr = TMR.from_contents()
-        tmr = tmr.graph()
+        tmr = tmr.space()
 
         o = Frame("@" + tmr.name + ".OBJECT.?").add_parent("@ONT.OBJECT")
         e = Frame("@" + tmr.name + ".EVENT.?").add_parent("@ONT.EVENT")
@@ -85,18 +85,18 @@ class TMRTestCase(unittest.TestCase):
     def test_tmr_find_main_event(self):
         tmr = TMR.from_contents()
 
-        object1 = Frame("@" + tmr.graph().name + ".OBJECT.1").add_parent("@ONT.OBJECT")
-        event1 = Frame("@" + tmr.graph().name + ".EVENT.1").add_parent("@ONT.EVENT")
+        object1 = Frame("@" + tmr.space().name + ".OBJECT.1").add_parent("@ONT.OBJECT")
+        event1 = Frame("@" + tmr.space().name + ".EVENT.1").add_parent("@ONT.EVENT")
 
         self.assertEqual(event1, tmr.find_main_event())
 
     def test_tmr_find_main_event_with_purpose_of(self):
         tmr = TMR.from_contents()
 
-        object1 = Frame("@" + tmr.graph().name + ".OBJECT.1").add_parent("@ONT.OBJECT")
-        event1 = Frame("@" + tmr.graph().name + ".EVENT.1").add_parent("@ONT.EVENT")
-        event2 = Frame("@" + tmr.graph().name + ".EVENT.2").add_parent("@ONT.EVENT")
-        event3 = Frame("@" + tmr.graph().name + ".EVENT.3").add_parent("@ONT.EVENT")
+        object1 = Frame("@" + tmr.space().name + ".OBJECT.1").add_parent("@ONT.OBJECT")
+        event1 = Frame("@" + tmr.space().name + ".EVENT.1").add_parent("@ONT.EVENT")
+        event2 = Frame("@" + tmr.space().name + ".EVENT.2").add_parent("@ONT.EVENT")
+        event3 = Frame("@" + tmr.space().name + ".EVENT.3").add_parent("@ONT.EVENT")
 
         event1["PURPOSE-OF"] = event2
         event2["PURPOSE-OF"] = event3
@@ -106,7 +106,7 @@ class TMRTestCase(unittest.TestCase):
     def test_tmr_is_prefix(self):
         tmr = TMR.from_contents()
 
-        event1 = Frame("@" + tmr.graph().name + ".EVENT.1").add_parent("@ONT.EVENT")
+        event1 = Frame("@" + tmr.space().name + ".EVENT.1").add_parent("@ONT.EVENT")
 
         self.assertFalse(tmr.is_prefix())
 
@@ -117,7 +117,7 @@ class TMRTestCase(unittest.TestCase):
     def test_tmr_is_postfix(self):
         tmr = TMR.from_contents()
 
-        event1 = Frame("@" + tmr.graph().name + ".EVENT.1").add_parent("@ONT.EVENT")
+        event1 = Frame("@" + tmr.space().name + ".EVENT.1").add_parent("@ONT.EVENT")
 
         self.assertFalse(tmr.is_postfix())
 
@@ -130,8 +130,8 @@ class TMRTestCase(unittest.TestCase):
 
         tmr = TMR.from_contents()
 
-        aspect1 = Frame("@" + tmr.graph().name + ".ASPECT.1").add_parent("@ONT.ASPECT")
-        event1 = Frame("@" + tmr.graph().name + ".EVENT.?").add_parent("@ONT.EVENT")
+        aspect1 = Frame("@" + tmr.space().name + ".ASPECT.1").add_parent("@ONT.ASPECT")
+        event1 = Frame("@" + tmr.space().name + ".EVENT.?").add_parent("@ONT.EVENT")
 
         self.assertFalse(tmr.is_postfix())
 
@@ -147,10 +147,10 @@ class TMRTestCase(unittest.TestCase):
 
         self.assertEqual([], tmr.find_by_concept("@ONT.OBJECT"))
 
-        event1 = Frame("@" + tmr.graph().name + ".EVENT.1").add_parent("@ONT.EVENT")
-        o1 = Frame("@" + tmr.graph().name + ".O.1").add_parent("@ONT.OBJECT")
-        o2 = Frame("@" + tmr.graph().name + ".O.2").add_parent("@ONT.OBJECT")
-        o3 = Frame("@" + tmr.graph().name + ".O.3").add_parent("@ONT.PHYSICAL-OBJECT")
+        event1 = Frame("@" + tmr.space().name + ".EVENT.1").add_parent("@ONT.EVENT")
+        o1 = Frame("@" + tmr.space().name + ".O.1").add_parent("@ONT.OBJECT")
+        o2 = Frame("@" + tmr.space().name + ".O.2").add_parent("@ONT.OBJECT")
+        o3 = Frame("@" + tmr.space().name + ".O.3").add_parent("@ONT.PHYSICAL-OBJECT")
 
         results = tmr.find_by_concept("@ONT.OBJECT")
         self.assertEqual(3, len(results))
@@ -229,7 +229,7 @@ class TMRFrameTestCase(unittest.TestCase):
 
         r = self.load_resource("tests.resources", "DemoMay2018_Analyses.json", parse_json=True)
         tmr = TMR.from_json(r[8])
-        tmr = tmr.graph()
+        tmr = tmr.space()
 
         self.assertTrue(Frame("@" + tmr.name + ".BRACKET.1")["MADE-OF"][0].space() == "ONT")
 
@@ -244,7 +244,7 @@ class TMRFrameTestCase(unittest.TestCase):
         self.assertEqual("SCREWDRIVER-1", _tmr["FASTEN-1"]["INSTRUMENT-1"])
 
         tmr = TMR.from_json(r[8])
-        tmr = tmr.graph()
+        tmr = tmr.space()
         self.assertTrue("INSTRUMENT" in Frame("@" + tmr.name + ".FASTEN.1"))
         self.assertFalse("INSTRUMENT.1" in Frame("@" + tmr.name + ".FASTEN.1"))
         self.assertEqual(2, len(Frame("@" + tmr.name + ".FASTEN.1")["INSTRUMENT"]))
@@ -262,13 +262,13 @@ class TMRFrameTestCase(unittest.TestCase):
         self.assertTrue("HUMAN" in _tmr["FASTEN-1"]["AGENT"])
 
         tmr = TMR.from_json(r[8])
-        tmr = tmr.graph()
+        tmr = tmr.space()
         self.assertTrue(isinstance(Frame("@" + tmr.name + ".FASTEN.1")["AGENT"][0], Frame))
         self.assertEqual(Frame("@" + tmr.name + ".FASTEN.1")["AGENT"][0].space(), Space("ONT"))
 
     def test_tmr_instance_uses_instance_of(self):
         tmr = TMR.from_contents()
-        tmr = tmr.graph()
+        tmr = tmr.space()
         instance = TMRFrame("@" + tmr.name + ".NAME").add_parent("@ONT.OBJECT")
 
         self.assertIn("INSTANCE-OF", instance)

@@ -70,7 +70,7 @@ class XMR(object):
 
         frame = Frame("@" + space.name + ".XMR.?").add_parent(isa)
 
-        frame["REFERS-TO-GRAPH"] = refers_to
+        frame["REFERS-TO-SPACE"] = refers_to
         frame["SIGNAL"] = signal
         frame["TYPE"] = type
         frame["STATUS"] = status
@@ -122,8 +122,8 @@ class XMR(object):
     def source(self) -> Frame:
         return self.frame["SOURCE"].singleton()
 
-    def graph(self) -> Space:
-        return Space(self.frame["REFERS-TO-GRAPH"].singleton())
+    def space(self) -> Space:
+        return Space(self.frame["REFERS-TO-SPACE"].singleton())
 
     def timestamp(self) -> float:
         return self.frame["TIMESTAMP"].singleton()

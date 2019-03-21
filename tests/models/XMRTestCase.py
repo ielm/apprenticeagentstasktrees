@@ -59,11 +59,11 @@ class XMRTestCase(unittest.TestCase):
 
         self.assertEqual(source, XMR(frame).source())
 
-    def test_graph(self):
+    def test_space(self):
         f = Frame("@TEST.XMR")
-        f["REFERS-TO-GRAPH"] = "TEST"
+        f["REFERS-TO-SPACE"] = "TEST"
 
-        self.assertEqual(Space("TEST"), XMR(f).graph())
+        self.assertEqual(Space("TEST"), XMR(f).space())
 
     def test_timestamp(self):
         now = time.time()
@@ -114,7 +114,7 @@ class XMRTestCase(unittest.TestCase):
 
         xmr = XMR.instance(Space("TEST"), Space("TARGET"), XMR.Signal.INPUT, XMR.Type.LANGUAGE, XMR.InputStatus.RECEIVED, source, root)
 
-        self.assertEqual(Space("TARGET"), xmr.graph())
+        self.assertEqual(Space("TARGET"), xmr.space())
         self.assertTrue(xmr.is_input())
         self.assertEqual(XMR.Type.LANGUAGE, xmr.type())
         self.assertEqual(XMR.InputStatus.RECEIVED, xmr.status())
@@ -123,7 +123,7 @@ class XMRTestCase(unittest.TestCase):
 
         xmr = XMR.instance(Space("TEST"), Space("TARGET"), XMR.Signal.OUTPUT, XMR.Type.LANGUAGE, XMR.OutputStatus.FINISHED, source, root, capability=capability)
 
-        self.assertEqual(Space("TARGET"), xmr.graph())
+        self.assertEqual(Space("TARGET"), xmr.space())
         self.assertTrue(xmr.is_output())
         self.assertEqual(XMR.Type.LANGUAGE, xmr.type())
         self.assertEqual(XMR.OutputStatus.FINISHED, xmr.status())
