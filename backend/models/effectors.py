@@ -129,7 +129,7 @@ class Capability(object):
     def __init__(self, frame: Frame):
         self.frame = frame
 
-    def run(self, agent: 'Agent', output: 'OutputXMR', callback: 'Callback'):
+    def run(self, agent: 'Agent', output: 'XMR', callback: 'Callback'):
         MPRegistry.output(self.mp_name(), agent, output, callback)
 
     def mp_name(self) -> str:

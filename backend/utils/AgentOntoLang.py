@@ -1,5 +1,4 @@
 from backend.models.agenda import Agenda, Goal, Plan, Step, Trigger
-# from backend.models.bootstrap import BootstrapTriple
 from backend.models.effectors import Capability
 from backend.models.mps import AgentMethod, MPRegistry, OutputMethod
 from backend.models.output import OutputXMRTemplate

@@ -1,16 +1,10 @@
 from backend.models.effectors import Capability
-# from backend.models.graph import Frame, Graph, Identifier, Literal, Network
 from backend.models.xmr import XMR
 from ontograph import graph
 from ontograph.Frame import Frame
 from ontograph.Index import Identifier
 from ontograph.Space import Space
-from typing import Any, List, Tuple, Union
-
-
-class Graph(object): pass
-class Literal(object): pass
-class Network(object): pass
+from typing import Any, List, Union
 
 
 class OutputXMRTemplate(object):
@@ -22,8 +16,6 @@ class OutputXMRTemplate(object):
 
         template_id = "XMR-TEMPLATE#" + str(max(spaces) + 1 if len(spaces) > 0 else 1)
 
-        #template_id = "XMR-TEMPLATE#" + str(len(list(filter(lambda graph: graph.startswith("XMR-TEMPLATE#"), network._storage.keys()))) + 1)
-
         space = Space(template_id)
         anchor = Frame("@" + space.name + ".TEMPLATE-ANCHOR.?")
 
@@ -33,8 +25,6 @@ class OutputXMRTemplate(object):
             capability = capability.frame
         if isinstance(capability, Identifier):
             capability = Frame(capability.id)
-
-        # params = list(map(lambda param: Literal(param) if not isinstance(param, Literal) else param, params))
 
         anchor["NAME"] = name
         anchor["TYPE"] = type

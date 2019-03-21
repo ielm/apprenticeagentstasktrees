@@ -4,15 +4,9 @@ from backend.utils.AtomicCounter import AtomicCounter
 from ontograph.Frame import Frame
 from ontograph.Index import Identifier
 from ontograph.Space import Space
-
-import time
 from typing import List, Union
 
-
-class Network(object): pass
-class Ontology(object): pass
-class Graph(object): pass
-class Literal(object): pass
+import time
 
 
 class VMR(XMR):
@@ -40,8 +34,6 @@ class VMR(XMR):
 
     @classmethod
     def from_json(cls, vmr_dict: dict, namespace: str=None, source: Union[str, Identifier, Frame]=None) -> 'VMR':
-        # if ontology is None:
-        #     raise Exception("VMRs must have an anchoring ontology provided.")
         if namespace is None:
             namespace = "VMR#" + str(VMR.counter.increment())
 
@@ -82,9 +74,6 @@ class VMR(XMR):
 
         vmr: VMR = XMR.instance(Space("INPUTS"), space, XMR.Signal.INPUT, XMR.Type.VISUAL, XMR.InputStatus.RECEIVED, source, reference)
         return vmr
-
-    def _network(self) -> Network:
-        return self.frame._graph._network
 
     def locations(self) -> List[Frame]:
         space = self.graph()

@@ -3,8 +3,9 @@ from backend.models.xmr import XMR
 from backend.utils.AtomicCounter import AtomicCounter
 from ontograph.Frame import Frame
 from ontograph.Index import Identifier
+from ontograph.Query import ExistsComparator, Query
 from ontograph.Space import Space
-from typing import Union
+from typing import Iterable, Union
 
 import re
 
@@ -208,8 +209,7 @@ class TMRFrame(Frame):
         return self
 
     def tmr(self) -> TMR:
-        network: Network = self._graph._network
-        results = network.search(Frame.q(network).f("REFERS-TO-GRAPH", Literal(self._graph._namespace)))
+        results = list(Query(ExistsComparator(slot="REFERS-TO-GRAPH", filler=self.space().name)).start())
         if len(results) != 1:
             raise Exception("TMR wrapper node not found.")
 
@@ -217,6 +217,10 @@ class TMRFrame(Frame):
 
 
 class TMRGraph(Space):
+
+    def values(self) -> Iterable[TMRFrame]:
+        for frame in self:
+            yield TMRFrame(frame.id)
 
     def _frame_type(self):
         return TMRFrame

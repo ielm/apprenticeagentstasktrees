@@ -1,10 +1,6 @@
-# from backend.contexts.LCTContext import LCTContext
 from backend.models.agenda import Agenda, Decision, Expectation, Goal, Step
 from backend.models.effectors import Callback, Effector
 from backend.models.environment import Environment
-# from backend.models.fr import FR
-# from backend.models.graph import Frame, Graph, Identifier, Network
-# from backend.models.ontology import Ontology
 from backend.models.statement import TransientFrame
 from backend.models.tmr import TMR
 from backend.models.vmr import VMR
@@ -18,12 +14,7 @@ from ontograph.Space import Space
 from typing import Any, List, Union
 
 
-class Network(object): pass
-class Ontology(object): pass
-class Graph(object): pass
-
-
-class Agent(Network):
+class Agent(object):
     """
     The Agent
     """
@@ -265,7 +256,7 @@ class Agent(Network):
     def effectors(self) -> List[Effector]:
         return list(map(lambda e: Effector(e), self.identity["HAS-EFFECTOR"]))
 
-    def pending_inputs(self) -> List[Graph]:
+    def pending_inputs(self) -> List[Space]:
         inputs = map(lambda input: XMR(input), self.identity["HAS-INPUT"])
         inputs = filter(lambda input: input.status() == XMR.InputStatus.RECEIVED, inputs)
         inputs = map(lambda input: input.graph(), inputs)

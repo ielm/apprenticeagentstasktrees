@@ -1,17 +1,11 @@
 from backend.models.effectors import Capability
-# from backend.models.graph import Frame, Graph, Identifier, Literal, Network
-
 from enum import Enum
 from ontograph.Frame import Frame
-from ontograph.Graph import Graph
 from ontograph.Index import Identifier
 from ontograph.Space import Space
 from typing import Union
 
 import time
-
-
-class Network(object): pass
 
 
 # XMR is a Frame wrapper object for holding a node as a reference to a particular meaning representation, and resolving

@@ -1,19 +1,15 @@
-# from backend.models.graph import Filler, Frame, Graph, Identifier, Literal
 from backend.models.mps import MPRegistry
-# from backend.models.query import Query
-from pydoc import locate
-from typing import Any, Callable, List, Type, Union
-
 from ontograph import graph
 from ontograph.Frame import Frame
 from ontograph.Graph import Graph
 from ontograph.Index import Identifier
 from ontograph.Query import Query
 from ontograph.Space import Space
+from typing import Any, Callable, List, Type, Union
+
 
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from backend.models.bootstrap import BootstrapTriple
     from backend.models.output import OutputXMR, OutputXMRTemplate
 
 
@@ -40,7 +36,7 @@ class Variable(object):
     def name(self) -> str:
         if "NAME" in self.frame:
             return self.frame["NAME"][0]
-        raise Exception("Unnamed variable '" + self.frame.name() + "'.")
+        raise Exception("Unnamed variable '" + self.frame.id + "'.")
 
     def value(self) -> Any:
         if "VALUE" in self.frame:
@@ -213,15 +209,15 @@ class Statement(object):
             return param
         if isinstance(param, Identifier):
             try:
-                return param.resolve(self.frame._graph)
-            except: param = param.render()
+                return Frame(param.id)
+            except: param = param.id
         if isinstance(param, str):
             try:
                 return varmap.resolve(param)
             except: pass
 
             try:
-                return Identifier.parse(param).resolve(self.frame._graph)
+                return Frame(Identifier.parse(param).id)
             except: pass
 
         return param
@@ -256,7 +252,7 @@ class AddFillerStatement(Statement):
         if isinstance(to, Identifier):
             to = Frame(self.frame.id)
         if isinstance(to, Query):
-            to = to.start(graph)
+            to = to.start()
         if isinstance(to, str):
             try:
                 to = varmap.resolve(to)
@@ -355,7 +351,7 @@ class AssignFillerStatement(Statement):
         if isinstance(to, Identifier):
             to = Frame(to.id)
         if isinstance(to, Query):
-            to = self.frame._graph.search(to)
+            to = list(to.start())
         if isinstance(to, str):
             try:
                 to = varmap.resolve(to)
@@ -449,7 +445,6 @@ class ExpectationStatement(Statement):
             condition = condition.frame
 
         frame = Frame("@" + space.name + ".EXPECTATION-STATEMENT.?").add_parent("@EXE.EXPECTATION-STATEMENT")
-        # frame = graph.register("EXPECTATION-STATEMENT", isa="EXE.EXPECTATION-STATEMENT", generate_index=True)
         frame["CONDITION"] = condition
 
         return ExpectationStatement(frame)
@@ -567,12 +562,9 @@ class MakeInstanceStatement(Statement):
             of = Frame(of.id)
 
         instance = Frame("@" + space + "." + Identifier.parse(of.id)[1] + ".?").add_parent(of)
-        # for slot in of:
-        #     slot = of[slot]
-        #     instance[slot.property] = slot
 
         if len(params) != len(instance["WITH"]):
-            raise Exception("Mismatched parameter count when making instance of '" + of.name() + "' with parameters '" + str(params) + "'.")
+            raise Exception("Mismatched parameter count when making instance of '" + of.id + "' with parameters '" + str(params) + "'.")
 
         params = list(map(lambda param: self._resolve_param(param, varmap), params))
 
@@ -672,7 +664,7 @@ class OutputXMRStatement(Statement):
 class TransientFrameStatement(Statement):
 
     @classmethod
-    def instance(cls, space: Space, properties: List['BootstrapTriple']):
+    def instance(cls, space: Space, properties: List['TransientTriple']):
         frame = Frame("@" + space.name + ".TRANSIENTFRAME-STATEMENT.?").add_parent("@EXE.TRANSIENTFRAME-STATEMENT")
 
         for property in properties:
@@ -680,7 +672,7 @@ class TransientFrameStatement(Statement):
 
         return TransientFrameStatement(frame)
 
-    def properties(self) -> List['BootstrapTriple']:
+    def properties(self) -> List['TransientTriple']:
         return list(self.frame["HAS-PROPERTY"])
 
     def run(self, scope: StatementScope, varmap: VariableMap):

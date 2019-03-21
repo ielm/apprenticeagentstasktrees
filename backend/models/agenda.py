@@ -1,17 +1,11 @@
-# from backend.models.grammar import Grammar
-# from backend.models.graph import Frame, Graph, Identifier, Literal
-# from backend.models.query import Query
-from backend.models.statement import AssertStatement, MakeInstanceStatement, Statement, StatementScope, VariableMap
+from backend.models.statement import AssertStatement, Statement, StatementScope, VariableMap
 from enum import Enum
 from functools import reduce
-from typing import Any, Dict, List, Tuple, Union
-
-from ontograph import graph
 from ontograph.Frame import Frame, Role
-from ontograph.Graph import Graph
 from ontograph.Index import Identifier
 from ontograph.Query import Query
 from ontograph.Space import Space
+from typing import Any, List, Union
 
 import time
 
@@ -132,15 +126,6 @@ class Goal(VariableMap):
 
         return Goal(frame)
 
-    @classmethod
-    def parse(cls, agent: 'Agent', input: str) -> 'Goal':
-        result = Grammar.parse(agent, input, start="define", agent=agent)
-
-        if not isinstance(result, Goal):
-            raise Exception("Parsed value for \"" + input + "\" is not a Goal.")
-
-        return result
-
     def __init__(self, frame: Frame):
         super().__init__(frame)
 
@@ -151,8 +136,6 @@ class Goal(VariableMap):
         slot = self.frame["NAME"]
         if len(slot) == 1:
             return slot.singleton()
-        # if "NAME" in self.frame:
-        #     return self.frame["NAME"].singleton()
         return "Unknown Goal"
 
     def is_pending(self) -> bool:
@@ -672,7 +655,6 @@ class Decision(object):
     '''
 
     @classmethod
-    # def build(cls, graph: Graph, goal: Union[str, Identifier, Frame, Goal], plan: Union[str, Identifier, Frame, Plan], step: Union[str, Identifier, Frame, Step]) -> 'Decision':
     def build(cls, space: Space, goal: Union[str, Identifier, Frame, Goal], plan: Union[str, Identifier, Frame, Plan], step: Union[str, Identifier, Frame, Step]) -> 'Decision':
         if isinstance(goal, Goal):
             goal = goal.frame
@@ -681,7 +663,6 @@ class Decision(object):
         if isinstance(step, Step):
             step = step.frame
 
-        # decision = graph.register("DECISION", isa="EXE.DECISION", generate_index=True)
         decision = Frame("@" + space.name + ".DECISION.?")
         decision["IS-A"] = Frame("@EXE.DECISION")
         decision["ON-GOAL"] = goal

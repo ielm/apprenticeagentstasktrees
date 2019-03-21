@@ -5,7 +5,7 @@ import requests
 from typing import List
 from uuid import UUID
 
-from backend.config import ontosem_service
+from backend.utils.LEIAEnvironment import ontosem_service
 from ontograph.Frame import Frame, Role
 from ontograph.Space import Space
 

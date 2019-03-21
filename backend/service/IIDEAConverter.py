@@ -1,7 +1,6 @@
 from backend.agent import Agent
 from backend.models.agenda import Decision, Expectation, Goal, Plan, Step, Trigger
 from backend.models.effectors import Callback, Capability, Effector
-# from backend.models.graph import Frame, Identifier, Literal
 from backend.models.xmr import XMR
 from backend.utils.AgentLogger import CachedAgentLogger
 from ontograph.Frame import Frame

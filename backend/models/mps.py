@@ -1,14 +1,13 @@
-# from backend.models.graph import Frame, Identifier
 from ontograph.Frame import Frame
 from ontograph.Index import Identifier
-from typing import Any, Callable, List, Union
+from typing import Any, List, Union
 
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from backend.agent import Agent
     from backend.models.effectors import Callback, Capability
     from backend.models.output import OutputXMR
-    from backend.models.statement import CapabilityStatement, Statement
+    from backend.models.statement import Statement
 
 import sys
 

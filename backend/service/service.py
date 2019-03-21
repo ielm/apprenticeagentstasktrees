@@ -265,20 +265,6 @@ def yale_visual_input():
     return "OK"
 
 
-@app.route("/input", methods=["POST"])
-def input():
-    if not request.get_json():
-        abort(400)
-
-    data = request.get_json()
-    tmrs = input_to_tmrs(data)
-
-    for tmr in tmrs:
-        agent.input(tmr)
-
-    return "OK"
-
-
 @app.route("/components/graph", methods=["GET"])
 def components_graph():
     if "namespace" not in request.args:
