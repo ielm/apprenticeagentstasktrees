@@ -339,10 +339,6 @@ class GoalTestCase(unittest.TestCase):
 
         StatementRegistry.register(TestStatement)
 
-        class TestAgent(Agent):
-            def __init__(self):
-                pass
-
         AgentOntoLang().load_knowledge("backend.resources", "exe.knowledge")
 
         goal = Frame("@TEST.GOAL.1")
