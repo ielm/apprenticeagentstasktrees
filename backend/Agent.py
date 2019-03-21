@@ -278,6 +278,10 @@ class Agent(object):
             return self.identity[property].singleton()
         return default
 
+    def reset(self):
+        graph.reset()
+        self._bootstrap()
+
     def _bootstrap(self):
         from backend.utils.AgentOntoLang import AgentOntoLang
         graph.set_ontolang(AgentOntoLang())

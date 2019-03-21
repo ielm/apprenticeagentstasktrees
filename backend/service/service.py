@@ -5,13 +5,13 @@ from flask_cors import CORS
 from flask_socketio import SocketIO
 from pkgutil import get_data
 
-from backend.agent import Agent
+from backend import agent
 from backend.models.xmr import XMR
 from backend.service.AgentAdvanceThread import AgentAdvanceThread
 from backend.service.IIDEAConverter import IIDEAConverter
 from backend.service.KnowledgeLoader import KnowledgeLoader
 from backend.utils.OntologyLoader import OntologyServiceLoader
-from backend.utils.YaleUtils import format_learned_event_yale, input_to_tmrs, lookup_by_visual_id
+from backend.utils.YaleUtils import format_learned_event_yale, lookup_by_visual_id
 from ontograph import graph as g
 from ontograph.Frame import Frame
 from ontograph.Space import Space
@@ -21,7 +21,6 @@ app = Flask(__name__, template_folder="../../frontend/templates/")
 CORS(app)
 socketio = SocketIO(app)
 
-agent = Agent()
 agent.logger().enable()
 OntologyServiceLoader().load()
 KnowledgeLoader.load_resource("backend.resources", "exe.knowledge")
@@ -121,7 +120,9 @@ def reset():
     g.reset()
 
     global agent
-    agent = Agent()
+    agent.reset()
+    OntologyServiceLoader().load()
+    KnowledgeLoader.load_resource("backend.resources", "exe.knowledge")
 
     return "OK"
 

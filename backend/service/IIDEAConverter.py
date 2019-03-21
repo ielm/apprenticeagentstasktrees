@@ -1,4 +1,4 @@
-from backend.agent import Agent
+from backend.Agent import Agent
 from backend.models.agenda import Decision, Expectation, Goal, Plan, Step, Trigger
 from backend.models.effectors import Callback, Capability, Effector
 from backend.models.xmr import XMR
@@ -38,7 +38,7 @@ class IIDEAConverter(object):
             "source": source(xmr),
             "rendered": xmr.render(),
             "id": xmr.frame.id,
-            "graph": xmr.graph().name
+            "graph": xmr.space().name
         }, payload))
 
         return payload
@@ -52,7 +52,7 @@ class IIDEAConverter(object):
         status = XMR(input).status().value.lower()
 
         return {
-            "name": input["REFERS-TO-GRAPH"][0],
+            "name": input["REFERS-TO-SPACE"][0],
             "status": status
         }
 
@@ -138,7 +138,7 @@ class IIDEAConverter(object):
     def convert_output(cls, output: XMR):
         return {
             "frame": output.frame.id,
-            "graph": output.graph().name,
+            "graph": output.space().name,
             "status": output.status().name
         }
 

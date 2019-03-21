@@ -1,4 +1,4 @@
-from backend.agent import Agent
+from backend.Agent import Agent
 from backend.models.agenda import Decision, Expectation, Goal, Plan, Step
 from backend.models.effectors import Callback, Effector
 from backend.models.mps import AgentMethod

@@ -1,4 +1,4 @@
-from backend.agent import Agent
+from backend.Agent import Agent
 from backend.models.agenda import Decision, Goal
 # from backend.models.bootstrap import Bootstrap
 # from backend.models.ontology import Ontology

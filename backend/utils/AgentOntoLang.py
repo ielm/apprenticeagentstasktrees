@@ -355,12 +355,13 @@ class AgentOntoLangTransformer(OntoLangTransformer):
         return matches[0]
 
     def statement_instance(self, matches):
+        from backend import agent
         if isinstance(matches[0], Identifier):
             if matches[0].id == "SELF":
-                return Frame("@SELF.ROBOT.1")
+                return agent.identity
             return matches[0]
         if str(matches[0]) == "SELF":
-            return Frame("@SELF.ROBOT.1")
+            return agent.identity
 
         return matches[0]
 

@@ -1,4 +1,4 @@
-from backend.agent import Agent
+from backend.Agent import Agent
 from backend.models.agenda import Agenda, Condition, Decision, Effect, Expectation, Goal, Plan, Step, Trigger
 # from backend.models.bootstrap import Bootstrap
 # from backend.models.graph import Frame, Graph, Literal, Network

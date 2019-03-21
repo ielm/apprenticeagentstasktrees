@@ -1,7 +1,7 @@
 import json
 import os
 
-from backend.agent import Agent
+from backend.Agent import Agent
 from backend.utils.YaleUtils import bootstrap, format_learned_event_yale, lookup_by_visual_id, visual_input
 from ontograph import graph
 from ontograph.Frame import Frame

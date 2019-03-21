@@ -1,4 +1,4 @@
-from backend.agent import Agent
+from backend.Agent import Agent
 from backend.models.agenda import Decision, Goal
 from backend.models.effectors import Callback, Effector
 from backend.utils.OntologyLoader import OntologyServiceLoader

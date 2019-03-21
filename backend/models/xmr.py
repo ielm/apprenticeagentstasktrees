@@ -145,7 +145,8 @@ class AMR(XMR):
 
     def render(self):
         try:
-            if self.source().id != "@SELF.ROBOT.1":
+            from backend import agent
+            if self.source().id != agent.identity.id:
                 return super().render()
 
             action = Identifier.parse(self.root().id)[1].upper()
@@ -160,10 +161,11 @@ class MMR(XMR):
 
     def render(self):
         try:
+            from backend import agent
             if Identifier.parse(self.root().id)[1] != "INIT-GOAL":
                 return super().render()
 
-            if self.source().id != "@SELF.ROBOT.1":
+            if self.source().id != agent.identity.id:
                 return super().render()
 
             from backend.models.agenda import Goal

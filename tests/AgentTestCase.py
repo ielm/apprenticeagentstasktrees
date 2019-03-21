@@ -1,4 +1,4 @@
-from backend.agent import Agent
+from backend.Agent import Agent
 from backend.models.agenda import Decision, Expectation, Goal, Plan, Step, Trigger
 from backend.models.effectors import Capability, Effector
 from backend.models.output import OutputXMRTemplate
@@ -141,7 +141,7 @@ class AgentTestCase(unittest.TestCase):
         agent.iidea()
 
     def test_callback(self):
-        from backend.agent import Callback
+        from backend.models.effectors import Callback
 
         # First, minimally define a goal
         definition = Frame("@EXE.GOAL-DEFINITION")
@@ -695,7 +695,7 @@ class AgentAssessTestCase(unittest.TestCase):
         self.g = self.agent.exe
 
     def test_assess_processes_all_received_callbacks(self):
-        from backend.agent import Callback
+        from backend.models.effectors import Callback
 
         # First, minimally define a goal
         definition = Frame("@EXE.GOAL-DEFINITION")
