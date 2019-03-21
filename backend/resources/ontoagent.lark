@@ -49,8 +49,8 @@ plan: PLAN "(" PLAN_NAME ")" plan_selection plan_step+
 plan_do: DO (statement | IDLE)
 plan_selection: SELECT (DEFAULT | IF NOT? (boolean_statement | mp_statement))
 plan_step: STEP plan_do+
-priority: (PRIORITY (double | mp_statement))?
-resources: (RESOURCES (double | mp_statement))?
+priority: PRIORITY (double | mp_statement)
+resources: RESOURCES (double | mp_statement)
 statement_instance: (SELF | identifier | make_instance_statement | argument)
 statement: (add_filler_statement | assert_statement | assign_filler_statement | assign_variable_statement | exists_statement | expectation_statement |foreach_statement | is_statement | make_instance_statement | mp_statement | output_statement | transient_statement)
 transient_statement: "{" (ontoagent_triple ";")* "}"
