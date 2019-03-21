@@ -1,18 +1,19 @@
 from backend.models.environment import Environment
-from backend.models.graph import Frame, Graph, Identifier, Literal, Network
-from backend.models.ontology import Ontology
 from backend.models.xmr import XMR
 from backend.utils.AtomicCounter import AtomicCounter
+from ontograph.Frame import Frame
+from ontograph.Index import Identifier
+from ontograph.Space import Space
+from typing import List, Union
 
 import time
-from typing import List, Union
 
 
 class VMR(XMR):
     counter = AtomicCounter()
 
     @classmethod
-    def from_contents(cls, network: Network, ontology: Ontology, contains: dict=None, events: dict=None, namespace: str=None, source: Union[str, Identifier, Frame]=None) -> 'VMR':
+    def from_contents(cls, contains: dict=None, events: dict=None, namespace: str=None, source: Union[str, Identifier, Frame]=None) -> 'VMR':
 
         if contains is None:
             contains = {}
@@ -29,24 +30,22 @@ class VMR(XMR):
             "EVENTS": events
         }
 
-        return VMR.from_json(network, ontology, vmr_dict, namespace=namespace, source=source)
+        return VMR.from_json(vmr_dict, namespace=namespace, source=source)
 
     @classmethod
-    def from_json(cls, network: Network, ontology: Ontology, vmr_dict: dict, namespace: str=None, source: Union[str, Identifier, Frame]=None) -> 'VMR':
-        if ontology is None:
-            raise Exception("VMRs must have an anchoring ontology provided.")
+    def from_json(cls, vmr_dict: dict, namespace: str=None, source: Union[str, Identifier, Frame]=None) -> 'VMR':
         if namespace is None:
             namespace = "VMR#" + str(VMR.counter.increment())
 
-        graph = network.register(namespace)
+        space = Space(namespace)
 
-        reference = graph.register("ENVIRONMENT", generate_index=False)
-        events = graph.register("EVENTS", generate_index=False)
+        reference = Frame("@" + space.name + ".ENVIRONMENT")
+        events = Frame("@" + space.name + ".EVENTS")
 
         if "ENVIRONMENT" in vmr_dict:
 
-            reference["REFERS-TO"] = Literal(vmr_dict["ENVIRONMENT"]["_refers_to"])
-            reference["TIMESTAMP"] = Literal(vmr_dict["ENVIRONMENT"]["timestamp"])
+            reference["REFERS-TO"] = vmr_dict["ENVIRONMENT"]["_refers_to"]
+            reference["TIMESTAMP"] = vmr_dict["ENVIRONMENT"]["timestamp"]
 
             for frame in vmr_dict["ENVIRONMENT"]["contains"]:
                 location = vmr_dict["ENVIRONMENT"]["contains"][frame]["LOCATION"]
@@ -56,7 +55,7 @@ class VMR(XMR):
                 if location == "HERE":
                     location = reference
 
-                location_frame = graph.register("LOCATION", generate_index=True)
+                location_frame = Frame("@" + space.name + ".LOCATION.?")
                 location_frame["DOMAIN"] = frame
                 location_frame["RANGE"] = location
 
@@ -64,24 +63,24 @@ class VMR(XMR):
 
             for frame in vmr_dict["EVENTS"]:
                 contents = vmr_dict["EVENTS"][frame]
-                frame = graph.register(frame)
+                parts = Identifier.parse(frame)
+                if isinstance(parts[0], str) and isinstance(parts[1], str) and parts[2] is None:
+                    frame = "@" + space.name + "." + parts[0] + "." + str(parts[1])
+                frame = Frame(frame)
                 for slot in contents:
                     for filler in contents[slot]:
                         frame[slot] += filler
                 events["HAS-EVENT"] += frame
 
-        vmr: VMR = XMR.instance(network["INPUTS"], graph, XMR.Signal.INPUT, XMR.Type.VISUAL, XMR.InputStatus.RECEIVED, source, graph["ENVIRONMENT"])
+        vmr: VMR = XMR.instance(Space("INPUTS"), space, XMR.Signal.INPUT, XMR.Type.VISUAL, XMR.InputStatus.RECEIVED, source, reference)
         return vmr
 
-    def _network(self) -> Network:
-        return self.frame._graph._network
-
     def locations(self) -> List[Frame]:
-        graph = self.graph(self._network())
-        return list(map(lambda f: graph[f], filter(lambda f: graph[f]._identifier.name == "LOCATION", graph)))
+        space = self.space()
+        return list(filter(lambda f: Identifier.parse(f.id)[1] == "LOCATION", space))
 
-    def update_environment(self, environment: Union[Graph, Environment]):
-        if isinstance(environment, Graph):
+    def update_environment(self, environment: Union[Space, Environment]):
+        if isinstance(environment, Space):
             environment = Environment(environment)
 
         epoch = environment.advance()
@@ -94,30 +93,32 @@ class VMR(XMR):
             object = location_marker["DOMAIN"].singleton()
             location = location_marker["RANGE"].singleton()
 
-            if location == self.graph(self._network())["ENVIRONMENT"]:
-                location = "ONT.LOCATION"
+            if location == Frame("@" + self.space().name + ".ENVIRONMENT"):
+                location = "@ONT.LOCATION"
 
             environment.enter(object, location=location)
 
     def events(self) -> List[Frame]:
-        return list(map(lambda f: f.resolve(), self.graph(self._network())["EVENTS"]["HAS-EVENT"]))
+        return list(Frame("@" + self.space().name + ".EVENTS")["HAS-EVENT"])
 
     def epoch(self) -> Frame:
         return self.frame["EPOCH"].singleton()
 
-    def update_memory(self, graph: Graph):
+    def update_memory(self, space: Space):
         for event in self.events():
             parents = event.parents()
             if len(parents) == 0:
-                parents = [event._identifier.name]
+                parents = [event.id]
 
-            frame = graph.register(event._identifier.name, isa=parents, generate_index=True)
+            frame = Frame("@" + space.name + "." + Identifier.parse(event.id)[1] + ".?")
+            for parent in parents:
+                frame.add_parent(parent)
 
             for slot in event:
-                if slot == event._ISA_type():
+                if slot.property == "IS-A":
                     continue
-                for filler in event[slot]:
-                    frame[slot] += filler
+                for filler in slot:
+                    frame[slot.property] += filler
 
     def render(self):
 
@@ -131,7 +132,7 @@ class VMR(XMR):
 
         def get_then(now: Frame) -> Frame:
             if len(now["FOLLOWS"]) == 0:
-                return Frame("NO-SUCH-EPOCH")
+                return Frame("@ENV.NO-SUCH-EPOCH", declare=False)
             return now["FOLLOWS"].singleton()
 
         def get_view(env: Environment, epoch: Frame) -> List[Frame]:
@@ -145,10 +146,10 @@ class VMR(XMR):
                 return frame["NAME"].singleton()
             if "HAS-NAME" in frame:
                 return frame["HAS-NAME"].singleton()
-            return frame.name()
+            return frame.id
 
         try:
-            env = Environment(self.frame._graph._network["ENV"])
+            env = Environment(Space("ENV"))
 
             now = self.epoch()
             then = get_then(now)
@@ -174,7 +175,7 @@ class VMR(XMR):
             for e in self.events():
                 agent = e["AGENT"].singleton()
                 theme = e["THEME"].singleton()
-                action = e._identifier.name
+                action = Identifier.parse(e.id)[1]
 
                 observations.append("I see that " + get_name(agent) + " did " + action + "(" + get_name(theme) + ")")
 

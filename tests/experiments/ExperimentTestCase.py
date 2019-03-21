@@ -1,9 +1,9 @@
-from backend.agent import Agent
+from backend.Agent import Agent
 from backend.models.agenda import Decision, Expectation, Goal, Plan, Step
 from backend.models.effectors import Callback, Effector
-from backend.models.graph import Frame, Identifier
 from backend.models.mps import AgentMethod
 from backend.models.xmr import XMR
+from ontograph.Frame import Frame
 
 from pkgutil import get_data
 from typing import Callable, List, Type, Union
@@ -47,7 +47,7 @@ class ExperimentTestCase(unittest.TestCase):
                 return m
 
     def assertGoalExists(self, agent: Agent, isa: str=None, status: Goal.Status=None, query: Callable=None):
-        goals = list(map(lambda g: Goal(g.resolve()), agent.identity["HAS-GOAL"]))
+        goals = list(map(lambda g: Goal(g), agent.identity["HAS-GOAL"]))
 
         if status is not None:
             goals = agent.agenda().goals(pending=(status == Goal.Status.PENDING), active=(status == Goal.Status.ACTIVE), abandoned=(status == Goal.Status.ABANDONED), satisfied=(status == Goal.Status.SATISFIED))
@@ -61,26 +61,20 @@ class ExperimentTestCase(unittest.TestCase):
         if len(goals) == 0:
             self.fail("No such matching goal.")
 
-    def assertDecisionExists(self, agent: Agent, status: Decision.Status=None, goal: [str, Identifier, Frame, Goal]=None, plan: [str, Identifier, Frame, Plan]=None, step: [str, Identifier, Frame, Step]=None, outputs: List[Union[str, Identifier, Frame, XMR]]=None, effectors: List[Union[str, Identifier, Frame, Effector]]=None, callbacks: List[Union[str, Identifier, Frame, Callback]]=None, impasses: List[Union[str, Identifier, Frame, Goal]]=None, expectations: List[Union[str, Identifier, Frame, Expectation]]=None, query: Callable=None):
+    def assertDecisionExists(self, agent: Agent, status: Decision.Status=None, goal: [str, Frame, Goal]=None, plan: [str, Frame, Plan]=None, step: [str, Frame, Step]=None, outputs: List[Union[str, Frame, XMR]]=None, effectors: List[Union[str, Frame, Effector]]=None, callbacks: List[Union[str, Frame, Callback]]=None, impasses: List[Union[str, Frame, Goal]]=None, expectations: List[Union[str, Frame, Expectation]]=None, query: Callable=None):
 
         if isinstance(goal, str):
-            goal = Identifier.parse(goal)
-        if isinstance(goal, Identifier):
-            goal = agent.lookup(goal)
+            goal = Frame(goal)
         if isinstance(goal, Frame):
             goal = Goal(goal)
 
         if isinstance(plan, str):
-            plan = Identifier.parse(plan)
-        if isinstance(plan, Identifier):
-            plan = agent.lookup(plan)
+            plan = Frame(plan)
         if isinstance(plan, Frame):
             plan = Plan(plan)
 
         if isinstance(step, str):
-            step = Identifier.parse(step)
-        if isinstance(step, Identifier):
-            step = agent.lookup(step)
+            step = Frame(step)
         if isinstance(step, Frame):
             step = Step(step)
 
@@ -88,9 +82,7 @@ class ExperimentTestCase(unittest.TestCase):
 
             def convert_output(output):
                 if isinstance(output, str):
-                    output = Identifier.parse(output)
-                if isinstance(output, Identifier):
-                    output = agent.lookup(output)
+                    output = Frame(output)
                 if isinstance(output, Frame):
                     output = XMR(output)
                 return output
@@ -101,9 +93,7 @@ class ExperimentTestCase(unittest.TestCase):
 
             def convert_effector(effector):
                 if isinstance(effector, str):
-                    effector = Identifier.parse(effector)
-                if isinstance(effector, Identifier):
-                    effector = agent.lookup(effector)
+                    effector = Frame(effector)
                 if isinstance(effector, Frame):
                     effector = Effector(effector)
                 return effector
@@ -114,9 +104,7 @@ class ExperimentTestCase(unittest.TestCase):
 
             def convert_callback(callback):
                 if isinstance(callback, str):
-                    callback = Identifier.parse(callback)
-                if isinstance(callback, Identifier):
-                    callback = agent.lookup(callback)
+                    callback = Frame(callback)
                 if isinstance(callback, Frame):
                     callback = Callback(callback)
                 return callback
@@ -127,9 +115,7 @@ class ExperimentTestCase(unittest.TestCase):
 
             def convert_impasse(impasse):
                 if isinstance(impasse, str):
-                    impasse = Identifier.parse(impasse)
-                if isinstance(impasse, Identifier):
-                    impasse = agent.lookup(impasse)
+                    impasse = Frame(impasse)
                 if isinstance(impasse, Frame):
                     impasse = Goal(impasse)
                 return impasse
@@ -140,9 +126,7 @@ class ExperimentTestCase(unittest.TestCase):
 
             def convert_expectation(expectation):
                 if isinstance(expectation, str):
-                    expectation = Identifier.parse(expectation)
-                if isinstance(expectation, Identifier):
-                    expectation = agent.lookup(expectation)
+                    expectation = Frame(expectation)
                 if isinstance(expectation, Frame):
                     expectation = Expectation(expectation)
                 return expectation

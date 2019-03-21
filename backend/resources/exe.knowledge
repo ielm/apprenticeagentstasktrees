@@ -7,101 +7,101 @@
 @EXE.TRANSIENT-FRAME = {};
 
 @EXE.PHYSICAL-EFFECTOR = {
-    ISA @EXE.EFFECTOR
+    IS-A @EXE.EFFECTOR;
 };
 
 @EXE.VERBAL-EFFECTOR = {
-    ISA @EXE.EFFECTOR
+    IS-A @EXE.EFFECTOR;
 };
 
 @EXE.MENTAL-EFFECTOR = {
-    ISA @EXE.EFFECTOR
+    IS-A @EXE.EFFECTOR;
 };
 
 @EXE.STATEMENT = {};
 
 @EXE.RETURNING-STATEMENT = {
-    ISA @EXE.STATEMENT;
+    IS-A @EXE.STATEMENT;
 };
 
 @EXE.BOOLEAN-STATEMENT = {
-    ISA @EXE.RETURNING-STATEMENT;
+    IS-A @EXE.RETURNING-STATEMENT;
 };
 
 @EXE.ADDFILLER-STATEMENT = {
-    ISA @EXE.STATEMENT;
-    CLASSMAP "backend.models.statement.AddFillerStatement";
+    IS-A @EXE.STATEMENT;
+    CLASSMAP "AddFillerStatement";
 };
 
 @EXE.ASSERT-STATEMENT = {
-    ISA @EXE.STATEMENT;
-    CLASSMAP "backend.models.statement.AssertStatement";
+    IS-A @EXE.STATEMENT;
+    CLASSMAP "AssertStatement";
 };
 
 @EXE.ASSIGNFILLER-STATEMENT = {
-    ISA @EXE.STATEMENT;
-    CLASSMAP "backend.models.statement.AssignFillerStatement";
+    IS-A @EXE.STATEMENT;
+    CLASSMAP "AssignFillerStatement";
 };
 
 @EXE.ASSIGNVARIABLE-STATEMENT = {
-    ISA @EXE.STATEMENT;
-    CLASSMAP "backend.models.statement.AssignVariableStatement";
+    IS-A @EXE.STATEMENT;
+    CLASSMAP "AssignVariableStatement";
 };
 
 @EXE.EXISTS-STATEMENT = {
-    ISA @EXE.BOOLEAN-STATEMENT;
-    CLASSMAP "backend.models.statement.ExistsStatement";
+    IS-A @EXE.BOOLEAN-STATEMENT;
+    CLASSMAP "ExistsStatement";
 };
 
 @EXE.EXPECTATION-STATEMENT = {
-    ISA @EXE.STATEMENT;
-    CLASSMAP "backend.models.statement.ExpectationStatement";
+    IS-A @EXE.STATEMENT;
+    CLASSMAP "ExpectationStatement";
 };
 
 @EXE.FOREACH-STATEMENT = {
-    ISA @EXE.STATEMENT;
-    CLASSMAP "backend.models.statement.ForEachStatement";
+    IS-A @EXE.STATEMENT;
+    CLASSMAP "ForEachStatement";
 };
 
 @EXE.IS-STATEMENT = {
-    ISA @EXE.BOOLEAN-STATEMENT;
-    CLASSMAP "backend.models.statement.IsStatement";
+    IS-A @EXE.BOOLEAN-STATEMENT;
+    CLASSMAP "IsStatement";
 };
 
 @EXE.MAKEINSTANCE-STATEMENT = {
-    ISA @EXE.RETURNING-STATEMENT;
-    CLASSMAP "backend.models.statement.MakeInstanceStatement";
+    IS-A @EXE.RETURNING-STATEMENT;
+    CLASSMAP "MakeInstanceStatement";
 };
 
 @EXE.MP-STATEMENT = {
-    ISA @EXE.RETURNING-STATEMENT;
-    CLASSMAP "backend.models.statement.MeaningProcedureStatement";
+    IS-A @EXE.RETURNING-STATEMENT;
+    CLASSMAP "MeaningProcedureStatement";
 };
 
 @EXE.OUTPUTXMR-STATEMENT = {
-    ISA @EXE.RETURNING-STATEMENT;
-    CLASSMAP "backend.models.statement.OutputXMRStatement";
+    IS-A @EXE.RETURNING-STATEMENT;
+    CLASSMAP "OutputXMRStatement";
 };
 
 @EXE.TRANSIENTFRAME-STATEMENT = {
-    ISA @EXE.RETURNING-STATEMENT;
-    CLASSMAP "backend.models.statement.TransientFrameStatement";
+    IS-A @EXE.RETURNING-STATEMENT;
+    CLASSMAP "TransientFrameStatement";
 };
 
 @EXE.XMR = {};
 
 @EXE.AMR = {
-    ISA @EXE.XMR;
+    IS-A @EXE.XMR;
 };
 
 @EXE.MMR = {
-    ISA @EXE.XMR;
+    IS-A @EXE.XMR;
 };
 
 @EXE.TMR = {
-    ISA @EXE.XMR;
+    IS-A @EXE.XMR;
 };
 
 @EXE.VMR = {
-    ISA @EXE.XMR;
+    IS-A @EXE.XMR;
 };

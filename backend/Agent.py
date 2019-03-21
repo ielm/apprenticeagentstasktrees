@@ -1,70 +1,50 @@
-from backend.contexts.LCTContext import LCTContext
 from backend.models.agenda import Agenda, Decision, Expectation, Goal, Step
 from backend.models.effectors import Callback, Effector
 from backend.models.environment import Environment
-from backend.models.fr import FR
-from backend.models.graph import Frame, Graph, Identifier, Network
-from backend.models.ontology import Ontology
 from backend.models.statement import TransientFrame
 from backend.models.tmr import TMR
 from backend.models.vmr import VMR
 from backend.models.xmr import XMR
 from backend.utils.AgentLogger import AgentLogger, CachedAgentLogger
+from ontograph import graph
+from ontograph.Frame import Frame
+from ontograph.Index import Identifier
+from ontograph.Query import IsAComparator, Query
+from ontograph.Space import Space
 from typing import Any, List, Union
 
 
-class Agent(Network):
+class Agent(object):
     """
     The Agent
     """
 
-    def __init__(self, ontology: Ontology = None):
-        """
-        Initialize Agent
-
-        :param ontology: The agent's "World Model"
-        """
+    def __init__(self):
         super().__init__()
 
-        if ontology is None:
-            raise Exception("NYI, Default Ontology Required")
+        self.exe = Space("EXE")
+        self.ontology = Space("ONT")
 
-        self.exe = self.register("EXE")
-        self.ontology = self.register(ontology)
+        self.internal = Space("SELF")
+        self.wo_memory = Space("WM")
+        self.lt_memory = Space("LT")
+        self.environment = Space("ENV")
 
-        self.internal = self.register(FR("SELF", self.ontology))
-        self.wo_memory = self.register(FR("WM", self.ontology))
-        self.lt_memory = self.register(FR("LT", self.ontology))
-        self.environment = self.register(FR("ENV", self.ontology))
+        self.inputs = Space("INPUTS")
+        self.outputs = Space("OUTPUTS")
 
-        self.inputs = self.register(FR("INPUTS", self.ontology))
-        self.outputs = self.register(FR("OUTPUTS", self.ontology))
-
-        self.identity = self.internal.register("ROBOT", isa="ONT.ROBOT")
+        self.identity = Frame("@SELF.ROBOT.1").add_parent("@ONT.ROBOT")
         self._bootstrap()
 
         self.input_memory = []
         self.action_queue = []
-        self.context = LCTContext(self)
 
         self._logger = CachedAgentLogger()
-        self.wo_memory.logger(self._logger)
-        self.lt_memory.logger(self._logger)
 
     def logger(self, logger=None) -> AgentLogger:
         if not logger is None:
             self._logger = logger
         return self._logger
-
-    def input(self, input):
-        tmr = TMR.from_json(self, self.ontology, input)
-        self.input_memory.append(tmr)
-
-        self._logger.log("Input: " + tmr.render())
-
-        agenda = self.context.default_understanding()
-        agenda.logger(self._logger)
-        agenda.process(self, tmr)
 
     class IDEA(object):
         D = 1
@@ -136,18 +116,16 @@ class Agent(Network):
 
         # If input is visual input, create VMR, else create tmr and continue
         if type == "VISUAL":
-            xmr = VMR.from_json(self, self.ontology, input, source=source)
+            xmr = VMR.from_json(input, source=source)
             xmr.update_environment(self.env())
             xmr.update_memory(self.wo_memory)
         else:
-            xmr = TMR.from_json(self, self.ontology, input, source=source)
+            xmr = TMR.from_json(input, source=source)
 
         # Takes graph obj and writes it to the network
         # registered_xMR = self.register(input)
 
         self.identity["HAS-INPUT"] += xmr.frame
-
-        self._logger.log("Input: " + xmr.render())
 
     def _decide(self):
         agenda = self.agenda()
@@ -163,7 +141,7 @@ class Agent(Network):
                     step = list(filter(lambda step: step.is_pending(), plan.steps()))[0]
 
                     existing_decisions = self.decisions()
-                    existing_decisions = filter(lambda d: d.goal().frame._identifier == goal.frame._identifier, existing_decisions)
+                    existing_decisions = filter(lambda d: d.goal().frame == goal.frame, existing_decisions)
                     existing_decisions = filter(lambda d: d.plan() == plan, existing_decisions)
                     existing_decisions = filter(lambda d: d.step() == step, existing_decisions)
 
@@ -192,19 +170,19 @@ class Agent(Network):
                 candidate_effectors = list(filter(lambda effector: output.capability() in effector.capabilities(), candidate_effectors))
                 candidate_effectors = list(filter(lambda effector: effector not in effector_map.values(), candidate_effectors))
                 if len(candidate_effectors) > 0:
-                    effector_map[output.frame.name()] = candidate_effectors[0]
+                    effector_map[output.frame.id] = candidate_effectors[0]
 
-            if len(effector_map) == len(decision.outputs()) and decision.goal().frame.name() not in selected_goals:
-                selected_goals.append(decision.goal().frame.name())
+            if len(effector_map) == len(decision.outputs()) and decision.goal().frame.id not in selected_goals:
+                selected_goals.append(decision.goal().frame.id)
                 decision.select()
                 for output in effector_map.keys():
-                    output = XMR(self.lookup(output))
-                    effector = effector_map[output.frame.name()]
+                    output = XMR(Frame(output))
+                    effector = effector_map[output.frame.id]
                     effector.reserve(decision, output, output.capability())
             else:
                 decision.decline()
         for goal in selected_goals:
-            Goal(self.lookup(goal)).status(Goal.Status.ACTIVE)
+            Goal(Frame(goal)).status(Goal.Status.ACTIVE)
         for decision in self.decisions():
             if decision.status() == Decision.Status.BLOCKED and decision.goal().is_pending():
                 decision.goal().status(Goal.Status.ACTIVE)
@@ -228,7 +206,7 @@ class Agent(Network):
 
         for decision in self.decisions():
             for impasse in decision.impasses():
-                if impasse.frame.name() not in list(map(lambda g: g.frame.name(), self.agenda().goals(pending=True, active=True, abandoned=True, satisfied=True))):
+                if impasse.frame.id not in list(map(lambda g: g.frame.id, self.agenda().goals(pending=True, active=True, abandoned=True, satisfied=True))):
                     self.agenda().add_goal(impasse)
 
         for decision in list(filter(lambda decision: decision.status() == Decision.Status.EXECUTING, self.decisions())):
@@ -238,11 +216,12 @@ class Agent(Network):
 
         for decision in list(filter(lambda decision: decision.status() != Decision.Status.BLOCKED and decision.status() != Decision.Status.EXECUTING and decision.status() != Decision.Status.FINISHED, self.decisions())):
             self.identity["HAS-DECISION"] -= decision.frame
-            del decision.frame._graph[decision.frame.name()]
-
-            for output in decision.outputs():
-                del output.frame._graph[output.frame.name()]
-                del self[output.graph(self)._namespace]
+            outputs = decision.outputs()
+            for output in outputs:
+                output.frame.delete()
+            decision.frame.delete()
+            for output in outputs:
+                output.frame.delete()
 
         for decision in self.decisions():
             decision.assess_impasses()
@@ -258,37 +237,37 @@ class Agent(Network):
         if reassess:
             self._assess()
 
-        for transient_frame in self.exe.search(Frame.q(self).isa("EXE.TRANSIENT-FRAME")):
-            if transient_frame.name() == "EXE.TRANSIENT-FRAME":
+        for transient_frame in Query(IsAComparator("@EXE.TRANSIENT-FRAME")).start():
+            if transient_frame.id == "@EXE.TRANSIENT-FRAME":
                 continue
             if TransientFrame(transient_frame).is_in_scope():
                 continue
-            del self.exe[transient_frame.name()]
+            transient_frame.delete()
 
     def agenda(self):
         return Agenda(self.identity)
 
     def decisions(self) -> List[Decision]:
-        return list(map(lambda decision: Decision(decision.resolve()), self.identity["HAS-DECISION"]))
+        return list(map(lambda decision: Decision(decision), self.identity["HAS-DECISION"]))
 
     def env(self):
         return Environment(self.environment)
 
     def effectors(self) -> List[Effector]:
-        return list(map(lambda e: Effector(e.resolve()), self.identity["HAS-EFFECTOR"]))
+        return list(map(lambda e: Effector(e), self.identity["HAS-EFFECTOR"]))
 
-    def pending_inputs(self) -> List[Graph]:
-        inputs = map(lambda input: XMR(input.resolve()), self.identity["HAS-INPUT"])
+    def pending_inputs(self) -> List[Space]:
+        inputs = map(lambda input: XMR(input), self.identity["HAS-INPUT"])
         inputs = filter(lambda input: input.status() == XMR.InputStatus.RECEIVED, inputs)
-        inputs = map(lambda input: input.graph(self), inputs)
+        inputs = map(lambda input: input.space(), inputs)
 
         return list(inputs)
 
     def callback(self, callback: Union[str, Identifier, Frame, 'Callback']):
         if isinstance(callback, str):
-            callback = Identifier.parse(callback)
+            callback = Frame(callback)
         if isinstance(callback, Identifier):
-            callback = callback.resolve(None, self)
+            callback = Frame(callback.id)
         if isinstance(callback, Frame):
             callback = Callback(callback)
 
@@ -299,6 +278,29 @@ class Agent(Network):
             return self.identity[property].singleton()
         return default
 
+    def reset(self):
+        graph.reset()
+        self._bootstrap()
+
     def _bootstrap(self):
-        from backend.models.bootstrap import Bootstrap
-        Bootstrap.bootstrap_resource(self, "backend.resources", "exe.knowledge")
+        from backend.utils.AgentOntoLang import AgentOntoLang
+        graph.set_ontolang(AgentOntoLang())
+
+        self.load_knowledge("backend.resources", "exe.knowledge")
+
+    def load_knowledge(self, package: str, resource: str):
+        from backend.utils.AgentOntoLang import AgentOntoLang
+        ontolang: AgentOntoLang = graph.ontolang()
+        ontolang.load_knowledge(package, resource)
+
+    def spaces(self) -> List[Space]:
+        results = {"EXE", "ONT", "SELF", "WM", "LT", "ENV", "INPUTS", "OUTPUTS"}
+        results = results.union(set(map(lambda s: s.name, graph)))
+        return list(map(lambda s: Space(s), results))
+
+    def __len__(self):
+        return len(self.spaces())
+
+    def __iter__(self):
+        for space in self.spaces():
+            yield space

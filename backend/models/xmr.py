@@ -1,7 +1,8 @@
 from backend.models.effectors import Capability
-from backend.models.graph import Frame, Graph, Identifier, Literal, Network
-
 from enum import Enum
+from ontograph.Frame import Frame
+from ontograph.Index import Identifier
+from ontograph.Space import Space
 from typing import Union
 
 import time
@@ -49,26 +50,30 @@ class XMR(object):
         return clazz(frame)
 
     @classmethod
-    def instance(g, graph: Graph, refers_to: Union[str, Graph], signal: Signal, type: Type, status: Union[InputStatus, OutputStatus], source: Union[str, Identifier, Frame], root: [str, Identifier, Frame], capability: [str, Identifier, Frame, Capability]=None) -> 'XMR':
+    def instance(g, space: Space, refers_to: Union[str, Space], signal: Signal, type: Type, status: Union[InputStatus, OutputStatus], source: Union[str, Identifier, Frame], root: [str, Identifier, Frame], capability: [str, Identifier, Frame, Capability]=None) -> 'XMR':
 
-        if isinstance(refers_to, Graph):
-            refers_to = refers_to._namespace
+        if isinstance(source, str):
+            source = Frame(source)
+
+        if isinstance(refers_to, Space):
+            refers_to = refers_to.name
 
         if isinstance(capability, Capability):
             capability = capability.frame
 
         isa = {
-            "ACTION": "EXE.AMR",
-            "MENTAL": "EXE.MMR",
-            "LANGUAGE": "EXE.TMR",
-            "VISUAL": "EXE.VMR",
+            "ACTION": Frame("@EXE.AMR"),
+            "MENTAL": Frame("@EXE.MMR"),
+            "LANGUAGE": Frame("@EXE.TMR"),
+            "VISUAL": Frame("@EXE.VMR"),
         }[type.name]
 
-        frame = graph.register("XMR", isa=isa, generate_index=True)
-        frame["REFERS-TO-GRAPH"] = Literal(refers_to)
-        frame["SIGNAL"] = Literal(signal)
-        frame["TYPE"] = Literal(type)
-        frame["STATUS"] = Literal(status)
+        frame = Frame("@" + space.name + ".XMR.?").add_parent(isa)
+
+        frame["REFERS-TO-SPACE"] = refers_to
+        frame["SIGNAL"] = signal
+        frame["TYPE"] = type
+        frame["STATUS"] = status
         frame["SOURCE"] = source
         frame["ROOT"] = root
         frame["TIMESTAMP"] = time.time()
@@ -117,8 +122,8 @@ class XMR(object):
     def source(self) -> Frame:
         return self.frame["SOURCE"].singleton()
 
-    def graph(self, network: Network) -> Graph:
-        return network[self.frame["REFERS-TO-GRAPH"].singleton()]
+    def space(self) -> Space:
+        return Space(self.frame["REFERS-TO-SPACE"].singleton())
 
     def timestamp(self) -> float:
         return self.frame["TIMESTAMP"].singleton()
@@ -133,18 +138,19 @@ class XMR(object):
         self.frame["STATUS"] = status
 
     def render(self) -> str:
-        return self.frame.name()
+        return self.frame.id
 
 
 class AMR(XMR):
 
     def render(self):
         try:
-            if self.source().name() != "SELF.ROBOT.1":
+            from backend import agent
+            if self.source().id != agent.identity.id:
                 return super().render()
 
-            action = self.root()._identifier.name.upper()
-            theme = self.root()["THEME"].singleton().name()
+            action = Identifier.parse(self.root().id)[1].upper()
+            theme = self.root()["THEME"].singleton().id
 
             return "I am taking the " + action + "(" + theme + ") action."
 
@@ -155,10 +161,11 @@ class MMR(XMR):
 
     def render(self):
         try:
-            if self.root()._identifier.name != "INIT-GOAL":
+            from backend import agent
+            if Identifier.parse(self.root().id)[1] != "INIT-GOAL":
                 return super().render()
 
-            if self.source().name() != "SELF.ROBOT.1":
+            if self.source().id != agent.identity.id:
                 return super().render()
 
             from backend.models.agenda import Goal

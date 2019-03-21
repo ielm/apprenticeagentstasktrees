@@ -5,24 +5,25 @@ from flask_cors import CORS
 from flask_socketio import SocketIO
 from pkgutil import get_data
 
-from backend.agent import Agent
-from backend.models.bootstrap import Bootstrap
-from backend.contexts.LCTContext import LCTContext
-from backend.models.grammar import Grammar
-from backend.models.graph import Frame, Identifier
-from backend.models.ontology import Ontology
+from backend import agent
 from backend.models.xmr import XMR
 from backend.service.AgentAdvanceThread import AgentAdvanceThread
 from backend.service.IIDEAConverter import IIDEAConverter
-from backend.utils.YaleUtils import format_learned_event_yale, input_to_tmrs, lookup_by_visual_id
+from backend.service.KnowledgeLoader import KnowledgeLoader
+from backend.utils.OntologyLoader import OntologyServiceLoader
+from backend.utils.YaleUtils import format_learned_event_yale, lookup_by_visual_id
+from ontograph import graph as g
+from ontograph.Frame import Frame
+from ontograph.Space import Space
 
 
 app = Flask(__name__, template_folder="../../frontend/templates/")
 CORS(app)
 socketio = SocketIO(app)
 
-agent = Agent(ontology=Ontology.init_default())
 agent.logger().enable()
+OntologyServiceLoader().load()
+KnowledgeLoader.load_resource("backend.resources", "exe.knowledge")
 thread = None
 
 
@@ -41,36 +42,35 @@ def build_payload():
     }
 
 
-def graph_to_json(graph):
+def graph_to_json(space: Space):
     frames = []
 
-    for f in graph:
-        frame = graph[f]
+    for frame in space:
+
+        t = frame.__class__.__name__
+        if frame.space() == g.ontology():
+            t = "OntologyFrame"
+        if frame.space() is not None and frame.space().name.startswith("TMR#"):
+            t = "TMRFrame"
 
         converted = {
-            "type": frame.__class__.__name__,
-            "graph": graph._namespace if frame._identifier.graph is None else frame._identifier.graph,
-            "name": frame._identifier.render(graph=False),
+            "type": t,
+            "graph": space.name if frame.space() is None else frame.space().name,
+            "name": frame.id,
             "relations": [],
             "attributes": []
         }
 
-        for s in frame:
-            slot = frame[s]
+        for slot in frame:
             for filler in slot:
-                if isinstance(filler._value, Identifier):
-
-                    modified = Identifier(filler._value.graph, filler._value.name, instance=filler._value.instance)
-                    if modified.graph is None:
-                        modified.graph = graph._namespace
-
+                if isinstance(filler, Frame):
                     converted["relations"].append({
-                        "graph": modified.graph,
-                        "slot": s,
-                        "value": modified.render(graph=False),
+                        "graph": space.name if filler.space() is None else filler.space().name,
+                        "slot": slot.property,
+                        "value": filler.id
                     })
                 else:
-                    value = filler._value.value
+                    value = filler
                     if isinstance(value, type):
                         value = value.__module__ + '.' + value.__name__
                     elif isinstance(value, int):
@@ -79,7 +79,7 @@ def graph_to_json(graph):
                         value = str(value)
 
                     converted["attributes"].append({
-                        "slot": s,
+                        "slot": slot.property,
                         "value": value
                     })
 
@@ -107,7 +107,7 @@ def favicon():
 
 @app.route("/", methods=["GET"])
 def index():
-    return render_template("index.html", network=agent._storage.keys())
+    return render_template("index.html", network=list(map(lambda s: s.name, agent.spaces())))
 
 
 @app.route("/grammar", methods=["GET"])
@@ -117,23 +117,25 @@ def grammar():
 
 @app.route("/reset", methods=["DELETE"])
 def reset():
+    g.reset()
+
     global agent
-    agent = Agent(Ontology.init_default())
+    agent.reset()
+    OntologyServiceLoader().load()
+    KnowledgeLoader.load_resource("backend.resources", "exe.knowledge")
 
     return "OK"
 
 
 @app.route("/network", methods=["GET"])
 def network():
-    return json.dumps(list(agent._storage.keys()))
+    return json.dumps(list(map(lambda s: s.name, g)))
 
 
 @app.route("/view", methods=["POST"])
 def view():
     data = request.data.decode("utf-8")
-    view = Grammar.parse(agent, data)
-    view_graph = view.view()
-    return graph_to_json(view_graph)
+    return graph_to_json(g.ontolang().run(data))
 
 
 @app.route("/graph", methods=["GET"])
@@ -143,7 +145,7 @@ def graph():
 
     id = request.args["id"]
 
-    return graph_to_json(agent[id])
+    return graph_to_json(Space(id))
 
 
 @app.route("/iidea/start", methods=["GET"])
@@ -201,7 +203,7 @@ def iidea_input():
         from backend.utils.YaleUtils import analyze
         tmr = analyze(data["input"])
 
-    source = lookup_by_visual_id(agent, data["source"])
+    source = lookup_by_visual_id(data["source"])
     agent._input(input=tmr, source=source, type=data["type"])
 
     return json.dumps(build_payload())
@@ -264,26 +266,6 @@ def yale_visual_input():
     return "OK"
 
 
-@app.route("/input", methods=["POST"])
-def input():
-    if not request.get_json():
-        abort(400)
-
-    data = request.get_json()
-    tmrs = input_to_tmrs(data)
-
-    for tmr in tmrs:
-        agent.input(tmr)
-
-    if isinstance(agent.context, LCTContext):
-        learning = list(map(lambda instance: instance.name(), agent.wo_memory.search(Frame.q(network).f(LCTContext.LEARNING, True))))
-        return json.dumps({
-            LCTContext.LEARNING: learning
-        })
-
-    return "OK"
-
-
 @app.route("/components/graph", methods=["GET"])
 def components_graph():
     if "namespace" not in request.args:
@@ -294,7 +276,7 @@ def components_graph():
         include_sources = request.args["include_sources"].lower() == "true"
 
     graph = request.args["namespace"]
-    graph = graph_to_json(agent[graph])
+    graph = graph_to_json(Space(graph))
     return render_template("graph.html", gj=json.loads(graph), include_sources=include_sources)
 
 
@@ -310,10 +292,7 @@ def htn():
 
     instance = request.args["instance"]
 
-    from backend.models.fr import FRInstance
-    instance: FRInstance = agent.search(Frame.q(agent).id(instance))[0]
-
-    return json.dumps(format_learned_event_yale(instance, agent.ontology), indent=4)
+    return json.dumps(format_learned_event_yale(Frame(instance), agent.ontology), indent=4)
 
 
 @app.route("/bootstrap", methods=["GET", "POST"])
@@ -321,17 +300,17 @@ def bootstrap():
     if request.method == "POST":
         script = request.form["custom-bootstrap"]
         script = script.replace("\r\n", "\n")
-        Bootstrap.bootstrap_script(agent, script)
+        KnowledgeLoader.load_script(script)
         return redirect("/bootstrap", code=302)
 
     if "package" in request.args and "resource" in request.args:
         package = request.args["package"]
         resource = request.args["resource"]
-        Bootstrap.bootstrap_resource(agent, package, resource)
+        KnowledgeLoader.load_resource(package, resource)
         return redirect("/bootstrap", code=302)
 
-    resources = Bootstrap.list_resources("backend.resources") + Bootstrap.list_resources("backend.resources.experiments") + Bootstrap.list_resources("backend.resources.example")
-    resources = map(lambda r: {"resource": r, "loaded": r[0] + "." + r[1] in Bootstrap.loaded}, resources)
+    resources = KnowledgeLoader.list_resources("backend.resources") + KnowledgeLoader.list_resources("backend.resources.experiments") + KnowledgeLoader.list_resources("backend.resources.example")
+    resources = map(lambda r: {"resource": r, "loaded": r[0] + "." + r[1] in KnowledgeLoader.loaded}, resources)
 
     return render_template("bootstrap.html", resources=resources)
 
