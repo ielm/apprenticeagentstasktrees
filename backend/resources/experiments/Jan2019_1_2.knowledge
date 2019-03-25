@@ -1,0 +1,251 @@
+@ENV.EPOCH = {};
+
+// Effectors and capabilities
+
+@EXE.FETCH-OBJECT-CAPABILITY = {
+    IS-A @EXE.CAPABILITY;
+    MP "fetch_object_capability";
+    COVERS-EVENT @ONT.TAKE;
+};
+
+@EXE.HOLD-OBJECT-CAPABILITY = {
+    IS-A @EXE.CAPABILITY;
+    MP "hold_object_capability";
+    COVERS-EVENT @ONT.HOLD;
+};
+
+@EXE.INIT-GOAL-CAPABILITY = {
+    IS-A @EXE.CAPABILITY;
+    MP "init_goal_capability";
+    COVERS-EVENT @ONT.MENTAL-EVENT;
+};
+
+@EXE.SPEAK-CAPABILITY = {
+    IS-A @EXE.CAPABILITY;
+    MP  "speak_capability";
+};
+
+@SELF.PHYSICAL-EFFECTOR.1 = {
+    IS-A @EXE.PHYSICAL-EFFECTOR;
+    HAS-CAPABILITY @EXE.FETCH-OBJECT-CAPABILITY;
+    HAS-CAPABILITY @EXE.HOLD-OBJECT-CAPABILITY;
+    STATUS "FREE";
+};
+
+@SELF.MENTAL-EFFECTOR.1 = {
+    IS-A @EXE.MENTAL-EFFECTOR;
+    HAS-CAPABILITY @EXE.INIT-GOAL-CAPABILITY;
+    STATUS "FREE";
+};
+
+@SELF.VERBAL-EFFECTOR.1 = {
+    IS-A @EXE.VERBAL-EFFECTOR;
+    HAS-CAPABILITY @EXE.SPEAK-CAPABILITY;
+    STATUS "FREE";
+};
+
+@SELF.ROBOT.1 += {
+    PRIORITY_WEIGHT 1.5;
+    RESOURCES_WEIGHT 0.25;
+    HAS-EFFECTOR @SELF.PHYSICAL-EFFECTOR.1;
+    HAS-EFFECTOR @SELF.MENTAL-EFFECTOR.1;
+    HAS-EFFECTOR @SELF.VERBAL-EFFECTOR.1;
+};
+
+@LT.HUMAN.1 = {
+    IS-A @ONT.HUMAN;
+    HAS-NAME "Jake";
+};
+
+@LT.TEACH.1 = {
+    IS-A @ONT.TEACH;
+    AGENT @LT.HUMAN.1;
+    BENEFICIARY @SELF.ROBOT.1;
+    THEME @LT.BUILD.1;
+};
+
+// Define TEMPLATES ----------------
+
+DEFINE init-goal($definition, $params) AS TEMPLATE
+    TYPE MENTAL
+    REQUIRES @EXE.INIT-GOAL-CAPABILITY
+    ROOT @OUT.INIT-GOAL.1
+    INCLUDE
+
+    @OUT.INIT-GOAL.1 = {
+        AGENT @SELF.ROBOT.1;
+        THEME "$definition";
+        PARAMS "$params";
+    };
+;
+
+DEFINE fetch-object($object) AS TEMPLATE
+    TYPE PHYSICAL
+    REQUIRES @EXE.FETCH-OBJECT-CAPABILITY
+    ROOT @OUT.FETCH.1
+    INCLUDE
+
+    @OUT.FETCH.1 = {
+        AGENT @SELF.ROBOT.1;
+        THEME "$object";
+    };
+;
+
+DEFINE hold-object($object) AS TEMPLATE
+    TYPE PHYSICAL
+    REQUIRES @EXE.HOLD-OBJECT-CAPABILITY
+    ROOT @OUT.HOLD.1
+    INCLUDE
+
+    @OUT.HOLD.1 = {
+        AGENT @SELF.ROBOT.1;
+        THEME "$object";
+    };
+;
+
+DEFINE greet-human($human) AS TEMPLATE
+    TYPE VERBAL
+    REQUIRES @EXE.SPEAK-CAPABILITY
+    ROOT @OUT.SPEECH-ACT.1
+    INCLUDE
+
+    @OUT.SPEECH-ACT.1 = {
+        AGENT @SELF.ROBOT.1;
+        THEME @OUT.GREET.1;
+    };
+
+    @OUT.GREET.1 = {
+        AGENT @SELF.ROBOT.1;
+        THEME "$human";
+    };
+;
+
+DEFINE summon-agent($agent, $purpose) AS TEMPLATE
+    TYPE VERBAL
+    REQUIRES @EXE.SPEAK-CAPABILITY
+    ROOT @OUT.SPEECH-ACT.1
+    INCLUDE
+
+    @OUT.SPEECH-ACT.1 = {
+        AGENT @SELF.ROBOT.1;
+        THEME @OUT.REQUEST-ACTION.1;
+    };
+
+    @OUT.REQUEST-ACTION.1 = {
+        AGENT @SELF.ROBOT.1;
+        BENEFICIARY "$agent";
+        THEME @OUT.CHANGE-LOCATION.1;
+        PURPOSE "$purpose";
+    };
+
+    @OUT.CHANGE-LOCATION.1 = {
+        BENEFICIARY "$agent";
+        DESTINATION @ONT.LOCATION;
+    };
+;
+
+// Define GOALS --------------------
+
+REGISTER MP backend.resources.experiments.Jan2019_1_2.SelectGoalFromLanguageInput AS select_goal_from_language_input;
+REGISTER MP backend.resources.experiments.Jan2019_1_2.InitGoalCapability AS init_goal_capability;
+REGISTER MP backend.resources.experiments.Jan2019_1_2.FetchObjectCapability AS fetch_object_capability;
+REGISTER MP backend.resources.experiments.Jan2019_1_2.HoldObjectCapability AS hold_object_capability;
+REGISTER MP backend.resources.experiments.Jan2019_1_2.SpeakCapability AS speak_capability;
+REGISTER MP backend.resources.experiments.Jan2019_1_2.ShouldAcknowledgeVisualInput AS should_acknowledge_visual_input;
+REGISTER MP backend.resources.experiments.Jan2019_1_2.ShouldGreetHuman AS should_greet_human;
+REGISTER MP backend.resources.experiments.Jan2019_1_2.SelectHumanToGreet AS select_human_to_greet;
+REGISTER MP backend.resources.experiments.Jan2019_1_2.IsInEnvironment AS is_in_environment;
+
+DEFINE ACKNOWLEDGE-LANGUAGE-INPUT($tmr)
+    AS GOAL
+    IN EXE
+    PRIORITY 0.5
+    RESOURCES 0.5
+    PLAN (acknowledge language input)
+        SELECT DEFAULT
+        STEP
+            DO $goal = SELF.select_goal_from_language_input($tmr)
+            DO $tmr[STATUS] = "ACKNOWLEDGED"
+            DO $params = [$tmr]
+            DO OUTPUT init-goal($goal, $params) BY SELF
+    WHEN EXECUTED THEN satisfied
+;
+
+ADD TRIGGER TO @SELF.ROBOT.1 INSTANTIATE @EXE.ACKNOWLEDGE-LANGUAGE-INPUT WHEN (@ ISA @EXE.TMR AND STATUS = #XMR.InputStatus.RECEIVED and TYPE = #XMR.Type.LANGUAGE);
+
+DEFINE ACKNOWLEDGE-VISUAL-INPUT($vmr)
+    AS GOAL
+    IN EXE
+    PRIORITY 0.5
+    RESOURCES 0.5
+    PLAN (passively register visual input)
+        SELECT IF NOT SELF.should_acknowledge_visual_input($vmr)
+        STEP
+            DO IDLE
+    PLAN (acknowledge visual input)
+        SELECT IF SELF.should_greet_human($vmr)
+        STEP
+            DO $goal = @EXE.GREET-HUMAN
+            DO $vmr[STATUS] = "ACKNOWLEDGED"
+            DO $params = [SELF.select_human_to_greet($vmr)]
+            DO OUTPUT init-goal($goal, $params) BY SELF
+    WHEN EXECUTED THEN satisfied
+;
+
+ADD TRIGGER TO @SELF.ROBOT.1 INSTANTIATE @EXE.ACKNOWLEDGE-VISUAL-INPUT WHEN (@ ISA @EXE.VMR AND STATUS = #XMR.InputStatus.RECEIVED and TYPE = #XMR.Type.VISUAL);
+
+DEFINE BUILD-A-CHAIR()
+    AS GOAL
+    IN EXE
+    PRIORITY 0.5
+    RESOURCES 0.5
+    PLAN (as-taught-by-jake)
+        SELECT DEFAULT
+        STEP
+            DO $screwdriver = @ENV.SCREWDRIVER.1
+            DO OUTPUT fetch-object($screwdriver) BY SELF
+        STEP
+            DO $bracket = @ENV.BRACKET.1
+            DO OUTPUT fetch-object($bracket) BY SELF
+        STEP
+            DO $dowel = @ENV.DOWEL.1
+            DO OUTPUT fetch-object($dowel) BY SELF
+        STEP
+            DO $human = @ENV.HUMAN.1
+            DO $purpose = {
+                INSTANCE-OF @ONT.ATTACH;
+                AGENT @ENV.HUMAN.1;
+                THEME @ENV.BRACKET.1;
+                DESTINATION @ENV.DOWEL.1;
+                INSTRUMENT @ENV.SCREWDRIVER.1;
+            }
+            DO ASSERT SELF.is_in_environment($human) ELSE IMPASSE WITH @SELF:@EXE.REQUEST-HELP($human, $purpose)
+            DO EXPECT EXISTS (@ ISA @ONT.ATTACH AND AGENT=@ENV.HUMAN.1 AND THEME=@ENV.BRACKET.1 AND DESTINATION=@ENV.DOWEL.1 AND INSTRUMENT=@ENV.SCREWDRIVER.1)
+    WHEN EXECUTED THEN satisfied
+;
+
+DEFINE GREET-HUMAN($human)
+    AS GOAL
+    IN EXE
+    PRIORITY 0.5
+    RESOURCES 0.5
+    PLAN (greet-normal)
+        SELECT DEFAULT
+        STEP
+            DO OUTPUT greet-human($human) BY SELF
+    WHEN EXECUTED THEN SATISFIED
+;
+
+DEFINE REQUEST-HELP($agent, $purpose)
+    AS GOAL
+    IN EXE
+    PRIORITY 0.5
+    RESOURCES 0.5
+    PLAN (summon-for-purpose)
+        SELECT DEFAULT
+        STEP
+            DO OUTPUT summon-agent($agent, $purpose) BY SELF
+        STEP
+            DO EXPECT SELF.is_in_environment($agent)
+    WHEN EXECUTED THEN SATISFIED
+;

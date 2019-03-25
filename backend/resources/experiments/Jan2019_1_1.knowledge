@@ -1,0 +1,215 @@
+@ENV.EPOCH = {};
+
+// Effectors and capabilities
+
+@EXE.FETCH-OBJECT-CAPABILITY = {
+    IS-A @EXE.CAPABILITY;
+    MP "fetch_object_capability";
+    COVERS-EVENT @ONT.TAKE;
+};
+
+@EXE.INIT-GOAL-CAPABILITY = {
+    IS-A @EXE.CAPABILITY;
+    MP "init_goal_capability";
+    COVERS-EVENT @ONT.MENTAL-EVENT;
+};
+
+@EXE.SPEAK-CAPABILITY = {
+    IS-A @EXE.CAPABILITY;
+    MP  "speak_capability";
+};
+
+@SELF.PHYSICAL-EFFECTOR.1 = {
+    IS-A @EXE.PHYSICAL-EFFECTOR;
+    HAS-CAPABILITY @EXE.FETCH-OBJECT-CAPABILITY;
+    STATUS "FREE";
+};
+
+@SELF.MENTAL-EFFECTOR.1 = {
+    IS-A @EXE.MENTAL-EFFECTOR;
+    HAS-CAPABILITY @EXE.INIT-GOAL-CAPABILITY;
+    STATUS "FREE";
+};
+
+@SELF.VERBAL-EFFECTOR.1 = {
+    IS-A @EXE.VERBAL-EFFECTOR;
+    HAS-CAPABILITY @EXE.SPEAK-CAPABILITY;
+    STATUS "FREE";
+};
+
+@SELF.ROBOT.1 += {
+    PRIORITY_WEIGHT 1.5;
+    RESOURCES_WEIGHT 0.25;
+    HAS-EFFECTOR @SELF.PHYSICAL-EFFECTOR.1;
+    HAS-EFFECTOR @SELF.MENTAL-EFFECTOR.1;
+    HAS-EFFECTOR @SELF.VERBAL-EFFECTOR.1;
+};
+
+@LT.HUMAN.1 = {
+    IS-A @ONT.HUMAN;
+    HAS-NAME "Jake";
+};
+
+@LT.TEACH.1 = {
+    IS-A @ONT.TEACH;
+    AGENT @LT.HUMAN.1;
+    BENEFICIARY @SELF.ROBOT.1;
+    THEME @LT.BUILD.1;
+};
+
+// Define TEMPLATES ----------------
+
+DEFINE init-goal($definition, $params) AS TEMPLATE
+    TYPE MENTAL
+    REQUIRES @EXE.INIT-GOAL-CAPABILITY
+    ROOT @OUT.INIT-GOAL.1
+    INCLUDE
+
+    @OUT.INIT-GOAL.1 = {
+        AGENT @SELF.ROBOT.1;
+        THEME "$definition";
+        PARAMS "$params";
+    };
+;
+
+DEFINE fetch-object($object) AS TEMPLATE
+    TYPE PHYSICAL
+    REQUIRES @EXE.FETCH-OBJECT-CAPABILITY
+    ROOT @OUT.FETCH.1
+    INCLUDE
+
+    @OUT.FETCH.1 = {
+        AGENT @SELF.ROBOT.1;
+        THEME "$object";
+    };
+;
+
+DEFINE greet-human($human) AS TEMPLATE
+    TYPE VERBAL
+    REQUIRES @EXE.SPEAK-CAPABILITY
+    ROOT @OUT.SPEECH-ACT.1
+    INCLUDE
+
+    @OUT.SPEECH-ACT.1 = {
+        AGENT @SELF.ROBOT.1;
+        THEME @OUT.GREET.1;
+    };
+
+    @OUT.GREET.1 = {
+        AGENT @SELF.ROBOT.1;
+        THEME "$human";
+    };
+;
+
+DEFINE describe-action($action) AS TEMPLATE
+    TYPE VERBAL
+    REQUIRES @EXE.SPEAK-CAPABILITY
+    ROOT @OUT.SPEECH-ACT.1
+    INCLUDE
+
+    @OUT.SPEECH-ACT.1 = {
+        AGENT @SELF.ROBOT.1;
+        THEME @OUT.DESCRIBE.1;
+    };
+
+    @OUT.DESCRIBE.1 = {
+        AGENT @SELF.ROBOT.1;
+        THEME "$action";
+    };
+;
+
+// Define GOALS --------------------
+
+REGISTER MP backend.resources.experiments.Jan2019_1_1.SelectGoalFromLanguageInput AS select_goal_from_language_input;
+REGISTER MP backend.resources.experiments.Jan2019_1_1.InitGoalCapability AS init_goal_capability;
+REGISTER MP backend.resources.experiments.Jan2019_1_1.FetchObjectCapability AS fetch_object_capability;
+REGISTER MP backend.resources.experiments.Jan2019_1_1.SpeakCapability AS speak_capability;
+REGISTER MP backend.resources.experiments.Jan2019_1_1.ShouldAcknowledgeVisualInput AS should_acknowledge_visual_input;
+REGISTER MP backend.resources.experiments.Jan2019_1_1.ShouldGreetHuman AS should_greet_human;
+REGISTER MP backend.resources.experiments.Jan2019_1_1.SelectHumanToGreet AS select_human_to_greet;
+REGISTER MP backend.resources.experiments.Jan2019_1_1.DetermineCurrentAction AS determine_current_action;
+
+DEFINE ACKNOWLEDGE-LANGUAGE-INPUT($tmr)
+    AS GOAL
+    IN EXE
+    PRIORITY 0.5
+    RESOURCES 0.5
+    PLAN (acknowledge language input)
+        SELECT DEFAULT
+        STEP
+            DO $goal = SELF.select_goal_from_language_input($tmr)
+            DO $tmr[STATUS] = "ACKNOWLEDGED"
+            DO $params = [$tmr]
+            DO OUTPUT init-goal($goal, $params) BY SELF
+    WHEN EXECUTED THEN satisfied
+;
+
+ADD TRIGGER TO @SELF.ROBOT.1 INSTANTIATE @EXE.ACKNOWLEDGE-LANGUAGE-INPUT WHEN (@ ISA @EXE.TMR AND STATUS = #XMR.InputStatus.RECEIVED and TYPE = #XMR.Type.LANGUAGE);
+
+DEFINE ACKNOWLEDGE-VISUAL-INPUT($vmr)
+    AS GOAL
+    IN EXE
+    PRIORITY 0.5
+    RESOURCES 0.5
+    PLAN (passively register visual input)
+        SELECT IF NOT SELF.should_acknowledge_visual_input($vmr)
+        STEP
+            DO IDLE
+    PLAN (acknowledge visual input)
+        SELECT IF SELF.should_greet_human($vmr)
+        STEP
+            DO $goal = @EXE.GREET-HUMAN
+            DO $vmr[STATUS] = "ACKNOWLEDGED"
+            DO $params = [SELF.select_human_to_greet($vmr)]
+            DO OUTPUT init-goal($goal, $params) BY SELF
+    WHEN EXECUTED THEN satisfied
+;
+
+ADD TRIGGER TO @SELF.ROBOT.1 INSTANTIATE @EXE.ACKNOWLEDGE-VISUAL-INPUT WHEN (@ ISA @EXE.VMR AND STATUS = #XMR.InputStatus.RECEIVED and TYPE = #XMR.Type.VISUAL);
+
+DEFINE BUILD-A-CHAIR()
+    AS GOAL
+    IN EXE
+    PRIORITY 0.5
+    RESOURCES 0.5
+    PLAN (as-taught-by-jake)
+        SELECT DEFAULT
+        STEP
+            DO $screwdriver = @ENV.SCREWDRIVER.1
+            DO OUTPUT fetch-object($screwdriver) BY SELF
+        STEP
+            DO $bracket1 = @ENV.BRACKET.1
+            DO OUTPUT fetch-object($bracket1) BY SELF
+        STEP
+            DO $bracket2 = @ENV.BRACKET.2
+            DO OUTPUT fetch-object($bracket2) BY SELF
+        STEP
+            DO $dowel = @ENV.DOWEL.1
+            DO OUTPUT fetch-object($dowel) BY SELF
+    WHEN EXECUTED THEN satisfied
+;
+
+DEFINE GREET-HUMAN($human)
+    AS GOAL
+    IN EXE
+    PRIORITY 0.5
+    RESOURCES 0.5
+    PLAN (greet-normal)
+        SELECT DEFAULT
+        STEP
+            DO OUTPUT greet-human($human) BY SELF
+    WHEN EXECUTED THEN SATISFIED
+;
+
+DEFINE RESPOND-TO-QUERY($tmr)
+    AS GOAL
+    IN EXE
+    PRIORITY 0.5
+    RESOURCES 0.5
+    PLAN (respond)
+        SELECT DEFAULT
+        STEP
+            DO $action = SELF.determine_current_action()
+            DO OUTPUT describe-action($action) BY SELF
+    WHEN EXECUTED THEN SATISFIED
+;

@@ -10,6 +10,50 @@ from ontograph.Frame import Frame, Role
 from ontograph.Space import Space
 
 
+def signal_action(action: str, object_id: int, callback: str):
+    from backend.utils.LEIAEnvironment import yale_robot_service
+    endpoint = yale_robot_service() + "/robotcommand"
+
+    import urllib.request
+    import json
+
+    body = {
+        action: object_id,
+        "callback": callback
+    }
+
+    req = urllib.request.Request(endpoint)
+    req.add_header('Content-Type', 'application/json; charset=utf-8')
+
+    jsondata = json.dumps(body)
+    jsondataasbytes = jsondata.encode('utf-8')
+
+    req.add_header('Content-Length', len(jsondataasbytes))
+    response = urllib.request.urlopen(req, jsondataasbytes)
+
+
+def signal_speech(text: str, callback: str):
+    from backend.utils.LEIAEnvironment import yale_robot_service
+    endpoint = yale_robot_service() + "/robotcommand"
+
+    import urllib.request
+    import json
+
+    body = {
+        "speak": text,
+        "callback": callback
+    }
+
+    req = urllib.request.Request(endpoint)
+    req.add_header('Content-Type', 'application/json; charset=utf-8')
+
+    jsondata = json.dumps(body)
+    jsondataasbytes = jsondata.encode('utf-8')
+
+    req.add_header('Content-Length', len(jsondataasbytes))
+    response = urllib.request.urlopen(req, jsondataasbytes)
+
+
 def bootstrap(input: dict, space: Space):
     types = {
         "dowel": {"IS-A": "DOWEL"},
