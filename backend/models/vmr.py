@@ -70,6 +70,8 @@ class VMR(XMR):
                 frame = Frame(frame)
                 for slot in contents:
                     for filler in contents[slot]:
+                        if filler.startswith("@"):
+                            filler = Frame(filler)
                         frame[slot] += filler
                 events["HAS-EVENT"] += frame
 
