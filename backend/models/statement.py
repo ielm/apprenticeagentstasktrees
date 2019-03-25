@@ -1,5 +1,4 @@
 from backend.models.mps import MPRegistry
-from ontograph import graph
 from ontograph.Frame import Frame
 from ontograph.Graph import Graph
 from ontograph.Index import Identifier
@@ -599,7 +598,8 @@ class MeaningProcedureStatement(Statement):
 
         params = list(map(lambda param: self._resolve_param(param, varmap), self.frame["PARAMS"]))
 
-        result = MPRegistry.run(mp, graph, *params, statement=self, varmap=varmap)
+        from backend import agent
+        result = MPRegistry.run(mp, agent, *params, statement=self, varmap=varmap)
         return result
 
     def __eq__(self, other):
