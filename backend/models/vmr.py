@@ -48,7 +48,8 @@ class VMR(XMR):
             reference["TIMESTAMP"] = vmr_dict["ENVIRONMENT"]["timestamp"]
 
             for frame in vmr_dict["ENVIRONMENT"]["contains"]:
-                location = vmr_dict["ENVIRONMENT"]["contains"][frame]["LOCATION"]
+                frame = Frame(frame)
+                location = Frame(vmr_dict["ENVIRONMENT"]["contains"][frame]["LOCATION"])
                 if location == "NOT-HERE":
                     continue
 
