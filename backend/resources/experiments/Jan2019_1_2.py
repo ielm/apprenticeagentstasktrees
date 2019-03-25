@@ -1,18 +1,21 @@
 from backend.models.mps import AgentMethod, OutputMethod
-from backend.models.agenda import Goal
-from backend.models.graph import Frame
 from backend.models.xmr import XMR
-from backend.models.effectors import Capability
+from ontograph.Frame import Frame
+from ontograph.Index import Identifier
+from ontograph.Query import AndComparator, InSpaceComparator, IsAComparator, Query
 
 
 class SelectGoalFromLanguageInput(AgentMethod):
     def run(self, input_tmr):
-        tmr = XMR(input_tmr).graph(self.agent)
-        if len(tmr.search(Frame.q(self.agent).isa("ONT.REQUEST-INFO"))) > 0:
-            return self.agent.lookup("EXE.RESPOND-TO-QUERY")
+        tmr = XMR(input_tmr).space()
+
+        query = Query(AndComparator([InSpaceComparator(tmr.name), IsAComparator("@ONT.REQUEST-INFO")]))
+
+        if len(query.start()) > 0:
+            return Frame("@EXE.RESPOND-TO-QUERY")
 
         print("TODO: choose a goal intelligently")
-        return self.agent.lookup("EXE.BUILD-A-CHAIR")
+        return Frame("@EXE.BUILD-A-CHAIR")
 
 
 class InitGoalCapability(OutputMethod):
@@ -79,7 +82,7 @@ class SpeakCapability(OutputMethod):
 
 class ShouldAcknowledgeVisualInput(AgentMethod):
     def run(self, input_vmr):
-        vmr = XMR(input_vmr).graph(self.agent)
+        vmr = XMR(input_vmr).space()
 
         if self._acknowledge_due_to_human_entering(vmr):
             return True
@@ -95,10 +98,9 @@ class ShouldAcknowledgeVisualInput(AgentMethod):
         # 2) Find all LOCATIONs with a DOMAIN of ONT.HUMAN
         #    If that human is currently in the environment, AND was not previously in the environment, return True
         for frame in vmr:
-            frame = vmr[frame]
-            if frame._identifier.name == "LOCATION":
+            if Identifier.parse(frame.id)[1] == "LOCATION":
                 domain = frame["DOMAIN"].singleton()
-                if domain ^ "ONT.HUMAN":
+                if domain ^ "@ONT.HUMAN":
                     try:
                         # The agent is currently in the environment
                         self.agent.env().location(domain)
@@ -114,7 +116,7 @@ class ShouldAcknowledgeVisualInput(AgentMethod):
 
 class ShouldGreetHuman(AgentMethod):
     def run(self, input_vmr):
-        vmr = XMR(input_vmr).graph(self.agent)
+        vmr = XMR(input_vmr).space()
 
         return self._acknowledge_due_to_human_entering(vmr)
 
@@ -127,10 +129,9 @@ class ShouldGreetHuman(AgentMethod):
         # 2) Find all LOCATIONs with a DOMAIN of ONT.HUMAN
         #    If that human is currently in the environment, AND was not previously in the environment, return True
         for frame in vmr:
-            frame = vmr[frame]
-            if frame._identifier.name == "LOCATION":
+            if Identifier.parse(frame.id)[1] == "LOCATION":
                 domain = frame["DOMAIN"].singleton()
-                if domain ^ "ONT.HUMAN":
+                if domain ^ "@ONT.HUMAN":
                     try:
                         # The agent is currently in the environment
                         self.agent.env().location(domain)
@@ -146,17 +147,16 @@ class ShouldGreetHuman(AgentMethod):
 
 class SelectHumanToGreet(AgentMethod):
     def run(self, input_vmr):
-        vmr = XMR(input_vmr).graph(self.agent)
+        vmr = XMR(input_vmr).space()
 
         history = self.agent.env().history()
         if len(history) < 2:
             return None
 
         for frame in vmr:
-            frame = vmr[frame]
-            if frame._identifier.name == "LOCATION":
+            if Identifier.parse(frame.id)[1] == "LOCATION":
                 domain = frame["DOMAIN"].singleton()
-                if domain ^ "ONT.HUMAN":
+                if domain ^ "@ONT.HUMAN":
                     try:
                         # The agent is currently in the environment
                         self.agent.env().location(domain)

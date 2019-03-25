@@ -236,25 +236,25 @@ class Jan2019Experiment(ExperimentTestCase):
         #######
 
         # 1a) Input from "Jake", "Let's build a chair."
-        agent._input(self.analyses()[0], source="LT.HUMAN.1")
+        agent._input(self.analyses()[0], source="@LT.HUMAN.1")
 
         # 1b) IIDEA loop
         self.iidea_loop(agent)
 
         # 1c) TEST: An instance of ACKNOWLEDGE-LANGUAGE-INPUT with the correct TMR was triggered, and executed
         #     TEST: An instance of BUILD-A-CHAIR is pending
-        self.assertGoalExists(agent, isa="EXE.ACKNOWLEDGE-LANGUAGE-INPUT", status=Goal.Status.SATISFIED, query=lambda goal: goal.resolve("$tmr")["REFERS-TO-SPACE"].singleton() == "TMR#1")
-        self.assertGoalExists(agent, isa="EXE.BUILD-A-CHAIR", status=Goal.Status.PENDING)
+        self.assertGoalExists(agent, isa="@EXE.ACKNOWLEDGE-LANGUAGE-INPUT", status=Goal.Status.SATISFIED, query=lambda goal: goal.resolve("$tmr")["REFERS-TO-SPACE"].singleton() == "TMR#1")
+        self.assertGoalExists(agent, isa="@EXE.BUILD-A-CHAIR", status=Goal.Status.PENDING)
 
         # 1d) IIDEA loop
         self.iidea_loop(agent)
 
         # 1e) TEST: An instance of BUILD-A-CHAIR is in progress, with the first step waiting on the physical effector
-        self.assertGoalExists(agent, isa="EXE.BUILD-A-CHAIR", status=Goal.Status.ACTIVE, query=lambda goal: goal.plans()[0].steps()[0].status() == Step.Status.PENDING)
-        self.assertFalse(Effector(agent.internal["PHYSICAL-EFFECTOR.1"]).is_free())
-        self.assertEqual(agent.exe["FETCH-OBJECT-CAPABILITY"], Effector(agent.internal["PHYSICAL-EFFECTOR.1"]).on_capability())
-        self.assertEqual(agent.outputs["XMR.2"], Effector(agent.internal["PHYSICAL-EFFECTOR.1"]).on_output())
-        self.assertEqual(agent.environment["SCREWDRIVER.1"], XMR(agent.outputs["XMR.2"]).graph(agent)["FETCH.1"]["THEME"].singleton())
+        self.assertGoalExists(agent, isa="@EXE.BUILD-A-CHAIR", status=Goal.Status.ACTIVE, query=lambda goal: goal.plans()[0].steps()[0].status() == Step.Status.PENDING)
+        self.assertFalse(Effector(Frame("@SELF.PHYSICAL-EFFECTOR.1")).is_free())
+        self.assertEqual(Frame("@EXE.FETCH-OBJECT-CAPABILITY"), Effector(Frame("@SELF.PHYSICAL-EFFECTOR.1")).on_capability())
+        self.assertEqual(Frame("@OUTPUTS.XMR.2"), Effector(Frame("@SELF.PHYSICAL-EFFECTOR.1")).on_output())
+        self.assertEqual(Frame("@ENV.SCREWDRIVER.1"), Frame("@" + XMR(Frame("@OUTPUTS.XMR.2")).space().name + ".FETCH.1")["THEME"].singleton())
 
         #######
 
@@ -270,117 +270,117 @@ class Jan2019Experiment(ExperimentTestCase):
 
         # 2d) TEST: An instance of BUILD-A-CHAIR is in progress, with the first step waiting on the physical effector
         #     TEST: An instance of ACKNOWLEDGE-VISUAL-INPUT with the correct VMR was triggered, and executed (no effect)
-        self.assertGoalExists(agent, isa="EXE.BUILD-A-CHAIR", status=Goal.Status.ACTIVE, query=lambda goal: goal.plans()[0].steps()[0].status() == Step.Status.PENDING)
-        self.assertGoalExists(agent, isa="EXE.ACKNOWLEDGE-VISUAL-INPUT", status=Goal.Status.SATISFIED, query=lambda goal: XMR(goal.resolve("$vmr")).graph(agent) == agent["VMR#1"])
-        self.assertFalse(Effector(agent.internal["PHYSICAL-EFFECTOR.1"]).is_free())
-        self.assertTrue(Effector(agent.internal["MENTAL-EFFECTOR.1"]).is_free())
-        self.assertTrue(Effector(agent.internal["VERBAL-EFFECTOR.1"]).is_free())
+        self.assertGoalExists(agent, isa="@EXE.BUILD-A-CHAIR", status=Goal.Status.ACTIVE, query=lambda goal: goal.plans()[0].steps()[0].status() == Step.Status.PENDING)
+        self.assertGoalExists(agent, isa="@EXE.ACKNOWLEDGE-VISUAL-INPUT", status=Goal.Status.SATISFIED, query=lambda goal: XMR(goal.resolve("$vmr")).space().name == "VMR#1")
+        self.assertFalse(Effector(Frame("@SELF.PHYSICAL-EFFECTOR.1")).is_free())
+        self.assertTrue(Effector(Frame("@SELF.MENTAL-EFFECTOR.1")).is_free())
+        self.assertTrue(Effector(Frame("@SELF.VERBAL-EFFECTOR.1")).is_free())
 
         #######
 
         # 3a) Callback input capability GET(screwdriver) is complete
-        agent.callback("SELF.CALLBACK.2")
+        agent.callback("@SELF.CALLBACK.1")
 
         # 3b) Visual input "the screwdriver has been moved"
         agent._input(self.observations()["Screwdriver location changes to workspace"], type=XMR.Type.VISUAL.name)
 
         # 3c) TEST: The screwdriver is "close" to the agent
-        self.assertEqual(agent.environment["WORKSPACE.1"], agent.env().location("ENV.SCREWDRIVER.1"))
+        self.assertEqual(Frame("@ENV.WORKSPACE.1"), agent.env().location("@ENV.SCREWDRIVER.1"))
 
         # 3d) IIDEA loop
         self.iidea_loop(agent)
 
         # 3e) TEST: An instance of BUILD-A-CHAIR is in progress, with the first step finished
         #     TEST: An instance of ACKNOWLEDGE-VISUAL-INPUT with the correct VMR was triggered, and executed (no effect)
-        self.assertGoalExists(agent, isa="EXE.BUILD-A-CHAIR", status=Goal.Status.ACTIVE, query=lambda goal: goal.plans()[0].steps()[0].status() == Step.Status.FINISHED)
-        self.assertGoalExists(agent, isa="EXE.BUILD-A-CHAIR", status=Goal.Status.ACTIVE, query=lambda goal: goal.plans()[0].steps()[1].status() == Step.Status.PENDING)
-        self.assertGoalExists(agent, isa="EXE.ACKNOWLEDGE-VISUAL-INPUT", status=Goal.Status.SATISFIED, query=lambda goal: XMR(goal.resolve("$vmr")).graph(agent) == agent["VMR#2"])
+        self.assertGoalExists(agent, isa="@EXE.BUILD-A-CHAIR", status=Goal.Status.ACTIVE, query=lambda goal: goal.plans()[0].steps()[0].status() == Step.Status.FINISHED)
+        self.assertGoalExists(agent, isa="@EXE.BUILD-A-CHAIR", status=Goal.Status.ACTIVE, query=lambda goal: goal.plans()[0].steps()[1].status() == Step.Status.PENDING)
+        self.assertGoalExists(agent, isa="@EXE.ACKNOWLEDGE-VISUAL-INPUT", status=Goal.Status.SATISFIED, query=lambda goal: XMR(goal.resolve("$vmr")).space().name == "VMR#2")
 
         # 3f) IIDEA loop
         self.iidea_loop(agent)
 
         # 3g) TEST: An instance of BUILD-A-CHAIR is in progress, with the second step waiting on the physical effector
-        self.assertGoalExists(agent, isa="EXE.BUILD-A-CHAIR", status=Goal.Status.ACTIVE, query=lambda goal: goal.plans()[0].steps()[1].status() == Step.Status.PENDING)
-        self.assertFalse(Effector(agent.internal["PHYSICAL-EFFECTOR.1"]).is_free())
-        self.assertEqual(agent.exe["FETCH-OBJECT-CAPABILITY"], Effector(agent.internal["PHYSICAL-EFFECTOR.1"]).on_capability())
-        self.assertEqual(agent.outputs["XMR.3"], Effector(agent.internal["PHYSICAL-EFFECTOR.1"]).on_output())
-        self.assertEqual(agent.environment["BRACKET.1"], XMR(agent.outputs["XMR.3"]).graph(agent)["FETCH.1"]["THEME"].singleton())
+        self.assertGoalExists(agent, isa="@EXE.BUILD-A-CHAIR", status=Goal.Status.ACTIVE, query=lambda goal: goal.plans()[0].steps()[1].status() == Step.Status.PENDING)
+        self.assertFalse(Effector(Frame("@SELF.PHYSICAL-EFFECTOR.1")).is_free())
+        self.assertEqual(Frame("@EXE.FETCH-OBJECT-CAPABILITY"), Effector(Frame("@SELF.PHYSICAL-EFFECTOR.1")).on_capability())
+        self.assertEqual(Frame("@OUTPUTS.XMR.3"), Effector(Frame("@SELF.PHYSICAL-EFFECTOR.1")).on_output())
+        self.assertEqual(Frame("@ENV.BRACKET.1"), Frame("@" + XMR(Frame("@OUTPUTS.XMR.3")).space().name + ".FETCH.1")["THEME"].singleton())
 
         #######
 
         # 4a) Callback input capability GET(bracket) is complete
-        agent.callback("SELF.CALLBACK.3")
+        agent.callback("@SELF.CALLBACK.1")
 
         # 4b) IIDEA loop
         self.iidea_loop(agent)
 
         # 4c) TEST: An instance of BUILD-A-CHAIR is in progress, with the second step finished
-        self.assertGoalExists(agent, isa="EXE.BUILD-A-CHAIR", status=Goal.Status.ACTIVE, query=lambda goal: goal.plans()[0].steps()[0].status() == Step.Status.FINISHED)
-        self.assertGoalExists(agent, isa="EXE.BUILD-A-CHAIR", status=Goal.Status.ACTIVE, query=lambda goal: goal.plans()[0].steps()[1].status() == Step.Status.FINISHED)
-        self.assertGoalExists(agent, isa="EXE.BUILD-A-CHAIR", status=Goal.Status.ACTIVE, query=lambda goal: goal.plans()[0].steps()[2].status() == Step.Status.PENDING)
+        self.assertGoalExists(agent, isa="@EXE.BUILD-A-CHAIR", status=Goal.Status.ACTIVE, query=lambda goal: goal.plans()[0].steps()[0].status() == Step.Status.FINISHED)
+        self.assertGoalExists(agent, isa="@EXE.BUILD-A-CHAIR", status=Goal.Status.ACTIVE, query=lambda goal: goal.plans()[0].steps()[1].status() == Step.Status.FINISHED)
+        self.assertGoalExists(agent, isa="@EXE.BUILD-A-CHAIR", status=Goal.Status.ACTIVE, query=lambda goal: goal.plans()[0].steps()[2].status() == Step.Status.PENDING)
 
         # 4d) IIDEA loop
         self.iidea_loop(agent)
 
         # 4e) TEST: An instance of BUILD-A-CHAIR is in progress, with the third step waiting on the physical effector
-        self.assertGoalExists(agent, isa="EXE.BUILD-A-CHAIR", status=Goal.Status.ACTIVE, query=lambda goal: goal.plans()[0].steps()[2].status() == Step.Status.PENDING)
-        self.assertFalse(Effector(agent.internal["PHYSICAL-EFFECTOR.1"]).is_free())
-        self.assertEqual(agent.exe["FETCH-OBJECT-CAPABILITY"], Effector(agent.internal["PHYSICAL-EFFECTOR.1"]).on_capability())
-        self.assertEqual(agent.outputs["XMR.4"], Effector(agent.internal["PHYSICAL-EFFECTOR.1"]).on_output())
-        self.assertEqual(agent.environment["DOWEL.1"], XMR(agent.outputs["XMR.4"]).graph(agent)["FETCH.1"]["THEME"].singleton())
+        self.assertGoalExists(agent, isa="@EXE.BUILD-A-CHAIR", status=Goal.Status.ACTIVE, query=lambda goal: goal.plans()[0].steps()[2].status() == Step.Status.PENDING)
+        self.assertFalse(Effector(Frame("@SELF.PHYSICAL-EFFECTOR.1")).is_free())
+        self.assertEqual(Frame("@EXE.FETCH-OBJECT-CAPABILITY"), Effector(Frame("@SELF.PHYSICAL-EFFECTOR.1")).on_capability())
+        self.assertEqual(Frame("@OUTPUTS.XMR.4"), Effector(Frame("@SELF.PHYSICAL-EFFECTOR.1")).on_output())
+        self.assertEqual(Frame("@ENV.DOWEL.1"), Frame("@" + XMR(Frame("@OUTPUTS.XMR.4")).space().name + ".FETCH.1")["THEME"].singleton())
 
         #######
 
         # 5a) Callback input capability GET(dowel) is complete
-        agent.callback("SELF.CALLBACK.4")
+        agent.callback("@SELF.CALLBACK.1")
 
         # 5b) IIDEA loop
         self.iidea_loop(agent)
 
         # 5c) TEST: An instance of BUILD-A-CHAIR is in progress, with the third step finished
-        self.assertGoalExists(agent, isa="EXE.BUILD-A-CHAIR", status=Goal.Status.ACTIVE, query=lambda goal: goal.plans()[0].steps()[0].status() == Step.Status.FINISHED)
-        self.assertGoalExists(agent, isa="EXE.BUILD-A-CHAIR", status=Goal.Status.ACTIVE, query=lambda goal: goal.plans()[0].steps()[1].status() == Step.Status.FINISHED)
-        self.assertGoalExists(agent, isa="EXE.BUILD-A-CHAIR", status=Goal.Status.ACTIVE, query=lambda goal: goal.plans()[0].steps()[2].status() == Step.Status.FINISHED)
-        self.assertGoalExists(agent, isa="EXE.BUILD-A-CHAIR", status=Goal.Status.ACTIVE, query=lambda goal: goal.plans()[0].steps()[3].status() == Step.Status.PENDING)
+        self.assertGoalExists(agent, isa="@EXE.BUILD-A-CHAIR", status=Goal.Status.ACTIVE, query=lambda goal: goal.plans()[0].steps()[0].status() == Step.Status.FINISHED)
+        self.assertGoalExists(agent, isa="@EXE.BUILD-A-CHAIR", status=Goal.Status.ACTIVE, query=lambda goal: goal.plans()[0].steps()[1].status() == Step.Status.FINISHED)
+        self.assertGoalExists(agent, isa="@EXE.BUILD-A-CHAIR", status=Goal.Status.ACTIVE, query=lambda goal: goal.plans()[0].steps()[2].status() == Step.Status.FINISHED)
+        self.assertGoalExists(agent, isa="@EXE.BUILD-A-CHAIR", status=Goal.Status.ACTIVE, query=lambda goal: goal.plans()[0].steps()[3].status() == Step.Status.PENDING)
 
         # 5d) IIDEA loop
         self.iidea_loop(agent)
 
         # 5e) TEST: An instance of BUILD-A-CHAIR is in progress, with the fourth step is pending, blocked on REQUEST-HELP
-        self.assertGoalExists(agent, isa="EXE.BUILD-A-CHAIR", status=Goal.Status.ACTIVE, query=lambda goal: goal.plans()[0].steps()[3].status() == Step.Status.PENDING)
-        self.assertGoalExists(agent, isa="EXE.REQUEST-HELP", status=Goal.Status.PENDING)
-        self.assertDecisionExists(agent, status=Decision.Status.BLOCKED, goal="SELF.GOAL.2", impasses=["SELF.REQUEST-HELP.1"])
+        self.assertGoalExists(agent, isa="@EXE.BUILD-A-CHAIR", status=Goal.Status.ACTIVE, query=lambda goal: goal.plans()[0].steps()[3].status() == Step.Status.PENDING)
+        self.assertGoalExists(agent, isa="@EXE.REQUEST-HELP", status=Goal.Status.PENDING)
+        self.assertDecisionExists(agent, status=Decision.Status.BLOCKED, goal="@SELF.GOAL.2", impasses=["@SELF.REQUEST-HELP.1"])
 
         # 5f) IIDEA loop
         self.iidea_loop(agent)
 
         # 5g) TEST: An instance of BUILD-A-CHAIR is in progress, with the fourth step is pending, blocked on REQUEST-HELP
         #     TEST: An instance of REQUEST-HELP is in progress, waiting on SPEAK-CAPABILITY
-        self.assertGoalExists(agent, isa="EXE.BUILD-A-CHAIR", status=Goal.Status.ACTIVE, query=lambda goal: goal.plans()[0].steps()[3].status() == Step.Status.PENDING)
-        self.assertGoalExists(agent, isa="EXE.REQUEST-HELP", status=Goal.Status.ACTIVE, query=lambda goal: goal.plans()[0].steps()[0].status() == Step.Status.PENDING)
-        self.assertFalse(Effector(agent.internal["VERBAL-EFFECTOR.1"]).is_free())
-        self.assertEqual(agent.exe["SPEAK-CAPABILITY"], Effector(agent.internal["VERBAL-EFFECTOR.1"]).on_capability())
-        self.assertEqual(agent.outputs["XMR.5"], Effector(agent.internal["VERBAL-EFFECTOR.1"]).on_output())
-        self.assertEqual(XMR(agent.outputs["XMR.5"]).graph(agent)["ATTACH.1"], XMR(agent.outputs["XMR.5"]).graph(agent)["REQUEST-ACTION.1"]["PURPOSE"].singleton())
-        self.assertDecisionExists(agent, status=Decision.Status.BLOCKED, goal="SELF.GOAL.2", impasses=["SELF.REQUEST-HELP.1"])
+        self.assertGoalExists(agent, isa="@EXE.BUILD-A-CHAIR", status=Goal.Status.ACTIVE, query=lambda goal: goal.plans()[0].steps()[3].status() == Step.Status.PENDING)
+        self.assertGoalExists(agent, isa="@EXE.REQUEST-HELP", status=Goal.Status.ACTIVE, query=lambda goal: goal.plans()[0].steps()[0].status() == Step.Status.PENDING)
+        self.assertFalse(Effector(Frame("@SELF.VERBAL-EFFECTOR.1")).is_free())
+        self.assertEqual(Frame("@EXE.SPEAK-CAPABILITY"), Effector(Frame("@SELF.VERBAL-EFFECTOR.1")).on_capability())
+        self.assertEqual(Frame("@OUTPUTS.XMR.5"), Effector(Frame("@SELF.VERBAL-EFFECTOR.1")).on_output())
+        self.assertEqual(Frame("@" + XMR(Frame("@OUTPUTS.XMR.5")).space().name + ".ATTACH.1"), Frame("@" + XMR(Frame("@OUTPUTS.XMR.5")).space().name + ".REQUEST-ACTION.1")["PURPOSE"].singleton())
+        self.assertDecisionExists(agent, status=Decision.Status.BLOCKED, goal="@SELF.GOAL.2", impasses=["@SELF.REQUEST-HELP.1"])
 
         #######
 
         # 6a) Callback input capability SPEAK("Jake, come back, you need to screw the bracket to the dowel.") is complete
-        agent.callback("SELF.CALLBACK.5")
+        agent.callback("@SELF.CALLBACK.1")
 
         # 6b) IIDEA loop
         self.iidea_loop(agent)
 
         # 6c) TEST: An instance of BUILD-A-CHAIR is in progress, with the fourth step finished
-        self.assertGoalExists(agent, isa="EXE.BUILD-A-CHAIR", status=Goal.Status.ACTIVE, query=lambda goal: goal.plans()[0].steps()[0].status() == Step.Status.FINISHED)
-        self.assertGoalExists(agent, isa="EXE.BUILD-A-CHAIR", status=Goal.Status.ACTIVE, query=lambda goal: goal.plans()[0].steps()[1].status() == Step.Status.FINISHED)
-        self.assertGoalExists(agent, isa="EXE.BUILD-A-CHAIR", status=Goal.Status.ACTIVE, query=lambda goal: goal.plans()[0].steps()[2].status() == Step.Status.FINISHED)
-        self.assertGoalExists(agent, isa="EXE.BUILD-A-CHAIR", status=Goal.Status.ACTIVE, query=lambda goal: goal.plans()[0].steps()[3].status() == Step.Status.PENDING)
+        self.assertGoalExists(agent, isa="@EXE.BUILD-A-CHAIR", status=Goal.Status.ACTIVE, query=lambda goal: goal.plans()[0].steps()[0].status() == Step.Status.FINISHED)
+        self.assertGoalExists(agent, isa="@EXE.BUILD-A-CHAIR", status=Goal.Status.ACTIVE, query=lambda goal: goal.plans()[0].steps()[1].status() == Step.Status.FINISHED)
+        self.assertGoalExists(agent, isa="@EXE.BUILD-A-CHAIR", status=Goal.Status.ACTIVE, query=lambda goal: goal.plans()[0].steps()[2].status() == Step.Status.FINISHED)
+        self.assertGoalExists(agent, isa="@EXE.BUILD-A-CHAIR", status=Goal.Status.ACTIVE, query=lambda goal: goal.plans()[0].steps()[3].status() == Step.Status.PENDING)
 
         # 6d) TEST: The verbal effector is released; the decision is still blocked
-        self.assertTrue(Effector(agent.internal["VERBAL-EFFECTOR.1"]).is_free())
-        self.assertDecisionExists(agent, status=Decision.Status.BLOCKED, goal="SELF.GOAL.2", impasses=["SELF.REQUEST-HELP.1"])
+        self.assertTrue(Effector(Frame("@SELF.VERBAL-EFFECTOR.1")).is_free())
+        self.assertDecisionExists(agent, status=Decision.Status.BLOCKED, goal="@SELF.GOAL.2", impasses=["@SELF.REQUEST-HELP.1"])
 
         #######
 
@@ -388,7 +388,7 @@ class Jan2019Experiment(ExperimentTestCase):
         agent._input(self.observations()["Jake enters"], type=XMR.Type.VISUAL.name)
 
         # 7b) TEST: Jake is in the environment
-        self.assertEqual(agent.ontology["LOCATION"], agent.env().location("ENV.HUMAN.1"))
+        self.assertEqual(Frame("@ONT.LOCATION"), agent.env().location("@ENV.HUMAN.1"))
 
         # 7c) IIDEA loop
         self.iidea_loop(agent)
@@ -397,39 +397,39 @@ class Jan2019Experiment(ExperimentTestCase):
         #     TEST: An instance of GREET-AGENT with the correct VMR was created
         #     TEST: An instance of SELF.REQUEST-HELP was satisfied
         #     TEST: An instance of BUILD-A-CHAIR is no longer blocked
-        self.assertGoalExists(agent, isa="EXE.ACKNOWLEDGE-VISUAL-INPUT", status=Goal.Status.SATISFIED, query=lambda goal: XMR(goal.resolve("$vmr")).graph(agent) == agent["VMR#3"])
-        self.assertGoalExists(agent, isa="EXE.GREET-HUMAN", status=Goal.Status.PENDING, query=lambda goal: goal.resolve("$human") == agent.environment["HUMAN.1"])
-        self.assertGoalExists(agent, isa="EXE.REQUEST-HELP", status=Goal.Status.SATISFIED)
-        self.assertDecisionExists(agent, status=Decision.Status.PENDING, goal="SELF.GOAL.2", impasses=[])
+        self.assertGoalExists(agent, isa="@EXE.ACKNOWLEDGE-VISUAL-INPUT", status=Goal.Status.SATISFIED, query=lambda goal: XMR(goal.resolve("$vmr")).space().name == "VMR#3")
+        self.assertGoalExists(agent, isa="@EXE.GREET-HUMAN", status=Goal.Status.PENDING, query=lambda goal: goal.resolve("$human") == Frame("@ENV.HUMAN.1"))
+        self.assertGoalExists(agent, isa="@EXE.REQUEST-HELP", status=Goal.Status.SATISFIED)
+        self.assertDecisionExists(agent, status=Decision.Status.PENDING, goal="@SELF.GOAL.2", impasses=[])
 
         # 7e) IIDEA loop
         self.iidea_loop(agent)
 
         # 7f) An instance of GREET-AGENT is in progress, with the first step waiting on the verbal effector
-        self.assertGoalExists(agent, isa="EXE.GREET-HUMAN", status=Goal.Status.ACTIVE, query=lambda goal: goal.plans()[0].steps()[0].status() == Step.Status.PENDING)
-        self.assertFalse(Effector(agent.internal["VERBAL-EFFECTOR.1"]).is_free())
-        self.assertEqual(agent.exe["SPEAK-CAPABILITY"], Effector(agent.internal["VERBAL-EFFECTOR.1"]).on_capability())
-        self.assertEqual(agent.outputs["XMR.7"], Effector(agent.internal["VERBAL-EFFECTOR.1"]).on_output())
-        self.assertEqual(agent.environment["HUMAN.1"], XMR(agent.outputs["XMR.7"]).graph(agent)["GREET.1"]["THEME"].singleton())
+        self.assertGoalExists(agent, isa="@EXE.GREET-HUMAN", status=Goal.Status.ACTIVE, query=lambda goal: goal.plans()[0].steps()[0].status() == Step.Status.PENDING)
+        self.assertFalse(Effector(Frame("@SELF.VERBAL-EFFECTOR.1")).is_free())
+        self.assertEqual(Frame("@EXE.SPEAK-CAPABILITY"), Effector(Frame("@SELF.VERBAL-EFFECTOR.1")).on_capability())
+        self.assertEqual(Frame("@OUTPUTS.XMR.7"), Effector(Frame("@SELF.VERBAL-EFFECTOR.1")).on_output())
+        self.assertEqual(Frame("@ENV.HUMAN.1"), Frame("@" + XMR(Frame("@OUTPUTS.XMR.7")).space().name + ".GREET.1")["THEME"].singleton())
 
         #######
 
         # 8a) Callback input capability SPEAK("Hi Jake.") is complete
-        agent.callback("SELF.CALLBACK.7")
+        agent.callback("@SELF.CALLBACK.1")
 
         # 8b) IIDEA loop
         self.iidea_loop(agent)
 
         # 8c) TEST: GREET-HUMAN is "satisfied"
-        self.assertGoalExists(agent, isa="EXE.GREET-HUMAN", status=Goal.Status.SATISFIED, query=lambda goal: goal.resolve("$human") == agent.environment["HUMAN.1"])
-        self.assertTrue(Effector(agent.internal["VERBAL-EFFECTOR.1"]).is_free())
+        self.assertGoalExists(agent, isa="@EXE.GREET-HUMAN", status=Goal.Status.SATISFIED, query=lambda goal: goal.resolve("$human") == Frame("@ENV.HUMAN.1"))
+        self.assertTrue(Effector(Frame("@SELF.VERBAL-EFFECTOR.1")).is_free())
 
         # 8d) TEST: An instance of BUILD-A-CHAIR is in progress, with the fourth step finished
-        self.assertGoalExists(agent, isa="EXE.BUILD-A-CHAIR", status=Goal.Status.ACTIVE, query=lambda goal: goal.plans()[0].steps()[0].status() == Step.Status.FINISHED)
-        self.assertGoalExists(agent, isa="EXE.BUILD-A-CHAIR", status=Goal.Status.ACTIVE, query=lambda goal: goal.plans()[0].steps()[1].status() == Step.Status.FINISHED)
-        self.assertGoalExists(agent, isa="EXE.BUILD-A-CHAIR", status=Goal.Status.ACTIVE, query=lambda goal: goal.plans()[0].steps()[2].status() == Step.Status.FINISHED)
-        self.assertGoalExists(agent, isa="EXE.BUILD-A-CHAIR", status=Goal.Status.ACTIVE, query=lambda goal: goal.plans()[0].steps()[3].status() == Step.Status.PENDING)
-        self.assertDecisionExists(agent, status=Decision.Status.EXECUTING, goal="SELF.GOAL.2", impasses=[])
+        self.assertGoalExists(agent, isa="@EXE.BUILD-A-CHAIR", status=Goal.Status.ACTIVE, query=lambda goal: goal.plans()[0].steps()[0].status() == Step.Status.FINISHED)
+        self.assertGoalExists(agent, isa="@EXE.BUILD-A-CHAIR", status=Goal.Status.ACTIVE, query=lambda goal: goal.plans()[0].steps()[1].status() == Step.Status.FINISHED)
+        self.assertGoalExists(agent, isa="@EXE.BUILD-A-CHAIR", status=Goal.Status.ACTIVE, query=lambda goal: goal.plans()[0].steps()[2].status() == Step.Status.FINISHED)
+        self.assertGoalExists(agent, isa="@EXE.BUILD-A-CHAIR", status=Goal.Status.ACTIVE, query=lambda goal: goal.plans()[0].steps()[3].status() == Step.Status.PENDING)
+        self.assertDecisionExists(agent, status=Decision.Status.EXECUTING, goal="@SELF.GOAL.2", impasses=[])
 
         #######
 
@@ -440,4 +440,4 @@ class Jan2019Experiment(ExperimentTestCase):
         self.iidea_loop(agent)
 
         # 9c) TEST: An instance of BUILD-A-CHAIR is satisfied
-        self.assertGoalExists(agent, isa="EXE.BUILD-A-CHAIR", status=Goal.Status.SATISFIED)
+        self.assertGoalExists(agent, isa="@EXE.BUILD-A-CHAIR", status=Goal.Status.SATISFIED)
