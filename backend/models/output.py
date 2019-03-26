@@ -17,7 +17,7 @@ class OutputXMRTemplate(object):
         template_id = "XMR-TEMPLATE#" + str(max(spaces) + 1 if len(spaces) > 0 else 1)
 
         space = Space(template_id)
-        anchor = Frame("@" + space.name + ".TEMPLATE-ANCHOR.?")
+        anchor = Frame("@" + space.name + ".TEMPLATE-ANCHOR.?").add_parent("@EXE.TEMPLATE-ANCHOR")
 
         if isinstance(capability, str):
             capability = Frame(capability)
@@ -58,7 +58,11 @@ class OutputXMRTemplate(object):
         self.space = space
 
     def anchor(self) -> Frame:
-        candidates = list(filter(lambda frame: Identifier.parse(frame.id)[1] == "TEMPLATE-ANCHOR", self.space))
+        if self.space == graph.ontology():
+            raise Exception
+
+        from ontograph.Query import AndComparator, InSpaceComparator, IsAComparator, Query
+        candidates = list(Query(AndComparator([InSpaceComparator(self.space), IsAComparator("@EXE.TEMPLATE-ANCHOR")])).start())
         if len(candidates) != 1:
             raise Exception
         return candidates[0]
