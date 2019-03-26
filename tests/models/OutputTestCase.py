@@ -14,39 +14,39 @@ class OutputXMRTemplateTestCase(unittest.TestCase):
         self.capability = Frame("@TEST.CAPABILITY")
 
     def test_anchor(self):
-        f1 = Frame("@TEST.TEMPLATE-ANCHOR.?")
+        f1 = Frame("@TEST.TEMPLATE-ANCHOR.?").add_parent("@EXE.TEMPLATE-ANCHOR")
         f2 = Frame("@TEST.FRAME.?")
         f3 = Frame("@TEST.FRAME.?")
 
         self.assertEqual(f1, OutputXMRTemplate(Space("TEST")).anchor())
 
     def test_name(self):
-        f = Frame("@TEST.TEMPLATE-ANCHOR.?")
+        f = Frame("@TEST.TEMPLATE-ANCHOR.?").add_parent("@EXE.TEMPLATE-ANCHOR")
         f["NAME"] = "Test Name"
 
         self.assertEqual("Test Name", OutputXMRTemplate(Space("TEST")).name())
 
     def test_type(self):
-        f = Frame("@TEST.TEMPLATE-ANCHOR.?")
+        f = Frame("@TEST.TEMPLATE-ANCHOR.?").add_parent("@EXE.TEMPLATE-ANCHOR")
         f["TYPE"] = XMR.Type.ACTION
 
         self.assertEqual(XMR.Type.ACTION, OutputXMRTemplate(Space("TEST")).type())
 
     def test_capability(self):
-        f = Frame("@TEST.TEMPLATE-ANCHOR.?")
+        f = Frame("@TEST.TEMPLATE-ANCHOR.?").add_parent("@EXE.TEMPLATE-ANCHOR")
         f["REQUIRES"] = self.capability
 
         self.assertEqual(self.capability, OutputXMRTemplate(Space("TEST")).capability())
 
     def test_params(self):
-        f = Frame("@TEST.TEMPLATE-ANCHOR.?")
+        f = Frame("@TEST.TEMPLATE-ANCHOR.?").add_parent("@EXE.TEMPLATE-ANCHOR")
         f["PARAMS"] += "$var1"
         f["PARAMS"] += "$var2"
 
         self.assertEqual(["$var1", "$var2"], OutputXMRTemplate(Space("TEST")).params())
 
     def test_root(self):
-        f = Frame("@TEST.TEMPLATE-ANCHOR.?")
+        f = Frame("@TEST.TEMPLATE-ANCHOR.?").add_parent("@EXE.TEMPLATE-ANCHOR")
         self.assertIsNone(OutputXMRTemplate(Space("TEST")).root())
 
         root = Frame("@TEST.ROOT")
