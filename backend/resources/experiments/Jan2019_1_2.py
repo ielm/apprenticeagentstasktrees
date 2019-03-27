@@ -42,10 +42,9 @@ class FetchObjectCapability(OutputMethod):
             id = target["visual-object-id"].singleton()
 
             from backend.utils.YaleUtils import signal_action
-
-            signal_action("get", id, self.callback.frame.name())
+            signal_action("get", id, self.callback.frame.id)
         except:
-            print("Warning: unable to signal robot to fetch " + str(target) + ".")
+            print("Warning: unable to signal robot to fetch " + target.id + ".")
 
 
 class HoldObjectCapability(OutputMethod):
@@ -75,8 +74,10 @@ class SpeakCapability(OutputMethod):
 
             self.output.frame["SENTENCE"] = sentence
 
-            print("TODO: issue command to robot to speak " + str(sentence))
-        except: pass
+            from backend.utils.YaleUtils import signal_speech
+            signal_speech(sentence, self.callback.frame.id)
+        except:
+            print("Warning: unable to signal robot to speak '" + str(sentence) + "'.")
 
 
 class ShouldAcknowledgeVisualInput(AgentMethod):
