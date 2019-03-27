@@ -105,7 +105,7 @@ class OutputXMRTemplate(object):
         root = None
         if self.root() is not None:
             root = Identifier(self.root().id.replace("@" + self.root().space().name, "@" + graph_id))
-        anchor = XMR.instance(space, xmr_graph, XMR.Signal.OUTPUT, self.type(), XMR.OutputStatus.PENDING, "SELF.ROBOT.1", root, self.capability())
+        anchor = XMR.instance(space, xmr_graph, XMR.Signal.OUTPUT, self.type(), XMR.OutputStatus.PENDING, "@SELF.ROBOT.1", root, self.capability())
 
         def materialize_transient_frame(param: Any):
             if isinstance(param, Identifier):
