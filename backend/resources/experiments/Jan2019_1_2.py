@@ -1,6 +1,6 @@
 from backend.models.mps import AgentMethod, OutputMethod
 from backend.models.xmr import XMR
-from ontograph.Frame import Frame
+from ontograph.Frame import Frame, Role
 from ontograph.Index import Identifier
 from ontograph.Query import AndComparator, InSpaceComparator, IsAComparator, Query
 
@@ -59,22 +59,21 @@ class SpeakCapability(OutputMethod):
     def run(self):
         try:
             sentence = ""
-            if self.output.root()["THEME"].singleton()._identifier.name == "GREET":
+            if Identifier.parse(self.output.root()["THEME"].singleton().id)[1] == "GREET":
                 target = self.output.root()["THEME"].singleton()["THEME"].singleton()
                 if "HAS-NAME" in target:
-                    sentence = "Hi " + target["HAS-NAME"].singleton() + "."
+                    sentence = "Hi " + target["HAS-NAME", Role.LOC].singleton() + "."
                 else:
                     sentence = "Hi."
 
-            elif self.output.root()["THEME"].singleton()._identifier.name == "REQUEST-ACTION":
+            elif Identifier.parse(self.output.root()["THEME"].singleton().id)[1] == "REQUEST-ACTION":
                 target = self.output.root()["THEME"].singleton()["THEME"].singleton()["BENEFICIARY"].singleton()
                 if "HAS-NAME" in target:
-                    sentence = target["HAS-NAME"].singleton() + ", come here, you need to attach the bracket to the dowel with the screwdriver."
+                    sentence = target["HAS-NAME", Role.LOC].singleton() + ", come here, you need to attach the bracket to the dowel with the screwdriver."
                 else:
                     sentence = "Come here, you need to attach the bracket to the dowel with the screwdriver."
 
-            from backend.models.graph import Literal
-            self.output.frame["SENTENCE"] = Literal(sentence)
+            self.output.frame["SENTENCE"] = sentence
 
             print("TODO: issue command to robot to speak " + str(sentence))
         except: pass

@@ -1,6 +1,6 @@
 from backend.models.mps import AgentMethod, OutputMethod
 from backend.models.xmr import XMR
-from ontograph.Frame import Frame
+from ontograph.Frame import Frame, Role
 from ontograph.Index import Identifier
 from ontograph.Query import AndComparator, InSpaceComparator, IsAComparator, Query
 
@@ -52,23 +52,22 @@ class SpeakCapability(OutputMethod):
     def run(self):
         try:
             sentence = ""
-            if self.output.root()["THEME"].singleton()._identifier.name == "GREET":
+            if Identifier.parse(self.output.root()["THEME"].singleton().id)[1] == "GREET":
                 target = self.output.root()["THEME"].singleton()["THEME"].singleton()
                 if "HAS-NAME" in target:
-                    sentence = "Hi " + target["HAS-NAME"].singleton() + "."
+                    sentence = "Hi " + target["HAS-NAME", Role.LOC].singleton() + "."
                 else:
                     sentence = "Hi."
 
-            elif self.output.root()["THEME"].singleton()._identifier.name == "DESCRIBE":
+            elif Identifier.parse(self.output.root()["THEME"].singleton().id)[1] == "DESCRIBE":
                 target = self.output.root()["THEME"].singleton()["THEME"].singleton()
-                target = target._identifier.graph
-                for output in self.agent["OUTPUTS"]:
-                    output = XMR.from_instance(self.agent["OUTPUTS"][output])
-                    if output.graph(self.agent)._namespace == target:
+                target = Identifier.parse(target.id)[0]
+                for output in self.agent.outputs:
+                    output = XMR.from_instance(output)
+                    if output.space().name == target:
                         sentence = output.render()
 
-            from backend.models.graph import Literal
-            self.output.frame["SENTENCE"] = Literal(sentence)
+            self.output.frame["SENTENCE"] = sentence
 
             print("TODO: issue command to robot to speak " + str(sentence))
         except: pass
