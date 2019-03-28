@@ -1,6 +1,6 @@
 import os
 
-MONGO_HOST = int(os.environ["MONGO_HOST"]) if "MONGO_HOST" in os.environ else "localhost"
+MONGO_HOST = os.environ["MONGO_HOST"] if "MONGO_HOST" in os.environ else "localhost"
 MONGO_PORT = int(os.environ["MONGO_PORT"]) if "MONGO_PORT" in os.environ else 27017
 
 ONTOLOGY_HOST = os.environ["ONTOLOGY_HOST"] if "ONTOLOGY_HOST" in os.environ else "localhost"
