@@ -120,14 +120,14 @@ DEFINE describe-action($action) AS TEMPLATE
 
 // Define GOALS --------------------
 
-REGISTER MP backend.resources.experiments.Jan2019_1_1.SelectGoalFromLanguageInput AS select_goal_from_language_input;
-REGISTER MP backend.resources.experiments.Jan2019_1_1.InitGoalCapability AS init_goal_capability;
-REGISTER MP backend.resources.experiments.Jan2019_1_1.FetchObjectCapability AS fetch_object_capability;
-REGISTER MP backend.resources.experiments.Jan2019_1_1.SpeakCapability AS speak_capability;
-REGISTER MP backend.resources.experiments.Jan2019_1_1.ShouldAcknowledgeVisualInput AS should_acknowledge_visual_input;
-REGISTER MP backend.resources.experiments.Jan2019_1_1.ShouldGreetHuman AS should_greet_human;
-REGISTER MP backend.resources.experiments.Jan2019_1_1.SelectHumanToGreet AS select_human_to_greet;
-REGISTER MP backend.resources.experiments.Jan2019_1_1.DetermineCurrentAction AS determine_current_action;
+REGISTER MP backend.resources.experiments.Robot_1.SelectGoalFromLanguageInput AS select_goal_from_language_input;
+REGISTER MP backend.resources.experiments.Robot_1.InitGoalCapability AS init_goal_capability;
+REGISTER MP backend.resources.experiments.Robot_1.FetchObjectCapability AS fetch_object_capability;
+REGISTER MP backend.resources.experiments.Robot_1.SpeakCapability AS speak_capability;
+REGISTER MP backend.resources.experiments.Robot_1.ShouldAcknowledgeVisualInput AS should_acknowledge_visual_input;
+REGISTER MP backend.resources.experiments.Robot_1.ShouldGreetHuman AS should_greet_human;
+REGISTER MP backend.resources.experiments.Robot_1.SelectHumanToGreet AS select_human_to_greet;
+REGISTER MP backend.resources.experiments.Robot_1.DetermineCurrentAction AS determine_current_action;
 
 DEFINE ACKNOWLEDGE-LANGUAGE-INPUT($tmr)
     AS GOAL

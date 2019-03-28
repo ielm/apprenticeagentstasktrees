@@ -22,7 +22,7 @@ class Jan2019Experiment(ExperimentTestCase):
     def observations():
         return json.loads(get_data("tests.resources", "DemoJan2019_Observations_VMR.json").decode('ascii'))
 
-    def test_1_1(self):
+    def test_robot_1(self):
 
         graph.reset()
         OntologyServiceLoader().load()
@@ -34,8 +34,8 @@ class Jan2019Experiment(ExperimentTestCase):
         agent.load_knowledge("backend.resources.experiments", "chair.knowledge")
 
         # Pb) There is an instance of "Jake", who is known, present, and taught the robot the chair instructions
-        agent.load_knowledge("backend.resources.experiments", "Jan2019_1_1.environment")
-        agent.load_knowledge("backend.resources.experiments", "Jan2019_1_1.knowledge")
+        agent.load_knowledge("backend.resources.experiments", "Robot_1.environment")
+        agent.load_knowledge("backend.resources.experiments", "Robot_1.knowledge")
 
         #######
 
