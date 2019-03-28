@@ -63,6 +63,7 @@ def bootstrap(input: dict, space: Space):
         "foot-bracket": {"IS-A": "BRACKET", "SIDE-TB": "BOTTOM"},
         "back-bracket": {"IS-A": "BRACKET", "SIDE-FB": "BACK"},
         "top-bracket": {"IS-A": "BRACKET", "SIDE-TB": "TOP"},
+        "screwdriver": {"IS-A": "SCREWDRIVER"},
     }
 
     from backend.models.environment import Environment
