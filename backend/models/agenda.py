@@ -139,16 +139,24 @@ class Goal(VariableMap):
         return "Unknown Goal"
 
     def is_pending(self) -> bool:
-        return Goal.Status.PENDING.name.lower() in self.frame["STATUS"] or Goal.Status.PENDING.name in self.frame["STATUS"] or Goal.Status.PENDING in self.frame["STATUS"]
+        return Goal.Status.PENDING in self.frame["STATUS", Role.LOC] or \
+               Goal.Status.PENDING.name in self.frame["STATUS", Role.LOC] or \
+               Goal.Status.PENDING.name.lower() in self.frame["STATUS", Role.LOC]
 
     def is_active(self) -> bool:
-        return Goal.Status.ACTIVE.name.lower() in self.frame["STATUS"] or Goal.Status.ACTIVE.name in self.frame["STATUS"] or Goal.Status.ACTIVE in self.frame["STATUS"]
+        return Goal.Status.ACTIVE in self.frame["STATUS", Role.LOC] or \
+               Goal.Status.ACTIVE.name in self.frame["STATUS", Role.LOC] or \
+               Goal.Status.ACTIVE.name.lower() in self.frame["STATUS", Role.LOC]
 
     def is_abandoned(self) -> bool:
-        return Goal.Status.ABANDONED.name.lower() in self.frame["STATUS"] or Goal.Status.ABANDONED.name in self.frame["STATUS"] or Goal.Status.ABANDONED in self.frame["STATUS"]
+        return Goal.Status.ABANDONED in self.frame["STATUS", Role.LOC] or \
+               Goal.Status.ABANDONED.name in self.frame["STATUS", Role.LOC] or \
+               Goal.Status.ABANDONED.name.lower() in self.frame["STATUS", Role.LOC]
 
     def is_satisfied(self) -> bool:
-        return Goal.Status.SATISFIED.name.lower() in self.frame["STATUS"] or Goal.Status.SATISFIED.name in self.frame["STATUS"] or Goal.Status.SATISFIED in self.frame["STATUS"]
+        return Goal.Status.SATISFIED in self.frame["STATUS", Role.LOC] or \
+               Goal.Status.SATISFIED.name in self.frame["STATUS", Role.LOC] or \
+               Goal.Status.SATISFIED.name.lower() in self.frame["STATUS", Role.LOC]
 
     def status(self, status: 'Goal.Status'):
         self.frame["STATUS"] = status
@@ -347,7 +355,7 @@ class Plan(object):
         return False
 
     def steps(self) -> List['Step']:
-        results = list(map(lambda s: Step(s), self.frame["HAS-STEP"]))
+        results = list(map(lambda s: Step(s), self.frame["HAS-STEP", Role.LOC]))
         results = sorted(results, key=lambda s: s.index())
         return results
 
@@ -425,16 +433,16 @@ class Step(object):
         self.frame = frame
 
     def index(self) -> int:
-        return self.frame["INDEX"].singleton()
+        return self.frame["INDEX", Role.LOC].singleton()
 
     def status(self) -> 'Step.Status':
-        return self.frame["STATUS"].singleton()
+        return self.frame["STATUS", Role.LOC].singleton()
 
     def is_pending(self) -> bool:
-        return self.frame["STATUS"].singleton() == Step.Status.PENDING
+        return self.frame["STATUS", Role.LOC].singleton() == Step.Status.PENDING
 
     def is_finished(self) -> bool:
-        return self.frame["STATUS"].singleton() == Step.Status.FINISHED
+        return self.frame["STATUS", Role.LOC].singleton() == Step.Status.FINISHED
 
     def perform(self, varmap: VariableMap) -> StatementScope:
         scope = StatementScope()
@@ -676,13 +684,13 @@ class Decision(object):
         self.frame = frame
 
     def goal(self) -> Goal:
-        return Goal(self.frame["ON-GOAL"].singleton())
+        return Goal(self.frame["ON-GOAL", Role.LOC].singleton())
 
     def plan(self) -> Plan:
-        return Plan(self.frame["ON-PLAN"].singleton())
+        return Plan(self.frame["ON-PLAN", Role.LOC].singleton())
 
     def step(self) -> Step:
-        return Step(self.frame["ON-STEP"].singleton())
+        return Step(self.frame["ON-STEP", Role.LOC].singleton())
 
     def impasses(self) -> List[Goal]:
         return list(map(lambda i: Goal(i), self.frame["HAS-IMPASSE"]))
@@ -708,13 +716,13 @@ class Decision(object):
         return list(map(lambda output: output.capability(), self.outputs()))
 
     def status(self) -> 'Decision.Status':
-        if "STATUS" not in self.frame:
+        try:
+            status = self.frame["STATUS", Role.LOC].singleton()
+            if isinstance(status, str):
+                status = Decision.Status[status]
+            return status
+        except:
             return Decision.Status.PENDING
-        status = self.frame["STATUS"].singleton()
-        if isinstance(status, str):
-            status = Decision.Status[status]
-
-        return status
 
     def effectors(self) -> List['Effector']:
         from backend.models.effectors import Effector
