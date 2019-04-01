@@ -55,6 +55,14 @@ class AgentOntoLangTransformer(OntoLangTransformer):
     def ontoagent_process(self, matches: List[OntoLangProcessor]) -> OntoLangProcessor:
         return matches[0]
 
+    def ontoagent_process_add_goal_instance(self, matches: List[Tree]) -> 'OntoAgentProcessorAddGoalInstance':
+        definition: Frame = matches[3]
+        params: List[Any] = []
+        if len(matches) > 4:
+            params = matches[4:]
+
+        return OntoAgentProcessorAddGoalInstance(definition, params)
+
     def ontoagent_process_add_trigger(self, matches: List[Tree]) -> 'OntoAgentProcessorAddTrigger':
         agenda: Identifier = matches[3]
         definition: Identifier = matches[5]
@@ -476,4 +484,28 @@ class OntoAgentProcessorRegisterMP(OntoLangProcessor):
     def __eq__(self, other):
         if isinstance(other, OntoAgentProcessorRegisterMP):
             return self.mp.__name__ == other.mp.__name__ and self.name == other.name
+        return super().__eq__(other)
+
+
+class OntoAgentProcessorAddGoalInstance(OntoLangProcessor):
+
+    def __init__(self, goal: Union[str, Identifier, Frame], params: List[Any]):
+        self.goal = goal
+        self.params = params
+
+    def run(self):
+        from backend import agent
+
+        definition = self.goal
+        if isinstance(self.goal, str):
+            definition = Frame(definition)
+        if isinstance(self.goal, Identifier):
+            definition = Frame(definition.id)
+
+        goal = Goal.instance_of(agent.internal, definition, self.params)
+        agent.agenda().add_goal(goal)
+
+    def __eq__(self, other):
+        if isinstance(other, OntoAgentProcessorAddGoalInstance):
+            return self.goal == other.goal and self.params == other.params
         return super().__eq__(other)

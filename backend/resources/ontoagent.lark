@@ -1,6 +1,7 @@
 ontoagent: (ontolang | ontoagent_process)*
-ontoagent_process: (ontoagent_process_add_trigger | ontoagent_process_define_goal | ontoagent_process_define_output_xmr_template | ontoagent_process_register_mp)
+ontoagent_process: (ontoagent_process_add_goal_instance | ontoagent_process_add_trigger | ontoagent_process_define_goal | ontoagent_process_define_output_xmr_template | ontoagent_process_register_mp)
 
+ontoagent_process_add_goal_instance: ADD GOAL INSTANCE identifier "(" (filler ("," filler)*)? ")" ";"
 ontoagent_process_add_trigger: ADD TRIGGER TO identifier INSTANTIATE identifier WHEN comparator ";"
 ontoagent_process_define_goal: DEFINE goal ";"
 ontoagent_process_define_output_xmr_template: DEFINE NAME arguments AS TEMPLATE output_xmr_template_type output_xmr_template_requires (output_xmr_template_root)? output_xmr_template_include ";"
@@ -75,6 +76,7 @@ IDLE: "idle"i
 IF: "if"i
 IMPASSE: "impasse"i
 INCLUDE: "include"i
+INSTANCE: "instance"i
 INSTANTIATE: "instantiate"i
 MENTAL: "mental"i
 MP: "mp"i
