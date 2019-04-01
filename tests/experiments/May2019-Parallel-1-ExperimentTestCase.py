@@ -32,10 +32,6 @@ class Jan2019Experiment(ExperimentTestCase):
         agent.load_knowledge("backend.resources.experiments", "Parallel_1.environment")
         agent.load_knowledge("backend.resources.experiments", "Parallel_1.knowledge")
 
-        # P-HACK) Add an instance of a goal directly (TODO: functionality to do this in ontoagent.lark)
-        goal = Goal.instance_of(agent.internal, Frame("@ONT.BUILD-A-CHAIR"), [])
-        agent.agenda().add_goal(goal)
-
         #######
 
         # 1a) There is an instance of the goal @ONT.BUILD-A-CHAIR on the agenda, pending
