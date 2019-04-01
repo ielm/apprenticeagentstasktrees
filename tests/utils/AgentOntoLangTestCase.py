@@ -1,3 +1,4 @@
+from backend import agent
 from backend.models.agenda import Agenda, Condition, Effect, Goal, Plan, Step
 from backend.models.mps import AgentMethod, MPRegistry
 from backend.models.output import OutputXMRTemplate
@@ -9,7 +10,7 @@ from ontograph.Index import Identifier
 from ontograph.OntoLang import AssignOntoLangProcessor
 from ontograph.Query import ExistsComparator, IdComparator, Query
 from ontograph.Space import Space
-from utils.AgentOntoLang import AgentOntoLang, OntoAgentProcessorAddTrigger, OntoAgentProcessorDefineOutputXMRTemplate, OntoAgentProcessorRegisterMP
+from utils.AgentOntoLang import AgentOntoLang, OntoAgentProcessorAddGoalInstance, OntoAgentProcessorAddTrigger, OntoAgentProcessorDefineOutputXMRTemplate, OntoAgentProcessorRegisterMP
 import unittest
 
 
@@ -165,6 +166,19 @@ class AgentOntoLangTestCase(unittest.TestCase):
 
         processor = OntoAgentProcessorRegisterMP(TestAgentMethod, name="TestMP")
         parsed = self.ontolang.parse("REGISTER MP tests.utils.AgentOntoLangTestCase.TestAgentMethod AS TestMP;")
+        self.assertEqual([processor], parsed)
+
+    def test_add_goal_instance(self):
+        processor = OntoAgentProcessorAddGoalInstance(Frame("@TEST.GOAL"), [])
+        parsed = self.ontolang.parse("ADD GOAL INSTANCE @TEST.GOAL();")
+        self.assertEqual([processor], parsed)
+
+        processor = OntoAgentProcessorAddGoalInstance(Frame("@TEST.GOAL"), [123])
+        parsed = self.ontolang.parse("ADD GOAL INSTANCE @TEST.GOAL(123);")
+        self.assertEqual([processor], parsed)
+
+        processor = OntoAgentProcessorAddGoalInstance(Frame("@TEST.GOAL"), [123, "hi", Frame("@TEST.FRAME.1")])
+        parsed = self.ontolang.parse("ADD GOAL INSTANCE @TEST.GOAL(123, \"hi\", @TEST.FRAME.1);")
         self.assertEqual([processor], parsed)
 
     def test_find_something_to_do(self):
@@ -665,6 +679,36 @@ class OntoAgentProcessorRegisterMPTestCase(unittest.TestCase):
 
         self.assertTrue(MPRegistry.has_mp("TestMP"))
         self.assertTrue(MPRegistry.run("TestMP", None))
+
+
+class OntoAgentProcessorAddGoalInstanceTestCase(unittest.TestCase):
+
+    def setUp(self):
+        agent.reset()
+
+    def test_call(self):
+        Goal.define(Space("TEST"), "GOAL", 0.5, 0.5, [], [], [], [])
+
+        process = OntoAgentProcessorAddGoalInstance(Frame("@TEST.GOAL"), [])
+        process.run()
+
+        goals = agent.agenda().goals(pending=True)
+        self.assertEqual(1, len(goals))
+        self.assertTrue(goals[0].frame ^ Frame("@TEST.GOAL"))
+
+    def test_call_with_params(self):
+        Goal.define(Space("TEST"), "GOAL", 0.5, 0.5, [], [], ["$var1", "$var2", "$var3"], [])
+
+        process = OntoAgentProcessorAddGoalInstance(Frame("@TEST.GOAL"), [123, "hi", Frame("@TEST.FRAME.1")])
+        process.run()
+
+        goals = agent.agenda().goals(pending=True)
+        self.assertEqual(1, len(goals))
+        goal = goals[0]
+
+        self.assertEqual(123, goal.resolve("$var1"))
+        self.assertEqual("hi", goal.resolve("$var2"))
+        self.assertEqual(Frame("@TEST.FRAME.1"), goal.resolve("$var3"))
 
 
 class TestAgentMethod(AgentMethod):
