@@ -1,0 +1,160 @@
+# Docker environment for the May2019.Robot-1 demo.
+# docker-compose -p leia -f Robot-1.yml up
+
+version: '3.3'
+
+services:
+  mongod:
+    image: mongo:3.6
+    ports:
+      - 27017:27017
+    networks:
+      - leia
+    command:
+      - "mongod"
+    volumes:
+      - mongodbdata:/data/db
+
+  ontology:
+    image: leia/ontology:1.0.0
+    ports:
+      - 5003:5003
+    networks:
+      - leia
+    command:
+      - "python"
+      - "-m"
+      - "ont.service"
+      - "host=0.0.0.0"
+    environment:
+      - ARCHIVE_PATH=/app/archives
+      - ONTOLOGY_ACTIVE=robot-v.1.0.0
+      - MONGO_HOST=mongod
+      - MONGO_PORT=27017
+      - AWS_ACCESS_KEY_ID=?                 // <--
+      - AWS_SECRET_ACCESS_KEY=?             // <--
+      - EDITING_ENABLED=True
+    volumes:
+      - ontology-archives:/app/archives
+    links:
+      - mongod
+    depends_on:
+      - mongod
+
+  initialize-lexicon:
+    image: leia/lexicon:latest
+    networks:
+      - leia
+    command:
+      - "python"
+      - "-m"
+      - "initialize"
+    environment:
+      - ARCHIVE_PATH=/app/archives
+      - LEXICON_ACTIVE=canonical-v.1.0.0
+      - MONGO_HOST=mongod
+      - MONGO_PORT=27017
+    volumes:
+      - lexicon-archives:/app/archives
+    links:
+      - mongod
+    depends_on:
+      - mongod
+
+  lexicon:
+    image: leia/lexicon:latest
+    ports:
+      - 5004:5004
+    networks:
+      - leia
+    command:
+      - "python"
+      - "-m"
+      - "service"
+    environment:
+      - ARCHIVE_PATH=/app/archives
+      - LEXICON_ACTIVE=canonical-v.1.0.0
+      - MONGO_HOST=mongod
+      - MONGO_PORT=27017
+      - AWS_ACCESS_KEY_ID=?                 // <--
+      - AWS_SECRET_ACCESS_KEY=?             // <--
+    volumes:
+      - lexicon-archives:/app/archives
+    links:
+      - mongod
+    depends_on:
+      - initialize-lexicon
+
+  corenlp:
+    image: leia/ontosem:1.1.2
+    ports:
+      - 5000:5000
+    networks:
+      - leia
+    command:
+      - "python3.6"
+      - "SmallSem/corenlp_server.py"
+      - "host=0.0.0.0"
+      - "port=5000"
+
+  ontosem:
+    image: leia/ontosem:1.1.2
+    ports:
+      - 5001:5001
+    networks:
+      - leia
+    command:
+      - "python3.6"
+      - "ontosem_server.py"
+      - "host=0.0.0.0"
+      - "port=5001"
+    environment:
+      - CORENLP_HOST=corenlp
+      - CORENLP_PORT=5000
+      - ONTOLOGY_HOST=ontology
+      - ONTOLOGY_PORT=5003
+      - SMALLSEM_LEXICON_LOCATION=SmallSem/data/robot_lexicon.py
+      - SMALLSEM_RESOURCES_LOCATION=SmallSem/data/nn_static_resources_robot.json
+      - SMALLSEM_ONTOLOGY_ACCESS=service
+      - SMALLSEM_ONTOLOGY_LOCATION=SmallSem/data/ontology.p
+    links:
+      - corenlp
+      - ontology
+    depends_on:
+      - corenlp
+      - lexicon
+      - ontology
+
+  agents:
+    image: leia/agents:May2019.Robot.1
+    ports:
+      - 5002:5002
+    networks:
+      - leia
+    command:
+      - "python3.6"
+      - "-m"
+      - "backend.service.service"
+      - "host=0.0.0.0"
+      - "port=5002"
+    environment:
+      - ONTOSEM_HOST=ontosem
+      - ONTOSEM_PORT=5001
+      - MONGO_HOST=mongod
+      - MONGO_PORT=27017
+      - ONTOLOGY_HOST=ontology
+      - ONTOLOGY_DATABASE=leia-ontology
+      - ONTOLOGY_COLLECTION=robot-v.1.0.0
+    links:
+      - mongod
+      - ontology
+      - ontosem
+
+volumes:
+  ontology-archives:
+  lexicon-archives:
+  mongodbdata:
+
+networks:
+  leia:
+    driver: bridge

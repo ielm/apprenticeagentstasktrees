@@ -1,0 +1,46 @@
+@ENV.WORKSPACE.1 = {
+    IS-A @ONT.LOCATION;
+};
+
+@ENV.STORAGE.1 = {
+    IS-A @ONT.LOCATION;
+};
+
+@ENV.STORAGE.2 = {
+    IS-A @ONT.LOCATION;
+};
+
+@ENV.SCREWDRIVER.1 = {
+    IS-A @ONT.SCREWDRIVER;
+    visual-object-id 1;
+};
+
+@ENV.DOWEL.1 = {
+    IS-A @ONT.DOWEL;
+    visual-object-id 4;
+};
+
+@ENV.HUMAN.1 = {
+    IS-A @ONT.HUMAN;
+    HAS-NAME "Jake";
+    visual-object-id "Jake";
+};
+
+@ENV.EPOCH.? = {
+    INSTANCE-OF @ENV.EPOCH;
+    TIME 0;
+    CONTAINS @ENV.SCREWDRIVER.1;
+    CONTAINS @ENV.DOWEL.1;
+    LOCATION @ENV.LOCATION.1;
+    LOCATION @ENV.LOCATION.2;
+};
+
+@ENV.LOCATION.1 = {
+    DOMAIN @ENV.SCREWDRIVER.1;
+    RANGE @ENV.STORAGE.1;
+};
+
+@ENV.LOCATION.2 = {
+    DOMAIN @ENV.DOWEL.1;
+    RANGE @ENV.STORAGE.2;
+};

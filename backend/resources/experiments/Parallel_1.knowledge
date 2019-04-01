@@ -1,0 +1,108 @@
+@SELF.ROBOT.1 += {
+    PRIORITY_WEIGHT  0.5;
+    RESOURCES_WEIGHT 0.5;
+	HAS-EFFECTOR	 @SELF.EFFECTOR.1;
+	HAS-EFFECTOR	 @SELF.EFFECTOR.2;
+};
+
+@SELF.EFFECTOR.1 = {	// An arm
+	IS-A			@EXE.PHYSICAL-EFFECTOR;
+    HAS-CAPABILITY	@EXE.FETCH-OBJECT-CAPABILITY;
+    STATUS          #Effector.Status.FREE;
+};
+
+@SELF.EFFECTOR.2 = {	// A speaker
+	IS-A			@EXE.VERBAL-EFFECTOR;
+    HAS-CAPABILITY	@EXE.SPEAK-CAPABILITY;
+    STATUS          #Effector.Status.FREE;
+};
+
+@EXE.FETCH-OBJECT-CAPABILITY = {	// Ability to fetch a small object
+	IS-A			@EXE.CAPABILITY;
+    MP				"FetchObjectCapability";
+    COVERS-EVENT	@ONT.TRANSFER-OBJECT;
+};
+
+@EXE.SPEAK-CAPABILITY = {	// Ability to vocalize generated TMRs
+	IS-A			@EXE.CAPABLIITY;
+    MP				"SpeakCapability";
+    COVERS-EVENT	@ONT.SPEECH-ACT;
+};
+
+
+
+REGISTER MP backend.resources.experiments.Parallel_1.FetchObjectCapability AS FetchObjectCapability;
+REGISTER MP backend.resources.experiments.Parallel_1.SpeakCapability AS SpeakCapability;
+REGISTER MP backend.resources.experiments.Parallel_1.InitGreetHumanGoal AS init_greet_human_goal;
+
+
+DEFINE fetch-object($object) AS TEMPLATE
+    TYPE PHYSICAL
+    REQUIRES @EXE.FETCH-OBJECT-CAPABILITY
+    ROOT @OUT.TRANSFER-OBJECT.1
+    INCLUDE
+
+    @OUT.TRANSFER-OBJECT.1 = {
+        AGENT @SELF.ROBOT.1;
+        THEME "$object";
+    };
+;
+
+DEFINE greet-human($human) AS TEMPLATE
+    TYPE VERBAL
+    REQUIRES @EXE.SPEAK-CAPABILITY
+    ROOT @OUT.SPEECH-ACT.1
+    INCLUDE
+
+    @OUT.SPEECH-ACT.1 = {
+        AGENT @SELF.ROBOT.1;
+        THEME @OUT.GREET.1;
+    };
+
+    @OUT.GREET.1 = {
+        AGENT @SELF.ROBOT.1;
+        THEME "$human";
+    };
+;
+
+DEFINE BUILD-A-CHAIR()
+    AS GOAL
+    IN ONT
+    PRIORITY 0.5
+    RESOURCES 0.5
+    PLAN (as-taught-by-jake)
+        SELECT DEFAULT
+        STEP
+            DO $screwdriver = @ENV.SCREWDRIVER.1
+            DO OUTPUT fetch-object($screwdriver) BY SELF
+        STEP
+            DO $dowel = @ENV.DOWEL.1
+            DO OUTPUT fetch-object($dowel) BY SELF
+    WHEN EXECUTED THEN satisfied
+;
+
+DEFINE GREET-HUMAN($human)
+    AS GOAL
+    IN ONT
+    PRIORITY 0.5
+    RESOURCES 0.5
+    PLAN (greet-normal)
+        SELECT DEFAULT
+        STEP
+            DO OUTPUT greet-human($human) BY SELF
+    WHEN EXECUTED THEN SATISFIED
+;
+
+DEFINE ACKNOWLEDGE-VISUAL-INPUT($vmr)
+    AS GOAL
+    IN EXE
+    PRIORITY 0.5
+    RESOURCES 0.5
+    PLAN (acknowledge visual input)
+        SELECT DEFAULT
+        STEP
+            DO SELF.init_greet_human_goal($vmr)
+    WHEN EXECUTED THEN satisfied
+;
+
+ADD TRIGGER TO @SELF.ROBOT.1 INSTANTIATE @EXE.ACKNOWLEDGE-VISUAL-INPUT WHEN (@ ISA @EXE.VMR AND STATUS = #XMR.InputStatus.RECEIVED and TYPE = #XMR.Type.VISUAL);
