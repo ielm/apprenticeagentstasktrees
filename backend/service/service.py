@@ -62,6 +62,7 @@ def graph_to_json(space: Space):
         }
 
         for slot in frame:
+            slot.include_inherited = False
             for filler in slot:
                 if isinstance(filler, Frame):
                     converted["relations"].append({
