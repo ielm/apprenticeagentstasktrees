@@ -1,5 +1,5 @@
 from backend.models.mps import MPRegistry
-from ontograph.Frame import Frame
+from ontograph.Frame import Frame, Role
 from ontograph.Graph import Graph
 from ontograph.Index import Identifier
 from ontograph.Query import Query
@@ -108,7 +108,7 @@ class VariableMap(object):
         raise Exception("Variable '" + name + "' is not defined in this mapping.")
 
     def variables(self) -> List[str]:
-        return list(self.frame["WITH"])
+        return list(self.frame["WITH", Role.LOC])
 
     def __eq__(self, other):
         if isinstance(other, VariableMap):

@@ -62,6 +62,7 @@ def graph_to_json(space: Space):
         }
 
         for slot in frame:
+            slot.include_inherited = False
             for filler in slot:
                 if isinstance(filler, Frame):
                     converted["relations"].append({
@@ -311,6 +312,7 @@ def bootstrap():
 
     resources = KnowledgeLoader.list_resources("backend.resources") + KnowledgeLoader.list_resources("backend.resources.experiments") + KnowledgeLoader.list_resources("backend.resources.example")
     resources = map(lambda r: {"resource": r, "loaded": r[0] + "." + r[1] in KnowledgeLoader.loaded}, resources)
+    resources = sorted(resources, key=lambda r: r["resource"])
 
     return render_template("bootstrap.html", resources=resources)
 

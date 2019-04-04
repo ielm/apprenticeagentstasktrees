@@ -3,7 +3,7 @@ from backend.models.agenda import Decision, Expectation, Goal, Plan, Step, Trigg
 from backend.models.effectors import Callback, Capability, Effector
 from backend.models.xmr import XMR
 from backend.utils.AgentLogger import CachedAgentLogger
-from ontograph.Frame import Frame
+from ontograph.Frame import Frame, Role
 
 
 class IIDEAConverter(object):
@@ -71,7 +71,7 @@ class IIDEAConverter(object):
             "active": goal.is_active(),
             "satisfied": goal.is_satisfied(),
             "abandoned": goal.is_abandoned(),
-            "plan": list(map(lambda plan: IIDEAConverter.convert_plan(agent, plan, goal), goal.frame["PLAN"])),
+            "plan": list(map(lambda plan: IIDEAConverter.convert_plan(agent, plan, goal), goal.frame["PLAN", Role.LOC])),
             "params": list(map(lambda variable: {"var": variable, "value": IIDEAConverter.convert_value(goal.resolve(variable))}, goal.variables()))
         }
 
