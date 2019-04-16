@@ -1,7 +1,7 @@
 --extra-index-url http://www.trulysmartagents.org/simple/
 --trusted-host www.trulysmartagents.org
 
-OntoGraph==0.9.0
+OntoGraph==0.9.1
 Flask-Cors==3.0.3
 Flask-Socketio==3.2.1
 eventlet==0.24.1
