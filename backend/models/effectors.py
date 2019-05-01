@@ -1,13 +1,15 @@
 from backend.models.agenda import Decision
-from backend.models.graph import Frame, Graph, Identifier, Literal, Network
 from backend.models.mps import MPRegistry
 from enum import Enum
+from ontograph.Frame import Frame
+from ontograph.Index import Identifier
+from ontograph.Space import Space
 from typing import Callable, List, Union
 
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from backend.agent import Agent
-    from backend.models.output import OutputXMR
+    from backend.models.xmr import XMR
 
 
 class Effector(object):
@@ -22,7 +24,7 @@ class Effector(object):
         OPERATING = 2
 
     @classmethod
-    def instance(cls, graph: Graph, type: Union[str, Type], capabilities: List[Union["Capability", Frame]]):
+    def instance(cls, space: Space, type: Union[str, Type], capabilities: List[Union["Capability", Frame]]):
         if isinstance(type, str):
             type = Effector.Type[type]
 
@@ -34,7 +36,7 @@ class Effector(object):
         if type == Effector.Type.MENTAL:
             parent = "MENTAL-EFFECTOR"
 
-        frame = graph.register(parent, isa="EXE." + parent, generate_index=True)
+        frame = Frame("@" + space.name + "." + parent + ".?").add_parent(Frame("@EXE." + parent))
 
         for capability in capabilities:
             if isinstance(capability, Capability):
@@ -49,11 +51,11 @@ class Effector(object):
         self.frame = frame
 
     def type(self) -> Type:
-        if self.frame ^ "EXE.PHYSICAL-EFFECTOR":
+        if self.frame ^ "@EXE.PHYSICAL-EFFECTOR":
             return Effector.Type.PHYSICAL
-        if self.frame ^ "EXE.VERBAL-EFFECTOR":
+        if self.frame ^ "@EXE.VERBAL-EFFECTOR":
             return Effector.Type.VERBAL
-        if self.frame ^ "EXE.MENTAL-EFFECTOR":
+        if self.frame ^ "@EXE.MENTAL-EFFECTOR":
             return Effector.Type.MENTAL
         raise Exception("Unknown type for effector.")
 
@@ -62,31 +64,31 @@ class Effector(object):
         return status == Effector.Status.FREE or status == Effector.Status.FREE.name
 
     def capabilities(self) -> List["Capability"]:
-        return list(map(lambda c: Capability(c.resolve()), self.frame["HAS-CAPABILITY"]))
+        return list(map(lambda c: Capability(c), self.frame["HAS-CAPABILITY"]))
 
     def on_decision(self) -> Union[Decision, None]:
         if "ON-DECISION" not in self.frame:
             return None
         return Decision(self.frame["ON-DECISION"].singleton())
 
-    def on_output(self) -> Union['OutputXMR', None]:
-        from backend.models.output import OutputXMR
+    def on_output(self) -> Union['XMR', None]:
+        from backend.models.output import XMR
         if "ON-OUTPUT" not in self.frame:
             return None
-        return OutputXMR(self.frame["ON-OUTPUT"].singleton())
+        return XMR(self.frame["ON-OUTPUT"].singleton())
 
     def on_capability(self) -> Union['Capability', None]:
         if "ON-CAPABILITY" not in self.frame:
             return None
         return Capability(self.frame["ON-CAPABILITY"].singleton())
 
-    def reserve(self, decision: Union[str, Identifier, Frame, Decision], output: Union[str, Identifier, Frame, 'OutputXMR'], capability: Union[str, Identifier, Frame, 'Capability']):
-        from backend.models.output import OutputXMR
+    def reserve(self, decision: Union[str, Identifier, Frame, Decision], output: Union[str, Identifier, Frame, 'XMR'], capability: Union[str, Identifier, Frame, 'Capability']):
+        from backend.models.output import XMR
 
         if isinstance(decision, Decision):
             decision = decision.frame
 
-        if isinstance(output, OutputXMR):
+        if isinstance(output, XMR):
             output = output.frame
 
         if isinstance(capability, Capability):
@@ -114,12 +116,12 @@ class Effector(object):
 class Capability(object):
 
     @classmethod
-    def instance(cls, graph: Graph, name: str, mp: Union[str, Callable], covers: List[Union[str, Identifier, Frame]]):
-        frame = graph.register(name, isa="EXE.CAPABILITY")
+    def instance(cls, space: Space, name: str, mp: Union[str, Callable], covers: List[Union[str, Identifier, Frame]]):
+        frame = Frame("@" + space.name + "." + name + ".?").add_parent(Frame("@EXE.CAPABILITY"))
         if not isinstance(mp, str):
             mp = mp.__name__
 
-        frame["MP"] = Literal(mp)
+        frame["MP"] = mp
         frame["COVERS-EVENT"] = covers
 
         return Capability(frame)
@@ -127,14 +129,14 @@ class Capability(object):
     def __init__(self, frame: Frame):
         self.frame = frame
 
-    def run(self, agent: 'Agent', output: 'OutputXMR', callback: 'Callback'):
+    def run(self, agent: 'Agent', output: 'XMR', callback: 'Callback'):
         MPRegistry.output(self.mp_name(), agent, output, callback)
 
     def mp_name(self) -> str:
         return self.frame["MP"].singleton()
 
     def events(self) -> List[Frame]:
-        return list(map(lambda e: e.resolve(), self.frame["COVERS-EVENT"]))
+        return list(self.frame["COVERS-EVENT"])
 
     def __eq__(self, other):
         if isinstance(other, Capability):
@@ -151,14 +153,14 @@ class Callback(object):
         RECEIVED = "RECEIVED"
 
     @classmethod
-    def build(cls, graph: Graph, decision: Union[str, Identifier, Frame, Decision], effector: Union[str, Identifier, Frame, Effector]) -> 'Callback':
+    def build(cls, space: Space, decision: Union[str, Identifier, Frame, Decision], effector: Union[str, Identifier, Frame, Effector]) -> 'Callback':
         if isinstance(decision, Decision):
             decision = decision.frame
 
         if isinstance(effector, Effector):
             effector = effector.frame
 
-        callback = graph.register("CALLBACK", isa="EXE.CALLBACK", generate_index=True)
+        callback = Frame("@" + space.name + ".CALLBACK.?")
         callback["FOR-DECISION"] = decision
         callback["FOR-EFFECTOR"] = effector
         callback["STATUS"] = Callback.Status.WAITING
@@ -177,7 +179,11 @@ class Callback(object):
     def status(self) -> 'Callback.Status':
         if "STATUS" not in self.frame:
             return Callback.Status.WAITING
-        return self.frame["STATUS"].singleton()
+        status = self.frame["STATUS"].singleton()
+        if isinstance(status, str):
+            status = Callback.Status[status]
+
+        return status
 
     def received(self):
         self.frame["STATUS"] = Callback.Status.RECEIVED
@@ -185,7 +191,7 @@ class Callback(object):
     def process(self):
         self.effector().release()
         self.decision().callback_received(self)
-        del self.frame._graph[str(self.frame._identifier)]
+        self.frame.delete()
 
     def __eq__(self, other):
         if isinstance(other, Callback):

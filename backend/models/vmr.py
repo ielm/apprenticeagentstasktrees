@@ -1,180 +1,191 @@
-from backend.models.graph import Frame, Graph, Identifier, Literal
-from backend.models.ontology import Ontology
-from backend.utils.AtomicCounter import AtomicCounter
 from backend.models.environment import Environment
+from backend.models.xmr import XMR
+from backend.utils.AtomicCounter import AtomicCounter
+from ontograph.Frame import Frame
+from ontograph.Index import Identifier
+from ontograph.Space import Space
+from typing import List, Union
 
-import re
-import datetime
-from uuid import uuid1, uuid4
-
-
-class VMR(Graph):
-    """
-    VMR is a relational DAG. Maybe we will want to use Spatio-Temporal DAGs for this?
-
-    Each temporal "slice" is a time-stamped DAG, which contains the main ENV node, all OBJECT or EVENT nodes that are "in" the environment, and all properties associated with OBJECT/EVENT nodes.
-    For now, each "slice" gets its own full ENV graph; for the future, maybe we can look at version control systems to update only what has changed in the ENV graph for each slice, but maintain temporality.
-    Slices don't have to be recorded with any specific frequency, so a VMR may have a range from a few milliseconds to multiple minutes in between slice timestamps.
+import time
 
 
-    All objects in the environment are OBJECT nodes, which have an [_IN] relational mapping to the environment, which is an ENV node.
-    All OBJECT nodes also have relative position relations with all other objects, kept at the coarsest possible granularity until more accurate positioning is needed.
-
-    OBJECT nodes can be EFFECTOR/s which are special objects that are a part of the agent itself and have functional capabilities defined in bootstrap.knowledge, as well as properties
-    The robot/agent is also a special object type, SELF, which refers to itself. EFFECTOR/s are connected to SELF by the _EFFECTOR_OF relation. Needless to say that SELF also has a set of properties.
-
-
-    Properties of OBJECT nodes include:
-        - general (approximate) location using current position as reference
-
-                     {<timestamp>}
-                     [Environment]
-                  __/      |     \__
-                 /    [__SELF__]    \
-           [Jake.#]                [Chair.#]
-        __/   |   \__             __/     \__
-       /      |      \           /           \
-     [_pos][_name][_interax]   [_status]     [_pos]
-
-The environment contains STORAGE.1, STORAGE.2, and WORKSPACE.1, which are each their own micro environments. They always come first in the ENVIRONMENT graph.
-    "slices": {
-        "SLICE.1": {
-            "ENVIRONMENT.1": {
-                "_refers_to": {},
-                "contains": {
-                    "STORAGE.1": {
-                        "contains": {}
-                    },
-                    "STORAGE.2": {
-                        "contains": {}
-                    },
-                    "WORKSPACE.1": {
-                        "contains": {}
-                    },
-                }
-            },
-            "_timestamp": datetime.datetime.now(),
-            "_id": uuid1(),  # use uuid1 for slice IDs
-        }
-    """
-    # TODO - create environment modifier function that takes Environment as input and decides if it needs to change anything in Environment
+class VMR(XMR):
     counter = AtomicCounter()
 
-    @staticmethod
-    def new(ontology: Ontology, vmr=None, namespace=None, id=None):
-        if vmr is None:
-            vmr = [{
-                "_id": uuid4() if not id else id,  # use uuid4 for vmr IDs
-                "slices": [{
-                    "SLICE.1": [{
-                        "ENVIRONMENT.1": [{
-                            "_refers_to": {},
-                            "contains": {}
-                        }],
-                        "_timestamp": datetime.datetime.now(),
-                        "_id": uuid1(),  # use uuid1 for slice IDs
-                    }],
-                }],
-                "_label": None,
-                "_visual_frames": None,
-            }]
-            return VMR(vmr[0], ontology, namespace=namespace)
+    @classmethod
+    def from_contents(cls, contains: dict=None, events: dict=None, namespace: str=None, source: Union[str, Identifier, Frame]=None) -> 'VMR':
 
-    def __init__(self, vmr_dict: dict, ontology: Ontology, namespace: str = None):
-        if ontology is None:
-            raise Exception("VMRs must have an anchoring ontology provided.")
+        if contains is None:
+            contains = {}
+
+        if events is None:
+            events = {}
+
+        vmr_dict = {
+            "ENVIRONMENT": {
+                "_refers_to": "ENV",
+                "timestamp": time.time(),
+                "contains": contains
+            },
+            "EVENTS": events
+        }
+
+        return VMR.from_json(vmr_dict, namespace=namespace, source=source)
+
+    @classmethod
+    def from_json(cls, vmr_dict: dict, namespace: str=None, source: Union[str, Identifier, Frame]=None) -> 'VMR':
         if namespace is None:
             namespace = "VMR#" + str(VMR.counter.increment())
 
-        super().__init__(namespace)
+        space = Space(namespace)
 
-        self.ontology = ontology._namespace
-        self._id = None
+        reference = Frame("@" + space.name + ".ENVIRONMENT")
+        events = Frame("@" + space.name + ".EVENTS")
 
-        # empty_env =
-        # self.environment = Environment()
+        if "ENVIRONMENT" in vmr_dict:
 
-        # COUNTER = 0
+            reference["REFERS-TO"] = vmr_dict["ENVIRONMENT"]["_refers_to"]
+            reference["TIMESTAMP"] = vmr_dict["ENVIRONMENT"]["timestamp"]
 
-        # TODO - create Slice instance for each slice in VMR
+            for frame in vmr_dict["ENVIRONMENT"]["contains"]:
+                frame = Frame(frame)
+                location = Frame(vmr_dict["ENVIRONMENT"]["contains"][frame]["LOCATION"])
+                if location == "NOT-HERE":
+                    continue
 
-        # for key in vmr_dict:
-        #     if key == "_id":
-        #         self._id = key
-        #     if key == "slices":
-        #         for s in vmr_dict[key]:
-        #             print()
-                    # print("COUNT#" + str(COUNTER) + ": ")
-                    # print(vmr_dict[key][s])
-                    # COUNTER += 1
-                    # print(vmr_dict[key][s])
+                if location == "HERE":
+                    location = reference
 
-                    # slice = Slice(vmr_dict[key][s])
+                location_frame = Frame("@" + space.name + ".LOCATION.?")
+                location_frame["DOMAIN"] = frame
+                location_frame["RANGE"] = location
 
-                # slice = Slice(key)
-                # self[key] = slice
+        if "EVENTS" in vmr_dict:
 
+            for frame in vmr_dict["EVENTS"]:
+                contents = vmr_dict["EVENTS"][frame]
+                parts = Identifier.parse(frame)
+                if isinstance(parts[0], str) and isinstance(parts[1], str) and parts[2] is None:
+                    frame = "@" + space.name + "." + parts[0] + "." + str(parts[1])
+                frame = Frame(frame)
+                for slot in contents:
+                    for filler in contents[slot]:
+                        if filler.startswith("@"):
+                            filler = Frame(filler)
+                        frame[slot] += filler
+                events["HAS-EVENT"] += frame
 
-        # for key in vmr_dict:
-        #     print("COUNT#" + str(COUNTER) + ": " + key)
-        #     COUNTER += 1
-            # if key == "_timestamp":
-            #     self._timestamp = vmr_dict[key]
-            # if key == "_label":
-            #     self._label = vmr_dict[key]
-            # if key == key.upper():
-            #     print("COUNT#"+str(COUNTER)+": "+key)
-            #
-            #     # TODO - If key is referring to element in @ENV, update environment
-            #
-            #     inst_dict = vmr_dict[key]
-            #
-            #     key = re.sub(r"-([0-9]+)$", ".\\1", key)
-            #
-            #     # TODO - self[key] = VMRInstance for all keys in vmr
-            #     self[key] = VMRInstance(key, properties=inst_dict, isa=None, ontology=ontology)
+        vmr: VMR = XMR.instance(Space("INPUTS"), space, XMR.Signal.INPUT, XMR.Type.VISUAL, XMR.InputStatus.RECEIVED, source, reference)
+        return vmr
 
-        for instance in self._storage.values():
-            for slot in instance._storage.values():
+    def locations(self) -> List[Frame]:
+        space = self.space()
+        return list(filter(lambda f: Identifier.parse(f.id)[1] == "LOCATION", space))
+
+    def update_environment(self, environment: Union[Space, Environment]):
+        if isinstance(environment, Space):
+            environment = Environment(environment)
+
+        epoch = environment.advance()
+        self.frame["EPOCH"] = epoch
+
+        for object in environment.current():
+            environment.exit(object)
+
+        for location_marker in self.locations():
+            object = location_marker["DOMAIN"].singleton()
+            location = location_marker["RANGE"].singleton()
+
+            if location == Frame("@" + self.space().name + ".ENVIRONMENT"):
+                location = "@ONT.LOCATION"
+
+            environment.enter(object, location=location)
+
+    def events(self) -> List[Frame]:
+        return list(Frame("@" + self.space().name + ".EVENTS")["HAS-EVENT"])
+
+    def epoch(self) -> Frame:
+        return self.frame["EPOCH"].singleton()
+
+    def update_memory(self, space: Space):
+        for event in self.events():
+            parents = event.parents()
+            if len(parents) == 0:
+                parents = [event.id]
+
+            frame = Frame("@" + space.name + "." + Identifier.parse(event.id)[1] + ".?")
+            for parent in parents:
+                frame.add_parent(parent)
+
+            for slot in event:
+                if slot.property == "IS-A":
+                    continue
                 for filler in slot:
-                    if isinstance(filler._value, Identifier) and filler._value.graph is None and not filler._value.render() in self:
-                        filler._value.graph = self.ontology
+                    frame[slot.property] += filler
 
-    def update_environment(self, env: Environment, vmr=None):
-        env.advance()
-        # TODO -  Decide whether obj has entered or exited the environment
-        return
+    def render(self):
+
+        observations = []
+
+        def get_location(env: Environment, object: Frame, epoch: Frame) -> Union[Frame, None]:
+            try:
+                return env.location(object, epoch)
+            except:
+                return None
+
+        def get_then(now: Frame) -> Frame:
+            if len(now["FOLLOWS"]) == 0:
+                return Frame("@ENV.NO-SUCH-EPOCH", declare=False)
+            return now["FOLLOWS"].singleton()
+
+        def get_view(env: Environment, epoch: Frame) -> List[Frame]:
+            try:
+                return env.view(epoch)
+            except:
+                return []
+
+        def get_name(frame: Frame) -> str:
+            if "NAME" in frame:
+                return frame["NAME"].singleton()
+            if "HAS-NAME" in frame:
+                return frame["HAS-NAME"].singleton()
+            return frame.id
+
+        try:
+            env = Environment(Space("ENV"))
+
+            now = self.epoch()
+            then = get_then(now)
+
+            all_known_objects = set(get_view(env, now))
+            all_known_objects = all_known_objects.union(get_view(env, then))
+
+            for o in all_known_objects:
+                location_now = get_location(env, o, now)
+                location_then = get_location(env, o, then)
+
+                if location_now != None and location_then != None and location_now != location_then:
+                    observations.append("I see that " + get_name(o) + " moved from the " + get_name(location_then) + " to the " + get_name(location_now))
+
+                if location_now != None and location_then == None:
+                    observations.append("I see that " + get_name(o) + " is now in the environment, at the " + get_name(location_now))
+
+                if location_now == None and location_then != None:
+                    observations.append("I see that " + get_name(o) + " has left the environment")
+        except: pass
+
+        try:
+            for e in self.events():
+                agent = e["AGENT"].singleton()
+                theme = e["THEME"].singleton()
+                action = Identifier.parse(e.id)[1]
+
+                observations.append("I see that " + get_name(agent) + " did " + action + "(" + get_name(theme) + ")")
 
 
-class VMRInstance(Frame):
-    def __init__(self, name, properties=None, isa=None, ontology: Ontology = None):
-        super().__init__(name, isa=isa)
+        except: pass
 
-        if properties is None:
-            properties = {}
+        if len(observations) == 0:
+            return super().render()
 
-        _properties = {}
-        for key in properties:
-            if key == key.upper():
-                _properties[key] = properties[key]
-
-        for key in properties:
-            original_key = key
-            key = re.sub(r"-[0-9]+$", "", key)
-
-            # if key == "slices":
-            #     if ontology is not None \
-            #     and key in ontology \
-            #     and
-
-
-class Slice(Frame):
-    def __init__(self, name, slice=None, isa=None, ontology: Ontology = None):
-        super().__init__(name, isa=isa)
-
-        # g = agent.register("ENV")
-
-        # environment = Environment(g)
-
-
-
+        return "; and ".join(observations) + "."

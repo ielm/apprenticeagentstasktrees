@@ -1,0 +1,71 @@
+// Example knowledge to demonstrate impasses and blocked decisions.
+// Load exe.knowledge and this file.
+// Submit any TMR as input to trigger an instance of GOAL-THAT-WILL-BE-BLOCKED.
+// Advance time - the goal will be blocked, and an impasse created (with resolution of SOME-SUBGOAL).
+// SOME-SUBGOAL will issue an output - callback to complete the goal and observe that GOAL-THAT-WILL-BE-BLOCKED is
+// no longer blocked (now pending).  After more time GOAL-THAT-WILL-BE-BLOCKED will issue its own output.
+
+@ENV.OBJECT.1 = {};
+@ENV.OBJECT.2 = {};
+@SELF.TEST-FRAME = {};
+
+@EXE.EXAMPLE-CAPABILITY = {
+    IS-A @EXE.CAPABILITY;
+    MP "example_capability";
+};
+
+@SELF.PHYSICAL-EFFECTOR.1 = {
+    IS-A @EXE.PHYSICAL-EFFECTOR;
+    HAS-CAPABILITY @EXE.EXAMPLE-CAPABILITY;
+    STATUS "FREE";
+};
+
+@SELF.ROBOT.1 += {
+    PRIORITY_WEIGHT 1.5;
+    RESOURCES_WEIGHT 0.25;
+    HAS-EFFECTOR @SELF.PHYSICAL-EFFECTOR.1;
+};
+
+DEFINE some-output($var) AS TEMPLATE
+    TYPE PHYSICAL
+    REQUIRES @EXE.EXAMPLE-CAPABILITY
+    ROOT @OUT.EVENT.1
+    INCLUDE
+
+    @OUT.EVENT.1 = {
+        AGENT @SELF.ROBOT.1;
+        THEME "$var";
+    };
+;
+
+REGISTER MP backend.resources.example.ExampleMP.ExampleCapability AS example_capability;
+
+DEFINE GOAL-THAT-WILL-BE-BLOCKED($tmr)
+    AS GOAL
+    IN EXE
+    PRIORITY 0.5
+    RESOURCES 0.5
+    PLAN (plan that will be blocked)
+        SELECT DEFAULT
+        STEP
+            DO $object1 = @ENV.OBJECT.1
+            DO $object2 = @ENV.OBJECT.2
+            DO ASSERT @SELF.TEST-FRAME[SLOT] == 123 ELSE IMPASSE WITH @EXE:@EXE.SOME-SUBGOAL($object1)
+            DO OUTPUT some-output($object2) BY SELF
+    WHEN EXECUTED THEN satisfied
+;
+
+ADD TRIGGER TO @SELF.ROBOT.1 INSTANTIATE @EXE.GOAL-THAT-WILL-BE-BLOCKED WHEN (@ ISA @EXE.TMR AND STATUS = #XMR.InputStatus.RECEIVED and TYPE = #XMR.Type.LANGUAGE);
+
+DEFINE SOME-SUBGOAL($tmr)
+    AS GOAL
+    IN EXE
+    PRIORITY 0.5
+    RESOURCES 0.5
+    PLAN (get around an impasse)
+        SELECT DEFAULT
+        STEP
+            DO @SELF.TEST-FRAME[SLOT] = 123
+            DO OUTPUT some-output($tmr) BY SELF
+    WHEN EXECUTED THEN satisfied
+;

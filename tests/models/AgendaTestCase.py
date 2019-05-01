@@ -1,20 +1,29 @@
-from backend.models.agenda import Agenda, Condition, Decision, Goal, Plan, Step, Trigger
-from backend.models.bootstrap import Bootstrap
-from backend.models.graph import Frame, Graph, Literal, Network
-from backend.models.statement import Statement, StatementScope, VariableMap
+from backend.Agent import Agent
+from backend.models.agenda import Agenda, Condition, Decision, Effect, Expectation, Goal, Plan, Step, Trigger
+# from backend.models.bootstrap import Bootstrap
+# from backend.models.graph import Frame, Graph, Literal, Network
+from backend.models.statement import Statement, StatementRegistry, StatementScope, VariableMap
+from backend.models.xmr import XMR
+from backend.utils.AgentOntoLang import AgentOntoLang
+from ontograph import graph
+from ontograph.Frame import Frame
+from ontograph.Query import ExistsComparator, IdComparator, IsAComparator, Query
+from ontograph.Space import Space
 
 import unittest
 
 
 class AgendaTestCase(unittest.TestCase):
 
+    def setUp(self):
+        graph.reset()
+
     def test_goals(self):
-        graph = Graph("TEST")
-        f1 = graph.register("AGENDA.1")  # Typically the agent identity frame (so, e.g., ROBOT.1) is used, as there is no "AGENDA".
-        g1 = graph.register("GOAL.1")
-        g2 = graph.register("GOAL.2")
-        g3 = graph.register("GOAL.3")
-        g4 = graph.register("GOAL.4")
+        f1 = Frame("@TEST.AGENDA.1")  # Typically the agent identity frame (so, e.g., ROBOT.1) is used, as there is no "AGENDA".
+        g1 = Frame("@TEST.GOAL.1")
+        g2 = Frame("@TEST.GOAL.2")
+        g3 = Frame("@TEST.GOAL.3")
+        g4 = Frame("@TEST.GOAL.4")
 
         f1["HAS-GOAL"] = [g1, g2, g3, g4]
 
@@ -31,10 +40,9 @@ class AgendaTestCase(unittest.TestCase):
         self.assertEqual(agenda.goals(satisfied=True, active=False), [Goal(g4)])
 
     def test_add_goal(self):
-        graph = Graph("TEST")
-        f1 = graph.register("AGENDA.1")
-        g1 = graph.register("GOAL.1")
-        g2 = graph.register("GOAL.2")
+        f1 = Frame("@TEST.AGENDA.1")
+        g1 = Frame("@TEST.GOAL.1")
+        g2 = Frame("@TEST.GOAL.2")
 
         agenda = Agenda(f1)
         agenda.add_goal(g1)
@@ -43,26 +51,24 @@ class AgendaTestCase(unittest.TestCase):
         self.assertEqual(agenda.goals(pending=True), [Goal(g1), Goal(g2)])
 
     def test_prepare_plan(self):
-        graph = Graph("TEST")
-        f1 = graph.register("AGENDA.1")
-        a1 = graph.register("PLAN.1")
-        a2 = graph.register("PLAN.2")
+        f1 = Frame("@TEST.AGENDA.1")
+        a1 = Frame("@TEST.PLAN.1")
+        a2 = Frame("@TEST.PLAN.2")
 
         agenda = Agenda(f1)
 
         agenda.prepare_plan(a1)
         self.assertEqual(len(f1["PLAN-TO-TAKE"]), 1)
-        self.assertEqual(f1["PLAN-TO-TAKE"][0].resolve(), a1)
+        self.assertEqual(f1["PLAN-TO-TAKE"][0], a1)
 
         agenda.prepare_plan(Plan(a2))
         self.assertEqual(len(f1["PLAN-TO-TAKE"]), 2)
-        self.assertEqual(f1["PLAN-TO-TAKE"][0].resolve(), a1)
-        self.assertEqual(f1["PLAN-TO-TAKE"][1].resolve(), a2)
+        self.assertEqual(f1["PLAN-TO-TAKE"][0], a1)
+        self.assertEqual(f1["PLAN-TO-TAKE"][1], a2)
 
     def test_plan(self):
-        graph = Graph("TEST")
-        f1 = graph.register("AGENDA.1")
-        a1 = graph.register("PLAN.1")
+        f1 = Frame("@TEST.AGENDA.1")
+        a1 = Frame("@TEST.PLAN.1")
 
         f1["PLAN-TO-TAKE"] = a1
 
@@ -70,16 +76,16 @@ class AgendaTestCase(unittest.TestCase):
         self.assertEqual([a1], agenda.plan())
 
     def test_triggers(self):
-        n = Network()
-        graph = n.register(Graph("TEST"))
-        agenda = graph.register("AGENDA")
-        definition = graph.register("MYGOAL")
+        space = Space("TEST")
 
-        query1 = Frame.q(n).isa("TEST1")
-        query2 = Frame.q(n).isa("TEST2")
+        agenda = Frame("@TEST.AGENDA")
+        definition = Frame("@TEST.MYGOAL")
 
-        trigger1 = Trigger.build(graph, query1, definition)
-        trigger2 = Trigger.build(graph, query2, definition)
+        query1 = Query(IsAComparator("@TEST.TEST.?"))
+        query2 = Query(IsAComparator("@TEST.TEST.?"))
+
+        trigger1 = Trigger.build(space, query1, definition)
+        trigger2 = Trigger.build(space, query2, definition)
 
         agenda["TRIGGER"] += trigger1.frame
         agenda["TRIGGER"] += trigger2.frame
@@ -87,57 +93,60 @@ class AgendaTestCase(unittest.TestCase):
         self.assertEqual([trigger1, trigger2], Agenda(agenda).triggers())
 
     def test_add_trigger(self):
-        n = Network()
-        graph = n.register(Graph("TEST"))
-        agenda = graph.register("AGENDA")
-        definition = graph.register("MYGOAL")
+        agenda = Frame("@TEST.AGENDA")
+        definition = Frame("@TEST.MYGOAL")
 
-        query = Frame.q(n).isa("TEST1")
+        query = Query(IsAComparator("@TEST.TEST.?"))
 
-        trigger = Trigger.build(graph, query, definition)
+        trigger = Trigger.build(Space("TEST"), query, definition)
 
         Agenda(agenda).add_trigger(trigger)
 
         self.assertEqual([trigger], Agenda(agenda).triggers())
 
     def test_fire_triggers(self):
-        n = Network()
-        graph = n.register(Graph("TEST"))
-        agenda = Agenda(graph.register("AGENDA"))
+        space = Space("TEST")
 
-        definition = graph.register("MYGOAL")
-        definition["WITH"] = Literal("$var1")
+        agenda = Agenda(Frame("@TEST.AGENDA"))
 
-        trigger1 = Trigger.build(graph, Frame.q(n).id("TEST.TARGET.1"), definition)
+        definition = Frame("@TEST.MYGOAL")
+        definition["WITH"] = "$var1"
+
+        query = Query(IdComparator("@TEST.TARGET.1"))
+
+        trigger1 = Trigger.build(space, query, definition)
         agenda.add_trigger(trigger1)
 
-        trigger2 = Trigger.build(graph, Frame.q(n).id("TEST.TARGET.1"), definition)
+        trigger2 = Trigger.build(space, query, definition)
         agenda.add_trigger(trigger2)
 
-        target = graph.register("TARGET", generate_index=True)
+        target = Frame("@TEST.TARGET.1")
 
         self.assertEqual(0, len(agenda.goals(pending=True, active=True)))
 
         agenda.fire_triggers()
 
-        self.assertIn(graph["GOAL.1"], agenda.goals(pending=True, active=True))
-        self.assertEqual(target, Goal(graph["GOAL.1"]).resolve("$var1"))
+        self.assertIn(Frame("@TEST.GOAL.1"), agenda.goals(pending=True, active=True))
+        self.assertEqual(target, Goal(Frame("@TEST.GOAL.1")).resolve("$var1"))
 
-        self.assertIn(graph["GOAL.2"], agenda.goals(pending=True, active=True))
-        self.assertEqual(target, Goal(graph["GOAL.2"]).resolve("$var1"))
+        self.assertIn(Frame("@TEST.GOAL.2"), agenda.goals(pending=True, active=True))
+        self.assertEqual(target, Goal(Frame("@TEST.GOAL.2")).resolve("$var1"))
 
 
 class GoalTestCase(unittest.TestCase):
 
+    def setUp(self):
+        graph.reset()
+
     def test_name(self):
-        f = Frame("TEST.1")
-        f["NAME"] = Literal("Test Name")
+        f = Frame("@TEST.TEST.1")
+        f["NAME"] = "Test Name"
 
         goal = Goal(f)
         self.assertEqual(goal.name(), "Test Name")
 
     def test_status_from_frame(self):
-        f = Frame("TEST.1")
+        f = Frame("@TEST.TEST.1")
         goal = Goal(f)
 
         f["STATUS"] = "pending"
@@ -165,7 +174,7 @@ class GoalTestCase(unittest.TestCase):
         self.assertTrue(goal.is_satisfied())
 
     def test_status_to_frame(self):
-        f = Frame("TEST.1")
+        f = Frame("@TEST.TEST.1")
         goal = Goal(f)
 
         goal.status(Goal.Status.PENDING)
@@ -193,15 +202,15 @@ class GoalTestCase(unittest.TestCase):
         self.assertTrue(Goal.Status.SATISFIED in f["STATUS"])
 
     def test_executed_is_true_if_any_plan_is_complete(self):
-        g = Graph("TEST")
+        s = Space("TEST")
 
-        step1 = Step.build(g, 1, [])
-        step2 = Step.build(g, 1, [])
+        step1 = Step.build(s, 1, [])
+        step2 = Step.build(s, 1, [])
 
-        plan1 = Plan.build(g, "test-plan-1", Plan.DEFAULT, [step1])
-        plan2 = Plan.build(g, "test-plan-2", Plan.DEFAULT, [step2])
+        plan1 = Plan.build(s, "test-plan-1", Plan.DEFAULT, [step1])
+        plan2 = Plan.build(s, "test-plan-2", Plan.DEFAULT, [step2])
 
-        goal = g.register("GOAL.1")
+        goal = Frame("@TEST.GOAL.1")
         goal["PLAN"] = [plan1.frame, plan2.frame]
 
         self.assertFalse(Goal(goal).executed())
@@ -212,8 +221,7 @@ class GoalTestCase(unittest.TestCase):
 
     def test_priority_numeric(self):
 
-        graph = Graph("TEST")
-        f = graph.register("GOAL.1")
+        f = Frame("@TEST.GOAL.1")
         f["PRIORITY"] = 0.5
 
         goal = Goal(f)
@@ -225,14 +233,14 @@ class GoalTestCase(unittest.TestCase):
             def run(self, varmap: VariableMap, *args, **kwargs):
                 return 0.5
 
-        network = Network()
-        graph = network.register("EXE")
-        Bootstrap.bootstrap_resource(network, "backend.resources", "exe.knowledge")
+        StatementRegistry.register(TestStatement)
 
-        graph["RETURNING-STATEMENT"]["CLASSMAP"] = Literal(TestStatement)
-        statement = graph.register("STATEMENT.1", isa="EXE.RETURNING-STATEMENT")
+        AgentOntoLang().load_knowledge("backend.resources", "exe.knowledge")
 
-        f = graph.register("GOAL.1")
+        Frame("@EXE.RETURNING-STATEMENT")["CLASSMAP"] = TestStatement.__qualname__
+        statement = Frame("@TEST.STATEMENT.1").add_parent("@EXE.RETURNING-STATEMENT")
+
+        f = Frame("@TEST.GOAL.1")
         f["PRIORITY"] = statement
 
         goal = Goal(f)
@@ -240,16 +248,14 @@ class GoalTestCase(unittest.TestCase):
         self.assertTrue(f["_PRIORITY"] == 0.5)
 
     def test_priority(self):
-        graph = Graph("TEST")
-        f = graph.register("GOAL.1")
+        f = Frame("@TEST.GOAL.1")
 
         goal = Goal(f)
         self.assertEqual(0.0, goal.priority())
         self.assertTrue(f["_PRIORITY"] == 0.0)
 
     def test_cached_priority(self):
-        graph = Graph("TEST")
-        f = graph.register("GOAL.1")
+        f = Frame("@TEST.GOAL.1")
 
         goal = Goal(f)
         self.assertEqual(0.0, goal._cached_priority())
@@ -258,8 +264,7 @@ class GoalTestCase(unittest.TestCase):
 
     def test_resources_numeric(self):
 
-        graph = Graph("TEST")
-        f = graph.register("GOAL.1")
+        f = Frame("@TEST.GOAL.1")
         f["RESOURCES"] = 0.5
 
         goal = Goal(f)
@@ -271,14 +276,14 @@ class GoalTestCase(unittest.TestCase):
             def run(self, varmap: VariableMap, *args, **kwargs):
                 return 0.5
 
-        network = Network()
-        graph = network.register("EXE")
-        Bootstrap.bootstrap_resource(network, "backend.resources", "exe.knowledge")
+        StatementRegistry.register(TestStatement)
 
-        graph["RETURNING-STATEMENT"]["CLASSMAP"] = Literal(TestStatement)
-        statement = graph.register("STATEMENT.1", isa="EXE.RETURNING-STATEMENT")
+        AgentOntoLang().load_knowledge("backend.resources", "exe.knowledge")
 
-        f = graph.register("GOAL.1")
+        Frame("@EXE.RETURNING-STATEMENT")["CLASSMAP"] = TestStatement.__qualname__
+        statement = Frame("@TEST.STATEMENT.1").add_parent("@EXE.RETURNING-STATEMENT")
+
+        f = Frame("@TEST.GOAL.1")
         f["RESOURCES"] = statement
 
         goal = Goal(f)
@@ -286,16 +291,14 @@ class GoalTestCase(unittest.TestCase):
         self.assertTrue(f["_RESOURCES"] == 0.5)
 
     def test_resources(self):
-        graph = Graph("TEST")
-        f = graph.register("GOAL.1")
+        f = Frame("@TEST.GOAL.1")
 
         goal = Goal(f)
         self.assertEqual(1.0, goal.resources())
         self.assertTrue(f["_RESOURCES"] == 1.0)
 
     def test_cached_resources(self):
-        graph = Graph("TEST")
-        f = graph.register("GOAL.1")
+        f = Frame("@TEST.GOAL.1")
 
         goal = Goal(f)
         self.assertEqual(1.0, goal._cached_resources())
@@ -303,15 +306,13 @@ class GoalTestCase(unittest.TestCase):
         self.assertEqual(1.0, goal._cached_resources())
 
     def test_assign_decision(self):
-        graph = Graph("TEST")
-        f = graph.register("GOAL.1")
+        f = Frame("@TEST.GOAL.1")
         goal = Goal(f)
         goal.decision(decide=0.5)
         self.assertTrue(0.5 in f["_DECISION"])
 
     def test_cached_decision(self):
-        graph = Graph("TEST")
-        f = graph.register("GOAL.1")
+        f = Frame("@TEST.GOAL.1")
 
         goal = Goal(f)
         self.assertEqual(0.0, goal.decision())
@@ -320,13 +321,12 @@ class GoalTestCase(unittest.TestCase):
         self.assertEqual(0.5, goal.decision())
 
     def test_plan(self):
-        graph = Graph("TEST")
-        goal = graph.register("GOAL.1")
-        plan1 = graph.register("PLAN.1")
-        plan2 = graph.register("PLAN.2")
+        goal = Frame("@TEST.GOAL.1")
+        plan1 = Frame("@TEST.PLAN.1")
+        plan2 = Frame("@TEST.PLAN.2")
 
         goal["PLAN"] = [plan1, plan2]
-        plan2["SELECT"] = Literal(Plan.DEFAULT)
+        plan2["SELECT"] = Plan.DEFAULT
 
         self.assertEqual(Goal(goal).plan(), plan2)
         self.assertIsInstance(Goal(goal).plan(), Plan)
@@ -337,16 +337,16 @@ class GoalTestCase(unittest.TestCase):
             def run(self, varmap: VariableMap, *args, **kwargs):
                 return True
 
-        network = Network()
-        graph = network.register("EXE")
-        Bootstrap.bootstrap_resource(network, "backend.resources", "exe.knowledge")
+        StatementRegistry.register(TestStatement)
 
-        goal = graph.register("GOAL.1")
-        condition1 = graph.register("CONDITION.1")
-        condition2 = graph.register("CONDITION.2")
-        statement = graph.register("STATEMENT.1", isa="EXE.BOOLEAN-STATEMENT")
+        AgentOntoLang().load_knowledge("backend.resources", "exe.knowledge")
 
-        graph["BOOLEAN-STATEMENT"]["CLASSMAP"] = Literal(TestStatement)
+        goal = Frame("@TEST.GOAL.1")
+        condition1 = Frame("@TEST.CONDITION.1")
+        condition2 = Frame("@TEST.CONDITION.2")
+        statement = Frame("@TEST.STATEMENT.1").add_parent("@EXE.BOOLEAN-STATEMENT")
+
+        Frame("@EXE.BOOLEAN-STATEMENT")["CLASSMAP"] = TestStatement.__qualname__
         goal["WHEN"] = [condition1, condition2]
         condition1["ORDER"] = 2
         condition2["ORDER"] = 1
@@ -358,22 +358,67 @@ class GoalTestCase(unittest.TestCase):
         Goal(goal).assess()
         self.assertTrue(Goal(goal).is_satisfied())
 
+    def test_assess_abandons_subgoals_if_goal_satisfied(self):
+        subgoal1 = Frame("@TEST.SUBGOAL.1")
+        subgoal1["STATUS"] = Goal.Status.ACTIVE
+
+        subgoal2 = Frame("@TEST.SUBGOAL.2")
+        subgoal2["STATUS"] = Goal.Status.SATISFIED
+
+        goal = Frame("@TEST.GOAL.1")
+        goal["STATUS"] = Goal.Status.ACTIVE
+        goal["HAS-GOAL"] += subgoal1
+        goal["HAS-GOAL"] += subgoal2
+
+        self.assertEqual([subgoal1, subgoal2], Goal(goal).subgoals())
+        self.assertTrue(Goal(subgoal1).is_active())
+        self.assertTrue(Goal(subgoal2).is_satisfied())
+
+        goal["STATUS"] = Goal.Status.SATISFIED
+        Goal(goal).assess()
+
+        self.assertEqual([subgoal1, subgoal2], Goal(goal).subgoals())
+        self.assertTrue(Goal(subgoal1).is_abandoned())
+        self.assertTrue(Goal(subgoal2).is_satisfied())
+
+    def test_assess_abandons_subgoals_if_goal_abandoned(self):
+        subgoal1 = Frame("@TEST.SUBGOAL.1")
+        subgoal1["STATUS"] = Goal.Status.ACTIVE
+
+        subgoal2 = Frame("@TEST.SUBGOAL.2")
+        subgoal2["STATUS"] = Goal.Status.SATISFIED
+
+        goal = Frame("@TEST.GOAL.1")
+        goal["STATUS"] = Goal.Status.ACTIVE
+        goal["HAS-GOAL"] += subgoal1
+        goal["HAS-GOAL"] += subgoal2
+
+        self.assertEqual([subgoal1, subgoal2], Goal(goal).subgoals())
+        self.assertTrue(Goal(subgoal1).is_active())
+        self.assertTrue(Goal(subgoal2).is_satisfied())
+
+        goal["STATUS"] = Goal.Status.ABANDONED
+        Goal(goal).assess()
+
+        self.assertEqual([subgoal1, subgoal2], Goal(goal).subgoals())
+        self.assertTrue(Goal(subgoal1).is_abandoned())
+        self.assertTrue(Goal(subgoal2).is_satisfied())
+
     def test_instance_of(self):
-        graph = Graph("TEST")
-        definition = graph.register("GOAL-DEF")
-        plan = graph.register("PLAN.1")
-        condition = graph.register("CONDITION.1")
+        definition = Frame("@TEST.GOAL-DEF")
+        plan = Frame("@TEST.PLAN.1")
+        condition = Frame("@TEST.CONDITION.1")
 
-        plan["SELECT"] = Literal(Plan.DEFAULT)
+        plan["SELECT"] = Plan.DEFAULT
 
-        definition["NAME"] = Literal("Test Goal")
+        definition["NAME"] = "Test Goal"
         definition["PRIORITY"] = 0.5
         definition["PLAN"] = plan
         definition["WHEN"] = condition
-        definition["WITH"] = Literal("VAR_X")
+        definition["WITH"] = "VAR_X"
 
         params = [123]
-        goal = Goal.instance_of(graph, definition, params)
+        goal = Goal.instance_of(Space("TEST"), definition, params)
 
         self.assertEqual(goal.name(), "Test Goal")
         self.assertTrue(goal.frame["PRIORITY"] == 0.5)
@@ -382,119 +427,157 @@ class GoalTestCase(unittest.TestCase):
         self.assertTrue(goal.frame["WITH"] == "VAR_X")
         self.assertEqual(1, len(goal.frame["_WITH"]))
 
-        var = goal.frame["_WITH"][0].resolve()
+        var = goal.frame["_WITH"][0]
         self.assertEqual(var["NAME"], "VAR_X")
         self.assertEqual(var["FROM"], goal.frame)
         self.assertEqual(var["VALUE"], 123)
 
+    def test_effects(self):
+        goal = Frame("@TEST.GOAL.1")
+
+        from backend.models.statement import AddFillerStatement
+
+        statement1 = AddFillerStatement.instance(Space("TEST"), "@TEST.FRAME.1", "SLOT", 123)
+        statement2 = AddFillerStatement.instance(Space("TEST"), "@TEST.FRAME.1", "SLOT", "$var1")
+
+        effect1 = Effect.build(Space("TEST"), [statement1])
+        effect2 = Effect.build(Space("TEST"), [statement2])
+
+        goal["HAS-EFFECT"] += effect1.frame
+        goal["HAS-EFFECT"] += effect2.frame
+
+        self.assertEqual([effect1, effect2], Goal(goal).effects())
+
+    def test_effects_applied_in_assess_if_goal_satisfied(self):
+        AgentOntoLang().load_knowledge("backend.resources", "exe.knowledge")
+
+        goal = Frame("@TEST.GOAL.1")
+
+        from backend.models.statement import AddFillerStatement, Variable
+
+        frame = Frame("@TEST.FRAME.?")
+
+        statement1 = AddFillerStatement.instance(Space("TEST"), "@TEST.FRAME.1", "SLOT", 123)
+        statement2 = AddFillerStatement.instance(Space("TEST"), "@TEST.FRAME.1", "SLOT", "$var1")
+
+        effect1 = Effect.build(Space("TEST"), [statement1])
+        effect2 = Effect.build(Space("TEST"), [statement2])
+
+        goal["HAS-EFFECT"] += effect1.frame
+        goal["HAS-EFFECT"] += effect2.frame
+
+        Variable.instance(Space("TEST"), "$var1", 456, Goal(goal))
+
+        goal["STATUS"] = Goal.Status.ACTIVE
+        Goal(goal).assess()
+        self.assertEqual([], frame["SLOT"])
+
+        goal["STATUS"] = Goal.Status.SATISFIED
+        Goal(goal).assess()
+        self.assertEqual([123, 456], frame["SLOT"])
+
 
 class TriggerTestCase(unittest.TestCase):
 
+    def setUp(self):
+        graph.reset()
+
     def test_query(self):
-        n = Network()
 
-        query = Frame.q(n).id("TEST.FRAME.123")
+        query = Query(IdComparator("@TEST.FRAME.123"))
 
-        graph = n.register(Graph("TEST"))
-        trigger = graph.register("TRIGGER")
+        trigger = Frame("@TEST.TRIGGER")
         trigger["QUERY"] = query
 
         self.assertEqual(query, Trigger(trigger).query())
 
     def test_definition(self):
-        n = Network()
-        graph = n.register(Graph("TEST"))
-        goal = graph.register("MYGOAL")
-        trigger = graph.register("TRIGGER")
+        goal = Frame("@TEST.MYGOAL")
+        trigger = Frame("@TEST.TRIGGER")
         trigger["DEFINITION"] = goal
 
         self.assertEqual(goal, Trigger(trigger).definition())
 
     def test_triggered_on(self):
-        n = Network()
-        graph = n.register(Graph("TEST"))
-        o1 = graph.register("OBJECT.1")
-        o2 = graph.register("OBJECT.2")
+        o1 = Frame("@TEST.OBJECT.1")
+        o2 = Frame("@TEST.OBJECT.2")
 
-        trigger = graph.register("TRIGGER")
+        trigger = Frame("@TEST.TRIGGER")
 
-        trigger["TRIGGERED-ON"] += "TEST.OBJECT.1"
-        trigger["TRIGGERED-ON"] += "TEST.OBJECT.2"
+        trigger["TRIGGERED-ON"] += o1
+        trigger["TRIGGERED-ON"] += o2
 
         self.assertEqual([o1, o2], Trigger(trigger).triggered_on())
 
     def test_fire_creates_goal_instance(self):
-        n = Network()
-        graph = n.register(Graph("TEST"))
-        agenda = Agenda(graph.register("AGENDA"))
+        agenda = Agenda(Frame("@TEST.AGENDA"))
 
-        definition = graph.register("MYGOAL")
-        definition["WITH"] = Literal("$var1")
+        definition = Frame("@TEST.MYGOAL")
+        definition["WITH"] = "$var1"
 
-        trigger = Trigger.build(graph, Frame.q(n).id("TEST.TARGET.1"), definition)
+        trigger = Trigger.build(Space("TEST"), Query(IdComparator("@TEST.TARGET.1")), definition)
         agenda.add_trigger(trigger)
 
-        target = graph.register("TARGET", generate_index=True)
+        target = Frame("@TEST.TARGET.?")
 
         self.assertEqual(0, len(agenda.goals(pending=True, active=True)))
 
         trigger.fire(agenda)
 
-        self.assertIn(graph["GOAL.1"], agenda.goals(pending=True, active=True))
-        self.assertEqual(target, Goal(graph["GOAL.1"]).resolve("$var1"))
+        self.assertIn(Frame("@TEST.GOAL.1"), agenda.goals(pending=True, active=True))
+        self.assertEqual(target, Goal(Frame("@TEST.GOAL.1")).resolve("$var1"))
 
     def test_fire_creates_multiple_goal_instances(self):
-        n = Network()
-        graph = n.register(Graph("TEST"))
-        agenda = Agenda(graph.register("AGENDA"))
+        agenda = Agenda(Frame("@TEST.AGENDA"))
 
-        definition = graph.register("MYGOAL")
-        definition["WITH"] = Literal("$var1")
+        definition = Frame("@TEST.MYGOAL")
+        definition["WITH"] = "$var1"
 
-        trigger = Trigger.build(graph, Frame.q(n).has("MYSLOT"), definition)
+        trigger = Trigger.build(Space("TEST"), Query(ExistsComparator(slot="MYSLOT")), definition)
 
-        target1 = graph.register("TARGET", generate_index=True)
+        target1 = Frame("@TEST.TARGET.?")
         target1["MYSLOT"] = 123
 
-        target2 = graph.register("TARGET", generate_index=True)
+        target2 = Frame("@TEST.TARGET.?")
         target2["MYSLOT"] = 123
 
         self.assertEqual(0, len(agenda.goals(pending=True, active=True)))
 
         trigger.fire(agenda)
 
-        self.assertIn(graph["GOAL.1"], agenda.goals(pending=True, active=True))
-        self.assertIn(graph["GOAL.2"], agenda.goals(pending=True, active=True))
-        self.assertEqual(target1, Goal(graph["GOAL.1"]).resolve("$var1"))
-        self.assertEqual(target2, Goal(graph["GOAL.2"]).resolve("$var1"))
+        self.assertIn(Frame("@TEST.GOAL.1"), agenda.goals(pending=True, active=True))
+        self.assertIn(Frame("@TEST.GOAL.2"), agenda.goals(pending=True, active=True))
+
+        resolved = [Goal(Frame("@TEST.GOAL.1")).resolve("$var1"), Goal(Frame("@TEST.GOAL.2")).resolve("$var1")]
+        self.assertEqual(2, len(resolved))
+        self.assertIn(target1, resolved)
+        self.assertIn(target2, resolved)
 
     def test_fire_filters_existing_triggered_instances(self):
-        n = Network()
-        graph = n.register(Graph("TEST"))
-        agenda = Agenda(graph.register("AGENDA"))
+        agenda = Agenda(Frame("@TEST.AGENDA"))
 
-        definition = graph.register("MYGOAL")
-        definition["WITH"] = Literal("$var1")
+        definition = Frame("@TEST.MYGOAL")
+        definition["WITH"] = "$var1"
 
-        trigger = Trigger.build(graph, Frame.q(n).has("MYSLOT"), definition)
+        trigger = Trigger.build(Space("TEST"), Query(ExistsComparator(slot="MYSLOT")), definition)
 
-        target1 = graph.register("TARGET", generate_index=True)
+        target1 = Frame("@TEST.TARGET.?")
         target1["MYSLOT"] = 123
 
         self.assertEqual(0, len(agenda.goals(pending=True, active=True)))
 
         trigger.fire(agenda)
 
-        self.assertIn(graph["GOAL.1"], agenda.goals(pending=True, active=True))
-        self.assertEqual(target1, Goal(graph["GOAL.1"]).resolve("$var1"))
+        self.assertIn(Frame("@TEST.GOAL.1"), agenda.goals(pending=True, active=True))
+        self.assertEqual(target1, Goal(Frame("@TEST.GOAL.1")).resolve("$var1"))
 
-        target2 = graph.register("TARGET", generate_index=True)
+        target2 = Frame("@TEST.TARGET.?")
         target2["MYSLOT"] = 123
 
         trigger.fire(agenda)
 
-        self.assertIn(graph["GOAL.2"], agenda.goals(pending=True, active=True))
-        self.assertEqual(target2, Goal(graph["GOAL.2"]).resolve("$var1"))
+        self.assertIn(Frame("@TEST.GOAL.2"), agenda.goals(pending=True, active=True))
+        self.assertEqual(target2, Goal(Frame("@TEST.GOAL.2")).resolve("$var1"))
 
         self.assertEqual(2, len(agenda.goals(pending=True, active=True)))
 
@@ -502,31 +585,30 @@ class TriggerTestCase(unittest.TestCase):
 class ConditionTestCase(unittest.TestCase):
 
     def setUp(self):
-        self.n = Network()
-        self.g = self.n.register("EXE")
-        Bootstrap.bootstrap_resource(self.n, "backend.resources", "exe.knowledge")
+        graph.reset()
+        AgentOntoLang().load_knowledge("backend.resources", "exe.knowledge")
 
     def test_order(self):
-        gc = self.g.register("CONDITION.1")
+        gc = Frame("@TEST.CONDITION.1")
         gc["ORDER"] = 1
 
         self.assertEqual(Condition(gc).order(), 1)
 
     def test_status(self):
-        gc = self.g.register("GOAL-CONDITION.1")
-        gc["STATUS"] = Literal(Goal.Status.SATISFIED.name)
+        gc = Frame("@TEST.GOAL-CONDITION.1")
+        gc["STATUS"] = Goal.Status.SATISFIED.name
 
         self.assertEqual(Condition(gc).status(), Goal.Status.SATISFIED)
 
     def test_on(self):
-        gc = self.g.register("GOAL-CONDITION.1")
-        gc["ON"] = Literal(Condition.On.EXECUTED)
+        gc = Frame("@TEST.GOAL-CONDITION.1")
+        gc["ON"] = Condition.On.EXECUTED
 
         self.assertEqual(Condition(gc).on(), Condition.On.EXECUTED)
 
     def test_requires_boolean_statement(self):
-        c = self.g.register("CONDITION.1")
-        b = self.g.register("STATEMENT.1", isa="EXE.STATEMENT")
+        c = Frame("@TEST.CONDITION.1")
+        b = Frame("@TEST.STATEMENT.1").add_parent("@EXE.STATEMENT")
 
         c["IF"] = b
 
@@ -534,14 +616,14 @@ class ConditionTestCase(unittest.TestCase):
             Condition(c)
 
     def test_assess_executed(self):
-        goal = self.g.register("GOAL")
+        goal = Frame("@TEST.GOAL")
 
-        condition = self.g.register("CONDITION")
+        condition = Frame("@TEST.CONDITION")
         condition["ON"] = Condition.On.EXECUTED
 
         self.assertFalse(Condition(condition).assess(VariableMap(goal)))
 
-        goal["PLAN"] = self.g.register("PLAN")
+        goal["PLAN"] = Frame("@TEST.PLAN")
 
         self.assertTrue(Condition(condition).assess(VariableMap(goal)))
 
@@ -551,9 +633,11 @@ class ConditionTestCase(unittest.TestCase):
             def run(self, scope: StatementScope,  varmap: VariableMap):
                 return True
 
-        c = self.g.register("CONDITION.1")
-        b = self.g.register("BOOLEAN-STATEMENT.1", isa="EXE.BOOLEAN-STATEMENT")
-        self.g["BOOLEAN-STATEMENT"]["CLASSMAP"] = Literal(TestStatement)
+        StatementRegistry.register(TestStatement)
+
+        c = Frame("@TEST.CONDITION.1")
+        b = Frame("@TEST.BOOLEAN-STATEMENT.1").add_parent("@EXE.BOOLEAN-STATEMENT")
+        Frame("@EXE.BOOLEAN-STATEMENT")["CLASSMAP"] = TestStatement.__qualname__
 
         c["IF"] = b
 
@@ -568,17 +652,21 @@ class ConditionTestCase(unittest.TestCase):
             def run(self, scope: StatementScope, varmap: VariableMap):
                 return result1
 
+        StatementRegistry.register(TestStatement1)
+
         class TestStatement2(Statement):
             def run(self, scope: StatementScope,  varmap: VariableMap):
                 return result2
 
-        c = self.g.register("CONDITION.1")
-        self.g.register("TEST-STATEMENT-A", isa="EXE.BOOLEAN-STATEMENT")
-        self.g.register("TEST-STATEMENT-B", isa="EXE.BOOLEAN-STATEMENT")
-        b1 = self.g.register("TEST-STATEMENT-A.1", isa="TEST-STATEMENT-A")
-        b2 = self.g.register("TEST-STATEMENT-B.1", isa="TEST-STATEMENT-B")
-        self.g["TEST-STATEMENT-A"]["CLASSMAP"] = Literal(TestStatement1)
-        self.g["TEST-STATEMENT-B"]["CLASSMAP"] = Literal(TestStatement2)
+        StatementRegistry.register(TestStatement2)
+
+        c = Frame("@TEST.CONDITION.1")
+        Frame("@TEST.STATEMENT-A").add_parent("@EXE.BOOLEAN-STATEMENT")
+        Frame("@TEST.STATEMENT-B").add_parent("@EXE.BOOLEAN-STATEMENT")
+        b1 = Frame("@TEST.STATEMENT-A.1").add_parent("@TEST.STATEMENT-A")
+        b2 = Frame("@TEST.STATEMENT-B.1").add_parent("@TEST.STATEMENT-B")
+        Frame("@TEST.STATEMENT-A")["CLASSMAP"] = TestStatement1.__qualname__
+        Frame("@TEST.STATEMENT-B")["CLASSMAP"] = TestStatement2.__qualname__
 
         c["IF"] = [b1, b2]
         c["LOGIC"] = Condition.Logic.AND
@@ -598,17 +686,21 @@ class ConditionTestCase(unittest.TestCase):
             def run(self, scope: StatementScope,  varmap: VariableMap):
                 return result1
 
+        StatementRegistry.register(TestStatement1)
+
         class TestStatement2(Statement):
             def run(self, scope: StatementScope,  varmap: VariableMap):
                 return result2
 
-        c = self.g.register("CONDITION.1")
-        self.g.register("TEST-STATEMENT-A", isa="EXE.BOOLEAN-STATEMENT")
-        self.g.register("TEST-STATEMENT-B", isa="EXE.BOOLEAN-STATEMENT")
-        b1 = self.g.register("TEST-STATEMENT-A.1", isa="TEST-STATEMENT-A")
-        b2 = self.g.register("TEST-STATEMENT-B.1", isa="TEST-STATEMENT-B")
-        self.g["TEST-STATEMENT-A"]["CLASSMAP"] = Literal(TestStatement1)
-        self.g["TEST-STATEMENT-B"]["CLASSMAP"] = Literal(TestStatement2)
+        StatementRegistry.register(TestStatement2)
+
+        c = Frame("@TEST.CONDITION.1")
+        Frame("@TEST.STATEMENT-A").add_parent("@EXE.BOOLEAN-STATEMENT")
+        Frame("@TEST.STATEMENT-B").add_parent("@EXE.BOOLEAN-STATEMENT")
+        b1 = Frame("@TEST.STATEMENT-A.1").add_parent("@TEST.STATEMENT-A")
+        b2 = Frame("@TEST.STATEMENT-B.1").add_parent("@TEST.STATEMENT-B")
+        Frame("@TEST.STATEMENT-A")["CLASSMAP"] = TestStatement1.__qualname__
+        Frame("@TEST.STATEMENT-B")["CLASSMAP"] = TestStatement2.__qualname__
 
         c["IF"] = [b1, b2]
         c["LOGIC"] = Condition.Logic.OR
@@ -628,17 +720,21 @@ class ConditionTestCase(unittest.TestCase):
             def run(self, scope: StatementScope,  varmap: VariableMap):
                 return result1
 
+        StatementRegistry.register(TestStatement1)
+
         class TestStatement2(Statement):
             def run(self, scope: StatementScope,  varmap: VariableMap):
                 return result2
 
-        c = self.g.register("CONDITION.1")
-        self.g.register("TEST-STATEMENT-A", isa="EXE.BOOLEAN-STATEMENT")
-        self.g.register("TEST-STATEMENT-B", isa="EXE.BOOLEAN-STATEMENT")
-        b1 = self.g.register("TEST-STATEMENT-A.1", isa="TEST-STATEMENT-A")
-        b2 = self.g.register("TEST-STATEMENT-B.1", isa="TEST-STATEMENT-B")
-        self.g["TEST-STATEMENT-A"]["CLASSMAP"] = Literal(TestStatement1)
-        self.g["TEST-STATEMENT-B"]["CLASSMAP"] = Literal(TestStatement2)
+        StatementRegistry.register(TestStatement2)
+
+        c = Frame("@TEST.CONDITION.1")
+        Frame("@TEST.STATEMENT-A").add_parent("@EXE.BOOLEAN-STATEMENT")
+        Frame("@TEST.STATEMENT-B").add_parent("@EXE.BOOLEAN-STATEMENT")
+        b1 = Frame("@TEST.STATEMENT-A.1").add_parent("@TEST.STATEMENT-A")
+        b2 = Frame("@TEST.STATEMENT-B.1").add_parent("@TEST.STATEMENT-B")
+        Frame("@TEST.STATEMENT-A")["CLASSMAP"] = TestStatement1.__qualname__
+        Frame("@TEST.STATEMENT-B")["CLASSMAP"] = TestStatement2.__qualname__
 
         c["IF"] = [b1, b2]
         c["LOGIC"] = Condition.Logic.NOR
@@ -663,17 +759,21 @@ class ConditionTestCase(unittest.TestCase):
             def run(self, scope: StatementScope,  varmap: VariableMap):
                 return result1
 
+        StatementRegistry.register(TestStatement1)
+
         class TestStatement2(Statement):
             def run(self, scope: StatementScope,  varmap: VariableMap):
                 return result2
 
-        c = self.g.register("CONDITION.1")
-        self.g.register("TEST-STATEMENT-A", isa="EXE.BOOLEAN-STATEMENT")
-        self.g.register("TEST-STATEMENT-B", isa="EXE.BOOLEAN-STATEMENT")
-        b1 = self.g.register("TEST-STATEMENT-A.1", isa="TEST-STATEMENT-A")
-        b2 = self.g.register("TEST-STATEMENT-B.1", isa="TEST-STATEMENT-B")
-        self.g["TEST-STATEMENT-A"]["CLASSMAP"] = Literal(TestStatement1)
-        self.g["TEST-STATEMENT-B"]["CLASSMAP"] = Literal(TestStatement2)
+        StatementRegistry.register(TestStatement2)
+
+        c = Frame("@TEST.CONDITION.1")
+        Frame("@TEST.STATEMENT-A").add_parent("@EXE.BOOLEAN-STATEMENT")
+        Frame("@TEST.STATEMENT-B").add_parent("@EXE.BOOLEAN-STATEMENT")
+        b1 = Frame("@TEST.STATEMENT-A.1").add_parent("@TEST.STATEMENT-A")
+        b2 = Frame("@TEST.STATEMENT-B.1").add_parent("@TEST.STATEMENT-B")
+        Frame("@TEST.STATEMENT-A")["CLASSMAP"] = TestStatement1.__qualname__
+        Frame("@TEST.STATEMENT-B")["CLASSMAP"] = TestStatement2.__qualname__
 
         c["IF"] = [b1, b2]
         c["LOGIC"] = Condition.Logic.NAND
@@ -698,17 +798,21 @@ class ConditionTestCase(unittest.TestCase):
             def run(self, scope: StatementScope,  varmap: VariableMap):
                 return result1
 
+        StatementRegistry.register(TestStatement1)
+
         class TestStatement2(Statement):
             def run(self, scope: StatementScope,  varmap: VariableMap):
                 return result2
 
-        c = self.g.register("CONDITION.1")
-        self.g.register("TEST-STATEMENT-A", isa="EXE.BOOLEAN-STATEMENT")
-        self.g.register("TEST-STATEMENT-B", isa="EXE.BOOLEAN-STATEMENT")
-        b1 = self.g.register("TEST-STATEMENT-A.1", isa="TEST-STATEMENT-A")
-        b2 = self.g.register("TEST-STATEMENT-B.1", isa="TEST-STATEMENT-B")
-        self.g["TEST-STATEMENT-A"]["CLASSMAP"] = Literal(TestStatement1)
-        self.g["TEST-STATEMENT-B"]["CLASSMAP"] = Literal(TestStatement2)
+        StatementRegistry.register(TestStatement2)
+
+        c = Frame("@TEST.CONDITION.1")
+        Frame("@TEST.STATEMENT-A").add_parent("@EXE.BOOLEAN-STATEMENT")
+        Frame("@TEST.STATEMENT-B").add_parent("@EXE.BOOLEAN-STATEMENT")
+        b1 = Frame("@TEST.STATEMENT-A.1").add_parent("@TEST.STATEMENT-A")
+        b2 = Frame("@TEST.STATEMENT-B.1").add_parent("@TEST.STATEMENT-B")
+        Frame("@TEST.STATEMENT-A")["CLASSMAP"] = TestStatement1.__qualname__
+        Frame("@TEST.STATEMENT-B")["CLASSMAP"] = TestStatement2.__qualname__
 
         c["IF"] = [b1, b2]
         c["LOGIC"] = Condition.Logic.NOT
@@ -726,7 +830,7 @@ class ConditionTestCase(unittest.TestCase):
         self.assertTrue(Condition(c).assess(None))
 
     def test_assess_no_conditions(self):
-        gc = self.g.register("GOAL-CONDITION.1")
+        gc = Frame("@TEST.GOAL-CONDITION.1")
         self.assertTrue(Condition(gc).assess(None))
 
     def test_assess_with_varmap(self):
@@ -735,15 +839,17 @@ class ConditionTestCase(unittest.TestCase):
             def run(self, scope: StatementScope,  varmap: VariableMap):
                 return varmap.resolve("X")
 
-        c = self.g.register("CONDITION.1")
-        b = self.g.register("BOOLEAN-STATEMENT.1", isa="EXE.BOOLEAN-STATEMENT")
-        self.g["BOOLEAN-STATEMENT"]["CLASSMAP"] = Literal(TestStatement)
-        vm = self.g.register("VARMAP.1")
-        v = self.g.register("VARIABLE.1")
+        StatementRegistry.register(TestStatement)
 
-        vm["WITH"] = Literal("X")
+        c = Frame("@TEST.CONDITION.1")
+        b = Frame("@TEST.BOOLEAN-STATEMENT.1").add_parent("@EXE.BOOLEAN-STATEMENT")
+        Frame("@EXE.BOOLEAN-STATEMENT")["CLASSMAP"] = TestStatement.__qualname__
+        vm = Frame("@TEST.VARMAP.1")
+        v = Frame("@TEST.VARIABLE.1")
+
+        vm["WITH"] = "X"
         vm["_WITH"] = v
-        v["NAME"] = Literal("X")
+        v["NAME"] = "X"
         v["VALUE"] = True
 
         c["IF"] = b
@@ -754,17 +860,25 @@ class ConditionTestCase(unittest.TestCase):
 class PlanTestCase(unittest.TestCase):
 
     def setUp(self):
-        self.n = Network()
-        self.g = self.n.register("EXE")
+        graph.reset()
 
     def test_name(self):
-        plan = self.g.register("PLAN.1")
-        plan["NAME"] = Literal("Test Plan")
+        plan = Frame("@TEST.PLAN.1")
+        plan["NAME"] = "Test Plan"
 
         self.assertEqual(Plan(plan).name(), "Test Plan")
 
+    def test_is_negated(self):
+        plan = Frame("@TEST.PLAN.1")
+
+        plan["NEGATE"] = False
+        self.assertFalse(Plan(plan).is_negated())
+
+        plan["NEGATE"] = True
+        self.assertTrue(Plan(plan).is_negated())
+
     def test_select(self):
-        Bootstrap.bootstrap_resource(self.n, "backend.resources", "exe.knowledge")
+        AgentOntoLang().load_knowledge("backend.resources", "exe.knowledge")
 
         result = True
 
@@ -772,11 +886,13 @@ class PlanTestCase(unittest.TestCase):
             def run(self, varmap: VariableMap, *args, **kwargs):
                 return result
 
-        plan = self.g.register("PLAN.1")
-        statement = self.g.register("BOOLEAN-STATEMENT.1", isa="EXE.BOOLEAN-STATEMENT")
+        StatementRegistry.register(TestStatement)
+
+        plan = Frame("@TEST.PLAN.1")
+        statement = Frame("@TEST.BOOLEAN-STATEMENT.1").add_parent("@EXE.BOOLEAN-STATEMENT")
 
         plan["SELECT"] = statement
-        self.g["BOOLEAN-STATEMENT"]["CLASSMAP"] = Literal(TestStatement)
+        Frame("@EXE.BOOLEAN-STATEMENT")["CLASSMAP"] = TestStatement.__qualname__
 
         self.assertTrue(Plan(plan).select(None))
 
@@ -784,46 +900,92 @@ class PlanTestCase(unittest.TestCase):
 
         self.assertFalse(Plan(plan).select(None))
 
+    def test_select_negated(self):
+        AgentOntoLang().load_knowledge("backend.resources", "exe.knowledge")
+
+        class TestStatement(Statement):
+            def run(self, varmap: VariableMap, *args, **kwargs):
+                return True
+
+        StatementRegistry.register(TestStatement)
+
+        Frame("@EXE.BOOLEAN-STATEMENT")["CLASSMAP"] = TestStatement.__qualname__
+        statement = Frame("@TEST.BOOLEAN-STATEMENT.1").add_parent("@EXE.BOOLEAN-STATEMENT")
+
+        plan = Plan.build(Space("TEST"), "test", statement, [])
+        self.assertTrue(plan.select(None))
+
+        plan = Plan.build(Space("TEST"), "test", statement, [], negate=True)
+        self.assertFalse(plan.select(None))
+
     def test_select_with_variable(self):
-        Bootstrap.bootstrap_resource(self.n, "backend.resources", "exe.knowledge")
+        AgentOntoLang().load_knowledge("backend.resources", "exe.knowledge")
 
         class TestStatement(Statement):
             def run(self, scope: StatementScope, varmap: VariableMap):
                 return varmap.resolve("X")
 
-        varmap = self.g.register("VARMAP.1")
-        variable = self.g.register("VARIABLE.1")
-        plan = self.g.register("PLAN.1")
-        statement = self.g.register("BOOLEAN-STATEMENT.1", isa="EXE.BOOLEAN-STATEMENT")
+        StatementRegistry.register(TestStatement)
+
+        varmap = Frame("@TEST.VARMAP.1")
+        variable = Frame("@TEST.VARIABLE.1")
+        plan = Frame("@TEST.PLAN.1")
+        statement = Frame("@TEST.BOOLEAN-STATEMENT.1").add_parent("@EXE.BOOLEAN-STATEMENT")
 
         varmap["_WITH"] = variable
-        variable["NAME"] = Literal("X")
+        variable["NAME"] = "X"
         variable["VALUE"] = True
         plan["SELECT"] = statement
-        self.g["BOOLEAN-STATEMENT"]["CLASSMAP"] = Literal(TestStatement)
+        Frame("@EXE.BOOLEAN-STATEMENT")["CLASSMAP"] = TestStatement.__qualname__
 
         self.assertTrue(Plan(plan).select(VariableMap(varmap)))
 
+    def test_select_with_mp(self):
+        from backend.models.mps import AgentMethod
+        from backend.models.statement import MeaningProcedureStatement, MPRegistry
+
+        AgentOntoLang().load_knowledge("backend.resources", "exe.knowledge")
+
+        class TestMP(AgentMethod):
+            def run(self, var1):
+                return var1
+
+        MPRegistry.register(TestMP)
+
+        mp_statement = MeaningProcedureStatement.instance(Space("TEST"), TestMP.__name__, ["$var1"])
+        plan = Plan.build(Space("TEST"), "X", mp_statement, [])
+
+        varmap = Frame("@TEST.VARMAP.1")
+        variable = Frame("@TEST.VARIABLE.1")
+        varmap["_WITH"] = variable
+        variable["NAME"] = "$var1"
+
+        variable["VALUE"] = True
+        self.assertTrue(plan.select(VariableMap(varmap)))
+
+        variable["VALUE"] = False
+        self.assertFalse(plan.select(VariableMap(varmap)))
+
     def test_select_when_default(self):
-        plan = self.g.register("PLAN.1")
-        plan["SELECT"] = Literal(Plan.DEFAULT)
+        plan = Frame("@TEST.PLAN.1")
+        plan["SELECT"] = Plan.DEFAULT
 
         self.assertTrue(Plan(plan).select(None))
 
     def test_is_default(self):
-        plan = self.g.register("PLAN.1")
+        plan = Frame("@TEST.PLAN.1")
 
         self.assertFalse(Plan(plan).is_default())
 
-        plan["SELECT"] = Literal(Plan.DEFAULT)
+        plan["SELECT"] = Plan.DEFAULT
 
         self.assertTrue(Plan(plan).is_default())
 
     def test_steps(self):
-        plan = self.g.register("PLAN.1")
+        plan = Frame("@TEST.PLAN.1")
 
-        step1 = self.g.register("STEP", generate_index=True)
-        step2 = self.g.register("STEP", generate_index=True)
+        step1 = Frame("@TEST.STEP.?")
+        step2 = Frame("@TEST.STEP.?")
 
         step1["INDEX"] = 1
         step2["INDEX"] = 2
@@ -836,12 +998,12 @@ class PlanTestCase(unittest.TestCase):
         self.assertEqual([Step(step1), Step(step2)], Plan(plan).steps())
 
     def test_executed(self):
-        g = Graph("TEST")
+        s = Space("TEST")
 
-        step1 = Step.build(g, 1, [])
-        step2 = Step.build(g, 2, [])
+        step1 = Step.build(s, 1, [])
+        step2 = Step.build(s, 2, [])
 
-        plan = Plan.build(g, "test-plan", Plan.DEFAULT, [step1, step2])
+        plan = Plan.build(s, "test-plan", Plan.DEFAULT, [step1, step2])
 
         self.assertFalse(plan.executed())
 
@@ -857,17 +1019,17 @@ class PlanTestCase(unittest.TestCase):
 class StepTestCase(unittest.TestCase):
 
     def setUp(self):
-        self.n = Network()
-        self.g = self.n.register("EXE")
+        graph.reset()
+        StatementRegistry.reset()
 
     def test_index(self):
-        step = self.g.register("STEP")
+        step = Frame("@TEST.STEP")
         step["INDEX"] = 1
 
         self.assertEqual(1, Step(step).index())
 
     def test_status(self):
-        step = self.g.register("STEP")
+        step = Frame("@TEST.STEP")
 
         step["STATUS"] = Step.Status.PENDING
         self.assertEqual(Step.Status.PENDING, Step(step).status())
@@ -880,49 +1042,106 @@ class StepTestCase(unittest.TestCase):
         self.assertTrue(Step(step).is_finished())
 
     def test_perform(self):
-        Bootstrap.bootstrap_resource(self.n, "backend.resources", "exe.knowledge")
+        AgentOntoLang().load_knowledge("backend.resources", "exe.knowledge")
 
         out = []
 
         class TestStatement(Statement):
             def run(self, varmap: VariableMap, *args, **kwargs):
                 nonlocal out
-                out.append(self.frame["LOCAL"][0].resolve().value)
+                out.append(self.frame["LOCAL"][0])
 
-        step = self.g.register("STEP")
-        statement1 = self.g.register("STATEMENT", generate_index=True, isa="EXE.STATEMENT")
-        statement2 = self.g.register("STATEMENT", generate_index=True, isa="EXE.STATEMENT")
+        StatementRegistry.register(TestStatement)
 
-        self.g["STATEMENT"]["CLASSMAP"] = Literal(TestStatement)
+        step = Frame("@TEST.STEP")
+        statement1 = Frame("@TEST.STATEMENT.?").add_parent("@EXE.STATEMENT")
+        statement2 = Frame("@TEST.STATEMENT.?").add_parent("@EXE.STATEMENT")
+
+        Frame("@EXE.STATEMENT")["CLASSMAP"] = TestStatement.__qualname__
         step["PERFORM"] = [statement1, statement2]
-        statement1["LOCAL"] = Literal("X")
-        statement2["LOCAL"] = Literal("Y")
+        statement1["LOCAL"] = "X"
+        statement2["LOCAL"] = "Y"
 
-        Step(step).perform(VariableMap(self.g.register("VARMAP")))
+        Step(step).perform(VariableMap(Frame("@TEST.VARMAP")))
 
         self.assertEqual(out, ["X", "Y"])
 
-    def test_perform_returns_outputs(self):
-        Bootstrap.bootstrap_resource(self.n, "backend.resources", "exe.knowledge")
+    def test_perform_returns_scope_with_outputs(self):
+        AgentOntoLang().load_knowledge("backend.resources", "exe.knowledge")
 
         class TestStatement(Statement):
             def run(self, scope: StatementScope(), varmap: VariableMap):
                 scope.outputs.append(123)
 
-        agent = self.g.register("AGENT")
-        goal = self.g.register("GOAL")
-        plan = self.g.register("PLAN")
-        step = self.g.register("STEP")
+        StatementRegistry.register(TestStatement)
 
-        statement = self.g.register("STATEMENT", generate_index=True, isa="EXE.STATEMENT")
-        self.g["STATEMENT"]["CLASSMAP"] = Literal(TestStatement)
+        agent = Frame("@TEST.AGENT")
+        goal = Frame("@TEST.GOAL")
+        plan = Frame("@TEST.PLAN")
+        step = Frame("@TEST.STEP")
+
+        statement = Frame("@TEST.STATEMENT.?").add_parent("@EXE.STATEMENT")
+        Frame("@EXE.STATEMENT")["CLASSMAP"] = TestStatement.__qualname__
         step["PERFORM"] = [statement]
 
-        outputs = Step(step).perform(VariableMap(self.g.register("VARMAP")))
-        self.assertEqual([123], outputs)
+        scope = Step(step).perform(VariableMap(Frame("@TEST.VARMAP")))
+        self.assertEqual([123], scope.outputs)
+
+    def test_perform_returns_scope_with_expectations(self):
+        AgentOntoLang().load_knowledge("backend.resources", "exe.knowledge")
+
+        class TestStatement(Statement):
+            def run(self, scope: StatementScope(), varmap: VariableMap):
+                scope.expectations.append(123)
+
+        StatementRegistry.register(TestStatement)
+
+        agent = Frame("@TEST.AGENT")
+        goal = Frame("@TEST.GOAL")
+        plan = Frame("@TEST.PLAN")
+        step = Frame("@TEST.STEP")
+
+        statement = Frame("@TEST.STATEMENT.?").add_parent("@EXE.STATEMENT")
+        Frame("@EXE.STATEMENT")["CLASSMAP"] = TestStatement.__qualname__
+        step["PERFORM"] = [statement]
+
+        scope = Step(step).perform(VariableMap(Frame("@TEST.VARMAP")))
+        self.assertEqual([123], scope.expectations)
+
+    def test_perform_with_transients_overrides_scope_detection(self):
+        from backend.models.statement import TransientFrame
+
+        AgentOntoLang().load_knowledge("backend.resources", "exe.knowledge")
+
+        transient: Frame = None
+
+        class TestStatement(Statement):
+            def run(self, scope: StatementScope(), varmap: VariableMap):
+                nonlocal transient
+                transient = Frame("@" + self.frame.space().name + ".TRANSIENT")
+                scope.transients.append(TransientFrame(transient))
+
+        StatementRegistry.register(TestStatement)
+
+        agent = Frame("@TEST.AGENT")
+        goal = Frame("@TEST.GOAL")
+        plan = Frame("@TEST.PLAN")
+        step = Frame("@TEST.STEP")
+
+        statement = Frame("@TEST.STATEMENT.?").add_parent("@EXE.STATEMENT")
+        Frame("@EXE.STATEMENT")["CLASSMAP"] = TestStatement.__qualname__
+        step["PERFORM"] = [statement]
+
+        Step(step).perform(VariableMap(Frame("@TEST.VARMAP")))
+
+        step["STATUS"] = Step.Status.PENDING
+        self.assertTrue(TransientFrame(transient).is_in_scope())
+
+        step["STATUS"] = Step.Status.FINISHED
+        self.assertFalse(TransientFrame(transient).is_in_scope())
 
     def test_perform_with_variables(self):
-        Bootstrap.bootstrap_resource(self.n, "backend.resources", "exe.knowledge")
+        AgentOntoLang().load_knowledge("backend.resources", "exe.knowledge")
 
         out = []
 
@@ -931,15 +1150,17 @@ class StepTestCase(unittest.TestCase):
                 nonlocal out
                 out.append(varmap.resolve("X"))
 
-        step = self.g.register("STEP")
-        statement = self.g.register("STATEMENT", generate_index=True, isa="EXE.STATEMENT")
-        varmap = self.g.register("VARMAP")
-        variable = self.g.register("VARIABLE")
+        StatementRegistry.register(TestStatement)
 
-        self.g["STATEMENT"]["CLASSMAP"] = Literal(TestStatement)
+        step = Frame("@TEST.STEP")
+        statement = Frame("@TEST.STATEMENT.?").add_parent("@EXE.STATEMENT")
+        varmap = Frame("@TEST.VARMAP")
+        variable = Frame("@TEST.VARIABLE")
+
+        Frame("@EXE.STATEMENT")["CLASSMAP"] = TestStatement.__qualname__
         step["PERFORM"] = statement
         varmap["_WITH"] = variable
-        variable["NAME"] = Literal("X")
+        variable["NAME"] = "X"
         variable["VALUE"] = 123
 
         Step(step).perform(VariableMap(varmap))
@@ -947,59 +1168,101 @@ class StepTestCase(unittest.TestCase):
         self.assertEqual(out, [123])
 
     def test_perform_idle(self):
-        Bootstrap.bootstrap_resource(self.n, "backend.resources", "exe.knowledge")
+        AgentOntoLang().load_knowledge("backend.resources", "exe.knowledge")
 
-        step = self.g.register("STEP")
-        step["PERFORM"] = Literal(Step.IDLE)
+        step = Frame("@TEST.STEP")
+        step["PERFORM"] = Step.IDLE
 
-        Step(step).perform(VariableMap(self.g.register("VARMAP")))
+        Step(step).perform(VariableMap(Frame("@TEST.VARMAP")))
+
+    def test_perform_raises_impasse_exceptions(self):
+        AgentOntoLang().load_knowledge("backend.resources", "exe.knowledge")
+
+        from backend.models.statement import AssertStatement, ExistsStatement
+
+        perform = [AssertStatement.instance(Space("TEST"), ExistsStatement.instance(Space("TEST"), Query(IdComparator("@EXE.DNE"))), [])]
+
+        step = Step.build(Space("TEST"), 1, perform)
+
+        with self.assertRaises(AssertStatement.ImpasseException):
+            step.perform(VariableMap(Frame("@TEST.VARMAP")))
+
+        Frame("@EXE.DNE")
+        step.perform(VariableMap(Frame("@TEST.VARMAP")))
 
 
 class DecisionTestCase(unittest.TestCase):
 
     def setUp(self):
-        self.n = Network()
-        self.g = self.n.register("TEST")
+        graph.reset()
 
     def test_goal(self):
-        goal = self.g.register("GOAL")
+        goal = Frame("@TEST.GOAL")
 
-        decision = self.g.register("DECISION")
+        decision = Frame("@TEST.DECISION")
         decision["ON-GOAL"] = goal
 
         self.assertEqual(goal, Decision(decision).goal())
 
     def test_plan(self):
-        plan = self.g.register("PLAN")
+        plan = Frame("@TEST.PLAN")
 
-        decision = self.g.register("DECISION")
+        decision = Frame("@TEST.DECISION")
         decision["ON-PLAN"] = plan
 
         self.assertEqual(plan, Decision(decision).plan())
 
     def test_step(self):
-        step = self.g.register("STEP")
+        step = Frame("@TEST.STEP")
 
-        decision = self.g.register("DECISION")
+        decision = Frame("@TEST.DECISION")
         decision["ON-STEP"] = step
 
         self.assertEqual(step, Decision(decision).step())
 
+    def test_impasses(self):
+        decision = Frame("@TEST.DECISION")
+
+        self.assertEqual([], Decision(decision).impasses())
+
+        impasse1 = Frame("@TEST.GOAL.?")
+        impasse2 = Frame("@TEST.GOAL.?")
+
+        decision["HAS-IMPASSE"] += impasse1
+        decision["HAS-IMPASSE"] += impasse2
+
+        self.assertEqual([impasse1, impasse2], Decision(decision).impasses())
+        self.assertIsInstance(Decision(decision).impasses()[0], Goal)
+        self.assertIsInstance(Decision(decision).impasses()[1], Goal)
+
     def test_outputs(self):
-        decision = self.g.register("DECISION")
+        decision = Frame("@TEST.DECISION")
 
         self.assertEqual([], Decision(decision).outputs())
 
-        output1 = self.g.register("XMR", generate_index=True)
-        output2 = self.g.register("XMR", generate_index=True)
+        output1 = Frame("@TEST.XMR.?")
+        output2 = Frame("@TEST.XMR.?")
 
         decision["HAS-OUTPUT"] += output1
         decision["HAS-OUTPUT"] += output2
 
         self.assertEqual([output1, output2], Decision(decision).outputs())
 
+    def test_expectations(self):
+        decision = Frame("@TEST.DECISION")
+
+        self.assertEqual([], Decision(decision).expectations())
+
+        expectation1 = Frame("@TEST.EXPECTATION.?")
+        expectation2 = Frame("@TEST.EXPECTATION.?")
+
+        decision["HAS-EXPECTATION"] += expectation1
+        decision["HAS-EXPECTATION"] += expectation2
+
+        self.assertEqual([expectation1, expectation2], Decision(decision).expectations())
+
     def test_priority(self):
-        decision = self.g.register("DECISION")
+        decision = Frame("@TEST.DECISION")
 
         self.assertEqual(None, Decision(decision).priority())
 
@@ -1008,7 +1271,7 @@ class DecisionTestCase(unittest.TestCase):
         self.assertEqual(0.5, Decision(decision).priority())
 
     def test_cost(self):
-        decision = self.g.register("DECISION")
+        decision = Frame("@TEST.DECISION")
 
         self.assertEqual(None, Decision(decision).cost())
 
@@ -1017,15 +1280,15 @@ class DecisionTestCase(unittest.TestCase):
         self.assertEqual(0.5, Decision(decision).cost())
 
     def test_requires(self):
-        decision = self.g.register("DECISION")
+        decision = Frame("@TEST.DECISION")
 
         self.assertEqual([], Decision(decision).requires())
 
-        capability1 = self.g.register("CAPABILITY", generate_index=True)
-        capability2 = self.g.register("CAPABILITY", generate_index=True)
+        capability1 = Frame("@TEST.CAPABILITY.?")
+        capability2 = Frame("@TEST.CAPABILITY.?")
 
-        output1 = self.g.register("OUTPUT-XMR", generate_index=True)
-        output2 = self.g.register("OUTPUT-XMR", generate_index=True)
+        output1 = Frame("@TEST.OUTPUT-XMR.?")
+        output2 = Frame("@TEST.OUTPUT-XMR.?")
 
         output1["REQUIRES"] = capability1
         output2["REQUIRES"] = capability2
@@ -1036,7 +1299,7 @@ class DecisionTestCase(unittest.TestCase):
         self.assertEqual([capability1, capability2], Decision(decision).requires())
 
     def test_status(self):
-        decision = self.g.register("DECISION")
+        decision = Frame("@TEST.DECISION")
 
         self.assertEqual(Decision.Status.PENDING, Decision(decision).status())
 
@@ -1045,12 +1308,12 @@ class DecisionTestCase(unittest.TestCase):
         self.assertEqual(Decision.Status.SELECTED, Decision(decision).status())
 
     def test_effectors(self):
-        decision = self.g.register("DECISION")
+        decision = Frame("@TEST.DECISION")
 
         self.assertEqual([], Decision(decision).effectors())
 
-        effector1 = self.g.register("EFFECTOR", generate_index=True)
-        effector2 = self.g.register("EFFECTOR", generate_index=True)
+        effector1 = Frame("@TEST.EFFECTOR.?")
+        effector2 = Frame("@TEST.EFFECTOR.?")
 
         decision["HAS-EFFECTOR"] += effector1
         decision["HAS-EFFECTOR"] += effector2
@@ -1058,12 +1321,12 @@ class DecisionTestCase(unittest.TestCase):
         self.assertEqual([effector1, effector2], Decision(decision).effectors())
 
     def test_callbacks(self):
-        decision = self.g.register("DECISION")
+        decision = Frame("@TEST.DECISION")
 
         self.assertEqual([], Decision(decision).callbacks())
 
-        callback1 = self.g.register("CALLBACK", generate_index=True)
-        callback2 = self.g.register("CALLBACK", generate_index=True)
+        callback1 = Frame("@TEST.CALLBACK.?")
+        callback2 = Frame("@TEST.CALLBACK.?")
 
         decision["HAS-CALLBACK"] += callback1
         decision["HAS-CALLBACK"] += callback2
@@ -1071,11 +1334,11 @@ class DecisionTestCase(unittest.TestCase):
         self.assertEqual([callback1, callback2], Decision(decision).callbacks())
 
     def test_build(self):
-        goal = self.g.register("GOAL")
-        plan = self.g.register("PLAN")
-        step = self.g.register("STEP")
+        goal = Frame("@TEST.GOAL")
+        plan = Frame("@TEST.PLAN")
+        step = Frame("@TEST.STEP")
 
-        decision = Decision.build(self.g, goal, plan, step)
+        decision = Decision.build(Space("TEST"), goal, plan, step)
 
         self.assertEqual(goal, decision.goal())
         self.assertEqual(plan, decision.plan())
@@ -1087,34 +1350,88 @@ class DecisionTestCase(unittest.TestCase):
         self.assertEqual(Decision.Status.PENDING, decision.status())
         self.assertEqual([], decision.callbacks())
 
-    def test_generate_outputs(self):
+    def test_generate_outputs_populates_outputs(self):
         from backend.models.output import OutputXMRTemplate
         from backend.models.statement import OutputXMRStatement
 
-        self.n.register("EXE")
-        Bootstrap.bootstrap_resource(self.n, "backend.resources", "exe.knowledge")
+        AgentOntoLang().load_knowledge("backend.resources", "exe.knowledge")
 
-        agent = self.g.register("AGENT")
-        capability = self.g.register("CAPABILITY")
+        agent = Frame("@TEST.AGENT")
+        capability = Frame("@TEST.CAPABILITY")
 
-        template = OutputXMRTemplate.build(self.n, "test-template", OutputXMRTemplate.Type.PHYSICAL, capability, [])
-        statement = OutputXMRStatement.instance(self.g, template, [], agent)
-        goal = Goal(self.g.register("GOAL"))
-        step = Step.build(self.g, 1, statement)
+        template = OutputXMRTemplate.build("test-template", XMR.Type.ACTION, capability, [])
+        statement = OutputXMRStatement.instance(Space("TEST"), template, [], agent)
+        goal = Goal(Frame("@TEST.GOAL"))
+        step = Step.build(Space("TEST"), 1, statement)
 
-        decision = Decision.build(self.g, goal, "TEST-PLAN", step)
+        decision = Decision.build(Space("TEST"), goal, "TEST-PLAN", step)
 
         self.assertEqual([], decision.outputs())
 
         decision._generate_outputs()
 
-        self.assertEqual([self.n.lookup("TEST.XMR.1")], decision.outputs())
+        self.assertEqual([Frame("@OUTPUTS.XMR.1")], decision.outputs())
+
+    def test_generate_outputs_populates_expectations(self):
+        from backend.models.statement import ExpectationStatement, IsStatement
+
+        AgentOntoLang().load_knowledge("backend.resources", "exe.knowledge")
+
+        target = Frame("@TEST.TARGET")
+
+        statement = ExpectationStatement.instance(Space("TEST"), IsStatement.instance(Space("TEST"), target, "SLOT", 123))
+        goal = Goal(Frame("@TEST.GOAL"))
+        step = Step.build(Space("TEST"), 1, statement)
+
+        decision = Decision.build(Space("TEST"), goal, "TEST-PLAN", step)
+
+        self.assertEqual([], decision.expectations())
+
+        decision._generate_outputs()
+
+        self.assertEqual([Frame("@TEST.EXPECTATION.1")], decision.expectations())
+
+    def test_generate_outputs_halts_and_registers_impasses(self):
+        from backend.models.output import OutputXMRTemplate
+        from backend.models.statement import AssertStatement, ExistsStatement, MakeInstanceStatement, OutputXMRStatement, Variable
+
+        AgentOntoLang().load_knowledge("backend.resources", "exe.knowledge")
+
+        Goal.define(Space("TEST"), "IMPASSE-GOAL", 0.5, 0.5, [], [], ["$var1"], [])
+
+        resolution = MakeInstanceStatement.instance(Space("TEST"), "TEST", "@TEST.IMPASSE-GOAL", ["$var1"])
+        statement1 = AssertStatement.instance(Space("TEST"), ExistsStatement.instance(Space("TEST"), Query(IdComparator("@EXE.DNE"))), [resolution])
+
+        template = OutputXMRTemplate.build("test-template", XMR.Type.ACTION, None, [])
+        statement2 = OutputXMRStatement.instance(Space("TEST"), template, [], None)
+
+        goal = Goal(Frame("@TEST.GOAL"))
+        Variable.instance(Space("TEST"), "$var1", 123, goal)
+        step = Step.build(Space("TEST"), 1, [statement1, statement2])
+        decision = Decision.build(Space("TEST"), goal, "TEST-PLAN", step)
+
+        self.assertEqual([], decision.impasses())
+        self.assertEqual([], decision.outputs())
+        self.assertEqual([], goal.subgoals())
+
+        decision._generate_outputs()
+
+        self.assertEqual(1, len(decision.impasses()))
+        self.assertEqual("IMPASSE-GOAL", decision.impasses()[0].name())
+        self.assertEqual("@TEST.IMPASSE-GOAL.1", decision.impasses()[0].frame.id)
+        self.assertEqual(123, decision.impasses()[0].resolve("$var1"))
+
+        self.assertEqual("@TEST.IMPASSE-GOAL.1", goal.subgoals()[0].frame.id)
+
+        self.assertEqual(Decision.Status.BLOCKED, decision.status())
+
+        self.assertEqual([], decision.outputs())
 
     def test_calculate_priority(self):
-        definition = Goal.define(self.g, "TEST-GOAL", 1.0, 0.0, [], [], [])
-        goal = Goal.instance_of(self.g, definition, [])
+        definition = Goal.define(Space("TEST"), "TEST-GOAL", 1.0, 0.0, [], [], [], [])
+        goal = Goal.instance_of(Space("TEST"), definition, [])
 
-        decision = Decision.build(self.g, goal, "TEST.PLAN", "TEST.STEP")
+        decision = Decision.build(Space("TEST"), goal, "TEST.PLAN", "TEST.STEP")
 
         self.assertIsNone(decision.priority())
 
@@ -1123,10 +1440,10 @@ class DecisionTestCase(unittest.TestCase):
         self.assertEqual(1.0, decision.priority())
 
     def test_calculate_cost(self):
-        definition = Goal.define(self.g, "TEST-GOAL", 0.0, 1.0, [], [], [])
-        goal = Goal.instance_of(self.g, definition, [])
+        definition = Goal.define(Space("TEST"), "TEST-GOAL", 0.0, 1.0, [], [], [], [])
+        goal = Goal.instance_of(Space("TEST"), definition, [])
 
-        decision = Decision.build(self.g, goal, "TEST.PLAN", "TEST.STEP")
+        decision = Decision.build(Space("TEST"), goal, "TEST.PLAN", "TEST.STEP")
 
         self.assertIsNone(decision.cost())
 
@@ -1148,14 +1465,14 @@ class DecisionTestCase(unittest.TestCase):
         decision._calculate_cost.assert_called_once()
 
     def test_select(self):
-        decision = Decision.build(self.g, "TEST.GOAL", "TEST.PLAN", "TEST.STEP")
+        decision = Decision.build(Space("TEST"), "TEST.GOAL", "TEST.PLAN", "TEST.STEP")
         self.assertEqual(Decision.Status.PENDING, decision.status())
 
         decision.select()
         self.assertEqual(Decision.Status.SELECTED, decision.status())
 
     def test_decline(self):
-        decision = Decision.build(self.g, "TEST.GOAL", "TEST.PLAN", "TEST.STEP")
+        decision = Decision.build(Space("TEST"), "TEST.GOAL", "TEST.PLAN", "TEST.STEP")
         self.assertEqual(Decision.Status.PENDING, decision.status())
 
         decision.decline()
@@ -1164,7 +1481,6 @@ class DecisionTestCase(unittest.TestCase):
     def test_execute(self):
         from backend.models.effectors import Capability, Effector
         from backend.models.mps import MPRegistry, OutputMethod
-        from backend.models.output import OutputXMR, OutputXMRTemplate
 
         out = False
 
@@ -1174,13 +1490,13 @@ class DecisionTestCase(unittest.TestCase):
                 out = True
 
         MPRegistry.register(TestMP)
-        capability = Capability.instance(self.g, "CAPABILITY", "TestMP", ["ONT.EVENT"])
-        output = OutputXMR.build(self.g, OutputXMRTemplate.Type.PHYSICAL, capability, "OUTPUT-XMR")
+        capability = Capability.instance(Space("TEST"), "CAPABILITY", "TestMP", ["ONT.EVENT"])
+        output = XMR.instance(Space("TEST"), "OUTPUT-XMR", XMR.Signal.OUTPUT, XMR.Type.ACTION, XMR.OutputStatus.PENDING, "@TEST.FRAME.1", "", capability=capability)
 
-        decision = Decision.build(self.g, "GOAL", "PLAN", "STEP")
+        decision = Decision.build(Space("TEST"), "GOAL", "PLAN", "STEP")
         decision.frame["HAS-OUTPUT"] += output.frame
 
-        effector = Effector.instance(self.g, Effector.Type.PHYSICAL, [capability])
+        effector = Effector.instance(Space("TEST"), Effector.Type.PHYSICAL, [capability])
         effector.reserve(decision, output, capability)
 
         decision.execute(None, [effector])
@@ -1192,24 +1508,23 @@ class DecisionTestCase(unittest.TestCase):
     def test_creates_callback(self):
         from backend.models.effectors import Callback, Capability, Effector
         from backend.models.mps import MPRegistry, OutputMethod
-        from backend.models.output import OutputXMR, OutputXMRTemplate
 
         class TestMP(OutputMethod):
             def run(self): pass
 
         MPRegistry.register(TestMP)
-        capability = Capability.instance(self.g, "CAPABILITY", "TestMP", ["ONT.EVENT"])
-        output = OutputXMR.build(self.g, OutputXMRTemplate.Type.PHYSICAL, capability, "OUTPUT-XMR")
+        capability = Capability.instance(Space("TEST"), "CAPABILITY", "TestMP", ["ONT.EVENT"])
+        output = XMR.instance(Space("TEST"), "OUTPUT-XMR", XMR.Signal.OUTPUT, XMR.Type.ACTION, XMR.OutputStatus.PENDING, "@TEST.FRAME.1", "", capability=capability)
 
-        decision = Decision.build(self.g, "GOAL", "PLAN", "STEP")
+        decision = Decision.build(Space("TEST"), "GOAL", "PLAN", "STEP")
         decision.frame["HAS-OUTPUT"] += output.frame
 
-        effector = Effector.instance(self.g, Effector.Type.PHYSICAL, [capability])
+        effector = Effector.instance(Space("TEST"), Effector.Type.PHYSICAL, [capability])
         effector.reserve(decision, output, capability)
 
         decision.execute(None, [effector])
 
-        callback = self.g["CALLBACK.1"]
+        callback = Frame("@TEST.CALLBACK.1")
         self.assertIn(callback, decision.callbacks())
         self.assertEqual(decision, Callback(callback).decision())
         self.assertEqual(effector, Callback(callback).effector())
@@ -1217,22 +1532,21 @@ class DecisionTestCase(unittest.TestCase):
     def test_callback_received(self):
         from backend.models.effectors import Callback, Capability, Effector
         from backend.models.mps import MPRegistry, OutputMethod
-        from backend.models.output import OutputXMR, OutputXMRTemplate
 
         class TestMP(OutputMethod):
             def run(self): pass
 
         MPRegistry.register(TestMP)
-        capability = Capability.instance(self.g, "CAPABILITY", "TestMP", ["ONT.EVENT"])
-        output = OutputXMR.build(self.g, OutputXMRTemplate.Type.PHYSICAL, capability, "OUTPUT-XMR")
+        capability = Capability.instance(Space("TEST"), "CAPABILITY", "TestMP", ["ONT.EVENT"])
+        output = XMR.instance(Space("TEST"), "OUTPUT-XMR", XMR.Signal.OUTPUT, XMR.Type.ACTION, XMR.OutputStatus.PENDING, "@TEST.FRAME.1", "", capability=capability)
 
-        decision = Decision.build(self.g, "GOAL", "PLAN", "STEP")
+        decision = Decision.build(Space("TEST"), "GOAL", "PLAN", "STEP")
         decision.frame["HAS-OUTPUT"] += output.frame
 
-        effector = Effector.instance(self.g, Effector.Type.PHYSICAL, [capability])
+        effector = Effector.instance(Space("TEST"), Effector.Type.PHYSICAL, [capability])
         effector.reserve(decision, output, capability)
 
-        callback = Callback.build(self.g, decision, effector)
+        callback = Callback.build(Space("TEST"), decision, effector)
 
         decision.frame["HAS-EFFECTOR"] = effector.frame
         decision.frame["HAS-CALLBACK"] = callback.frame
@@ -1240,3 +1554,115 @@ class DecisionTestCase(unittest.TestCase):
         decision.callback_received(callback)
         self.assertNotIn(effector, decision.effectors())
         self.assertNotIn(callback, decision.callbacks())
+
+    def test_assess_impasses(self):
+
+        subgoal1 = Frame("@TEST.GOAL.?")
+        subgoal1["STATUS"] = Goal.Status.ACTIVE
+
+        subgoal2 = Frame("@TEST.GOAL.?")
+        subgoal2["STATUS"] = Goal.Status.SATISFIED
+
+        decision = Frame("@TEST.DECISION.?")
+        decision["HAS-IMPASSE"] += subgoal1
+        decision["HAS-IMPASSE"] += subgoal2
+
+        self.assertEqual([subgoal1, subgoal2], Decision(decision).impasses())
+
+        Decision(decision).assess_impasses()
+
+        self.assertEqual([subgoal1], Decision(decision).impasses())
+
+
+class ExpectationTestCase(unittest.TestCase):
+
+    def setUp(self):
+        AgentOntoLang().load_knowledge("backend.resources", "exe.knowledge")
+
+    def test_status(self):
+        e = Frame("@TEST.EXPECTATION")
+        e["STATUS"] = Expectation.Status.EXPECTING
+
+        self.assertEqual(Expectation.Status.EXPECTING, Expectation(e).status())
+
+    def test_condition(self):
+        from backend.models.statement import ExistsStatement
+
+        e = Frame("@TEST.EXPECTATION")
+        e["CONDITION"] = ExistsStatement.instance(Space("TEST"), Query(IdComparator("@TEST.FRAME.1"))).frame
+
+        self.assertEqual(ExistsStatement.instance(Space("TEST"), Query(IdComparator("@TEST.FRAME.1"))), Expectation(e).condition())
+
+    def test_build(self):
+        from backend.models.statement import ExistsStatement
+
+        e = Expectation.build(Space("TEST"), Expectation.Status.EXPECTING, ExistsStatement.instance(Space("TEST"), Query(IdComparator("@TEST.FRAME.1"))))
+
+        self.assertEqual(Expectation.Status.EXPECTING, e.status())
+        self.assertEqual(ExistsStatement.instance(Space("TEST"), Query(IdComparator("@TEST.FRAME.1"))), e.condition())
+
+    def test_assess(self):
+        from backend.models.statement import IsStatement
+
+        target = Frame("@TEST.TARGET")
+        varmap = VariableMap(Frame("@TEST.VARMAP"))
+
+        e = Expectation.build(Space("TEST"), Expectation.Status.PENDING, IsStatement.instance(Space("TEST"), target, "SLOT", 123))
+        self.assertEqual(Expectation.Status.PENDING, e.status())
+
+        e.assess(varmap)
+        self.assertEqual(Expectation.Status.PENDING, e.status())
+
+        target["SLOT"] = 123
+        e.assess(varmap)
+        self.assertEqual(Expectation.Status.SATISFIED, e.status())
+
+        target["SLOT"] = 456
+        e.assess(varmap)
+        self.assertEqual(Expectation.Status.PENDING, e.status())
+
+
+class EffectTestCase(unittest.TestCase):
+
+    def setUp(self):
+        AgentOntoLang().load_knowledge("backend.resources", "exe.knowledge")
+
+    def test_statements(self):
+        from backend.models.statement import AddFillerStatement
+
+        statement1 = AddFillerStatement.instance(Space("TEST"), "TEST.FRAME.1", "SLOT", 123)
+        statement2 = AddFillerStatement.instance(Space("TEST"), "TEST.FRAME.1", "SLOT", 123)
+
+        frame = Frame("@TEST.EFFECT")
+        frame["HAS-STATEMENT"] += statement1.frame
+        frame["HAS-STATEMENT"] += statement2.frame
+
+        self.assertEqual([statement1, statement2], Effect(frame).statements())
+
+    def test_build(self):
+        from backend.models.statement import AddFillerStatement
+
+        statement1 = AddFillerStatement.instance(Space("TEST"), "TEST.FRAME.1", "SLOT", 123)
+        statement2 = AddFillerStatement.instance(Space("TEST"), "TEST.FRAME.1", "SLOT", 123)
+
+        effect = Effect.build(Space("TEST"), [statement1, statement2])
+
+        self.assertEqual([statement1, statement2], effect.statements())
+
+    def test_apply(self):
+        from backend.models.statement import AddFillerStatement, Variable
+
+        statement1 = AddFillerStatement.instance(Space("TEST"), "@TEST.FRAME.1", "SLOT", 123)
+        statement2 = AddFillerStatement.instance(Space("TEST"), "@TEST.FRAME.1", "SLOT", "$var1")
+
+        effect = Effect.build(Space("TEST"), [statement1, statement2])
+
+        frame = Frame("@TEST.FRAME.?")
+
+        self.assertEqual([], frame["SLOT"])
+
+        varmap = VariableMap(Frame("@TEST.VARMAP"))
+        Variable.instance(Space("TEST"), "$var1", 456, varmap)
+        effect.apply(varmap)
+
+        self.assertEqual([123, 456], frame["SLOT"])

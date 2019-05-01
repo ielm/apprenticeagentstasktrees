@@ -1,23 +1,23 @@
 @EXE.INIT-GOAL-CAPABILITY = {
-    ISA @EXE.CAPABILITY;
+    IS-A @EXE.CAPABILITY;
     MP "init_goal_capability";
     COVERS-EVENT @ONT.MENTAL-EVENT;
 };
 
 @EXE.FETCH-OBJECT-CAPABILITY = {
-    ISA @EXE.CAPABILITY;
+    IS-A @EXE.CAPABILITY;
     MP "fetch_object_capability";
     COVERS-EVENT @ONT.TAKE;
 };
 
 @SELF.MENTAL-EFFECTOR.1 = {
-    ISA @EXE.MENTAL-EFFECTOR;
+    IS-A @EXE.MENTAL-EFFECTOR;
     HAS-CAPABILITY @EXE.INIT-GOAL-CAPABILITY;
     STATUS "FREE";
 };
 
 @SELF.PHYSICAL-EFFECTOR.1 = {
-    ISA @EXE.PHYSICAL-EFFECTOR;
+    IS-A @EXE.PHYSICAL-EFFECTOR;
     HAS-CAPABILITY @EXE.FETCH-OBJECT-CAPABILITY;
     STATUS "FREE";
 };
@@ -30,7 +30,7 @@
 };
 
 @ENV.SCREWDRIVER.1 = {
-    ISA @ONT.SCREWDRIVER;
+    IS-A @ONT.SCREWDRIVER;
 };
 
 DEFINE init-goal($definition) AS TEMPLATE
@@ -40,9 +40,9 @@ DEFINE init-goal($definition) AS TEMPLATE
     INCLUDE
 
     @OUT.INIT-GOAL.1 = {
-        AGENT @SELF;
-        THEME $definition;
-    }
+        AGENT @SELF.ROBOT.1;
+        THEME "$definition";
+    };
 ;
 
 DEFINE fetch-object($object) AS TEMPLATE
@@ -52,9 +52,9 @@ DEFINE fetch-object($object) AS TEMPLATE
     INCLUDE
 
     @OUT.FETCH.1 = {
-        AGENT @SELF;
-        THEME $object;
-    }
+        AGENT @SELF.ROBOT.1;
+        THEME "$object";
+    };
 ;
 
 REGISTER MP backend.resources.example.ExampleMP.SelectGoalFromLanguageInput AS select_goal_from_language_input;
@@ -76,7 +76,7 @@ DEFINE ACKNOWLEDGE-LANGUAGE-INPUT($tmr)
     WHEN EXECUTED THEN satisfied
 ;
 
-ADD TRIGGER TO @SELF.ROBOT.1 INSTANTIATE @EXE.ACKNOWLEDGE-LANGUAGE-INPUT WHEN (@ ^ @EXE.INPUT-TMR AND STATUS = "RECEIVED" and TYPE = "LANGUAGE");
+ADD TRIGGER TO @SELF.ROBOT.1 INSTANTIATE @EXE.ACKNOWLEDGE-LANGUAGE-INPUT WHEN (@ ISA @EXE.TMR AND STATUS = #XMR.InputStatus.RECEIVED and TYPE = #XMR.Type.LANGUAGE);
 
 DEFINE BUILD-A-CHAIR()
     AS GOAL
