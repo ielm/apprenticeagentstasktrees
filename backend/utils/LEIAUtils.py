@@ -12,6 +12,6 @@ def ontogen_generate(self, tmr: TMR = None, meta: dict = None):
     if meta is None:
         meta = {}
 
-    response = requests.post(url=ontogen_service() + "/generate", data={"meta": meta, "TMR": tmr.frame.dump()})
+    response = requests.post(url=ontogen_service() + "/gen/api/generate", data={"meta": meta, "TMR": tmr.frame.dump()})
 
     return response
