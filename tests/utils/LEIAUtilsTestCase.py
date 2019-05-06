@@ -18,9 +18,20 @@ class OntoGenTestCase(unittest.TestCase):
 
     def test_generate_greeting(self):
         greeting_meta = {}
-        file = os.path.abspath(__package__) + "/../resources/tmrs/HiJake.json"
+        file = os.path.abspath(__package__) + "/../resources/tmrs/ontogen/HiJake.json"
         greeting_tmr = self.resource(file)
 
         output = LEIAUtils.ontogen_generate(greeting_tmr, greeting_meta)
 
         self.assertEqual(output.text, "Hi, Jake")
+
+    # def test_generate_explanation(self):
+    #     #     explanation_meta = {
+    #     #         "FORMAT": "DIRECTED",
+    #     #         "TENSE": "PRESENT"
+    #     #     }
+    #     #     file = os.path.abspath(__package__) + "/../resources/tmrs/ontogen/GettingScrewdriver.json"
+    #     #     explanation_tmr = self.resource(file)
+    #     #
+    #     #     out = LEIAUtils.ontogen_generate(explanation_tmr, explanation_meta)
+    #     #     self.assertEqual(out.text, "I am carrying the screwdriver.")
