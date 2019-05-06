@@ -22,4 +22,5 @@ class OntoGenTestCase(unittest.TestCase):
         greeting_tmr = self.resource(file)
 
         output = LEIAUtils.ontogen_generate(greeting_tmr, greeting_meta)
-        print(output)
+
+        self.assertEqual(output.text, "Hi, Jake")
