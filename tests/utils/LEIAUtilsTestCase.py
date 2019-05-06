@@ -1,25 +1,21 @@
 from backend.utils import LEIAUtils
-from ontograph import graph
-from backend.models.tmr import TMR
+from pkgutil import get_data
+from unittest import skip
 
 import unittest
 import json
-import os
 
 
 class OntoGenTestCase(unittest.TestCase):
 
     @staticmethod
-    def resource(fp):
-        r = None
-        with open(fp) as f:
-            r = json.load(f)
-        return r
+    def resource(package, file):
+        return json.loads(get_data(package, file).decode('ascii'))
 
+    @skip("Warning: this expects the OntoGen service to be available in order to run correctly.")
     def test_generate_greeting(self):
         greeting_meta = {}
-        file = os.path.abspath(__package__) + "/../resources/tmrs/ontogen/HiJake.json"
-        greeting_tmr = self.resource(file)
+        greeting_tmr = self.resource("tests.resources.tmrs.ontogen", "HiJake.json")
 
         output = LEIAUtils.ontogen_generate(greeting_tmr, greeting_meta)
 

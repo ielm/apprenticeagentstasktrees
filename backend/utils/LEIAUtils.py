@@ -1,4 +1,4 @@
-from LEIAEnvironment import ontogen_service
+from backend.utils.LEIAEnvironment import ontogen_service
 from backend.models.tmr import TMR
 from ontograph.Frame import Frame
 
