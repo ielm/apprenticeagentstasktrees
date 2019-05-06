@@ -1,4 +1,8 @@
+from backend.models.tmr import TMR
+from backend.models.xmr import XMR
 from backend.utils import LEIAUtils
+from ontograph import graph
+from ontograph.Space import Space
 from pkgutil import get_data
 from unittest import skip
 
@@ -17,9 +21,11 @@ class OntoGenTestCase(unittest.TestCase):
         greeting_meta = {}
         greeting_tmr = self.resource("tests.resources.tmrs.ontogen", "HiJake.json")
 
-        output = LEIAUtils.ontogen_generate(greeting_tmr, greeting_meta)
+        graph.load(greeting_tmr)
+        xmr = XMR.instance(Space("OUTPUTS"), "OUT", XMR.Signal.OUTPUT, XMR.Type.LANGUAGE, XMR.OutputStatus.PENDING, "@SELF.ROBOT.1", "@OUTPUTS.TMR.1")
+        output = LEIAUtils.ontogen_generate(TMR(xmr.frame), greeting_meta)
 
-        self.assertEqual(output.text, "Hi, Jake")
+        self.assertEqual(output, "Hi, Jake")
 
     # def test_generate_explanation(self):
     #     #     explanation_meta = {

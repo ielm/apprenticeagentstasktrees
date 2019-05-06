@@ -6,15 +6,19 @@ import requests
 import json
 
 
-def ontogen_generate(tmr, meta: dict = None):
+def ontogen_generate(tmr: TMR, meta: dict = None):
     # input = tmr + meta to json
     if tmr is None:
         raise Exception("Cannot generate utterance without input TMR")
     if meta is None:
         meta = {}
 
-    data = {'meta': meta, 'TMR': tmr}
+    _tmr = {}
+    for frame in tmr.space():
+        _tmr[frame.id] = frame.dump()
+
+    data = {'meta': meta, 'TMR': _tmr}
 
     response = requests.post(url=ontogen_service() + "/gen/api/generate", data=json.dumps(data))
 
-    return response
+    return response.content.decode("utf-8")
