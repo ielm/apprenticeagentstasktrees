@@ -25,7 +25,7 @@ class OntoGenTestCase(unittest.TestCase):
         xmr = XMR.instance(Space("OUTPUTS"), "OUT", XMR.Signal.OUTPUT, XMR.Type.LANGUAGE, XMR.OutputStatus.PENDING, "@SELF.ROBOT.1", "@OUTPUTS.TMR.1")
         output = LEIAUtils.ontogen_generate(TMR(xmr.frame), greeting_meta)
 
-        self.assertEqual(output, "Hi, Jake")
+        self.assertEqual(output, "Hi, Jake.")
 
     # def test_generate_explanation(self):
     #     #     explanation_meta = {
