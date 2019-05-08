@@ -10,6 +10,9 @@
         <li id="nav-bootstrap" class="nav-item">
             <a class="nav-link" href="/bootstrap">Bootstrap</a>
         </li>
+        <li id="nav-io" class="nav-item">
+            <a class="nav-link" href="/io">I/O</a>
+        </li>
         <li id="nav-htn" class="nav-item">
             <a class="nav-link" href="/htn">HTN Viewer</a>
         </li>
@@ -23,7 +26,104 @@
             </div>
         </li>
     </ul>
+    <ul class="navbar-nav ml-auto">
+        <li id="advance-button" class="nav-item">
+            <i class="fas fa-step-forward fa-2x"></i>
+        </li>
+        <li id="start-stop-button" class="nav-item">
+            <i class="fas fa-play fa-2x"></i>
+        </li>
+    </ul>
 
 </nav>
+
+<style>
+    #advance-button > .fas {
+        color: rgba(255,255,255,.5);
+        cursor: pointer;
+        margin-right: 15px;
+    }
+    #advance-button > .fas:hover {
+        color: rgba(255,255,255,.75);
+    }
+    #start-stop-button > .fas {
+        color: rgba(255,255,255,.5);
+        cursor: pointer;
+    }
+    #start-stop-button > .fas:hover {
+        color: rgba(255,255,255,.75);
+    }
+</style>
+
+<script>
+    function start() {
+        $.ajax({
+            url: "/iidea/start",
+            method: "GET",
+        }).done(function(data) {
+            $("#start-stop-button").html('<i class="fas fa-pause fa-2x"></i>');
+        }).fail(function(error) {
+            console.log(error);
+        });
+    }
+
+    function stop() {
+        $.ajax({
+            url: "/iidea/stop",
+            method: "GET",
+        }).done(function(data) {
+            $("#start-stop-button").html('<i class="fas fa-play fa-2x"></i>');
+        }).fail(function(error) {
+            console.log(error);
+        });
+    }
+
+    function advance() {
+        $.ajax({
+            url: "/iidea/advance",
+            method: "GET",
+        }).done(function(data) {
+            console.log(data);
+        }).fail(function(error) {
+            console.log(error);
+        });
+    }
+
+    function updateRunningCondition(data) {
+        if (data["running"] == true) {
+            $("#start-stop-button").html('<i class="fas fa-pause fa-2x"></i>');
+            $("#advance-button").hide();
+        } else {
+            $("#start-stop-button").html('<i class="fas fa-play fa-2x"></i>');
+            $("#advance-button").show();
+        }
+    }
+</script>
+
+<script>
+    $(document).ready(function() {
+        $("#start-stop-button").on("click", function(e) {
+            if ($("#start-stop-button > .fa-play")[0] == undefined) {
+                stop();
+                $("#advance-button").show();
+            } else {
+                start();
+                $("#advance-button").hide();
+            }
+        });
+
+        $("#advance-button").on("click", function(e) {
+            advance();
+        });
+    });
+
+    var socket = io.connect('http://' + document.domain + ':' + location.port);
+    socket.on("iidea updated", function(msg) {
+        updateRunningCondition(msg);
+        if (typeof updateIIDEAData === "function") {
+            updateIIDEAData(msg);
+        }
+    });
+</script>
 
 <div style="margin-bottom: 80px"></div>

@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <title>Agent View</title>
 
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis.min.css">
+    {% include 'includes/common-css.html' %}
+    {% include 'includes/common-js.html' %}
 
     <style>
         .frame-link {
@@ -47,12 +47,6 @@
             color: black;
         }
     </style>
-
-    <script src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
-    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/mustache.js/2.3.0/mustache.min.js"></script>
 
     <script>
         var colors = {
@@ -121,13 +115,13 @@
 
             var framesByID = {};
             for (var frame in graph) {
-                framesByID[graph[frame]["graph"] + "." + graph[frame]["name"]] = graph[frame];
+                framesByID[graph[frame]["name"]] = graph[frame];
             }
 
             var frames = graph
                 .map(function(frame) {
                     return {
-                        id: frame["graph"] + "." + frame["name"],
+                        id: frame["name"],
                         label: frame["name"],
                         color: colors[frame["type"]],
                     }
@@ -139,8 +133,8 @@
                         .filter(r => ["AGENT-OF", "THEME-OF", "INSTRUMENT-OF", "SCOPE-OF", "DESTINATION-OF"].indexOf(r.slot) == -1)
                         .map(function(relation) {
                             return {
-                                from: frame["graph"] + "." + frame["name"],
-                                to: relation["graph"] + "." + relation["value"],
+                                from: frame["name"],
+                                to: relation["value"],
                                 label: relation["slot"],
                                 arrows: "to",
                             }
@@ -236,7 +230,7 @@
             <tr>
                 <td>{|slot|}</td>
                 <td class="property-icon"><img src="/assets/svg/arrow-thick-right.svg" alt="arrow-thick-right" style="height: 12px"></td>
-                <td><a class='frame-link' data-frame='{|graph|}.{|value|}'>{|graph|}.{|value|}</a></td>
+                <td><a class='frame-link' data-frame='{|value|}'>{|value|}</a></td>
             </tr>
             {|/frame.relations|}
         </table>
@@ -274,7 +268,7 @@
                 var id = $(e.target).data("frame");
                 for (var i in _graph) {
                     var frame = _graph[i];
-                    if (frame.graph + "." + frame.name == id) {
+                    if (frame.name == id) {
                         load_frame(frame);
                         _network.selectNodes([id]);
                         break;
@@ -296,7 +290,7 @@
 
             $(".graph-link").on("click", function(e) {
                 var graph = $(e.target).data("graph");
-                var query = "VIEW " + graph + " SHOW ALL";
+                var query = "FROM * SEARCH FOR @ IN " + graph + ";";
                 $("#viewQuery").val(query);
                 fetch_view(query);
             });

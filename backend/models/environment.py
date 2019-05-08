@@ -1,17 +1,19 @@
-from backend.models.graph import Frame, Graph, Identifier
+from ontograph.Frame import Frame
+from ontograph.Index import Identifier
+from ontograph.Space import Space
 from typing import List, Union
 
 
 class Environment(object):
 
-    def __init__(self, graph: Graph):
-        self.graph = graph
+    def __init__(self, space: Space):
+        self.space = space
 
     def advance(self) -> Frame:
         # Create a new timestamp
         epochs = self.history()
 
-        epoch = self.graph.register("EPOCH", isa="ENV.EPOCH", generate_index=True)
+        epoch = Frame("@" + self.space.name + ".EPOCH.?").add_parent("@ENV.EPOCH")
         epoch["TIME"] = len(epochs) + 1
 
         if len(epochs) > 0:
@@ -20,89 +22,88 @@ class Environment(object):
 
             for obj in last["CONTAINS"]:
                 epoch["CONTAINS"] += obj
-            for distance in last["DISTANCE"]:
-                distance = distance.resolve()
-                copy = self.graph.register("SPATIAL-DISTANCE", isa="ONT.SPATIAL-DISTANCE", generate_index=True)
-                copy["DOMAIN"] = distance["DOMAIN"].singleton()
-                copy["RANGE"] = distance["RANGE"].singleton()
-                epoch["DISTANCE"] += copy
 
+            for location in last["LOCATION"]:
+                copy = Frame("@" + self.space.name + ".SPATIAL-LOCATION.?").add_parent("@ONT.LOCATION")
+                copy["DOMAIN"] = location["DOMAIN"].singleton()
+                copy["RANGE"] = location["RANGE"].singleton()
+                epoch["LOCATION"] += copy
         return epoch
 
     def history(self) -> List[Frame]:
-        epochs = list(filter(lambda f: f ^ "ENV.EPOCH" and f != self.graph["ENV.EPOCH"], self.graph.values()))
+        epochs = list(filter(lambda f: f ^ "@ENV.EPOCH" and f != Frame("@ENV.EPOCH"), self.space))
         epochs = sorted(epochs, key=lambda e: e["TIME"].singleton())
 
         return epochs
 
-    def enter(self, obj: Union[str, Identifier, Frame], distance: float=1.0):
-        # Something new is in the env
+    def enter(self, obj: Union[str, Identifier, Frame], location: Frame=None):
         if isinstance(obj, str):
-            obj = Identifier.parse(obj)
-        if isinstance(obj, Frame):
-            obj = obj._identifier
+            obj = Frame(obj)
+
+        if location is None:
+            location = "@ONT.LOCATION"
 
         epoch = self.history()[-1]
 
         if obj not in epoch["CONTAINS"]:
             epoch["CONTAINS"] += obj
-            self.move(obj, distance)
+            self.move(obj, location=location)
 
     def exit(self, obj: Union[str, Identifier, Frame]):
-        # Something has exited the environment
         if isinstance(obj, str):
-            obj = Identifier.parse(obj)
-        if isinstance(obj, Frame):
-            obj = obj._identifier
+            obj = Frame(obj)
 
         epoch = self.history()[-1]
         epoch["CONTAINS"] -= obj
 
-    def move(self, obj: Union[str, Identifier, Frame], distance: float):
+        for d in epoch["LOCATION"]:
+            if d["DOMAIN"] == obj:
+                d["RANGE"] = None
+
+    def move(self, obj: Union[str, Identifier, Frame], location: Frame):
         if isinstance(obj, str):
-            obj = Identifier.parse(obj)
-        if isinstance(obj, Frame):
-            obj = obj._identifier
+            obj = Frame(obj)
 
         epoch = self.history()[-1]
-        for d in epoch["DISTANCE"]:
-            if d.resolve()["DOMAIN"] == obj:
-                d.resolve()["RANGE"] = distance
+        for d in epoch["LOCATION"]:
+            if d["DOMAIN"] == obj:
+                d["RANGE"] = location
                 return
 
-        d = self.graph.register("SPATIAL-DISTANCE", isa="ONT.SPATIAL-DISTANCE", generate_index=True)
+        d = Frame("@" + self.space.name + ".LOCATION.?").add_parent("@ONT.LOCATION")
         d["DOMAIN"] = obj
-        d["RANGE"] = distance
-        epoch["DISTANCE"] += d
+        d["RANGE"] = location
+        epoch["LOCATION"] += d
 
     def view(self, epoch: Union[int, str, Identifier, Frame]) -> List[Frame]:
         if isinstance(epoch, int):
             epoch = self.history()[epoch]
         if isinstance(epoch, str):
-            epoch = Identifier.parse(epoch)
-        if isinstance(epoch, Frame):
-            epoch = epoch._identifier
+            epoch = Frame(epoch)
+        if isinstance(epoch, Identifier):
+            epoch = Frame(epoch.id)
 
-        return list(map(lambda f: f.resolve(), self.graph[epoch]["CONTAINS"]))
+        return list(epoch["CONTAINS"])
 
     def current(self):
         return self.view(self.history()[-1])
 
-    def distance(self, obj: Union[str, Identifier, Frame], epoch: Union[int, str, Identifier, Frame]=-1) -> float:
+    def location(self, obj: Union[str, Identifier, Frame], epoch: Union[int, str, Identifier, Frame]=-1) -> Frame:
         if isinstance(epoch, int):
             epoch = self.history()[epoch]
         if isinstance(epoch, str):
-            epoch = Identifier.parse(epoch)
-        if isinstance(epoch, Frame):
-            epoch = epoch._identifier
+            epoch = Frame(epoch)
+        if isinstance(epoch, Identifier):
+            epoch = Frame(epoch.id)
 
         if isinstance(obj, str):
-            obj = Identifier.parse(obj)
-        if isinstance(obj, Frame):
-            obj = obj._identifier
+            obj = Frame(obj)
+        if isinstance(obj, Identifier):
+            obj = Frame(obj.id)
 
-        for d in self.graph[epoch]["DISTANCE"]:
-            if d.resolve()["DOMAIN"] == obj:
-                return d.resolve()["RANGE"].singleton()
-
-        raise Exception("Distance unknown.")
+        for d in epoch["LOCATION"]:
+            if d["DOMAIN"] == obj:
+                location = d["RANGE"].singleton()
+                if location is not None:
+                    return location
+        raise Exception("Location unknown.")

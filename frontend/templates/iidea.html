@@ -4,15 +4,8 @@
     <meta charset="UTF-8">
     <title>IIDEA</title>
 
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis.min.css">
-    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.3.1/css/all.css" integrity="sha384-mzrmE5qonljUremFsqc01SB46JvROS7bZs3IO2EmfFsd15uHvIt+Y8vEf7N7fWAU" crossorigin="anonymous">
-
-    <script src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
-    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/mustache.js/2.3.0/mustache.min.js"></script>
+    {% include 'includes/common-css.html' %}
+    {% include 'includes/common-js.html' %}
 
     <style>
         .input-link {
@@ -44,6 +37,8 @@
             padding-right: 4px;
             padding-top: 0px;
             padding-bottom: 0px;
+            font-size: .7rem;
+            margin-bottom: 3px;
         }
         .steps {
             color: grey;
@@ -58,30 +53,36 @@
         .decision-breadcrumbs {
             font-size: small;
         }
+        .output-details {
+            color: grey;
+            font-size: small;
+        }
+        .expectation-details {
+            color: grey;
+            font-size: small;
+        }
+        .decision > .card-header {
+            padding: 2px;
+            padding-left: 5px;
+            padding-right: 5px;
+            font-size: smaller;
+        }
+        .decision > .card-header > .badge {
+            vertical-align: text-bottom;
+            margin-right: 2px;
+        }
+        .decision > .card-body {
+            padding: 10px;
+        }
+        .decision > .card-footer {
+            padding: 0px;
+            padding-left: 5px;
+            padding-right: 5px;
+            font-size: smaller;
+        }
     </style>
 
     <script>
-        function advance(callback) {
-            $.ajax({
-                url: "/iidea/advance",
-                method: "GET",
-            }).done(function(data) {
-                var output = JSON.parse(data);
-                render_time(output);
-                render_inputs(output["inputs"]);
-                render_agenda(output["agenda"]);
-                render_effectors(output["effectors"]);
-                render_triggers(output["triggers"]);
-                render_logs(output["logs"]);
-                render_decisions(output["decisions"]);
-                if (callback != null) {
-                    callback();
-                }
-            }).fail(function(error) {
-                console.log(error);
-            });
-        }
-
         function input() {
             var source = null;
             if ($("#custom-source-radio").is(':checked')) {
@@ -101,10 +102,7 @@
                 contentType: "application/json",
             }).done(function(data) {
                 var output = JSON.parse(data);
-                render_time(output);
-                render_inputs(output["inputs"]);
-                render_agenda(output["agenda"]);
-                render_decisions(output["decisions"]);
+                updateIIDEAData(output);
                 $("#inputText").attr("placeholder", "Input Text");
                 $("#inputTextButton").prop("disabled", false);
             }).fail(function(error) {
@@ -127,10 +125,7 @@
                 contentType: "application/json",
             }).done(function(data) {
                 var output = JSON.parse(data);
-                render_time(output);
-                render_inputs(output["inputs"]);
-                render_agenda(output["agenda"]);
-                render_decisions(output["decisions"]);
+                updateIIDEAData(output);
             }).fail(function(error) {
                 console.log(error);
             });
@@ -148,50 +143,21 @@
                 contentType: "application/json",
             }).done(function(data) {
                 var output = JSON.parse(data);
-                render_time(output);
-                render_inputs(output["inputs"]);
-                render_agenda(output["agenda"]);
-                render_effectors(output["effectors"]);
-                render_triggers(output["triggers"]);
-                render_logs(output["logs"]);
-                render_decisions(output["decisions"]);
+                updateIIDEAData(output);
             }).fail(function(error) {
                 console.log(error);
             });
         }
-
-        function start() {
-            $("#start-button").hide();
-            $("#pause-button").show();
-            $("#advance-button").prop("disabled", true);
-
-            running = true;
-            run();
-        }
-
-        function pause() {
-            $("#start-button").show();
-            $("#pause-button").hide();
-            $("#advance-button").prop("disabled", false);
-
-            running = false;
-        }
-
     </script>
 
     <script>
-        var running = false;
-
-        function run() {
-            advance(keepRunning);
-        }
-
-        function keepRunning() {
-            setTimeout(function() {
-                if (running) {
-                    run();
-                }
-            }, 1000);
+        function updateIIDEAData(data) {
+            render_time(data);
+            render_inputs(data["inputs"]);
+            render_agenda(data["agenda"]);
+            render_effectors(data["effectors"]);
+            render_triggers(data["triggers"]);
+            render_decisions(data["decisions"]);
         }
     </script>
 
@@ -213,7 +179,7 @@
                     ignored: "warning"
                 }[input["status"]];
 
-                var link = $('<a href="#" class="input-link badge badge-' + status + '">' + input["name"] + '</a>');
+                var link = $('<a href="#" class="input-link badge badge-' + status + '" data-graph="' + input["name"] + '">' + input["name"] + '</a>');
                 $("#inputList").append(link);
             }
         }
@@ -293,19 +259,6 @@
             });
         }
 
-        function render_logs(logs) {
-            $("#logList").empty();
-
-            for (var i in logs) {
-                var log = logs[i];
-
-                var template = document.getElementById('log-template').innerHTML;
-                Mustache.parse(template, ["{|", "|}"]);
-                var rendered = Mustache.render(template, {"log": log});
-                $($(document).find("#logList")[0]).prepend($(rendered));
-            }
-        }
-
         function render_decisions(decisions) {
             $("#decisions").empty();
 
@@ -313,11 +266,27 @@
                 var decision = decisions[i];
 
                 if (decision.status == "SELECTED") {
-                    decision["style"] = "badge-info";
+                    decision["style"] = "badge-primary";
                 } else if (decision.status == "EXECUTING") {
                     decision["style"] = "badge-success";
                 } else if (decision.status == "FINISHED") {
                     decision["style"] = "badge-secondary";
+                } else if (decision.status == "BLOCKED") {
+                    decision["style"] = "badge-warning";
+                } else if (decision.status == "PENDING") {
+                    decision["style"] = "badge-info";
+                }
+
+                for (var e in decision.expectations) {
+                    var expectation = decision.expectations[e];
+
+                    if (expectation.status == "PENDING") {
+                        expectation["style"] = "badge-info";
+                    } else if (expectation.status == "EXPECTING") {
+                        expectation["style"] = "badge-success";
+                    } else if (expectation.status == "SATISFIED") {
+                        expectation["style"] = "badge-secondary";
+                    }
                 }
 
                 var template = document.getElementById('decision-template').innerHTML;
@@ -336,20 +305,11 @@
 
     <script>
         $(document).ready(function() {
-            $("#advance-button").on("click", function() {
-                advance();
-            });
             $("#inputTextButton").on("click", function() {
                 input();
             });
             $("#observationButton").on("click", function() {
                 observe();
-            });
-            $("#start-button").on("click", function() {
-                start();
-            });
-            $("#pause-button").on("click", function() {
-                pause();
             });
             $("#custom-source-input").on("keyup", function() {
                 $("#custom-source-radio").prop("checked", true);
@@ -372,27 +332,27 @@
                 var id = $(e.currentTarget).data("callback");
                 callback(id);
             });
+            $(document).on("click", ".input-link", function(e) {
+                var graph = $(e.currentTarget).data("graph");
+                $("#modalGraphBody").load("/components/graph?include_sources=false&namespace=" + escape(graph), function(){
+                    $("#modalGraph").modal({show:true});
+                });
+            });
+            $(document).on("click", ".output-link", function(e) {
+                var graph = $(e.currentTarget).data("graph");
+                $("#modalGraphBody").load("/components/graph?include_sources=false&namespace=" + escape(graph), function(){
+                    $("#modalGraph").modal({show:true});
+                });
+            });
+            $('#modalGraph').on('shown.bs.modal', function (e) {
+                _network.fit();
+            });
             $(function () {
                 $('[data-toggle="tooltip"]').tooltip();
             });
 
-
-
-
-            var agenda = JSON.parse('{{ aj|safe }}');
-            render_agenda(agenda);
-
-            var effectors = JSON.parse('{{ ej|safe }}');
-            render_effectors(effectors);
-
-            var triggers = JSON.parse('{{ tj|safe }}');
-            render_triggers(triggers);
-
-            var logs = JSON.parse({{lj|tojson}});
-            render_logs(logs);
-
-            var decisions = JSON.parse({{dj|tojson}});
-            render_decisions(decisions);
+            var payload = JSON.parse({{payload|tojson}});
+            updateIIDEAData(payload);
         });
     </script>
 
@@ -417,6 +377,12 @@
                     {| /selected |}
                     {|#steps|}
                         <div class="step">
+                            {| #next |}
+                                <i class="fas fa-arrow-alt-circle-right"></i>
+                            {| /next |}
+                            {| #blocked |}
+                                <i class="fas fa-shield-alt"></i>
+                            {| /blocked |}
                             {| #finished |}
                                 <i class="fas fa-check-circle"></i>
                             {| /finished |}
@@ -436,10 +402,50 @@
             </div>
             <div class="card-body">
                 <div><strong>Priority:</strong> {| priority |}, <strong>Cost:</strong> {| cost |}</div>
-                <div><strong>Outputs:</strong> {| outputs |}</div>
-                <div><strong>Requires:</strong> {| requires |}</div>
-                <div><strong>Effectors:</strong> {| effectors |}</div>
-                <div><strong>Callbacks:</strong> {| callbacks |}</div>
+
+                {| #outputs.length |}
+                    <div><strong>Outputs:</strong>
+                        {|#outputs|}
+                            <a href="#" class="output-link badge badge-secondary" data-graph="{| graph |}">{| graph |}</a>
+                            <span class="output-details">({| frame |})</span>
+                        {|/outputs|}
+                    </div>
+                {| /outputs.length |}
+
+                {| #requires.length |}
+                    <div><strong>Requires:</strong> {| requires |}</div>
+                {| /requires.length |}
+
+                {| #effectors.length |}
+                    <div><strong>Effectors:</strong> {| effectors |}</div>
+                {| /effectors.length |}
+
+                {| #callbacks.length |}
+                    <div><strong>Callbacks:</strong> {| callbacks |}</div>
+                {| /callbacks.length |}
+
+                {| #impasses.length |}
+                    <div><strong>Impasses:</strong> {| impasses |}</div>
+                {| /impasses.length |}
+
+                {| #expectations.length |}
+                    <div><strong>Expectations:</strong>
+                        {|#expectations|}
+                            <span class="badge badge-pill {| style |}">{| status |}</span>
+                            <span class="expectation-details">({| frame |})</span>
+                            {| condition |}
+                        {|/expectations|}
+                    </div>
+                {| /expectations.length |}
+            </div>
+            <div class="card-footer">
+                <strong>{| id |}</strong>
+                {| ^outputs.length |} • No outputs {| /outputs.length |}
+                {| ^requires.length |} • No required capabilities {| /requires.length |}
+                {| ^effectors.length |} • No effectors {| /effectors.length |}
+                {| ^callbacks.length |} • No callbacks {| /callbacks.length |}
+                {| ^impasses.length |} • No impasses {| /impasses.length |}
+                {| ^expectations.length |} • No expectations {| /expectations.length |}
             </div>
         </div>
     </script>
@@ -468,20 +474,28 @@
                     <td></td>
                     <td>
                         {| #capabilities |}
-                            {| #selected |}
-                                <i class="fas fa-check-circle" style="color: green"></i>
-                            {| /selected |}
+                            <div>
+                                {| #not_selected |}
+                                    <i class="fas fa-times-circle" style="color: darkgray"></i>
+                                {| /not_selected |}
+                                {| #selected_elsewhere |}
+                                    <i class="fas fa-check-circle" style="color: goldenrod"></i>
+                                {| /selected_elsewhere |}
+                                {| #selected_here |}
+                                    <i class="fas fa-check-circle" style="color: green"></i>
+                                {| /selected_here |}
 
-                            {| name |}
+                                {| name |}
 
-                            {| #callbacks |}
-                                {| #waiting |}
-                                    <button type="button" class="btn btn-primary btn-sm callback-button" data-callback="{| name |}"><i class="fas fa-undo-alt" style="font-size: smaller"></i></button>
-                                {| /waiting |}
-                                {| ^waiting |}
-                                    <button disabled type="button" class="btn btn-secondary btn-sm callback-button" data-callback="{| name |}"><i class="fas fa-undo-alt" style="font-size: smaller"></i></button>
-                                {| /waiting |}
-                            {| /callbacks |}
+                                {| #callbacks |}
+                                    {| #waiting |}
+                                        <button type="button" class="btn btn-primary btn-sm callback-button" data-callback="{| name |}"><i class="fas fa-undo-alt" style="font-size: x-small"></i></button>
+                                    {| /waiting |}
+                                    {| ^waiting |}
+                                        <button disabled type="button" class="btn btn-secondary btn-sm callback-button" data-callback="{| name |}"><i class="fas fa-undo-alt" style="font-size: smaller"></i></button>
+                                    {| /waiting |}
+                                {| /callbacks |}
+                            </div>
                         {| /capabilities |}
                     </td>
                 </tr>
@@ -492,12 +506,6 @@
     <script id="trigger-template" type="x-tmpl-mustache">
         <div class="trigger">
             <i class="fas fa-eye" data-toggle="tooltip" data-placement="top" title="{| triggered-on |}"></i> Trigger {| goal |} when {| query |}
-        </div>
-    </script>
-
-    <script id="log-template" type="x-tmpl-mustache">
-        <div class="log">
-            {| log |}
         </div>
     </script>
 
@@ -516,7 +524,7 @@
             <div class="col-sm-8">
                 <div class="card" style="margin-bottom: 25px;">
                     <div class="card-header">
-                        Agenda
+                        Agenda • <span>T<span id="time">{{ time }}</span> - <span id="stage">{{ stage }}</span></span> (pending)
                         <div class="form-check float-right">
                             <input class="form-check-input" type="checkbox" value="" id="hideSatisfiedCheckBox">
                             <label class="form-check-label" for="hideSatisfiedCheckBox">
@@ -544,16 +552,6 @@
                 </div>
             </div>
             <div class="col-sm-4">
-                <div class="card" style="margin-bottom: 25px;">
-                    <div class="card-header">
-                        Time: <span>T<span id="time">{{ time }}</span> - <span id="stage">{{ stage }}</span></span> (pending)
-                    </div>
-                    <div class="card-body">
-                        <button id="advance-button" type="button" class="btn btn-sm btn-secondary">Advance</button>
-                        <button id="start-button" type="button" class="btn btn-sm btn-success">Start</button>
-                        <button id="pause-button" type="button" class="btn btn-sm btn-warning" style="display: none;">Pause</button>
-                    </div>
-                </div>
                 <div class="card" style="margin-bottom: 25px;">
                     <div class="card-header">
                         Inputs and Observations
@@ -596,7 +594,7 @@
                             <div class="custom-control custom-radio custom-control-inline">
                                 <input type="radio" id="custom-source-radio" name="source-radio" class="custom-control-input">
                                 <label class="custom-control-label" for="custom-source-radio"></label>
-                                <input id="custom-source-input" type="text" class="form-control form-control-sm" placeholder="Source ID" value="LT.HUMAN.1">
+                                <input id="custom-source-input" type="text" class="form-control form-control-sm" placeholder="Source ID" value="ENV.HUMAN.1">
                             </div>
                         </div>
                         <hr>
@@ -609,13 +607,13 @@
                         <div id="inputList" style="padding-top: 10px;">
                             {% for i in inputs %}
                                 {% if i.status == "received" %}
-                                    <a href="#" class="input-link badge badge-secondary">{{i.name}}</a>
+                                    <a href="#" class="input-link badge badge-secondary" data-graph="{{i.name}}">{{i.name}}</a>
                                 {% elif i.status == "acknowledged" %}
-                                    <a href="#" class="input-link badge badge-info">{{i.name}}</a>
+                                    <a href="#" class="input-link badge badge-info" data-graph="{{i.name}}">{{i.name}}</a>
                                 {% elif i.status == "understood" %}
-                                    <a href="#" class="input-link badge badge-success">{{i.name}}</a>
+                                    <a href="#" class="input-link badge badge-success" data-graph="{{i.name}}">{{i.name}}</a>
                                 {% elif i.status == "ignored" %}
-                                    <a href="#" class="input-link badge badge-warning">{{i.name}}</a>
+                                    <a href="#" class="input-link badge badge-warning" data-graph="{{i.name}}">{{i.name}}</a>
                                 {% endif %}
                             {% endfor %}
                         </div>
@@ -637,14 +635,14 @@
                         <div id="triggerList"></div>
                     </div>
                 </div>
-                <div class="card" style="margin-bottom: 25px;">
-                    <div class="card-header">
-                        Logs
-                    </div>
-                    <div class="card-body">
-                        <div id="logList"></div>
-                    </div>
-                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="modalGraph" role="dialog">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div id="modalGraphBody" class="modal-body"></div>
             </div>
         </div>
     </div>

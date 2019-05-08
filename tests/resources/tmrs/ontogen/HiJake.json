@@ -1,0 +1,53 @@
+{
+    "@OUT.SPEECH-ACT.1": {
+        "_id": "@OUT.SPEECH-ACT.1",
+        "AGENT": {
+            "VALUE": [{
+                "filler": "@SELF.ROBOT.1",
+                "type": "id",
+                "from": null
+            }]
+        },
+        "BENEFICIARY": {
+            "VALUE": [{
+                "filler": "@ENV.HUMAN.1",
+                "type": "id",
+                "from": null
+            }]
+        },
+        "THEME": {
+            "VALUE": [{
+                "filler": "@OUT.GREET.1",
+                "type": "id",
+                "from": null
+            }]
+        }
+    },
+    "@OUT.GREET.1": {
+        "_id": "@OUT.GREET.1",
+        "AGENT": {
+            "VALUE": [{
+                "filler": "@SELF.ROBOT.1",
+                "type": "id",
+                "from": null
+            }]
+        },
+        "THEME": {
+            "VALUE": [{
+                "filler": "@ENV.HUMAN.1",
+                "type": "id",
+                "from": null
+            }]
+        }
+    },
+    "@ENV.HUMAN.1": {
+        "_id": "@ENV.HUMAN.1",
+        "HAS-NAME": {
+            "VALUE": [{
+                "filler": "Jake",
+                "type": "*",
+                "from": null
+            }]
+        }
+    }
+}

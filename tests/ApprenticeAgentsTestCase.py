@@ -1,7 +1,7 @@
 import json
 import unittest
 
-from backend.models.ontology import Ontology
+from backend.utils.OntologyLoader import OntologyServiceLoader
 from pkgutil import get_data
 
 
@@ -9,7 +9,7 @@ class ApprenticeAgentsTestCase(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        Ontology.init_default()
+        OntologyServiceLoader().load()
 
     def load_resource(self, module: str, file: str, parse_json: bool=False):
         binary = get_data(module, file)

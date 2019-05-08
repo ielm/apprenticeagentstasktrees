@@ -1,10 +1,11 @@
 from backend.models.mps import AgentMethod, OutputMethod
+from ontograph.Frame import Frame
 
 
 class SelectGoalFromLanguageInput(AgentMethod):
     def run(self, input_tmr):
         print("TODO: choose a goal intelligently")
-        return self.agent.lookup("EXE.BUILD-A-CHAIR")
+        return Frame("@EXE.BUILD-A-CHAIR")
 
 
 class InitGoalCapability(OutputMethod):
@@ -22,11 +23,10 @@ class InitGoalCapability(OutputMethod):
 
 class SelectObjectOfType(AgentMethod):
     def run(self, concept):
-        from backend.models.graph import Frame
-
+        from ontograph.Query import AndComparator, InSpaceComparator, IsAComparator, Query
         print("TODO: choose an object intelligently")
 
-        target = self.agent.environment.search(Frame.q(self.agent).isa(concept))[0]
+        target = list(Query(AndComparator([InSpaceComparator("ENV"), IsAComparator(concept)])).start())[0]
         return target
 
 
@@ -35,3 +35,9 @@ class FetchObjectCapability(OutputMethod):
         target = self.output.root()["THEME"].singleton()
 
         print("TODO: issue command to robot to fetch " + str(target))
+
+
+class ExampleCapability(OutputMethod):
+    def run(self):
+        target = self.output.root()["THEME"].singleton()
+        print("Issuing example capability with target " + str(target))
