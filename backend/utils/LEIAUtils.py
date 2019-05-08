@@ -26,7 +26,5 @@ def _tmr_frames(tmr: TMR) -> dict:
         for slot in frame:
             for filler in slot:
                 if type(filler) is Frame:
-                    print(filler.space().name)
-                    print(filler.id)
                     _tmr[filler.id] = filler.dump()
     return _tmr
