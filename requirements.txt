@@ -1,13 +1,7 @@
---extra-index-url http://www.trulysmartagents.org/simple/
---trusted-host www.trulysmartagents.org
-
-OntoGraph==0.11.0
 Flask-Cors==3.0.3
-Flask-Socketio==3.2.1
-eventlet==0.24.1
 multiset==2.0.3
-pip==9.0.3
-pymongo==3.7.2
-requests==2.18.4
+pip==9.0.1
+pymongo==3.6.1
+requests==2.20.0
 setuptools==28.8.0
-lark-parser==0.6.6
+lark-parser==0.5.6
