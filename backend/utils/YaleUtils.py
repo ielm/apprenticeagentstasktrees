@@ -68,6 +68,9 @@ def visual_input(input: dict, space: Space) -> dict:
             }
 
     for object in filter(lambda f: "visual-object-id" in f, space):
+        if object ^ "@ONT.HUMAN":
+            continue
+            
         if object["visual-object-id"].singleton() in input["storage-1"]:
             contains[object.id] = {
                 "LOCATION": locations["storage-1"]
