@@ -20,5 +20,7 @@ def ontogen_generate(tmr: TMR, meta: dict = None):
     data = {'meta': meta, 'TMR': _tmr}
 
     response = requests.post(url=ontogen_service() + "/gen/api/generate", data=json.dumps(data))
+    if response.status_code != 200:
+        raise Exception
 
     return response.content.decode("utf-8")
