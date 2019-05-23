@@ -379,6 +379,9 @@ class AgentOntoLangTransformer(OntoLangTransformer):
 
         return TransientFrameStatement.instance(Space("EXE"), properties)
 
+    def variable(self, matches):
+        return "$" + str(matches[0])
+
 
 class OntoAgentProcessorAddTrigger(OntoLangProcessor):
 

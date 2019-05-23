@@ -41,7 +41,7 @@ DEFINE init-goal($definition) AS TEMPLATE
 
     @OUT.INIT-GOAL.1 = {
         AGENT @SELF.ROBOT.1;
-        THEME "$definition";
+        THEME $definition;
     };
 ;
 
@@ -53,7 +53,7 @@ DEFINE fetch-object($object) AS TEMPLATE
 
     @OUT.FETCH.1 = {
         AGENT @SELF.ROBOT.1;
-        THEME "$object";
+        THEME $object;
     };
 ;
 
