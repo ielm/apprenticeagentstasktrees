@@ -7,20 +7,26 @@ import json
 
 
 def ontogen_generate(tmr: TMR, meta: dict = None):
-    # input = tmr + meta to json
     if tmr is None:
         raise Exception("Cannot generate utterance without input TMR")
     if meta is None:
         meta = {}
 
-    _tmr = {}
-    for frame in tmr.space():
-        _tmr[frame.id] = frame.dump()
-
-    data = {'meta': meta, 'TMR': _tmr}
+    data = {'meta': meta, 'TMR': _tmr_frames(tmr)}
 
     response = requests.post(url=ontogen_service() + "/gen/api/generate", data=json.dumps(data))
     if response.status_code != 200:
         raise Exception
 
     return response.content.decode("utf-8")
+
+
+def _tmr_frames(tmr: TMR) -> dict:
+    _tmr = {}
+    for frame in tmr.space():
+        _tmr[frame.id] = frame.dump()
+        for slot in frame:
+            for filler in slot:
+                if type(filler) is Frame:
+                    _tmr[filler.id] = filler.dump()
+    return _tmr
