@@ -1,0 +1,53 @@
+{
+    "@OUT.SPEECH-ACT.1": {
+        "_id": "@OUT.SPEECH-ACT.1",
+        "AGENT": {
+            "VALUE": [{
+                "filler": "@SELF.ROBOT.1",
+                "type": "id",
+                "from": null
+            }]
+        },
+        "THEME": {
+            "VALUE": [{
+                "filler": "@OUT.DESCRIBE.1",
+                "type": "id",
+                "from": null
+            }]
+        }
+    },
+    "@OUT.DESCRIBE.1": {
+        "_id": "@OUT.DESCRIBE.1",
+        "AGENT": {
+            "VALUE": [{
+                "filler": "@SELF.ROBOT.1",
+                "type": "id",
+                "from": null
+            }]
+        },
+        "THEME": {
+            "VALUE": [{
+                "filler": "@OUT.CARRY.1",
+                "type": "id",
+                "from": null
+            }]
+        }
+    },
+    "@OUT.CARRY.1": {
+        "_id": "@OUT.CARRY.1",
+        "AGENT": {
+            "VALUE": [{
+                "filler": "@SELF.ROBOT.1",
+                "type": "id",
+                "from": null
+            }]
+        },
+        "THEME": {
+            "VALUE": [{
+                "filler": "@ENV.SCREWDRIVER.1",
+                "type": "id",
+                "from": null
+            }]
+        }
+    }
+}

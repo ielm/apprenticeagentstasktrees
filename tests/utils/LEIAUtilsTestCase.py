@@ -45,3 +45,14 @@ class OntoGenTestCase(unittest.TestCase):
         output = LEIAUtils.ontogen_generate(TMR(xmr.frame), explanation_meta)
 
         self.assertEqual(output, "I am carrying the screwdriver.")
+
+    # def test_generate_explanation(self):
+    #     #     explanation_meta = {
+    #     #         "FORMAT": "DIRECTED",
+    #     #         "TENSE": "PRESENT"
+    #     #     }
+    #     #     file = os.path.abspath(__package__) + "/../resources/tmrs/ontogen/GettingScrewdriver.json"
+    #     #     explanation_tmr = self.resource(file)
+    #     #
+    #     #     out = LEIAUtils.ontogen_generate(explanation_tmr, explanation_meta)
+    #     #     self.assertEqual(out.text, "I am carrying the screwdriver.")

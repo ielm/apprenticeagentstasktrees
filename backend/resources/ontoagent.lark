@@ -56,6 +56,10 @@ statement_instance: (SELF | identifier | make_instance_statement | argument)
 statement: (add_filler_statement | assert_statement | assign_filler_statement | assign_variable_statement | exists_statement | expectation_statement |foreach_statement | is_statement | make_instance_statement | mp_statement | output_statement | transient_statement)
 transient_statement: "{" (ontoagent_triple ";")* "}"
 
+// Overrides
+^string: variable | (("\"") STRING ("\""))
+variable: "$" STRING
+
 // Keywords
 ABANDONED: "abandoned"i
 ADD: "add"i
