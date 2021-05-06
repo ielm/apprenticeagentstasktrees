@@ -2,7 +2,7 @@
 --trusted-host www.trulysmartagents.org
 
 OntoGraph==0.12.0
-Flask-Cors==3.0.3
+Flask-Cors==3.0.9
 Flask-Socketio==3.2.1
 eventlet==0.24.1
 multiset==2.0.3
