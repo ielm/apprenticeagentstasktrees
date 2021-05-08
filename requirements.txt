@@ -4,7 +4,7 @@
 OntoGraph==0.12.0
 Flask-Cors==3.0.3
 Flask-Socketio==3.2.1
-eventlet==0.24.1
+eventlet==0.31.0
 multiset==2.0.3
 pip==9.0.3
 pymongo==3.7.2
